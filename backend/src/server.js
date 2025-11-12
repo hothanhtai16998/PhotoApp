@@ -47,12 +47,11 @@ app.use("/api/users", userRoute);
 
 //deployment
 if (env.NODE_ENV === "production") {
-	app.use(express.static(path.join(__dirname, "../frontend/dist")));
-	app.get("*", (_, res) => {
-		res.sendFile(
-			path.resolve(__dirname, "../frontend", "dist", "index.html")
-		);
-	});
+    const frontendDistPath = path.resolve(__dirname, "frontend", "dist");
+    app.use(express.static(frontendDistPath));
+    app.get("*", (_, res) => {
+        res.sendFile(path.join(frontendDistPath, "index.html"));
+    });
 }
 
 //kết nối database
