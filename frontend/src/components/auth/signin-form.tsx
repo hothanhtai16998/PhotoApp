@@ -19,8 +19,8 @@ import { useNavigate } from "react-router";
 
 
 const SigninSchema = z.object({
-    username: z.string().min(6, "Tên đăng nhập phải có"),
-    password: z.string().min(8, "Mật khẩu phải có"),
+  username: z.string().min(6, { message: "Tên đăng nhập không được để trống." }),
+  password: z.string().min(8, { message: "Mật khẩu không được để trống." }),
 })
 
 type signInFormValue = z.infer<typeof SigninSchema>

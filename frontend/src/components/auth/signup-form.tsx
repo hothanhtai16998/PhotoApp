@@ -16,13 +16,16 @@ import { useAuthStore } from "../../stores/useAuthStore"
 import { useNavigate } from "react-router"
 
 const SignupSchema = z.object({
-  firstname: z.string().min(1, "Tên bắt buộc phải có"),
-  lastname: z.string().min(1, "Họ bắt buộc phải có"),
-  username: z.string().min(6, "Tên đăng nhập phải có ít nhất 6 ký tự"),
-  email: z.email("Email không hợp lệ"),
-  password: z.string().min(8, "Mật khẩu phải có ít nhất 8 ký tự"),
-  confirmpassword: z.string().min(8, "Xác nhận mật khẩu không đúng"),
-})
+  firstname: z.string().min(2, { message: "Họ không được để trống." }),
+  lastname: z.string().min(2, { message: "Tên không được để trống." }),
+  username: z.string().min(6, { message: "Tên đăng nhập phải có ít nhất 3 ký tự." }),
+  email: z.string().email({ message: "Email không hợp lệ." }),
+  password: z.string().min(8, { message: "Mật khẩu phải có ít nhất 8 ký tự." }),
+  confirmpassword: z.string()
+}).refine((data) => data.password === data.confirmpassword, {
+  message: "Mật khẩu không khớp.",
+  path: ["confirmpassword"],
+});
 
 type SignupFormValue = z.infer<typeof SignupSchema>
 
@@ -38,9 +41,10 @@ export function SignupForm({
     resolver: zodResolver(SignupSchema),
   })
 
-  const onSubmit = async (data: SignupFormValue) => {
+  const onSubmit = async (data: unknown) => {
     //gọi backend để xử lý
-    const { firstname, lastname, username, email, password } = data;
+    const validatedData = data as SignupFormValue;
+    const { firstname, lastname, username, email, password } = validatedData;
     await signUp(username, password, email, firstname, lastname)
     navigate("/signin");
   }
