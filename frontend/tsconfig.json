@@ -1,0 +1,18 @@
+{
+	"files": [],
+	"references": [
+		{ "path": "./tsconfig.app.json" },
+		{ "path": "./tsconfig.node.json" }
+	],
+	"compilerOptions": {
+		"baseUrl": ".",
+		"paths": {
+			"@/*": ["./src/*"]
+		},
+
+		//xoá 3 dòng này  nếu lỗi
+		"target": "es5",
+		"forceConsistentCasingInFileNames": true,
+		"strict": true
+	}
+}

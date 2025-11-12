@@ -1,0 +1,22 @@
+
+.homepage {
+    max-width: 1600px;
+    margin: 0 auto; /* This horizontally centers the container */
+    padding: 20px; /* Optional: adds some space around the content */
+}
+
+.content-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+/* Assuming your SearchBar component has a root class of .search-bar */
+.content-wrapper .search-bar {
+    position: absolute;
+    top: 50px; /* Adjust this value to position the search bar vertically */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10; /* Ensures the search bar is on top of the image grid */
+    width: 80%; /* Example width, adjust as needed */
+    max-width: 700px;
+}
