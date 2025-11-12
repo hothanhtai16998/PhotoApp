@@ -46,7 +46,7 @@ app.use(protectedRoute);
 app.use("/api/users", userRoute);
 
 //deployment
-if (env.PHOTO_ENV === "production") {
+if (env.NODE_ENV === "production") {
 	app.use(express.static(path.join(__dirname, "../frontend/dist")));
 	app.get("*", (_, res) => {
 		res.sendFile(
