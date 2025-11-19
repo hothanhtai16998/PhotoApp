@@ -46,20 +46,20 @@ export const useImageStore = create(
 						}
 					);
 				// HTTP upload to backend complete (85%)
-				// Now backend is uploading to Cloudinary - simulate progress 85-95%
+				// Now backend is processing and uploading to S3 - simulate progress 85-95%
 				// This gives visual feedback that processing is happening
-				let cloudinaryProgress = 85;
+				let s3Progress = 85;
 
 				// Start progress simulation
 				progressInterval = setInterval(
 					() => {
-						cloudinaryProgress += 1;
+						s3Progress += 1;
 						if (
-							cloudinaryProgress < 95
+							s3Progress < 95
 						) {
 							set((state) => {
 								state.uploadProgress =
-									cloudinaryProgress;
+									s3Progress;
 							});
 						} else {
 							if (progressInterval)
@@ -72,8 +72,8 @@ export const useImageStore = create(
 					500
 				); // Update every 500ms
 
-				// Backend response received = Cloudinary upload AND processing complete
-				// The response only comes after Cloudinary finishes
+				// Backend response received = S3 upload AND processing complete
+				// The response only comes after S3 upload and image processing finishes
 				if (progressInterval) {
 					clearInterval(
 						progressInterval

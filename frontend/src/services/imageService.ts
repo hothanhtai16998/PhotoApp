@@ -72,7 +72,7 @@ export const imageService = {
 						progressEvent.total
 					) {
 						// Calculate HTTP upload progress (uploading file to our backend)
-						// Cap at 85% - the remaining 15% is for Cloudinary upload on backend
+						// Cap at 85% - the remaining 15% is for S3 upload and image processing on backend
 						const httpProgress =
 							Math.round(
 								(progressEvent.loaded *

@@ -1,11 +1,10 @@
 import mongoose from 'mongoose';
-import cloudinary from '../libs/cloudinary.js';
+import { uploadImageWithSizes, deleteImageFromS3 } from '../libs/s3.js';
 import Image from '../models/Image.js';
 import Category from '../models/Category.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { logger } from '../utils/logger.js';
 import { PAGINATION } from '../utils/constants.js';
-import { Readable } from 'stream';
 import { clearCache } from '../middlewares/cacheMiddleware.js';
 
 export const getAllImages = asyncHandler(async (req, res) => {
@@ -109,7 +108,7 @@ export const getAllImages = asyncHandler(async (req, res) => {
         // If cache-busting is requested, use no-cache
         res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     } else {
-        // Otherwise, cache API responses for 5 minutes, images themselves are cached by Cloudinary
+        // Otherwise, cache API responses for 5 minutes, images themselves are cached by S3/CDN
         res.set('Cache-Control', 'public, max-age=300'); // 5 minutes
     }
 
@@ -166,71 +165,30 @@ export const uploadImage = asyncHandler(async (req, res) => {
         });
     }
 
-    let uploadResponse;
+    let uploadResult;
     try {
-        // Upload directly from buffer stream (more efficient than base64)
-        // Convert buffer to readable stream for better performance with large files
-        const bufferStream = Readable.from(req.file.buffer);
+        // Generate unique filename
+        const timestamp = Date.now();
+        const randomString = Math.random().toString(36).substring(2, 15);
+        const filename = `image-${timestamp}-${randomString}`;
 
-        // Add timeout for Cloudinary upload (90 seconds - should be enough for 10MB files)
-        const CLOUDINARY_UPLOAD_TIMEOUT = 90000; // 90 seconds
-        let uploadTimeout;
-
-        uploadResponse = await Promise.race([
-            new Promise((resolve, reject) => {
-                const uploadStream = cloudinary.uploader.upload_stream(
-                    {
-                        folder: 'photo-app-images',
-                        resource_type: 'image',
-                        // Generate multiple sizes for progressive loading (like Unsplash)
-                        eager: [
-                            // Thumbnail: 200px width, low quality for blur-up effect
-                            { width: 200, quality: 'auto:low', fetch_format: 'auto', crop: 'limit' },
-                            // Small: 800px width for grid view (increased from 400px to prevent pixelation)
-                            { width: 800, quality: 'auto:good', fetch_format: 'auto', crop: 'limit' },
-                            // Regular: 1080px width for detail view
-                            { width: 1080, quality: 'auto:good', fetch_format: 'auto', crop: 'limit' },
-                        ],
-                        // Main image transformation
-                        transformation: [
-                            { quality: 'auto:good' },
-                            { fetch_format: 'auto' },
-                        ],
-                        // Add timeout to Cloudinary upload options
-                        timeout: CLOUDINARY_UPLOAD_TIMEOUT,
-                    },
-                    (error, result) => {
-                        if (uploadTimeout) clearTimeout(uploadTimeout);
-                        if (error) reject(error);
-                        else resolve(result);
-                    }
-                );
-
-                // Pipe buffer stream to upload stream
-                bufferStream.pipe(uploadStream);
-            }),
-            new Promise((_, reject) => {
-                uploadTimeout = setTimeout(() => {
-                    reject(new Error('Lỗi tải ảnh: vui lòng thử lại với ảnh có dung lượng nhỏ hơn hoặc kiểm tra kết nối mạng của bạn.'));
-                }, CLOUDINARY_UPLOAD_TIMEOUT);
-            }),
-        ]);
-
-        // Extract different size URLs from eager transformations
-        const thumbnailUrl = uploadResponse.eager?.[0]?.secure_url || uploadResponse.secure_url;
-        const smallUrl = uploadResponse.eager?.[1]?.secure_url || uploadResponse.secure_url;
-        const regularUrl = uploadResponse.eager?.[2]?.secure_url || uploadResponse.secure_url;
+        // Upload image to S3 with multiple sizes using Sharp
+        uploadResult = await uploadImageWithSizes(
+            req.file.buffer,
+            'photo-app-images',
+            filename
+        );
 
         // Clear cache for images endpoint when new image is uploaded
         clearCache('/api/images');
 
         // Save to database with multiple image sizes
         const newImage = await Image.create({
-            imageUrl: uploadResponse.secure_url, // Full size (original)
-            thumbnailUrl, // Small thumbnail for blur-up
-            smallUrl, // Small size for grid
-            regularUrl, // Regular size for detail
-            publicId: uploadResponse.public_id,
+            imageUrl: uploadResult.imageUrl, // Original (optimized)
+            thumbnailUrl: uploadResult.thumbnailUrl, // Small thumbnail for blur-up
+            smallUrl: uploadResult.smallUrl, // Small size for grid
+            regularUrl: uploadResult.regularUrl, // Regular size for detail
+            publicId: uploadResult.publicId,
             imageTitle: imageTitle.trim(),
             imageCategory: categoryDoc._id, // Use category ObjectId
             uploadedBy: userId,
@@ -247,32 +205,32 @@ export const uploadImage = asyncHandler(async (req, res) => {
             image: newImage,
         });
     } catch (error) {
-        // Rollback Cloudinary upload if DB save failed
-        if (uploadResponse?.public_id) {
+        // Rollback S3 upload if DB save failed
+        if (uploadResult?.publicId) {
             try {
-                await cloudinary.uploader.destroy(uploadResponse.public_id);
+                await deleteImageFromS3(uploadResult.publicId, 'photo-app-images');
             } catch (rollbackError) {
-                logger.error('Lỗi tải ảnh từ Cloudinary', rollbackError);
+                logger.error('Lỗi xóa ảnh từ S3 sau khi rollback', rollbackError);
             }
         }
 
         // Provide user-friendly error messages
+        logger.error('Lỗi tải ảnh', {
+            message: error.message,
+            fileSize: req.file?.size,
+            fileName: req.file?.originalname,
+        });
+
         if (error.message?.includes('timeout') || error.message?.includes('Upload timeout')) {
-            logger.error('Lỗi tải ảnh từ Cloudinary', {
-                fileSize: req.file?.size,
-                fileName: req.file?.originalname,
-            });
-            throw new Error(error.message || 'Lỗi tải ảnh: vui lòng thử lại với ảnh có dung lượng nhỏ hơn hoặc kiểm tra kết nối mạng của bạn.');
+            throw new Error('Lỗi tải ảnh: vui lòng thử lại với ảnh có dung lượng nhỏ hơn hoặc kiểm tra kết nối mạng của bạn.');
         }
 
-        // Handle Cloudinary-specific errors
-        if (error.http_code) {
-            logger.error('Lỗi tải ảnh từ Cloudinary', {
-                httpCode: error.http_code,
-                message: error.message,
-                fileSize: req.file?.size,
-            });
-            throw new Error(`Tải ảnh thất bại: ${error.message || 'Không thể tải ảnh lên server. Vui lòng thử lại.'}`);
+        if (error.message?.includes('Failed to process')) {
+            throw new Error('Lỗi xử lý ảnh: định dạng ảnh không được hỗ trợ hoặc ảnh bị hỏng.');
+        }
+
+        if (error.message?.includes('Failed to upload')) {
+            throw new Error('Tải ảnh thất bại: không thể tải ảnh lên server. Vui lòng thử lại.');
         }
 
         // Re-throw other errors (they'll be handled by errorHandler middleware)

@@ -273,47 +273,15 @@ const ImageGrid = memo(() => {
   //   fetchImages({ search, page: 1 });
   // };
 
-  // Download image function - handles CORS and Cloudinary URLs
-  // Fetches the original/highest quality image from Cloudinary
+  // Download image function - uses the original/highest quality image URL
   const handleDownloadImage = useCallback(async (image: Image, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
     try {
-      // Construct the original/highest quality URL from Cloudinary
-      // Cloudinary stores the original, and we want to download it without any transformations
-      let downloadUrl: string;
-
-      if (image.publicId && image.imageUrl?.includes('cloudinary.com')) {
-        // Extract cloud_name from URL and construct original URL
-        // Cloudinary URL pattern: https://res.cloudinary.com/{cloud_name}/image/upload/{transformations}/{public_id}.{format}
-        // For original (no transformations): https://res.cloudinary.com/{cloud_name}/image/upload/{public_id}.{format}
-
-        // Extract cloud name from URL (simpler approach)
-        const urlParts = image.imageUrl.split('/');
-        const cloudNameIndex = urlParts.findIndex(part => part === 'cloudinary.com') + 1;
-        const cloudName = cloudNameIndex > 0 && urlParts[cloudNameIndex] ? urlParts[cloudNameIndex] : null;
-
-        if (cloudName) {
-          // Extract format from the original URL (it's usually at the end before query params)
-          const formatMatch = image.imageUrl.match(/\.([a-z]+)(?:\?|$)/i);
-          const format = formatMatch ? formatMatch[1] : 'jpg';
-
-          // Construct original URL without any transformations
-          // This will fetch the original uploaded image at full quality
-          downloadUrl = `https://res.cloudinary.com/${cloudName}/image/upload/${image.publicId}.${format}`;
-        } else {
-          // Fallback: try to remove transformations from existing URL
-          downloadUrl = image.imageUrl.replace(/\/upload\/[^/]+\//, '/upload/');
-        }
-      } else if (image.imageUrl?.includes('cloudinary.com')) {
-        // No publicId, but it's a Cloudinary URL - try to get original by removing transformations
-        // Pattern: .../upload/{transformations}/{public_id} -> .../upload/{public_id}
-        downloadUrl = image.imageUrl.replace(/\/upload\/[^/]+\//, '/upload/');
-      } else {
-        // Not a Cloudinary URL or no publicId - use the highest quality URL available
-        downloadUrl = image.imageUrl || image.regularUrl || image.smallUrl || '';
-      }
+      // Use the original imageUrl (highest quality) for download
+      // S3 stores the original optimized image, so we can use imageUrl directly
+      const downloadUrl = image.imageUrl || image.regularUrl || image.smallUrl || '';
 
       if (!downloadUrl) {
         throw new Error('Lỗi khi lấy Url của ảnh');

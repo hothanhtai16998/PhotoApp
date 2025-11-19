@@ -1,8 +1,7 @@
 import { asyncHandler } from "../middlewares/asyncHandler.js";
 import bcrypt from "bcrypt";
 import User from "../models/User.js";
-import cloudinary from "../libs/cloudinary.js";
-import { Readable } from 'stream';
+import { uploadAvatar, deleteAvatarFromS3 } from "../libs/s3.js";
 import { logger } from '../utils/logger.js';
 
 export const authMe = asyncHandler(async (req, res) => {
@@ -107,43 +106,32 @@ export const changeInfo = asyncHandler(async (req, res) => {
     }
 
     if (req.file) {
-        let uploadResponse;
+        let uploadResult;
         try {
-            // Convert buffer to readable stream
-            const bufferStream = Readable.from(req.file.buffer);
+            // Generate unique filename
+            const timestamp = Date.now();
+            const randomString = Math.random().toString(36).substring(2, 15);
+            const filename = `avatar-${timestamp}-${randomString}`;
 
-            uploadResponse = await new Promise((resolve, reject) => {
-                const uploadStream = cloudinary.uploader.upload_stream(
-                    {
-                        folder: 'photo-app-avatars',
-                        resource_type: 'image',
-                        transformation: [
-                            { width: 200, height: 200, crop: 'fill', gravity: 'face' },
-                            { quality: 'auto:good' },
-                            { fetch_format: 'auto' },
-                        ],
-                    },
-                    (error, result) => {
-                        if (error) reject(error);
-                        else resolve(result);
-                    }
-                );
+            // Upload avatar to S3 with Sharp processing
+            uploadResult = await uploadAvatar(
+                req.file.buffer,
+                'photo-app-avatars',
+                filename
+            );
 
-                bufferStream.pipe(uploadStream);
-            });
-
-            // Delete old avatar from Cloudinary if exists
+            // Delete old avatar from S3 if exists
             if (currentUser.avatarId) {
                 try {
-                    await cloudinary.uploader.destroy(currentUser.avatarId);
+                    await deleteAvatarFromS3(currentUser.avatarId);
                 } catch (deleteError) {
-                    logger.warn('Lỗi xoá ảnh từ Cloudinary', deleteError);
+                    logger.warn('Lỗi xoá ảnh đại diện từ S3', deleteError);
                     // Continue even if deletion fails
                 }
             }
 
-            updateData.avatarUrl = uploadResponse.secure_url;
-            updateData.avatarId = uploadResponse.public_id;
+            updateData.avatarUrl = uploadResult.avatarUrl;
+            updateData.avatarId = uploadResult.publicId;
         } catch (error) {
             logger.error('Lỗi không thể cập nhật ảnh đại diện', error);
             return res.status(500).json({

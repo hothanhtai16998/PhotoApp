@@ -4,7 +4,7 @@ import AdminRole from '../models/AdminRole.js';
 import Category from '../models/Category.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { logger } from '../utils/logger.js';
-import cloudinary from '../libs/cloudinary.js';
+import { deleteImageFromS3 } from '../libs/s3.js';
 import { PERMISSIONS } from '../middlewares/permissionMiddleware.js';
 
 // Statistics
@@ -216,12 +216,12 @@ export const deleteUser = asyncHandler(async (req, res) => {
     // Get all user's images
     const userImages = await Image.find({ uploadedBy: userId }).select('publicId');
 
-    // Delete images from Cloudinary
+    // Delete images from S3
     for (const image of userImages) {
         try {
-            await cloudinary.uploader.destroy(image.publicId);
+            await deleteImageFromS3(image.publicId, 'photo-app-images');
         } catch (error) {
-            logger.warn(`Lỗi không thể xoá ảnh ${image.publicId} từ Cloudinary:`, error);
+            logger.warn(`Lỗi không thể xoá ảnh ${image.publicId} từ S3:`, error);
         }
     }
 
@@ -327,11 +327,11 @@ export const deleteImage = asyncHandler(async (req, res) => {
         });
     }
 
-    // Delete from Cloudinary
+    // Delete from S3
     try {
-        await cloudinary.uploader.destroy(image.publicId);
+        await deleteImageFromS3(image.publicId, 'photo-app-images');
     } catch (error) {
-        logger.warn(`Lỗi không thể xoá ảnh ${image.publicId} từ Cloudinary:`, error);
+        logger.warn(`Lỗi không thể xoá ảnh ${image.publicId} từ S3:`, error);
     }
 
     // Delete from database

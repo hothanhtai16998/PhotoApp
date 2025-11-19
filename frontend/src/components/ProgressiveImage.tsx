@@ -13,31 +13,17 @@ interface ProgressiveImageProps {
 }
 
 /**
- * Generate Cloudinary thumbnail URL on-the-fly for old images
+ * Fallback to original URL if size-specific URLs are not available
+ * (for backward compatibility with old images)
  */
 const generateThumbnailUrl = (imageUrl: string): string => {
-  // If it's already a Cloudinary URL, add transformation
-  if (imageUrl.includes('cloudinary.com')) {
-    // Insert transformation before filename
-    return imageUrl.replace(
-      /\/upload\//,
-      '/upload/w_200,q_auto:low,f_auto/'
-    );
-  }
   return imageUrl;
 };
 
 /**
- * Generate Cloudinary small URL on-the-fly for old images
- * Use higher resolution (800px) to prevent pixelation when displayed at full width
+ * Fallback to original URL if size-specific URLs are not available
  */
 const generateSmallUrl = (imageUrl: string): string => {
-  if (imageUrl.includes('cloudinary.com')) {
-    return imageUrl.replace(
-      /\/upload\//,
-      '/upload/w_800,q_auto:good,f_auto/'
-    );
-  }
   return imageUrl;
 };
 

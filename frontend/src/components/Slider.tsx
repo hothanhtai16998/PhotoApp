@@ -38,28 +38,11 @@ function Slider() {
                         const isFirstSlide = index === 0;
                         const targetWidth = isFirstSlide ? 1200 : 1920;
                         
-                        let imageUrl = img.imageUrl;
-
-                        // Add Cloudinary transformations for optimal display
-                        // First slide: 1200px for faster LCP, others: 1920px for quality
-                        if (imageUrl.includes('cloudinary.com') &&
-                            imageUrl.includes('/image/upload/') &&
-                            !imageUrl.includes('/image/upload/w_')) {
-                            try {
-                                // Insert transformation into Cloudinary URL
-                                // Format: .../image/upload/{transformations}/{public_id}
-                                const uploadIndex = imageUrl.indexOf('/image/upload/');
-                                if (uploadIndex !== -1) {
-                                    const baseUrl = imageUrl.substring(0, uploadIndex + '/image/upload/'.length);
-                                    const restOfUrl = imageUrl.substring(uploadIndex + '/image/upload/'.length);
-                                    // w_{width}: target width, q_auto: auto quality, f_auto: auto format
-                                    imageUrl = `${baseUrl}w_${targetWidth},q_auto,f_auto/${restOfUrl}`;
-                                }
-                            } catch {
-                                // If transformation fails, use original URL
-                                console.warn('Failed to apply Cloudinary transformation, using original URL');
-                            }
-                        }
+                        // Use regularUrl if available (1080px), otherwise fallback to imageUrl
+                        // For first slide, prefer smaller size for faster LCP
+                        let imageUrl = isFirstSlide && img.regularUrl 
+                            ? img.regularUrl 
+                            : (img.regularUrl || img.imageUrl);
 
                         // Detect image orientation by loading the image with timeout
                         let isPortrait = false;

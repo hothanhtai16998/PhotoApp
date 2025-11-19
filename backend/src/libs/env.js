@@ -8,9 +8,10 @@ const validateEnv = () => {
 		'MONGODB_URI',
 		'ACCESS_TOKEN_SECRET',
 		'CLIENT_URL',
-		'CLOUDINARY_CLOUD_NAME',
-		'CLOUDINARY_API_KEY',
-		'CLOUDINARY_API_SECRET',
+		'AWS_REGION',
+		'AWS_ACCESS_KEY_ID',
+		'AWS_SECRET_ACCESS_KEY',
+		'AWS_S3_BUCKET_NAME',
 	];
 
 	const missing = required.filter(key => !process.env[key]);
@@ -35,9 +36,12 @@ export const env = {
 	RESEND_API_KEY: process.env.RESEND_API_KEY,
 	EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME,
 	EMAIL_FROM: process.env.EMAIL_FROM,
-	CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
-	CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
-	CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
+	// AWS S3 Configuration
+	AWS_REGION: process.env.AWS_REGION,
+	AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+	AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
+	AWS_S3_BUCKET_NAME: process.env.AWS_S3_BUCKET_NAME,
+	AWS_CLOUDFRONT_URL: process.env.AWS_CLOUDFRONT_URL, // Optional: CloudFront CDN URL
 	ARCJET_KEY: process.env.ARCJET_KEY,
 	ARCJET_ENV: process.env.ARCJET_ENV,
 	GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
