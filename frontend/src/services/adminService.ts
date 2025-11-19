@@ -6,8 +6,8 @@ export interface DashboardStats {
         totalImages: number;
         categoryStats: Array<{ _id: string; count: number }>;
     };
-    recentUsers: any[];
-    recentImages: any[];
+    recentUsers: User[];
+    recentImages: AdminImage[];
 }
 
 export interface User {
@@ -68,7 +68,7 @@ export const adminService = {
         page?: number;
         limit?: number;
         search?: string;
-    }): Promise<{ users: User[]; pagination: any }> => {
+    }): Promise<{ users: User[]; pagination: { page: number; pages: number; total: number; limit: number } }> => {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
         if (params?.limit) queryParams.append('limit', params.limit.toString());
@@ -116,7 +116,7 @@ export const adminService = {
         search?: string;
         category?: string;
         userId?: string;
-    }): Promise<{ images: AdminImage[]; pagination: any }> => {
+    }): Promise<{ images: AdminImage[]; pagination: { page: number; pages: number; total: number; limit: number } }> => {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
         if (params?.limit) queryParams.append('limit', params.limit.toString());

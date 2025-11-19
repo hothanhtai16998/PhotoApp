@@ -8,8 +8,10 @@ interface FetchImagesParams {
 	category?: string;
 }
 
+import type { Image } from '@/types/image';
+
 interface FetchImagesResponse {
-	images: any[];
+	images: Image[];
 	pagination?: {
 		page: number;
 		limit: number;

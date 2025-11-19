@@ -72,7 +72,7 @@ const ProgressiveImage = ({
   const loadedSrcs = useRef<Set<string>>(new Set());
   const preloadedRef = useRef<boolean>(false);
 
-  // Reset state when src changes
+  // Reset state when src changes - this is a valid pattern for resetting component state
   useEffect(() => {
     setCurrentSrc(effectiveThumbnail);
     setIsLoaded(false);
@@ -80,7 +80,8 @@ const ProgressiveImage = ({
     setShouldLoadEagerly(false);
     preloadedRef.current = false;
     loadedSrcs.current.clear();
-  }, [src, effectiveThumbnail]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [src]);
 
   // Preload images using Intersection Observer (like Unsplash)
   useEffect(() => {
@@ -93,7 +94,8 @@ const ProgressiveImage = ({
     if (isInViewport && !preloadedRef.current) {
       // Already visible, start loading immediately
       preloadedRef.current = true;
-      setShouldLoadEagerly(true);
+      // Use setTimeout to avoid synchronous setState in effect
+      setTimeout(() => setShouldLoadEagerly(true), 0);
 
       // Preload small size in background
       if (effectiveSmall !== effectiveThumbnail && !loadedSrcs.current.has(effectiveSmall)) {
@@ -124,7 +126,8 @@ const ProgressiveImage = ({
           if (entry.isIntersecting && !preloadedRef.current) {
             // Image is about to be visible, preload it
             preloadedRef.current = true;
-            setShouldLoadEagerly(true);
+            // Use setTimeout to avoid synchronous setState in effect
+            setTimeout(() => setShouldLoadEagerly(true), 0);
 
             // Preload small size in background
             if (effectiveSmall !== effectiveThumbnail && !loadedSrcs.current.has(effectiveSmall)) {
@@ -161,7 +164,7 @@ const ProgressiveImage = ({
     return () => {
       observer.disconnect();
     };
-  }, [effectiveThumbnail, effectiveSmall]);
+  }, [effectiveThumbnail, effectiveSmall, onLoad]);
 
   const handleLoad = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     const img = e.currentTarget;

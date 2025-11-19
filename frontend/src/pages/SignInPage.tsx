@@ -51,7 +51,7 @@ function SignInPage() {
 
             await signIn(username, password);
             navigate("/");
-        } catch (error) {
+        } catch {
             // Error is handled by the store
         } finally {
             setIsSubmitting(false);

@@ -9,6 +9,7 @@ import { useImageStore } from '@/stores/useImageStore';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { Upload, TrendingUp } from 'lucide-react';
+import type { Image } from '@/types/image';
 import './UploadPage.css';
 
 const uploadSchema = z.object({
@@ -24,7 +25,7 @@ type UploadFormValues = z.infer<typeof uploadSchema>;
 function UploadPage() {
     const { uploadImage, loading, images, fetchImages } = useImageStore();
     const navigate = useNavigate();
-    const [categoryImages, setCategoryImages] = useState<Array<{ category: string; images: any[] }>>([]);
+    const [categoryImages, setCategoryImages] = useState<Array<{ category: string; images: Image[] }>>([]);
     const { register, handleSubmit, formState: { errors } } = useForm<UploadFormValues>({
         resolver: zodResolver(uploadSchema),
     });
@@ -33,7 +34,7 @@ function UploadPage() {
     useEffect(() => {
         const categories = ['Nature', 'Portrait', 'Architecture', 'Travel', 'Street', 'Abstract'];
         
-        const processCategoryImages = (allImages: any[]) => {
+        const processCategoryImages = (allImages: Image[]) => {
             const categoryData = [];
             
             // Group images by category

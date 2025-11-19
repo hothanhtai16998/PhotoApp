@@ -55,7 +55,7 @@ function SignUpPage() {
                 data.lastName
             );
             navigate("/signin");
-        } catch (error) {
+        } catch {
             // Error is handled by the store
         } finally {
             setIsSubmitting(false);

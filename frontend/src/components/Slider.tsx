@@ -32,7 +32,7 @@ function Slider() {
 
                 if (response.images && response.images.length > 0) {
                     // Convert images to slides format
-                    const slidesDataPromises = response.images.map(async (img: Image, index: number) => {
+                    const slidesDataPromises = response.images.map(async (img: Image) => {
                         // Use full-size imageUrl for best quality to prevent pixelation
                         // imageUrl is the original full-size image, which provides the best quality
                         // For Cloudinary images, if we need specific transformations, we can add them

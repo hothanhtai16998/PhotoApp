@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { adminService, type DashboardStats, type User, type AdminImage, type AdminRole, type AdminRolePermissions } from '@/services/adminService';
@@ -69,7 +69,7 @@ function AdminPage() {
             }
         };
         checkAdmin();
-    }, []);
+    }, [fetchMe, navigate]);
 
     useEffect(() => {
         if (activeTab === 'dashboard') {
@@ -83,7 +83,7 @@ function AdminPage() {
         } else if (activeTab === 'roles') {
             loadAdminRoles();
         }
-    }, [activeTab]);
+    }, [activeTab, loadAdminRoles, loadImages, loadUsers]);
 
     const loadDashboardStats = async () => {
         try {
@@ -98,7 +98,7 @@ function AdminPage() {
         }
     };
 
-    const loadUsers = async (page = 1) => {
+    const loadUsers = useCallback(async (page = 1) => {
         try {
             setLoading(true);
             const data = await adminService.getAllUsers({
@@ -114,9 +114,9 @@ function AdminPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [usersSearch]);
 
-    const loadImages = async (page = 1) => {
+    const loadImages = useCallback(async (page = 1) => {
         try {
             setLoading(true);
             const data = await adminService.getAllImages({
@@ -132,7 +132,7 @@ function AdminPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [imagesSearch]);
 
     const handleDeleteUser = async (userId: string, username: string) => {
         if (!confirm(`Bạn có muốn xoá người dùng "${username}" không? Sẽ xoá cả ảnh mà người này đã đăng.`)) {
@@ -231,7 +231,7 @@ function AdminPage() {
         }
     };
 
-    const loadAdminRoles = async () => {
+    const loadAdminRoles = useCallback(async () => {
         if (!user?.isSuperAdmin) return;
         try {
             setLoading(true);
@@ -247,7 +247,7 @@ function AdminPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user?.isSuperAdmin, users.length, loadUsers]);
 
     const handleCreateRole = async (data: { userId: string; role: 'super_admin' | 'admin' | 'moderator'; permissions: AdminRolePermissions }) => {
         try {
