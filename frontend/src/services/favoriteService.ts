@@ -1,4 +1,5 @@
 import api from '@/lib/axios';
+import type { Image } from '@/types/image';
 
 export interface FavoriteResponse {
 	success: boolean;
@@ -13,7 +14,7 @@ export interface FavoritesCheckResponse {
 
 export interface FavoritesListResponse {
 	success: boolean;
-	images: any[];
+	images: Image[];
 	pagination: {
 		page: number;
 		limit: number;

@@ -149,7 +149,7 @@ function AdminPage() {
             }
         };
         checkAdmin();
-    }, [fetchMe, navigate]);
+    }, [fetchMe, navigate, loadDashboardStats]);
 
     useEffect(() => {
         if (activeTab === 'dashboard') {

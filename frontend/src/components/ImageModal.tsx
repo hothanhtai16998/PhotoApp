@@ -307,7 +307,7 @@ const ImageModal = ({
   }, [image._id, image.imageTitle]);
 
   // Handle toggle favorite
-  const handleToggleFavorite = async () => {
+  const handleToggleFavorite = useCallback(async () => {
     if (!accessToken || !image._id || isTogglingFavorite) return;
 
     setIsTogglingFavorite(true);
@@ -329,7 +329,7 @@ const ImageModal = ({
     } finally {
       setIsTogglingFavorite(false);
     }
-  };
+  }, [accessToken, image._id, isTogglingFavorite]);
 
   // Handle keyboard shortcuts
   useEffect(() => {
