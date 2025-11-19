@@ -6,13 +6,14 @@ import Session from "../models/Session.js";
 import { env } from "../libs/env.js";
 import { asyncHandler } from "../middlewares/asyncHandler.js";
 import { TOKEN } from "../utils/constants.js";
+import { logger } from "../utils/logger.js";
 
 // Google OAuth configuration
 const GOOGLE_CLIENT_ID = env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = env.GOOGLE_CLIENT_SECRET || '';
 // Backend callback URL - Google will redirect here with the code
-const BACKEND_URL = env.CLIENT_URL || `http://localhost:${env.PORT || 3000}`;
-const GOOGLE_REDIRECT_URI = env.GOOGLE_REDIRECT_URI || `${BACKEND_URL}/api/auth/google/callback`;
+// In production, GOOGLE_REDIRECT_URI must be explicitly set in environment variables
+const GOOGLE_REDIRECT_URI = env.GOOGLE_REDIRECT_URI;
 
 export const signUp = asyncHandler(async (req, res) => {
     const { username, password, email, firstName, lastName, phone, bio } = req.body;
@@ -196,10 +197,10 @@ export const refreshToken = asyncHandler(async (req, res) => {
 
 // Google OAuth - Initiate login
 export const googleAuth = asyncHandler(async (req, res) => {
-    if (!GOOGLE_CLIENT_ID) {
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_REDIRECT_URI) {
+        logger.error('Google OAuth not configured - missing GOOGLE_CLIENT_ID or GOOGLE_REDIRECT_URI');
         return res.status(500).json({
-            message: "Google OAuth is not configured. Please set GOOGLE_CLIENT_ID in environment variables.",
-            redirectUri: GOOGLE_REDIRECT_URI
+            message: "Google OAuth is not configured. Please set GOOGLE_CLIENT_ID and GOOGLE_REDIRECT_URI in environment variables.",
         });
     }
 
@@ -214,8 +215,8 @@ export const googleAuth = asyncHandler(async (req, res) => {
 
     const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI)}&response_type=code&scope=openid email profile&state=${state}&access_type=offline&prompt=consent`;
 
-    console.log('Google OAuth - Redirecting to:', googleAuthUrl);
-    console.log('Redirect URI:', GOOGLE_REDIRECT_URI);
+    logger.debug('Google OAuth - Redirecting to:', googleAuthUrl);
+    logger.debug('Redirect URI:', GOOGLE_REDIRECT_URI);
 
     res.redirect(googleAuthUrl);
 });
@@ -226,30 +227,42 @@ export const googleCallback = asyncHandler(async (req, res) => {
 
     // Handle Google OAuth errors
     if (error) {
-        console.error('Google OAuth error:', error, error_description);
-        const frontendUrl = env.CLIENT_URL || 'http://localhost:5173';
-        return res.redirect(`${frontendUrl}/signin?error=${encodeURIComponent(error_description || error)}`);
+        logger.error('Google OAuth error:', { error, error_description });
+        if (!env.CLIENT_URL) {
+            logger.error('CLIENT_URL not configured');
+            return res.status(500).json({ message: 'Server configuration error' });
+        }
+        return res.redirect(`${env.CLIENT_URL}/signin?error=${encodeURIComponent(error_description || error)}`);
     }
 
     const storedState = req.cookies?.oauth_state;
 
     // Verify state to prevent CSRF attacks
     if (!state || state !== storedState) {
-        console.error('State mismatch:', { state, storedState });
-        const frontendUrl = env.CLIENT_URL || 'http://localhost:5173';
-        return res.redirect(`${frontendUrl}/signin?error=Invalid state parameter`);
+        logger.error('OAuth state mismatch', { state, storedState, ip: req.ip });
+        if (!env.CLIENT_URL) {
+            logger.error('CLIENT_URL not configured');
+            return res.status(500).json({ message: 'Server configuration error' });
+        }
+        return res.redirect(`${env.CLIENT_URL}/signin?error=Invalid state parameter`);
     }
 
     if (!code) {
-        console.error('No authorization code provided');
-        const frontendUrl = env.CLIENT_URL || 'http://localhost:5173';
-        return res.redirect(`${frontendUrl}/signin?error=Authorization code not provided`);
+        logger.error('No authorization code provided in OAuth callback');
+        if (!env.CLIENT_URL) {
+            logger.error('CLIENT_URL not configured');
+            return res.status(500).json({ message: 'Server configuration error' });
+        }
+        return res.redirect(`${env.CLIENT_URL}/signin?error=Authorization code not provided`);
     }
 
     if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-        console.error('Google OAuth not configured');
-        const frontendUrl = env.CLIENT_URL || 'http://localhost:5173';
-        return res.redirect(`${frontendUrl}/signin?error=Google OAuth is not configured`);
+        logger.error('Google OAuth not configured - missing credentials');
+        if (!env.CLIENT_URL) {
+            logger.error('CLIENT_URL not configured');
+            return res.status(500).json({ message: 'Server configuration error' });
+        }
+        return res.redirect(`${env.CLIENT_URL}/signin?error=Google OAuth is not configured`);
     }
 
     try {
@@ -271,9 +284,12 @@ export const googleCallback = asyncHandler(async (req, res) => {
         const tokenData = await tokenResponse.json();
 
         if (!tokenData.access_token) {
-            console.error('Failed to get access token:', tokenData);
-            const frontendUrl = env.CLIENT_URL || 'http://localhost:5173';
-            return res.redirect(`${frontendUrl}/signin?error=Failed to get access token from Google`);
+            logger.error('Failed to get access token from Google', { tokenData });
+            if (!env.CLIENT_URL) {
+                logger.error('CLIENT_URL not configured');
+                return res.status(500).json({ message: 'Server configuration error' });
+            }
+            return res.redirect(`${env.CLIENT_URL}/signin?error=Failed to get access token from Google`);
         }
 
         // Get user info from Google
@@ -286,9 +302,12 @@ export const googleCallback = asyncHandler(async (req, res) => {
         const googleUser = await userResponse.json();
 
         if (!googleUser.id) {
-            console.error('Failed to get user info:', googleUser);
-            const frontendUrl = env.CLIENT_URL || 'http://localhost:5173';
-            return res.redirect(`${frontendUrl}/signin?error=Failed to get user info from Google`);
+            logger.error('Failed to get user info from Google', { googleUser });
+            if (!env.CLIENT_URL) {
+                logger.error('CLIENT_URL not configured');
+                return res.status(500).json({ message: 'Server configuration error' });
+            }
+            return res.redirect(`${env.CLIENT_URL}/signin?error=Failed to get user info from Google`);
         }
 
         // Find or create user
@@ -313,8 +332,11 @@ export const googleCallback = asyncHandler(async (req, res) => {
             // User exists - check if they're trying to use Google login on a password account
             if (!user.isOAuthUser) {
                 // User exists with password account, prevent Google login
-                const frontendUrl = env.CLIENT_URL || 'http://localhost:5173';
-                return res.redirect(`${frontendUrl}/signin?error=${encodeURIComponent('This email is already registered with email/password. Please sign in with your password instead.')}`);
+                if (!env.CLIENT_URL) {
+                    logger.error('CLIENT_URL not configured');
+                    return res.status(500).json({ message: 'Server configuration error' });
+                }
+                return res.redirect(`${env.CLIENT_URL}/signin?error=${encodeURIComponent('This email is already registered with email/password. Please sign in with your password instead.')}`);
             }
 
             // For existing OAuth users, always sync avatar from Google to keep it up to date
@@ -359,13 +381,19 @@ export const googleCallback = asyncHandler(async (req, res) => {
         res.clearCookie('oauth_state');
 
         // Redirect to frontend with token
-        const frontendUrl = env.CLIENT_URL || 'http://localhost:5173';
-        console.log('Google OAuth success - redirecting to frontend with token');
-        res.redirect(`${frontendUrl}/auth/google/callback?token=${accessToken}`);
+        if (!env.CLIENT_URL) {
+            logger.error('CLIENT_URL not configured');
+            return res.status(500).json({ message: 'Server configuration error' });
+        }
+        logger.info('Google OAuth success - redirecting to frontend with token', { userId: user._id });
+        res.redirect(`${env.CLIENT_URL}/auth/google/callback?token=${accessToken}`);
     } catch (error) {
-        console.error('Google OAuth error:', error);
-        const frontendUrl = env.CLIENT_URL || 'http://localhost:5173';
+        logger.error('Google OAuth error:', error);
+        if (!env.CLIENT_URL) {
+            logger.error('CLIENT_URL not configured');
+            return res.status(500).json({ message: 'Server configuration error' });
+        }
         const errorMessage = error.message || "Failed to authenticate with Google";
-        return res.redirect(`${frontendUrl}/signin?error=${encodeURIComponent(errorMessage)}`);
+        return res.redirect(`${env.CLIENT_URL}/signin?error=${encodeURIComponent(errorMessage)}`);
     }
 });
