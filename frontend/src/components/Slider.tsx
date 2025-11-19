@@ -100,11 +100,6 @@ function Slider() {
                             isPortrait,
                         };
 
-                        // Debug: Log slide data to verify info is available
-                        if (index === 0) {
-                            console.log('First slide data:', slideData);
-                        }
-
                         return slideData;
                     });
 

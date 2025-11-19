@@ -272,34 +272,6 @@ export const useImageStore = create(
 									)
 							);
 
-						// Debug: Log preserved images to help troubleshoot
-						if (
-							uniqueRecentUploads.length >
-								0 &&
-							params?._refresh
-						) {
-							console.log(
-								'Preserving recent uploads:',
-								uniqueRecentUploads.length,
-								uniqueRecentUploads.map(
-									(img) => ({
-										id: img._id,
-										title:
-											img.imageTitle,
-										category:
-											typeof img.imageCategory ===
-											'string'
-												? img.imageCategory
-												: img
-														.imageCategory
-														?.name,
-										createdAt:
-											img.createdAt,
-									})
-								)
-							);
-						}
-
 						// Combine and sort by createdAt descending (newest first) to ensure proper order
 						const combined = [
 							...uniqueRecentUploads,

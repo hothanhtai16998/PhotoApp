@@ -1,4 +1,5 @@
 import express from 'express';
+import helmet from 'helmet';
 import { env } from './libs/env.js';
 import { CONNECT_DB } from './configs/db.js';
 import path from 'path';
@@ -26,6 +27,24 @@ const app = express();
 if (env.NODE_ENV === 'production') {
     app.set('trust proxy', 1);
 }
+
+// Security middleware - Helmet helps secure Express apps by setting various HTTP headers
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            imgSrc: ["'self'", "https://res.cloudinary.com", "data:", "https:"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            connectSrc: ["'self'"],
+            fontSrc: ["'self'", "data:"],
+            objectSrc: ["'none'"],
+            mediaSrc: ["'self'"],
+            frameSrc: ["'none'"],
+        },
+    },
+    crossOriginEmbedderPolicy: false, // Allow Cloudinary images
+}));
 
 // Middleware
 // Compression middleware - reduces response size for better performance

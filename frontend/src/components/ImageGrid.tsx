@@ -262,7 +262,6 @@ const ImageGrid = () => {
         <div className="masonry-grid">
           {images.map((image) => {
             const imageType = imageTypes.get(image._id) || 'landscape'; // Get from state
-            // Debug: Check if uploadedBy exists
             const hasUserInfo = image.uploadedBy && (image.uploadedBy.displayName || image.uploadedBy.username);
             return (
               <div

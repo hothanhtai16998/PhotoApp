@@ -5,6 +5,7 @@ import { imageService } from "@/services/imageService";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Edit2, Star, XCircle } from "lucide-react";
+import { toast } from "sonner";
 import type { Image } from "@/types/image";
 import "./ProfilePage.css";
 
@@ -86,13 +87,13 @@ function ProfilePage() {
     };
 
     const handleEditPins = () => {
-        // TODO: Implement edit pins functionality
-        console.log('Edit pins clicked');
+        // Feature coming soon - allows users to pin favorite images to their profile
+        toast.info('Edit pins feature is coming soon! This will allow you to showcase your favorite images on your profile.');
     };
 
     const handleUpdateAvailability = () => {
-        // TODO: Implement availability update
-        console.log('Update availability clicked');
+        // Feature coming soon - allows users to indicate if they're available for hire
+        toast.info('Availability update feature is coming soon! You\'ll be able to indicate if you\'re available for photography work.');
     };
 
     if (!user) {
