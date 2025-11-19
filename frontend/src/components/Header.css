@@ -256,6 +256,9 @@
 	.header-link,
 	.header-button {
 		font-size: 0.875rem;
+		min-height: 44px; /* Better touch target */
+		display: flex;
+		align-items: center;
 	}
 
 	.header-button {
@@ -269,5 +272,62 @@
 
 	.category-link {
 		font-size: 0.8125rem;
+		min-height: 44px; /* Better touch target */
+		display: flex;
+		align-items: center;
+	}
+}
+
+@media (max-width: 480px) {
+	.header-container {
+		padding: 0 8px;
+		gap: 8px;
+	}
+
+	.header-logo {
+		font-size: 1rem;
+	}
+
+	.header-actions {
+		gap: 4px;
+	}
+
+	.header-link {
+		font-size: 0.8125rem;
+		padding: 4px 8px;
+	}
+
+	.header-link span,
+	.header-link svg {
+		display: none; /* Hide text/icons on very small screens */
+	}
+
+	.header-link:has(svg) {
+		padding: 8px;
+		min-width: 44px;
+		justify-content: center;
+	}
+
+	.header-link:has(svg) svg {
+		display: block;
+		margin: 0;
+	}
+
+	.header-button {
+		padding: 6px 10px;
+		font-size: 0.8125rem;
+	}
+
+	.search-input {
+		font-size: 0.875rem;
+		padding: 8px 6px;
+	}
+
+	.search-icon-left {
+		padding: 0 8px;
+	}
+
+	.search-visual {
+		padding: 8px;
 	}
 }

@@ -421,6 +421,48 @@
     .admin-search input {
         width: 100%;
     }
+
+    .admin-nav-item {
+        min-height: 44px; /* Better touch target */
+        padding: 12px 16px;
+    }
+
+    .admin-table {
+       	font-size: 0.875rem;
+    }
+
+    .admin-table th,
+    .admin-table td {
+        padding: 8px 4px;
+    }
+}
+
+@media (max-width: 480px) {
+    .admin-container {
+        padding: 0 8px;
+    }
+
+    .admin-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .admin-stats-card {
+        padding: 16px;
+    }
+
+    .admin-nav-item {
+        padding: 10px 12px;
+        font-size: 0.875rem;
+    }
+
+    .admin-nav-item span:not(.admin-nav-icon) {
+        display: none; /* Hide text on very small screens */
+    }
+
+    .admin-nav-item {
+        justify-content: center;
+        min-width: 44px;
+    }
 }
 
 /* Role Management */

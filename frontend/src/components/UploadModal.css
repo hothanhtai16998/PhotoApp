@@ -604,8 +604,38 @@
 
 	.upload-modal-footer {
 		flex-direction: column;
-		align-items: flex-start;
+		align-items: stretch;
 		gap: 16px;
+	}
+
+	.upload-modal-footer button {
+		width: 100%;
+		min-height: 44px; /* Better touch target */
+	}
+
+@media (max-width: 480px) {
+	.upload-modal-header {
+		padding: 16px;
+	}
+
+	.upload-modal-content {
+		padding: 20px 16px;
+	}
+
+	.upload-dropzone {
+		padding: 30px 16px;
+		min-height: 200px;
+	}
+
+	.upload-guidelines {
+		padding: 16px;
+		gap: 12px;
+	}
+
+	.upload-guideline-item {
+		font-size: 0.875rem;
+	}
+}
 	}
 
 	.footer-buttons {

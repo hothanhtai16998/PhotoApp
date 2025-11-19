@@ -110,5 +110,23 @@
 @media (max-width: 480px) {
 	.category-navigation-container {
 		margin-top: 20px;
+		margin-bottom: 20px;
+	}
+
+	.category-navigation-wrapper {
+		padding: 0 8px;
+	}
+
+	.category-navigation {
+		gap: 16px;
+		padding: 8px 0;
+	}
+
+	.category-nav-link {
+		font-size: 0.75rem;
+		padding: 8px 4px;
+		min-height: 44px; /* Better touch target */
+		display: flex;
+		align-items: center;
 	}
 }
