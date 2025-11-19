@@ -65,5 +65,10 @@ const userSchema = new mongoose.Schema(
     }
 );
 
+// Compound indexes for common queries
+userSchema.index({ email: 1, isAdmin: 1 }); // For admin queries filtering by email
+userSchema.index({ createdAt: -1 }); // For sorting users by creation date
+userSchema.index({ username: 1, isAdmin: 1 }); // For admin queries filtering by username
+
 const User = mongoose.model("User", userSchema);
 export default User;

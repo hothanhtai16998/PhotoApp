@@ -5,6 +5,7 @@ import type { Image } from '@/types/image';
 import ProgressiveImage from './ProgressiveImage';
 import CategoryNavigation from './CategoryNavigation';
 import ImageModal from './ImageModal';
+import { Skeleton } from './ui/skeleton';
 import { toast } from 'sonner';
 import './ImageGrid.css';
 
@@ -227,26 +228,32 @@ const ImageGrid = () => {
     }
   }, []);
 
-  if (loading && images.length === 0) {
+  if (error) {
     return (
-      <div className="image-grid-container">
-        <div className="loading-state">
-          <p>Đang tải ảnh...</p>
+      <div className="image-grid-container" role="alert" aria-live="polite">
+        <div className="error-state">
+          <p>Lỗi: {error}</p>
+          <button onClick={() => fetchImages()} aria-label="Thử lại tải ảnh">
+            Vui lòng thử lại
+          </button>
         </div>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className="image-grid-container">
-        <div className="error-state">
-          <p>Lỗi: {error}</p>
-          <button onClick={() => fetchImages()}>Vui lòng thử lại</button>
+  // Loading skeleton component
+  const ImageGridSkeleton = () => (
+    <div className="masonry-grid" aria-label="Đang tải ảnh" aria-live="polite">
+      {Array.from({ length: 12 }).map((_, index) => (
+        <div
+          key={`skeleton-${index}`}
+          className={`masonry-item ${index % 3 === 0 ? 'portrait' : 'landscape'}`}
+        >
+          <Skeleton className="w-full h-full min-h-[200px] rounded-lg" />
         </div>
-      </div>
-    );
-  }
+      ))}
+    </div>
+  );
 
   return (
     <div className="image-grid-container">
@@ -254,12 +261,14 @@ const ImageGrid = () => {
       <CategoryNavigation />
 
       {/* Main Image Grid */}
-      {images.length === 0 ? (
-        <div className="empty-state">
+      {loading && images.length === 0 ? (
+        <ImageGridSkeleton />
+      ) : images.length === 0 ? (
+        <div className="empty-state" role="status" aria-live="polite">
           <p>Chưa có ảnh nào, hãy thêm ảnh.</p>
         </div>
       ) : (
-        <div className="masonry-grid">
+        <div className="masonry-grid" role="list" aria-label="Danh sách ảnh">
           {images.map((image) => {
             const imageType = imageTypes.get(image._id) || 'landscape'; // Get from state
             const hasUserInfo = image.uploadedBy && (image.uploadedBy.displayName || image.uploadedBy.username);
@@ -267,6 +276,8 @@ const ImageGrid = () => {
               <div
                 key={image._id}
                 className={`masonry-item ${imageType}`}
+                role="listitem"
+                aria-label={`Ảnh: ${image.imageTitle || 'Không có tiêu đề'}`}
               >
                 <div
                   className="masonry-link"

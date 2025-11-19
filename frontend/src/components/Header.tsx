@@ -123,8 +123,8 @@ export const Header = memo(function Header() {
           </Link>
 
           {/* Search Bar */}
-          <form onSubmit={handleSearchSubmit} className="header-search">
-            <div className="search-icon-left">
+          <form onSubmit={handleSearchSubmit} className="header-search" role="search" aria-label="Tìm kiếm ảnh">
+            <div className="search-icon-left" aria-hidden="true">
               <Search size={20} />
             </div>
             <input
@@ -133,18 +133,29 @@ export const Header = memo(function Header() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="search-input"
+              aria-label="Tìm kiếm ảnh"
+              aria-describedby="search-description"
             />
+            <span id="search-description" className="sr-only">
+              Nhập từ khóa để tìm kiếm ảnh
+            </span>
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
                 className="search-clear"
+                aria-label="Xóa tìm kiếm"
               >
                 <X size={16} />
               </button>
             )}
-            <button type="button" className="search-visual" title="Visual search">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <button 
+              type="button" 
+              className="search-visual" 
+              title="Visual search"
+              aria-label="Tìm kiếm bằng hình ảnh"
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <rect x="2" y="2" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2 2" fill="none" />
                 <circle cx="10" cy="10" r="3" stroke="currentColor" strokeWidth="1.5" fill="none" />
               </svg>

@@ -24,6 +24,10 @@ const categorySchema = new mongoose.Schema(
     }
 );
 
+// Compound index for active categories
+categorySchema.index({ isActive: 1, name: 1 }); // For filtering active categories
+categorySchema.index({ createdAt: -1 }); // For sorting categories by creation date
+
 const Category = mongoose.model('Category', categorySchema);
 
 export default Category;

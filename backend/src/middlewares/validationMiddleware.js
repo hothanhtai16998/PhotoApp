@@ -27,17 +27,19 @@ export const validate = (req, res, next) => {
 
 /**
  * Validation rules for authentication
+ * Includes sanitization to prevent XSS attacks
  */
 export const validateSignUp = [
     body('username')
         .trim()
+        .escape() // Sanitize: escape HTML entities
         .isLength({ min: 3, max: 20 })
         .matches(/^[a-zA-Z0-9_]+$/)
         .withMessage('Username must be 3-20 characters and contain only letters, numbers, and underscores'),
     body('email')
         .trim()
+        .normalizeEmail() // Sanitize: normalize email format
         .isEmail()
-        .normalizeEmail()
         .withMessage('Invalid email format'),
     body('password')
         .isLength({ min: 8 })
@@ -45,20 +47,24 @@ export const validateSignUp = [
         .withMessage('Password must be at least 8 characters with uppercase, lowercase, and a number'),
     body('firstName')
         .trim()
+        .escape() // Sanitize: escape HTML entities
         .notEmpty()
         .withMessage('First name is required'),
     body('lastName')
         .trim()
+        .escape() // Sanitize: escape HTML entities
         .notEmpty()
         .withMessage('Last name is required'),
     body('phone')
         .optional()
         .trim()
+        .escape() // Sanitize: escape HTML entities
         .isLength({ max: 20 })
         .withMessage('Phone number must be less than 20 characters'),
     body('bio')
         .optional()
         .trim()
+        .escape() // Sanitize: escape HTML entities
         .isLength({ max: 500 })
         .withMessage('Bio must be less than 500 characters'),
     validate,
@@ -67,6 +73,7 @@ export const validateSignUp = [
 export const validateSignIn = [
     body('username')
         .trim()
+        .escape() // Sanitize: escape HTML entities
         .notEmpty()
         .withMessage('Username is required'),
     body('password')
@@ -77,24 +84,29 @@ export const validateSignIn = [
 
 /**
  * Validation rules for image operations
+ * Includes sanitization to prevent XSS attacks
  */
 export const validateImageUpload = [
     body('imageTitle')
         .trim()
+        .escape() // Sanitize: escape HTML entities
         .isLength({ min: 1, max: 200 })
         .withMessage('Image title must be between 1 and 200 characters'),
     body('imageCategory')
         .trim()
+        .escape() // Sanitize: escape HTML entities
         .notEmpty()
         .withMessage('Image category is required'),
     body('location')
         .optional()
         .trim()
+        .escape() // Sanitize: escape HTML entities
         .isLength({ max: 200 })
         .withMessage('Location must be less than 200 characters'),
     body('cameraModel')
         .optional()
         .trim()
+        .escape() // Sanitize: escape HTML entities
         .isLength({ max: 100 })
         .withMessage('Camera model must be less than 100 characters'),
     validate,
@@ -112,11 +124,13 @@ export const validateGetImages = [
     query('search')
         .optional()
         .trim()
+        .escape() // Sanitize: escape HTML entities
         .isLength({ max: 100 })
         .withMessage('Search query must be less than 100 characters'),
     query('category')
         .optional()
         .trim()
+        .escape() // Sanitize: escape HTML entities
         .isLength({ max: 50 })
         .withMessage('Category must be less than 50 characters'),
     validate,
