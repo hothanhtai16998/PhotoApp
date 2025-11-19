@@ -392,16 +392,64 @@ const ImageGrid = memo(() => {
     </div>
   );
 
+  // Search result count
+  const searchResultCount = useMemo(() => {
+    if (currentSearch && pagination) {
+      return pagination.total
+    }
+    return null
+  }, [currentSearch, pagination])
+
   return (
     <div className="image-grid-container">
       {/* Category Navigation */}
       <CategoryNavigation />
+      
+      {/* Search Results Header */}
+      {currentSearch && (
+        <div className="search-results-header">
+          <h2 className="search-results-title">
+            {loading ? (
+              'Đang tìm kiếm...'
+            ) : searchResultCount !== null ? (
+              <>
+                {searchResultCount === 0 ? (
+                  'Không tìm thấy kết quả'
+                ) : (
+                  <>
+                    {searchResultCount.toLocaleString('vi-VN')} {searchResultCount === 1 ? 'kết quả' : 'kết quả'} cho "{currentSearch}"
+                  </>
+                )}
+              </>
+            ) : (
+              `Kết quả tìm kiếm cho "${currentSearch}"`
+            )}
+          </h2>
+        </div>
+      )}
 
       {/* Main Image Grid */}
       {loading && images.length === 0 ? (
         <ImageGridSkeleton />
       ) : images.length === 0 ? (
         <div className="empty-state" role="status" aria-live="polite">
+          {currentSearch ? (
+            <>
+              <p>Không tìm thấy kết quả cho "{currentSearch}"</p>
+              <p className="empty-state-suggestions">
+                Thử tìm kiếm với từ khóa khác hoặc xóa bộ lọc tìm kiếm
+              </p>
+            </>
+          ) : currentCategory ? (
+            <>
+              <p>Không có ảnh nào trong danh mục "{currentCategory}"</p>
+              <p className="empty-state-suggestions">
+                Thử chọn danh mục khác hoặc xem tất cả ảnh
+              </p>
+            </>
+          ) : (
+            <p>Chưa có ảnh nào. Hãy tải ảnh lên để bắt đầu!</p>
+          )}
           <p>Chưa có ảnh nào, hãy thêm ảnh.</p>
         </div>
       ) : (

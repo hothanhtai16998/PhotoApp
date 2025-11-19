@@ -410,6 +410,19 @@
 	white-space: nowrap;
 }
 
+/* Search Results Header */
+.search-results-header {
+	margin: 24px 0;
+	padding: 0 20px;
+}
+
+.search-results-title {
+	font-size: 1.25rem;
+	font-weight: 600;
+	color: #111;
+	margin: 0;
+}
+
 /* Loading, Error, and Empty States */
 .loading-state,
 .error-state,
@@ -424,6 +437,12 @@
 .empty-state p {
 	font-size: 1.125rem;
 	margin-bottom: 1rem;
+}
+
+.empty-state-suggestions {
+	font-size: 0.9375rem !important;
+	color: #767676 !important;
+	margin-top: 0.5rem !important;
 }
 
 .error-state button {
