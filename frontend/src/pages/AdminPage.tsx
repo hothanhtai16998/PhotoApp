@@ -53,39 +53,7 @@ function AdminPage() {
     const [editingRole, setEditingRole] = useState<AdminRole | null>(null);
     const [creatingRole, setCreatingRole] = useState(false);
 
-    useEffect(() => {
-        const checkAdmin = async () => {
-            try {
-                await fetchMe();
-                const currentUser = useAuthStore.getState().user;
-                if (!currentUser?.isAdmin && !currentUser?.isSuperAdmin) {
-                    toast.error('Cần quyền Admin để truy cập trang này.');
-                    navigate('/');
-                    return;
-                }
-                loadDashboardStats();
-            } catch {
-                navigate('/signin');
-            }
-        };
-        checkAdmin();
-    }, [fetchMe, navigate]);
-
-    useEffect(() => {
-        if (activeTab === 'dashboard') {
-            loadDashboardStats();
-        } else if (activeTab === 'users') {
-            loadUsers();
-        } else if (activeTab === 'images') {
-            loadImages();
-        } else if (activeTab === 'categories') {
-            loadCategories();
-        } else if (activeTab === 'roles') {
-            loadAdminRoles();
-        }
-    }, [activeTab, loadAdminRoles, loadImages, loadUsers]);
-
-    const loadDashboardStats = async () => {
+    const loadDashboardStats = useCallback(async () => {
         try {
             setLoading(true);
             const data = await adminService.getDashboardStats();
@@ -96,7 +64,7 @@ function AdminPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     const loadUsers = useCallback(async (page = 1) => {
         try {
@@ -133,6 +101,69 @@ function AdminPage() {
             setLoading(false);
         }
     }, [imagesSearch]);
+
+    const loadCategories = useCallback(async () => {
+        try {
+            setLoading(true);
+            const data = await categoryService.getAllCategoriesAdmin();
+            setCategories(data);
+        } catch (error: unknown) {
+            const axiosError = error as { response?: { data?: { message?: string } } };
+            toast.error(axiosError.response?.data?.message || 'Lỗi khi lấy danh mục');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    const loadAdminRoles = useCallback(async () => {
+        if (!user?.isSuperAdmin) return;
+        try {
+            setLoading(true);
+            const data = await adminService.getAllAdminRoles();
+            setAdminRoles(data.adminRoles);
+            // Also load users if not already loaded (for create role modal)
+            if (users.length === 0) {
+                await loadUsers(1);
+            }
+        } catch (error: unknown) {
+            const axiosError = error as { response?: { data?: { message?: string } } };
+            toast.error(axiosError.response?.data?.message || 'Lỗi khi lấy danh sách quyền admin');
+        } finally {
+            setLoading(false);
+        }
+    }, [user?.isSuperAdmin, users.length, loadUsers]);
+
+    useEffect(() => {
+        const checkAdmin = async () => {
+            try {
+                await fetchMe();
+                const currentUser = useAuthStore.getState().user;
+                if (!currentUser?.isAdmin && !currentUser?.isSuperAdmin) {
+                    toast.error('Cần quyền Admin để truy cập trang này.');
+                    navigate('/');
+                    return;
+                }
+                loadDashboardStats();
+            } catch {
+                navigate('/signin');
+            }
+        };
+        checkAdmin();
+    }, [fetchMe, navigate]);
+
+    useEffect(() => {
+        if (activeTab === 'dashboard') {
+            loadDashboardStats();
+        } else if (activeTab === 'users') {
+            loadUsers();
+        } else if (activeTab === 'images') {
+            loadImages();
+        } else if (activeTab === 'categories') {
+            loadCategories();
+        } else if (activeTab === 'roles') {
+            loadAdminRoles();
+        }
+    }, [activeTab, loadAdminRoles, loadImages, loadUsers, loadCategories, loadDashboardStats]);
 
     const handleDeleteUser = async (userId: string, username: string) => {
         if (!confirm(`Bạn có muốn xoá người dùng "${username}" không? Sẽ xoá cả ảnh mà người này đã đăng.`)) {
@@ -179,19 +210,6 @@ function AdminPage() {
         }
     };
 
-    const loadCategories = async () => {
-        try {
-            setLoading(true);
-            const data = await categoryService.getAllCategoriesAdmin();
-            setCategories(data);
-        } catch (error: unknown) {
-            const axiosError = error as { response?: { data?: { message?: string } } };
-            toast.error(axiosError.response?.data?.message || 'Lỗi khi lấy danh mục');
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const handleCreateCategory = async (data: { name: string; description?: string }) => {
         try {
             await categoryService.createCategory(data);
@@ -230,24 +248,6 @@ function AdminPage() {
             toast.error(axiosError.response?.data?.message || 'Lỗi khi xoá danh mục');
         }
     };
-
-    const loadAdminRoles = useCallback(async () => {
-        if (!user?.isSuperAdmin) return;
-        try {
-            setLoading(true);
-            const data = await adminService.getAllAdminRoles();
-            setAdminRoles(data.adminRoles);
-            // Also load users if not already loaded (for create role modal)
-            if (users.length === 0) {
-                await loadUsers(1);
-            }
-        } catch (error: unknown) {
-            const axiosError = error as { response?: { data?: { message?: string } } };
-            toast.error(axiosError.response?.data?.message || 'Lỗi khi lấy danh sách quyền admin');
-        } finally {
-            setLoading(false);
-        }
-    }, [user?.isSuperAdmin, users.length, loadUsers]);
 
     const handleCreateRole = async (data: { userId: string; role: 'super_admin' | 'admin' | 'moderator'; permissions: AdminRolePermissions }) => {
         try {

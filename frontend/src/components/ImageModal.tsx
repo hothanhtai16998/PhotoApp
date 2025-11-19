@@ -368,7 +368,6 @@ const ImageModal = ({
       // Download with Ctrl/Cmd + D
       if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
         e.preventDefault();
-        const fakeEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
         const downloadBtn = document.querySelector('.modal-download-btn') as HTMLElement;
         if (downloadBtn) {
           downloadBtn.click();

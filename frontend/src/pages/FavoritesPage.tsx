@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { favoriteService } from "@/services/favoriteService";
 import Header from "@/components/Header";
-import ImageGrid from "@/components/ImageGrid";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Heart } from "lucide-react";
 import type { Image } from "@/types/image";

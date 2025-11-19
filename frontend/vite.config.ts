@@ -14,4 +14,18 @@ export default defineConfig({
 			),
 		},
 	},
+	build: {
+		cssCodeSplit: true,
+		rollupOptions: {
+			output: {
+				assetFileNames: (assetInfo) => {
+					// Ensure consistent naming for CSS files
+					if (assetInfo.name && assetInfo.name.endsWith('.css')) {
+						return 'assets/[name]-[hash][extname]';
+					}
+					return 'assets/[name]-[hash][extname]';
+				},
+			},
+		},
+	},
 });
