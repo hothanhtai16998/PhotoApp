@@ -109,10 +109,33 @@ const ImageGridItem = memo(({
           </div>
 
           {hasUserInfo && (
-            <div className="image-user-info">
-              <span className="image-user-name">
-                {image.uploadedBy?.displayName || image.uploadedBy?.username || 'Unknown'}
-              </span>
+            <div className="image-info">
+              <div className="image-author-info">
+                {image.uploadedBy.avatarUrl ? (
+                  <img
+                    src={image.uploadedBy.avatarUrl}
+                    alt={image.uploadedBy.displayName || image.uploadedBy.username}
+                    className="author-avatar"
+                    style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px', maxWidth: '32px', maxHeight: '32px' }}
+                    onError={(e) => {
+                      // Hide avatar if it fails to load
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div className="author-avatar-placeholder" style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px', maxWidth: '32px', maxHeight: '32px' }}>
+                    {(image.uploadedBy.displayName || image.uploadedBy.username || 'U').charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="author-details">
+                  <span className="image-author-name">
+                    {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}
+                  </span>
+                  {image.uploadedBy.bio && (
+                    <span className="author-bio">{image.uploadedBy.bio}</span>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -384,116 +407,18 @@ const ImageGrid = memo(() => {
       ) : (
         <div className="masonry-grid" role="list" aria-label="Danh sách ảnh">
           {images.map((image) => {
-            const imageType = imageTypes.get(image._id) || 'landscape'; // Get from state
-            const hasUserInfo = image.uploadedBy && (image.uploadedBy.displayName || image.uploadedBy.username);
+            const imageType = imageTypes.get(image._id) || 'landscape';
             return (
-              <div
+              <ImageGridItem
                 key={image._id}
-                className={`masonry-item ${imageType}`}
-                role="listitem"
-                aria-label={`Ảnh: ${image.imageTitle || 'Không có tiêu đề'}`}
-              >
-                <div
-                  className="masonry-link"
-                  onClick={() => {
-                    setSelectedImage(image);
-                  }}
-                  style={{ cursor: 'pointer' }}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setSelectedImage(image);
-                    }
-                  }}
-                  aria-label={`View ${image.imageTitle || 'image'}`}
-                >
-                  <ProgressiveImage
-                    src={image.imageUrl}
-                    thumbnailUrl={image.thumbnailUrl}
-                    smallUrl={image.smallUrl}
-                    regularUrl={image.regularUrl}
-                    alt={image.imageTitle || 'Photo'}
-                    onLoad={(img) => {
-                      // Handle image load for aspect ratio detection
-                      if (!processedImages.current.has(image._id) && currentImageIds.has(image._id)) {
-                        handleImageLoad(image._id, img);
-                      }
-                    }}
-                    onError={() => {
-                      // Error handling is done in ProgressiveImage component
-                    }}
-                  />
-                  <div
-                    className="masonry-overlay"
-                    onMouseMove={(e) => {
-                      const overlay = e.currentTarget;
-                      const rect = overlay.getBoundingClientRect();
-                      const x = e.clientX - rect.left;
-                      const y = e.clientY - rect.top;
-                      // Keep tooltip within bounds (with 10px margin)
-                      const tooltipWidth = 200;
-                      const tooltipHeight = 40;
-                      const adjustedX = Math.max(tooltipWidth / 2, Math.min(x, rect.width - tooltipWidth / 2));
-                      const adjustedY = Math.max(tooltipHeight / 2, Math.min(y, rect.height - tooltipHeight / 2));
-                      overlay.style.setProperty('--mouse-x', `${adjustedX}px`);
-                      overlay.style.setProperty('--mouse-y', `${adjustedY}px`);
-                    }}
-                  >
-                    {/* Image Title Tooltip - follows mouse */}
-                    {image.imageTitle && (
-                      <div className="image-title-tooltip">
-                        {image.imageTitle}
-                      </div>
-                    )}
-
-                    {/* Top Right - Download Button */}
-                    <div className="image-actions">
-                      <button
-                        className="image-action-btn download-btn"
-                        onClick={(e) => handleDownloadImage(image, e)}
-                        title="Download"
-                        aria-label="Download image"
-                      >
-                        <Download size={20} />
-                      </button>
-                    </div>
-
-                    {/* Bottom Left - User Info */}
-                    {hasUserInfo && (
-                      <div className="image-info">
-                        <div className="image-author-info">
-                          {image.uploadedBy.avatarUrl ? (
-                            <img
-                              src={image.uploadedBy.avatarUrl}
-                              alt={image.uploadedBy.displayName || image.uploadedBy.username}
-                              className="author-avatar"
-                              style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px', maxWidth: '32px', maxHeight: '32px' }}
-                              onError={(e) => {
-                                // Hide avatar if it fails to load
-                                e.currentTarget.style.display = 'none';
-                              }}
-                            />
-                          ) : (
-                            <div className="author-avatar-placeholder" style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px', maxWidth: '32px', maxHeight: '32px' }}>
-                              {(image.uploadedBy.displayName || image.uploadedBy.username || 'U').charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                          <div className="author-details">
-                            <span className="image-author-name">
-                              {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}
-                            </span>
-                            {image.uploadedBy.bio && (
-                              <span className="author-bio">{image.uploadedBy.bio}</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+                image={image}
+                imageType={imageType}
+                onSelect={setSelectedImage}
+                onDownload={handleDownloadImage}
+                onImageLoad={handleImageLoad}
+                currentImageIds={currentImageIds}
+                processedImages={processedImages}
+              />
             );
           })}
         </div>

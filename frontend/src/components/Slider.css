@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Urbanist:wght@700&family=Proxima+Nova:wght@400;500;600&display=swap');
+/* Fonts are now loaded via link preload in index.html for better performance */
 
 /* Image Zoom Out Animation - Continuous zoom out from center */
 @keyframes image-zoom-out {

@@ -8,11 +8,13 @@ import {
 } from '../controllers/categoryController.js';
 import { protectedRoute } from '../middlewares/authMiddleware.js';
 import { adminRoute } from '../middlewares/adminMiddleware.js';
+import { cacheMiddleware } from '../middlewares/cacheMiddleware.js';
 
 const router = express.Router();
 
 // Public route - get active categories
-router.get('/', getAllCategories);
+// Cache for 5 minutes - categories don't change frequently
+router.get('/', cacheMiddleware(5 * 60 * 1000), getAllCategories);
 
 // Admin routes - require authentication and admin access
 router.use(protectedRoute);

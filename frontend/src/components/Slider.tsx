@@ -32,16 +32,16 @@ function Slider() {
 
                 if (response.images && response.images.length > 0) {
                     // Convert images to slides format
-                    const slidesDataPromises = response.images.map(async (img: Image) => {
-                        // Use full-size imageUrl for best quality to prevent pixelation
-                        // imageUrl is the original full-size image, which provides the best quality
-                        // For Cloudinary images, if we need specific transformations, we can add them
-                        // but for now, using the full-size original ensures no pixelation
+                    const slidesDataPromises = response.images.map(async (img: Image, index: number) => {
+                        // Use optimized image sizes for better LCP
+                        // First slide uses smaller size (1200px) for faster LCP, others use 1920px
+                        const isFirstSlide = index === 0;
+                        const targetWidth = isFirstSlide ? 1200 : 1920;
+                        
                         let imageUrl = img.imageUrl;
 
-                        // Optional: Add Cloudinary transformations for optimal full-screen display
-                        // This requests a high-quality version at 1920px width (Full HD)
-                        // Only apply if the URL doesn't already have transformations
+                        // Add Cloudinary transformations for optimal display
+                        // First slide: 1200px for faster LCP, others: 1920px for quality
                         if (imageUrl.includes('cloudinary.com') &&
                             imageUrl.includes('/image/upload/') &&
                             !imageUrl.includes('/image/upload/w_')) {
@@ -52,8 +52,8 @@ function Slider() {
                                 if (uploadIndex !== -1) {
                                     const baseUrl = imageUrl.substring(0, uploadIndex + '/image/upload/'.length);
                                     const restOfUrl = imageUrl.substring(uploadIndex + '/image/upload/'.length);
-                                    // w_1920: 1920px width, q_auto: auto quality, f_auto: auto format
-                                    imageUrl = `${baseUrl}w_1920,q_auto,f_auto/${restOfUrl}`;
+                                    // w_{width}: target width, q_auto: auto quality, f_auto: auto format
+                                    imageUrl = `${baseUrl}w_${targetWidth},q_auto,f_auto/${restOfUrl}`;
                                 }
                             } catch {
                                 // If transformation fails, use original URL
@@ -98,6 +98,7 @@ function Slider() {
                             category: img.imageCategory,
                             createdAt: img.createdAt,
                             isPortrait,
+                            isFirstSlide, // Track if this is the first slide for LCP optimization
                         };
 
                         return slideData;
@@ -288,6 +289,7 @@ function Slider() {
             <div className="slider-container">
                 {slides.map((slide, index) => {
                     const isActive = index === currentSlide;
+                    const isFirstSlide = index === 0;
                     const isPrev = index === (currentSlide - 1 + slides.length) % slides.length;
                     const isNext = index === (currentSlide + 1) % slides.length;
                     const shouldShow = isActive || (isTransitioning && (isPrev || isNext));
@@ -300,27 +302,61 @@ function Slider() {
                                 backgroundImage: `url(${slide.backgroundImage})`,
                             }}
                         >
-                            {/* Hidden image to detect orientation on load */}
-                            <img
-                                src={slide.backgroundImage}
-                                alt=""
-                                style={{ display: 'none' }}
-                                onLoad={(e) => {
-                                    const img = e.currentTarget;
-                                    const isPortraitImg = img.naturalHeight > img.naturalWidth;
-                                    const slideElement = img.parentElement;
-                                    if (slideElement && isPortraitImg !== slide.isPortrait) {
-                                        // Update class if orientation was misdetected
-                                        if (isPortraitImg) {
-                                            slideElement.classList.add('portrait');
-                                            slideElement.classList.remove('landscape');
-                                        } else {
-                                            slideElement.classList.add('landscape');
-                                            slideElement.classList.remove('portrait');
+                            {/* Preload image with priority for first slide (LCP optimization) */}
+                            {isActive && isFirstSlide && (
+                                <img
+                                    src={slide.backgroundImage}
+                                    alt=""
+                                    fetchPriority="high"
+                                    loading="eager"
+                                    style={{ 
+                                        position: 'absolute',
+                                        width: 0,
+                                        height: 0,
+                                        opacity: 0,
+                                        pointerEvents: 'none'
+                                    }}
+                                    onLoad={(e) => {
+                                        const img = e.currentTarget;
+                                        const isPortraitImg = img.naturalHeight > img.naturalWidth;
+                                        const slideElement = img.parentElement;
+                                        if (slideElement && isPortraitImg !== slide.isPortrait) {
+                                            // Update class if orientation was misdetected
+                                            if (isPortraitImg) {
+                                                slideElement.classList.add('portrait');
+                                                slideElement.classList.remove('landscape');
+                                            } else {
+                                                slideElement.classList.add('landscape');
+                                                slideElement.classList.remove('portrait');
+                                            }
                                         }
-                                    }
-                                }}
-                            />
+                                    }}
+                                />
+                            )}
+                            {/* Hidden image to detect orientation on load for other slides */}
+                            {!(isActive && isFirstSlide) && (
+                                <img
+                                    src={slide.backgroundImage}
+                                    alt=""
+                                    loading="lazy"
+                                    style={{ display: 'none' }}
+                                    onLoad={(e) => {
+                                        const img = e.currentTarget;
+                                        const isPortraitImg = img.naturalHeight > img.naturalWidth;
+                                        const slideElement = img.parentElement;
+                                        if (slideElement && isPortraitImg !== slide.isPortrait) {
+                                            // Update class if orientation was misdetected
+                                            if (isPortraitImg) {
+                                                slideElement.classList.add('portrait');
+                                                slideElement.classList.remove('landscape');
+                                            } else {
+                                                slideElement.classList.add('landscape');
+                                                slideElement.classList.remove('portrait');
+                                            }
+                                        }
+                                    }}
+                                />
+                            )}
                             <div className="slide-overlay"></div>
 
                             {/* Title and Navigation in Bottom Left */}

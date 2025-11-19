@@ -76,7 +76,7 @@ cd backend
 NODE_ENV=production npm start
 
 # Test that frontend is served correctly
-# Visit http://localhost:5001
+# Visit http://localhost:3000
 ```
 
 ## Deployment

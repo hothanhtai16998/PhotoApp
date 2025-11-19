@@ -27,48 +27,43 @@ export default defineConfig({
 					}
 					return 'assets/[name]-[hash][extname]';
 				},
-				// Manual chunk splitting for better caching and parallel loading
+				// Simplified chunk splitting to avoid circular dependencies
 				manualChunks: (id) => {
-					// Split vendor libraries into separate chunks
+					// Only split node_modules into a single vendor chunk to avoid circular deps
 					if (id.includes('node_modules')) {
-						// React and React DOM together (often used together)
-						if (id.includes('react') || id.includes('react-dom')) {
-							return 'vendor-react';
-						}
-						// React Router
-						if (id.includes('react-router')) {
-							return 'vendor-router';
-						}
-						// UI libraries (Radix UI components)
-						if (id.includes('@radix-ui')) {
-							return 'vendor-radix';
-						}
-						// Form libraries (react-hook-form, zod)
-						if (id.includes('react-hook-form') || id.includes('zod') || id.includes('@hookform')) {
-							return 'vendor-forms';
-						}
-						// State management (zustand)
-						if (id.includes('zustand') || id.includes('immer')) {
-							return 'vendor-state';
-						}
-						// HTTP client (axios)
-						if (id.includes('axios')) {
-							return 'vendor-http';
-						}
-						// Icons (lucide-react)
-						if (id.includes('lucide-react')) {
-							return 'vendor-icons';
-						}
-						// Other vendor libraries
 						return 'vendor';
 					}
 				},
+				// Prevent circular dependency issues
+				format: 'es',
+			},
+			// Handle circular dependencies better
+			onwarn(warning, warn) {
+				// Suppress circular dependency warnings for vendor chunks
+				if (warning.code === 'CIRCULAR_DEPENDENCY') {
+					return;
+				}
+				// Suppress other warnings that don't affect functionality
+				if (warning.code === 'MODULE_LEVEL_DIRECTIVE') {
+					return;
+				}
+				warn(warning);
+			},
+			// Better handling of module dependencies and circular dependencies
+			treeshake: {
+				moduleSideEffects: 'no-external',
+				preset: 'recommended',
 			},
 		},
 		// Enable minification (esbuild is faster than terser)
 		minify: 'esbuild',
 		// Optimize source maps for production
 		sourcemap: false, // Disable source maps in production for smaller bundle
+		// Common chunk splitting strategy
+		commonjsOptions: {
+			include: [/node_modules/],
+			transformMixedEsModules: true,
+		},
 	},
 	// Optimize dependencies
 	optimizeDeps: {
@@ -81,5 +76,18 @@ export default defineConfig({
 			'zustand',
 			'immer',
 		],
+		// Don't force re-optimization - let Vite handle it naturally
+		force: false,
+		// Better handling of commonjs dependencies
+		esbuildOptions: {
+			target: 'es2020',
+		},
+	},
+	// Server configuration for development
+	server: {
+		// Ensure proper handling of module scripts
+		fs: {
+			strict: false,
+		},
 	},
 });

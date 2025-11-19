@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, memo } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { useImageStore } from "@/stores/useImageStore"
 import { categoryService, type Category } from "@/services/categoryService"
 import './CategoryNavigation.css'
 
-export function CategoryNavigation() {
+export const CategoryNavigation = memo(function CategoryNavigation() {
   const { fetchImages, currentCategory } = useImageStore()
   const navigate = useNavigate()
   const location = useLocation()
@@ -103,7 +103,7 @@ export function CategoryNavigation() {
       </div>
     </div>
   )
-}
+})
 
 export default CategoryNavigation
 

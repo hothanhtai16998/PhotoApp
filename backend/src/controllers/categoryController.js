@@ -1,6 +1,7 @@
 import Category from '../models/Category.js';
 import Image from '../models/Image.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
+import { clearCache } from '../middlewares/cacheMiddleware.js';
 
 export const getAllCategories = asyncHandler(async (req, res) => {
     const categories = await Category.find({ isActive: true })
@@ -74,6 +75,9 @@ export const createCategory = asyncHandler(async (req, res) => {
         isActive: true,
     });
 
+    // Clear cache for categories endpoint
+    clearCache('/api/categories');
+
     res.status(201).json({
         message: 'Tạo danh mục thành công',
         category,
@@ -138,6 +142,10 @@ export const updateCategory = asyncHandler(async (req, res) => {
         { new: true, runValidators: true }
     );
 
+    // Clear cache for categories and images endpoints (category changes affect image queries)
+    clearCache('/api/categories');
+    clearCache('/api/images');
+
     res.status(200).json({
         message: 'Tạo mới hoặc cập nhật danh mục thành công',
         category: updatedCategory,
@@ -172,6 +180,10 @@ export const deleteCategory = asyncHandler(async (req, res) => {
     }
 
     await Category.findByIdAndDelete(categoryId);
+
+    // Clear cache for categories and images endpoints
+    clearCache('/api/categories');
+    clearCache('/api/images');
 
     res.status(200).json({
         message: 'Xoá danh mục thành công',

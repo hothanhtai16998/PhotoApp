@@ -6,6 +6,7 @@ import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { logger } from '../utils/logger.js';
 import { PAGINATION } from '../utils/constants.js';
 import { Readable } from 'stream';
+import { clearCache } from '../middlewares/cacheMiddleware.js';
 
 export const getAllImages = asyncHandler(async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page) || PAGINATION.DEFAULT_PAGE);
@@ -219,6 +220,9 @@ export const uploadImage = asyncHandler(async (req, res) => {
         const thumbnailUrl = uploadResponse.eager?.[0]?.secure_url || uploadResponse.secure_url;
         const smallUrl = uploadResponse.eager?.[1]?.secure_url || uploadResponse.secure_url;
         const regularUrl = uploadResponse.eager?.[2]?.secure_url || uploadResponse.secure_url;
+
+        // Clear cache for images endpoint when new image is uploaded
+        clearCache('/api/images');
 
         // Save to database with multiple image sizes
         const newImage = await Image.create({

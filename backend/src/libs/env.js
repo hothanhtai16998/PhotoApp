@@ -26,7 +26,7 @@ const validateEnv = () => {
 validateEnv();
 
 export const env = {
-	PORT: process.env.PORT || 5001,
+	PORT: process.env.PORT || 3000,
 	MONGODB_URI: process.env.MONGODB_URI,
 	ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET,
 	CLIENT_URL: process.env.CLIENT_URL,

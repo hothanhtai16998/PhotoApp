@@ -22,8 +22,11 @@
 		<!-- Performance: Preconnect to external domains -->
 		<link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
 		<link rel="dns-prefetch" href="https://res.cloudinary.com" />
-		<!-- Performance: Preload critical resources -->
-		<link rel="modulepreload" href="/src/main.tsx" />
+		<!-- Performance: Preconnect to Google Fonts -->
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<!-- Performance: Load critical fonts with font-display swap (no inline handlers for CSP compliance) -->
+		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Urbanist:wght@700&family=Proxima+Nova:wght@400;500;600&display=swap" />
 	</head>
 	<body>
 		<div id="root"></div>

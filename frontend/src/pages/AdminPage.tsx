@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { adminService, type DashboardStats, type User, type AdminImage, type AdminRole, type AdminRolePermissions } from '@/services/adminService';
@@ -14,14 +14,25 @@ import {
     Tag
 } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-    AdminDashboard,
-    AdminUsers,
-    AdminImages,
-    AdminCategories,
-    AdminRoles,
-} from '@/components/admin/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
 import './AdminPage.css';
+
+// Lazy load admin tab components to reduce initial bundle size
+const AdminDashboard = lazy(() => import('@/components/admin/tabs/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const AdminUsers = lazy(() => import('@/components/admin/tabs/AdminUsers').then(m => ({ default: m.AdminUsers })));
+const AdminImages = lazy(() => import('@/components/admin/tabs/AdminImages').then(m => ({ default: m.AdminImages })));
+const AdminCategories = lazy(() => import('@/components/admin/tabs/AdminCategories').then(m => ({ default: m.AdminCategories })));
+const AdminRoles = lazy(() => import('@/components/admin/tabs/AdminRoles').then(m => ({ default: m.AdminRoles })));
+
+// Loading fallback for admin tabs
+const AdminTabLoader = () => (
+    <div className="flex items-center justify-center p-8">
+        <div className="flex flex-col items-center gap-4">
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-64 w-full max-w-4xl" />
+        </div>
+    </div>
+);
 
 type TabType = 'dashboard' | 'users' | 'images' | 'categories' | 'roles';
 
@@ -348,66 +359,68 @@ function AdminPage() {
 
                     {/* Main Content */}
                     <div className="admin-content">
-                        {activeTab === 'dashboard' && (
-                            <AdminDashboard stats={stats} loading={loading} />
-                        )}
-                        {activeTab === 'users' && (
-                            <AdminUsers
-                                users={users}
-                                pagination={usersPagination}
-                                search={usersSearch}
-                                currentUser={user as AuthUser | null}
-                                onSearchChange={setUsersSearch}
-                                onSearch={() => loadUsers(1)}
-                                onPageChange={loadUsers}
-                                onEdit={setEditingUser}
-                                onDelete={handleDeleteUser}
-                                editingUser={editingUser}
-                                onCloseEdit={() => setEditingUser(null)}
-                                onSaveEdit={handleUpdateUser}
-                            />
-                        )}
-                        {activeTab === 'images' && (
-                            <AdminImages
-                                images={images}
-                                pagination={imagesPagination}
-                                search={imagesSearch}
-                                onSearchChange={setImagesSearch}
-                                onSearch={() => loadImages(1)}
-                                onPageChange={loadImages}
-                                onDelete={handleDeleteImage}
-                            />
-                        )}
-                        {activeTab === 'categories' && (
-                            <AdminCategories
-                                categories={categories}
-                                creatingCategory={creatingCategory}
-                                editingCategory={editingCategory}
-                                onCreateClick={() => setCreatingCategory(true)}
-                                onEdit={setEditingCategory}
-                                onDelete={handleDeleteCategory}
-                                onCloseCreate={() => setCreatingCategory(false)}
-                                onCloseEdit={() => setEditingCategory(null)}
-                                onSaveCreate={handleCreateCategory}
-                                onSaveEdit={handleUpdateCategory}
-                            />
-                        )}
-                        {activeTab === 'roles' && user?.isSuperAdmin && (
-                            <AdminRoles
-                                roles={adminRoles}
-                                users={users}
-                                currentUser={user as AuthUser | null}
-                                creatingRole={creatingRole}
-                                editingRole={editingRole}
-                                onCreateClick={() => setCreatingRole(true)}
-                                onEdit={(role) => setEditingRole(role)}
-                                onDelete={handleDeleteRole}
-                                onCloseCreate={() => setCreatingRole(false)}
-                                onCloseEdit={() => setEditingRole(null)}
-                                onSaveCreate={handleCreateRole}
-                                onSaveEdit={handleUpdateRole}
-                            />
-                        )}
+                        <Suspense fallback={<AdminTabLoader />}>
+                            {activeTab === 'dashboard' && (
+                                <AdminDashboard stats={stats} loading={loading} />
+                            )}
+                            {activeTab === 'users' && (
+                                <AdminUsers
+                                    users={users}
+                                    pagination={usersPagination}
+                                    search={usersSearch}
+                                    currentUser={user as AuthUser | null}
+                                    onSearchChange={setUsersSearch}
+                                    onSearch={() => loadUsers(1)}
+                                    onPageChange={loadUsers}
+                                    onEdit={setEditingUser}
+                                    onDelete={handleDeleteUser}
+                                    editingUser={editingUser}
+                                    onCloseEdit={() => setEditingUser(null)}
+                                    onSaveEdit={handleUpdateUser}
+                                />
+                            )}
+                            {activeTab === 'images' && (
+                                <AdminImages
+                                    images={images}
+                                    pagination={imagesPagination}
+                                    search={imagesSearch}
+                                    onSearchChange={setImagesSearch}
+                                    onSearch={() => loadImages(1)}
+                                    onPageChange={loadImages}
+                                    onDelete={handleDeleteImage}
+                                />
+                            )}
+                            {activeTab === 'categories' && (
+                                <AdminCategories
+                                    categories={categories}
+                                    creatingCategory={creatingCategory}
+                                    editingCategory={editingCategory}
+                                    onCreateClick={() => setCreatingCategory(true)}
+                                    onEdit={setEditingCategory}
+                                    onDelete={handleDeleteCategory}
+                                    onCloseCreate={() => setCreatingCategory(false)}
+                                    onCloseEdit={() => setEditingCategory(null)}
+                                    onSaveCreate={handleCreateCategory}
+                                    onSaveEdit={handleUpdateCategory}
+                                />
+                            )}
+                            {activeTab === 'roles' && user?.isSuperAdmin && (
+                                <AdminRoles
+                                    roles={adminRoles}
+                                    users={users}
+                                    currentUser={user as AuthUser | null}
+                                    creatingRole={creatingRole}
+                                    editingRole={editingRole}
+                                    onCreateClick={() => setCreatingRole(true)}
+                                    onEdit={(role) => setEditingRole(role)}
+                                    onDelete={handleDeleteRole}
+                                    onCloseCreate={() => setCreatingRole(false)}
+                                    onCloseEdit={() => setEditingRole(null)}
+                                    onSaveCreate={handleCreateRole}
+                                    onSaveEdit={handleUpdateRole}
+                                />
+                            )}
+                        </Suspense>
                     </div>
                 </div>
             </div>

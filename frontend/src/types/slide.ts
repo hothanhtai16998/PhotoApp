@@ -10,4 +10,5 @@ export interface Slide {
 	category?: string | { name: string };
 	createdAt?: string;
 	isPortrait?: boolean;
+	isFirstSlide?: boolean;
 }
