@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback, memo } from 'react';
 import { useImageStore } from '@/stores/useImageStore';
 import { Download } from 'lucide-react';
 import type { Image } from '@/types/image';
@@ -9,7 +9,7 @@ import { Skeleton } from './ui/skeleton';
 import { toast } from 'sonner';
 import './ImageGrid.css';
 
-const ImageGrid = () => {
+const ImageGrid = memo(() => {
   const { images, loading, error, pagination, currentSearch, currentCategory, fetchImages } = useImageStore();
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -420,6 +420,8 @@ const ImageGrid = () => {
       )}
     </div>
   );
-};
+});
+
+ImageGrid.displayName = 'ImageGrid';
 
 export default ImageGrid;

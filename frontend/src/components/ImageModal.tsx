@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Share2,
@@ -273,6 +273,39 @@ const ImageModal = ({
     };
   }, [hasMoreRelatedImages, isLoadingRelatedImages]);
 
+  // Handle share functionality
+  const handleShare = useCallback(async () => {
+    const shareUrl = `${window.location.origin}/?image=${image._id}`;
+    const shareText = `Check out this photo: ${image.imageTitle || 'Untitled'}`;
+
+    // Use Web Share API if available (mobile)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: image.imageTitle || 'Photo',
+          text: shareText,
+          url: shareUrl,
+        });
+        toast.success('Đã chia sẻ ảnh');
+        return;
+      } catch (error) {
+        // User cancelled or error occurred, fall through to clipboard
+        if ((error as Error).name !== 'AbortError') {
+          console.error('Share failed:', error);
+        }
+      }
+    }
+
+    // Fallback: Copy to clipboard
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success('Đã sao chép liên kết vào clipboard');
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
+      toast.error('Không thể chia sẻ. Vui lòng thử lại.');
+    }
+  }, [image._id, image.imageTitle]);
+
   // Handle toggle favorite
   const handleToggleFavorite = async () => {
     if (!accessToken || !image._id || isTogglingFavorite) return;
@@ -298,11 +331,65 @@ const ImageModal = ({
     }
   };
 
-  // Close modal on Escape key and handle overlay scrolling
+  // Handle keyboard shortcuts
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
+    const handleKeyboard = (e: KeyboardEvent) => {
+      // Close modal on Escape
       if (e.key === 'Escape') {
         onClose();
+        return;
+      }
+      
+      // Only handle shortcuts when modal is open (not typing in inputs)
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+
+      // Arrow keys for navigation (if multiple images)
+      if (e.key === 'ArrowLeft' && images.length > 1) {
+        const currentIndex = images.findIndex(img => img._id === image._id);
+        if (currentIndex > 0) {
+          onImageSelect(images[currentIndex - 1]);
+        }
+        e.preventDefault();
+        return;
+      }
+      
+      if (e.key === 'ArrowRight' && images.length > 1) {
+        const currentIndex = images.findIndex(img => img._id === image._id);
+        if (currentIndex < images.length - 1) {
+          onImageSelect(images[currentIndex + 1]);
+        }
+        e.preventDefault();
+        return;
+      }
+
+      // Download with Ctrl/Cmd + D
+      if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        e.preventDefault();
+        const fakeEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+        const downloadBtn = document.querySelector('.modal-download-btn') as HTMLElement;
+        if (downloadBtn) {
+          downloadBtn.click();
+        }
+        return;
+      }
+
+      // Share with Ctrl/Cmd + S
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleShare().catch(console.error);
+        return;
+      }
+
+      // Toggle favorite with F
+      if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        if (accessToken && !isTogglingFavorite) {
+          handleToggleFavorite();
+        }
+        return;
       }
     };
 
@@ -326,7 +413,7 @@ const ImageModal = ({
       modalContent.scrollTop += wheelEvent.deltaY;
     };
 
-    document.addEventListener('keydown', handleEscape);
+    document.addEventListener('keydown', handleKeyboard);
     // Prevent page/body scrolling when modal is open
     document.body.style.overflow = 'hidden';
     // Prevent scrolling on the image grid container
@@ -339,7 +426,7 @@ const ImageModal = ({
     document.addEventListener('wheel', handleWheel, { passive: false });
 
     return () => {
-      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('keydown', handleKeyboard);
       document.removeEventListener('wheel', handleWheel);
       document.body.style.overflow = '';
       const gridContainer = document.querySelector('.image-grid-container');
@@ -347,7 +434,7 @@ const ImageModal = ({
         (gridContainer as HTMLElement).style.overflow = '';
       }
     };
-  }, [onClose]);
+  }, [onClose, images, image._id, onImageSelect, accessToken, isTogglingFavorite, handleShare, handleToggleFavorite]);
 
   return (
     <>
@@ -385,15 +472,17 @@ const ImageModal = ({
 
           {/* Right: Action Buttons */}
           <div className="modal-header-right">
-            {/* <button className="modal-action-btn" title="Save">
-              <Bookmark size={20} />
+            <button
+              className="modal-action-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleShare();
+              }}
+              title="Share (Ctrl/Cmd + S)"
+              aria-label="Chia sẻ ảnh"
+            >
+              <Share2 size={20} />
             </button>
-            <button className="modal-action-btn" title="Add">
-              <Plus size={20} />
-            </button>
-            <button className="modal-action-btn" title="Edit image">
-              <Edit size={20} />
-            </button> */}
             <button
               className="modal-download-btn"
               onClick={async (e) => {

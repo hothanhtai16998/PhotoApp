@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import './ProgressiveImage.css';
 
 interface ProgressiveImageProps {
@@ -47,7 +47,7 @@ const generateSmallUrl = (imageUrl: string): string => {
  * 2. Loads small size for grid view
  * 3. Optionally loads full size on hover/click
  */
-const ProgressiveImage = ({
+const ProgressiveImage = memo(({
   src,
   thumbnailUrl,
   smallUrl,
@@ -237,7 +237,9 @@ const ProgressiveImage = ({
       )}
     </div>
   );
-};
+});
+
+ProgressiveImage.displayName = 'ProgressiveImage';
 
 export default ProgressiveImage;
 

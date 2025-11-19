@@ -4,6 +4,7 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { imageService } from "@/services/imageService";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Edit2, Star, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import type { Image } from "@/types/image";
@@ -219,12 +220,26 @@ function ProfilePage() {
                     <div className="profile-content">
                         {activeTab === 'photos' || activeTab === 'illustrations' ? (
                             loading ? (
-                                <div className="loading-state">
-                                    <p>Loading images...</p>
+                                <div className="profile-image-grid" aria-label="Đang tải ảnh" aria-live="polite">
+                                    {Array.from({ length: 12 }).map((_, index) => (
+                                        <div
+                                            key={`skeleton-${index}`}
+                                            className={`profile-image-item ${index % 3 === 0 ? 'portrait' : 'landscape'}`}
+                                        >
+                                            <Skeleton className="w-full h-full min-h-[200px] rounded-lg" />
+                                        </div>
+                                    ))}
                                 </div>
                             ) : displayImages.length === 0 ? (
-                                <div className="empty-state">
-                                    <p>No {activeTab} yet.</p>
+                                <div className="empty-state" role="status" aria-live="polite">
+                                    <p>Chưa có {activeTab === 'photos' ? 'ảnh' : 'minh họa'} nào.</p>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => navigate('/upload')}
+                                        className="mt-4"
+                                    >
+                                        Tải ảnh lên
+                                    </Button>
                                 </div>
                             ) : (
                                 <div className="profile-image-grid">
