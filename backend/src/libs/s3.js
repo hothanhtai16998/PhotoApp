@@ -65,7 +65,7 @@ export const uploadImageWithSizes = async (imageBuffer, folder = 'photo-app-imag
 		const [thumbnailUrl, smallUrl, regularUrl, originalUrl] = await Promise.all(uploadPromises);
 
 		return {
-			publicId: `${folder}/${baseFilename}`,
+			publicId: baseFilename, // Store only filename, not full path
 			imageUrl: originalUrl,
 			thumbnailUrl,
 			smallUrl,

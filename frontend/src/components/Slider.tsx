@@ -34,13 +34,12 @@ function Slider() {
                     // Convert images to slides format
                     const slidesDataPromises = response.images.map(async (img: Image, index: number) => {
                         // Use optimized image sizes for better LCP
-                        // First slide uses smaller size (1200px) for faster LCP, others use 1920px
+                        // First slide uses smaller size for faster LCP, others use regular size
                         const isFirstSlide = index === 0;
-                        const targetWidth = isFirstSlide ? 1200 : 1920;
-                        
+
                         // Use regularUrl if available (1080px), otherwise fallback to imageUrl
                         // For first slide, prefer smaller size for faster LCP
-                        let imageUrl = isFirstSlide && img.regularUrl 
+                        const imageUrl = isFirstSlide && img.regularUrl 
                             ? img.regularUrl 
                             : (img.regularUrl || img.imageUrl);
 
@@ -292,7 +291,7 @@ function Slider() {
                                     alt=""
                                     fetchPriority="high"
                                     loading="eager"
-                                    style={{ 
+                                    style={{
                                         position: 'absolute',
                                         width: 0,
                                         height: 0,
