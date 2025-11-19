@@ -6,10 +6,14 @@ import {
   MoreVertical,
   CheckCircle2,
   ChevronDown,
+  Heart,
 } from 'lucide-react';
 import type { Image } from '@/types/image';
 import ProgressiveImage from './ProgressiveImage';
 import { imageService } from '@/services/imageService';
+import { favoriteService } from '@/services/favoriteService';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { toast } from 'sonner';
 import './ImageModal.css';
 
 interface ImageModalProps {
@@ -44,10 +48,13 @@ const ImageModal = ({
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'views' | 'downloads'>('views');
   const [hoveredBar, setHoveredBar] = useState<{ date: string; views: number; downloads: number; x: number; y: number } | null>(null);
+  const [isFavorited, setIsFavorited] = useState<boolean>(false);
+  const [isTogglingFavorite, setIsTogglingFavorite] = useState<boolean>(false);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const infoButtonRef = useRef<HTMLButtonElement>(null);
   const incrementedViewIds = useRef<Set<string>>(new Set());
   const currentImageIdRef = useRef<string | null>(null);
+  const { accessToken } = useAuthStore();
 
   // Generate accurate chart data - only show actual data for today, 0 for previous days
   const chartData = useMemo(() => {
@@ -99,7 +106,43 @@ const ImageModal = ({
     setViews(image.views || 0);
     setDownloads(image.downloads || 0);
     currentImageIdRef.current = image._id;
-  }, [image]);
+    
+    // Check favorite status when image changes (only if user is logged in)
+    if (accessToken && image && image._id) {
+      // Ensure imageId is a string and valid MongoDB ObjectId
+      const imageId = String(image._id).trim();
+      
+      // Validate MongoDB ObjectId format (24 hex characters)
+      const isValidMongoId = /^[0-9a-fA-F]{24}$/.test(imageId);
+      
+      if (!imageId || imageId === 'undefined' || imageId === 'null' || !isValidMongoId) {
+        setIsFavorited(false);
+        return;
+      }
+      
+      favoriteService.checkFavorites([imageId])
+        .then((response) => {
+          // Check response structure - backend returns { success: true, favorites: { imageId: boolean } }
+          if (response && response.favorites && typeof response.favorites === 'object') {
+            // Check both string and original ID format to handle any type mismatches
+            const isFavorited = response.favorites[imageId] === true || 
+                               response.favorites[String(image._id)] === true ||
+                               response.favorites[image._id] === true;
+            setIsFavorited(!!isFavorited);
+          } else {
+            setIsFavorited(false);
+          }
+        })
+        .catch((error) => {
+          // Silently fail - favorite status is optional
+          console.error('Failed to check favorite status:', error);
+        });
+    } else {
+      setIsFavorited(false);
+    }
+    // Use image._id instead of image object to ensure it triggers when image changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [image._id, accessToken]);
 
   // Close info modal when clicking outside
   useEffect(() => {
@@ -229,6 +272,31 @@ const ImageModal = ({
       observer.disconnect();
     };
   }, [hasMoreRelatedImages, isLoadingRelatedImages]);
+
+  // Handle toggle favorite
+  const handleToggleFavorite = async () => {
+    if (!accessToken || !image._id || isTogglingFavorite) return;
+
+    setIsTogglingFavorite(true);
+    try {
+      const imageId = String(image._id);
+      const response = await favoriteService.toggleFavorite(imageId);
+      
+      // Update local state immediately
+      setIsFavorited(response.isFavorited);
+      
+      if (response.isFavorited) {
+        toast.success('Đã thêm vào yêu thích');
+      } else {
+        toast.success('Đã xóa khỏi yêu thích');
+      }
+    } catch (error) {
+      console.error('Failed to toggle favorite:', error);
+      toast.error('Không thể cập nhật yêu thích. Vui lòng thử lại.');
+    } finally {
+      setIsTogglingFavorite(false);
+    }
+  };
 
   // Close modal on Escape key and handle overlay scrolling
   useEffect(() => {
@@ -406,6 +474,21 @@ const ImageModal = ({
 
             {/* Right: Actions */}
             <div className="modal-footer-right">
+              {accessToken && (
+                <button
+                  className={`modal-footer-btn ${isFavorited ? 'favorited' : ''}`}
+                  onClick={handleToggleFavorite}
+                  disabled={isTogglingFavorite}
+                  aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                >
+                  <Heart 
+                    size={18} 
+                    fill={isFavorited ? 'currentColor' : 'none'}
+                    className={isFavorited ? 'favorite-icon-filled' : ''}
+                  />
+                  <span>{isFavorited ? 'Đã lưu' : 'Lưu'}</span>
+                </button>
+              )}
               <button className="modal-footer-btn">
                 <Share2 size={18} />
                 <span>Chia sẻ</span>

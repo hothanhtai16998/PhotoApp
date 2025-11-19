@@ -12,8 +12,10 @@ import compression from 'compression';
 import imageRoute from './routes/imageRoute.js';
 import adminRoute from './routes/adminRoute.js';
 import categoryRoute from './routes/categoryRoute.js';
+import favoriteRoute from './routes/favoriteRoute.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { apiLimiter } from './middlewares/rateLimiter.js';
+import { csrfToken, validateCsrf, getCsrfToken } from './middlewares/csrfMiddleware.js';
 import { logger } from './utils/logger.js';
 import { startSessionCleanup } from './utils/sessionCleanup.js';
 import 'dotenv/config';
@@ -57,12 +59,15 @@ app.use(
         origin: env.CLIENT_URL,
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-XSRF-TOKEN', 'X-CSRF-Token'],
     })
 );
 
 // Apply rate limiting to all API routes
 app.use('/api', apiLimiter);
+
+// CSRF protection - generate token for all routes
+app.use('/api', csrfToken);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -72,12 +77,16 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// CSRF token endpoint (for frontend to retrieve token)
+app.get('/api/csrf-token', getCsrfToken);
+
 // API Routes
 app.use('/api/auth', authRoute);
 app.use('/api/users', userRoute);
 app.use('/api/images', imageRoute);
 app.use('/api/admin', adminRoute);
 app.use('/api/categories', categoryRoute);
+app.use('/api/favorites', favoriteRoute);
 
 // Serve static files in production
 if (env.NODE_ENV === 'production') {

@@ -14,7 +14,20 @@ const api = axios.create({
 	timeout: 120000, // 2 minutes for file uploads (can be overridden per request)
 });
 
-// Attach access token to request headers
+// Helper function to get CSRF token from cookie
+const getCsrfTokenFromCookie = (): string | null => {
+	if (typeof document === 'undefined') return null;
+	const cookies = document.cookie.split(';');
+	for (const cookie of cookies) {
+		const [name, value] = cookie.trim().split('=');
+		if (name === 'XSRF-TOKEN') {
+			return decodeURIComponent(value);
+		}
+	}
+	return null;
+};
+
+// Attach access token and CSRF token to request headers
 api.interceptors.request.use(
 	(
 		config: InternalAxiosRequestConfig
@@ -24,6 +37,14 @@ api.interceptors.request.use(
 
 		if (accessToken && config.headers) {
 			config.headers.Authorization = `Bearer ${accessToken}`;
+		}
+
+		// Add CSRF token for state-changing requests (POST, PUT, DELETE, PATCH)
+		if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(config.method?.toUpperCase() || '')) {
+			const csrfToken = getCsrfTokenFromCookie();
+			if (csrfToken && config.headers) {
+				config.headers['X-XSRF-TOKEN'] = csrfToken;
+			}
 		}
 
 		// Ensure Content-Type is set for JSON requests (if not already set)

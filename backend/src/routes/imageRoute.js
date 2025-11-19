@@ -10,6 +10,7 @@ import { singleUpload } from '../middlewares/multerMiddleware.js';
 import { protectedRoute } from '../middlewares/authMiddleware.js';
 import { uploadLimiter } from '../middlewares/rateLimiter.js';
 import { validateImageUpload, validateGetImages, validateUserId } from '../middlewares/validationMiddleware.js';
+import { validateCsrf } from '../middlewares/csrfMiddleware.js';
 
 const router = express.Router();
 
@@ -20,8 +21,8 @@ router.get('/', validateGetImages, getAllImages);
 router.patch('/:imageId/view', incrementView);
 router.patch('/:imageId/download', incrementDownload);
 
-// Protected routes
-router.post('/upload', protectedRoute, uploadLimiter, singleUpload, validateImageUpload, uploadImage);
+// Protected routes (with CSRF protection for state-changing operations)
+router.post('/upload', protectedRoute, validateCsrf, uploadLimiter, singleUpload, validateImageUpload, uploadImage);
 router.get('/user/:userId', protectedRoute, validateUserId, validateGetImages, getImagesByUserId);
 
 export default router;

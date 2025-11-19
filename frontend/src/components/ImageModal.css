@@ -397,14 +397,37 @@
 	display: flex;
 	align-items: center;
 	gap: 6px;
-	padding: 8px 12px;
+	padding: 8px 16px;
 	background: #f5f5f5;
-	border: none;
-	border-radius: 6px;
 	color: #111;
+	border: none;
+	border-radius: 8px;
 	cursor: pointer;
-	font-size: 0.8125rem;
+	font-size: 0.875rem;
+	font-weight: 500;
 	transition: all 0.2s ease;
+}
+
+.modal-footer-btn:hover {
+	background: #e5e5e5;
+}
+
+.modal-footer-btn:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.modal-footer-btn.favorited {
+	background: #fee2e2;
+	color: #dc2626;
+}
+
+.modal-footer-btn.favorited:hover {
+	background: #fecaca;
+}
+
+.favorite-icon-filled {
+	color: #dc2626;
 }
 
 .modal-footer-btn:hover {
@@ -413,6 +436,10 @@
 
 .modal-footer-btn:last-child {
 	padding: 8px;
+}
+
+.modal-footer-btn.favorited:last-child {
+	padding: 8px 16px;
 }
 
 /* Modal Close Button */

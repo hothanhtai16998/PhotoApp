@@ -1,0 +1,92 @@
+import api from '@/lib/axios';
+
+export interface FavoriteResponse {
+	success: boolean;
+	isFavorited: boolean;
+	message: string;
+}
+
+export interface FavoritesCheckResponse {
+	success: boolean;
+	favorites: Record<string, boolean>;
+}
+
+export interface FavoritesListResponse {
+	success: boolean;
+	images: any[];
+	pagination: {
+		page: number;
+		limit: number;
+		total: number;
+		pages: number;
+	};
+}
+
+export const favoriteService = {
+	/**
+	 * Toggle favorite status for an image
+	 */
+	toggleFavorite: async (imageId: string): Promise<FavoriteResponse> => {
+		const res = await api.post(`/favorites/${imageId}`, {}, {
+			withCredentials: true,
+		});
+		return res.data;
+	},
+
+	/**
+	 * Get user's favorite images
+	 */
+	getFavorites: async (params?: {
+		page?: number;
+		limit?: number;
+	}): Promise<FavoritesListResponse> => {
+		const queryParams = new URLSearchParams();
+		if (params?.page) {
+			queryParams.append('page', params.page.toString());
+		}
+		if (params?.limit) {
+			queryParams.append('limit', params.limit.toString());
+		}
+
+		const queryString = queryParams.toString();
+		const url = queryString ? `/favorites?${queryString}` : '/favorites';
+
+		const res = await api.get(url, {
+			withCredentials: true,
+		});
+		return res.data;
+	},
+
+	/**
+	 * Check if multiple images are favorited
+	 */
+	checkFavorites: async (imageIds: string[]): Promise<FavoritesCheckResponse> => {
+		// Ensure imageIds is a non-empty array
+		if (!Array.isArray(imageIds) || imageIds.length === 0) {
+			throw new Error('imageIds must be a non-empty array');
+		}
+		
+		// Validate MongoDB ObjectId format (24 hex characters)
+		const isValidMongoId = (id: string): boolean => {
+			return /^[0-9a-fA-F]{24}$/.test(String(id));
+		};
+		
+		// Ensure all IDs are strings and valid MongoDB ObjectIds
+		const stringIds = imageIds
+			.map(id => String(id).trim())
+			.filter(id => id && isValidMongoId(id));
+		
+		if (stringIds.length === 0) {
+			throw new Error('imageIds must contain at least one valid MongoDB ObjectId');
+		}
+		
+		const res = await api.post('/favorites/check', { imageIds: stringIds }, {
+			withCredentials: true,
+			headers: {
+				'Content-Type': 'application/json',
+			},
+		});
+		return res.data;
+	},
+};
+

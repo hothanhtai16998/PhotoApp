@@ -10,6 +10,7 @@ import EditProfilePage from "./pages/EditProfilePage";
 import ProfilePage from "./pages/ProfilePage";
 import UploadPage from "./pages/UploadPage";
 import AdminPage from "./pages/AdminPage";
+import FavoritesPage from "./pages/FavoritesPage";
 
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile/edit" element={<EditProfilePage />} />
         <Route path="/upload" element={<UploadPage />} />
+        <Route path="/favorites" element={<FavoritesPage />} />
       </Route>
 
       {/**admin routes */}

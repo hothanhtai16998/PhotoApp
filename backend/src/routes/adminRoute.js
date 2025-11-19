@@ -16,6 +16,7 @@ import {
 import { protectedRoute } from '../middlewares/authMiddleware.js';
 import { adminRoute } from '../middlewares/adminMiddleware.js';
 import { requireSuperAdmin } from '../middlewares/permissionMiddleware.js';
+import { validateCsrf } from '../middlewares/csrfMiddleware.js';
 
 const router = express.Router();
 
@@ -29,19 +30,19 @@ router.get('/dashboard/stats', getDashboardStats);
 // User Management
 router.get('/users', getAllUsers);
 router.get('/users/:userId', getUserById);
-router.put('/users/:userId', updateUser);
-router.delete('/users/:userId', deleteUser);
+router.put('/users/:userId', validateCsrf, updateUser);
+router.delete('/users/:userId', validateCsrf, deleteUser);
 
 // Image Management
 router.get('/images', getAllImagesAdmin);
-router.delete('/images/:imageId', deleteImage);
+router.delete('/images/:imageId', validateCsrf, deleteImage);
 
 // Admin Role Management (Super Admin Only)
 router.get('/roles', requireSuperAdmin, getAllAdminRoles);
 router.get('/roles/:userId', getAdminRole);
-router.post('/roles', requireSuperAdmin, createAdminRole);
-router.put('/roles/:userId', requireSuperAdmin, updateAdminRole);
-router.delete('/roles/:userId', requireSuperAdmin, deleteAdminRole);
+router.post('/roles', requireSuperAdmin, validateCsrf, createAdminRole);
+router.put('/roles/:userId', requireSuperAdmin, validateCsrf, updateAdminRole);
+router.delete('/roles/:userId', requireSuperAdmin, validateCsrf, deleteAdminRole);
 
 export default router;
 

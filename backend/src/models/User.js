@@ -56,6 +56,11 @@ const userSchema = new mongoose.Schema(
             default: false,
             index: true,
         },
+        // Favorites - array of image IDs that user has favorited
+        favorites: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Image',
+        }],
         // location: {
         //     type: String,
         // }

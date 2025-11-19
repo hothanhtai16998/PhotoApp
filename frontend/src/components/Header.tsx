@@ -2,7 +2,7 @@
 
 import { memo, useState, useEffect, useRef } from "react"
 import { Link, useNavigate, useLocation } from "react-router-dom"
-import { Search, X, Shield } from "lucide-react"
+import { Search, X, Shield, Heart } from "lucide-react"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { useImageStore } from "@/stores/useImageStore"
 import UploadModal from "./UploadModal"
@@ -167,6 +167,10 @@ export const Header = memo(function Header() {
             {accessToken ? (
               <>
                 <button onClick={() => setUploadModalOpen(true)} className="header-link">Thêm ảnh</button>
+                <Link to="/favorites" className="header-link" title="Ảnh yêu thích" aria-label="Xem ảnh yêu thích">
+                  <Heart size={18} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                  Yêu thích
+                </Link>
                 {user?.isAdmin && (
                   <Link to="/admin" className="header-link" title="Admin Panel">
                     <Shield size={18} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
