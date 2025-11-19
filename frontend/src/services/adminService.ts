@@ -1,0 +1,187 @@
+import api from '@/lib/axios';
+
+export interface DashboardStats {
+    stats: {
+        totalUsers: number;
+        totalImages: number;
+        categoryStats: Array<{ _id: string; count: number }>;
+    };
+    recentUsers: any[];
+    recentImages: any[];
+}
+
+export interface User {
+    _id: string;
+    username: string;
+    email: string;
+    displayName: string;
+    bio?: string;
+    isAdmin: boolean;
+    isSuperAdmin?: boolean;
+    createdAt: string;
+    imageCount?: number;
+}
+
+export interface AdminImage {
+    _id: string;
+    imageTitle: string;
+    imageUrl: string;
+    imageCategory: string | { _id: string; name: string; description?: string } | null;
+    uploadedBy: {
+        _id: string;
+        username: string;
+        displayName: string;
+        email: string;
+    };
+    createdAt: string;
+}
+
+export interface AdminRolePermissions {
+    manageUsers?: boolean;
+    deleteUsers?: boolean;
+    manageImages?: boolean;
+    deleteImages?: boolean;
+    manageCategories?: boolean;
+    manageAdmins?: boolean;
+    viewDashboard?: boolean;
+}
+
+export interface AdminRole {
+    _id: string;
+    userId: User | string;
+    role: 'super_admin' | 'admin' | 'moderator';
+    permissions: AdminRolePermissions;
+    grantedBy?: User;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export const adminService = {
+    getDashboardStats: async (): Promise<DashboardStats> => {
+        const res = await api.get('/admin/dashboard/stats', {
+            withCredentials: true,
+        });
+        return res.data;
+    },
+
+    getAllUsers: async (params?: {
+        page?: number;
+        limit?: number;
+        search?: string;
+    }): Promise<{ users: User[]; pagination: any }> => {
+        const queryParams = new URLSearchParams();
+        if (params?.page) queryParams.append('page', params.page.toString());
+        if (params?.limit) queryParams.append('limit', params.limit.toString());
+        if (params?.search) queryParams.append('search', params.search);
+
+        const queryString = queryParams.toString();
+        const url = queryString ? `/admin/users?${queryString}` : '/admin/users';
+
+        const res = await api.get(url, {
+            withCredentials: true,
+        });
+        return res.data;
+    },
+
+    getUserById: async (userId: string): Promise<{ user: User }> => {
+        const res = await api.get(`/admin/users/${userId}`, {
+            withCredentials: true,
+        });
+        return res.data;
+    },
+
+    updateUser: async (
+        userId: string,
+        data: {
+            displayName?: string;
+            email?: string;
+            bio?: string;
+        }
+    ): Promise<{ user: User }> => {
+        const res = await api.put(`/admin/users/${userId}`, data, {
+            withCredentials: true,
+        });
+        return res.data;
+    },
+
+    deleteUser: async (userId: string): Promise<void> => {
+        await api.delete(`/admin/users/${userId}`, {
+            withCredentials: true,
+        });
+    },
+
+    getAllImages: async (params?: {
+        page?: number;
+        limit?: number;
+        search?: string;
+        category?: string;
+        userId?: string;
+    }): Promise<{ images: AdminImage[]; pagination: any }> => {
+        const queryParams = new URLSearchParams();
+        if (params?.page) queryParams.append('page', params.page.toString());
+        if (params?.limit) queryParams.append('limit', params.limit.toString());
+        if (params?.search) queryParams.append('search', params.search);
+        if (params?.category) queryParams.append('category', params.category);
+        if (params?.userId) queryParams.append('userId', params.userId);
+
+        const queryString = queryParams.toString();
+        const url = queryString ? `/admin/images?${queryString}` : '/admin/images';
+
+        const res = await api.get(url, {
+            withCredentials: true,
+        });
+        return res.data;
+    },
+
+    deleteImage: async (imageId: string): Promise<void> => {
+        await api.delete(`/admin/images/${imageId}`, {
+            withCredentials: true,
+        });
+    },
+
+    // Admin Role Management
+    getAllAdminRoles: async (): Promise<{ adminRoles: AdminRole[] }> => {
+        const res = await api.get('/admin/roles', {
+            withCredentials: true,
+        });
+        return res.data;
+    },
+
+    getAdminRole: async (userId: string): Promise<{ adminRole: AdminRole }> => {
+        const res = await api.get(`/admin/roles/${userId}`, {
+            withCredentials: true,
+        });
+        return res.data;
+    },
+
+    createAdminRole: async (data: {
+        userId: string;
+        role?: 'super_admin' | 'admin' | 'moderator';
+        permissions?: AdminRolePermissions;
+    }): Promise<{ adminRole: AdminRole }> => {
+        const res = await api.post('/admin/roles', data, {
+            withCredentials: true,
+        });
+        return res.data;
+    },
+
+    updateAdminRole: async (
+        userId: string,
+        data: {
+            role?: 'super_admin' | 'admin' | 'moderator';
+            permissions?: AdminRolePermissions;
+        }
+    ): Promise<{ adminRole: AdminRole }> => {
+        const res = await api.put(`/admin/roles/${userId}`, data, {
+            withCredentials: true,
+        });
+        return res.data;
+    },
+
+    deleteAdminRole: async (userId: string): Promise<void> => {
+        await api.delete(`/admin/roles/${userId}`, {
+            withCredentials: true,
+        });
+    },
+};
+

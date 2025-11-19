@@ -1,0 +1,577 @@
+import User from '../models/User.js';
+import Image from '../models/Image.js';
+import AdminRole from '../models/AdminRole.js';
+import Category from '../models/Category.js';
+import { asyncHandler } from '../middlewares/asyncHandler.js';
+import { logger } from '../utils/logger.js';
+import cloudinary from '../libs/cloudinary.js';
+import { PERMISSIONS } from '../middlewares/permissionMiddleware.js';
+
+// Statistics
+export const getDashboardStats = asyncHandler(async (req, res) => {
+    const [totalUsers, totalImages, recentUsers, recentImages] = await Promise.all([
+        User.countDocuments(),
+        Image.countDocuments(),
+        User.find().sort({ createdAt: -1 }).limit(5).select('username email displayName createdAt isAdmin').lean(),
+        Image.find().sort({ createdAt: -1 }).limit(10).populate('uploadedBy', 'username displayName').populate('imageCategory', 'name').select('imageTitle imageCategory createdAt uploadedBy').lean(),
+    ]);
+
+    // Count images by category (using lookup to get category names)
+    const categoryStats = await Image.aggregate([
+        { $group: { _id: '$imageCategory', count: { $sum: 1 } } },
+        {
+            $lookup: {
+                from: 'categories',
+                localField: '_id',
+                foreignField: '_id',
+                as: 'category'
+            }
+        },
+        { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
+        {
+            $project: {
+                _id: 1,
+                count: 1,
+                name: { $ifNull: ['$category.name', 'Unknown'] }
+            }
+        },
+        { $sort: { count: -1 } },
+        { $limit: 10 },
+    ]);
+
+    res.status(200).json({
+        stats: {
+            totalUsers,
+            totalImages,
+            categoryStats,
+        },
+        recentUsers,
+        recentImages,
+    });
+});
+
+// User Management
+export const getAllUsers = asyncHandler(async (req, res) => {
+    // Check permission (super admin or admin with manageUsers permission)
+    if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.manageUsers) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền admin',
+        });
+    }
+
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 20), 100);
+    const skip = (page - 1) * limit;
+    const search = req.query.search?.trim();
+
+    const query = {};
+    if (search) {
+        query.$or = [
+            { username: { $regex: search, $options: 'i' } },
+            { email: { $regex: search, $options: 'i' } },
+            { displayName: { $regex: search, $options: 'i' } },
+        ];
+    }
+
+    const [users, total] = await Promise.all([
+        User.find(query)
+            .select('-hashedPassword')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean(),
+        User.countDocuments(query),
+    ]);
+
+    res.status(200).json({
+        users,
+        pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit),
+        },
+    });
+});
+
+export const getUserById = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId).select('-hashedPassword').lean();
+
+    if (!user) {
+        return res.status(404).json({
+            message: 'Không tìm thấy tên tài khoản',
+        });
+    }
+
+    // Get user's image count
+    const imageCount = await Image.countDocuments({ uploadedBy: userId });
+
+    res.status(200).json({
+        user: {
+            ...user,
+            imageCount,
+        },
+    });
+});
+
+export const updateUser = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+    const { displayName, email, bio } = req.body;
+
+    // Check permission (super admin or admin with manageUsers permission)
+    if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.manageUsers) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền admin',
+        });
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+        return res.status(404).json({
+            message: 'Không tìm thấy tên tài khoản',
+        });
+    }
+
+    // Prevent non-super admins from updating super admin users
+    if (user.isSuperAdmin && !req.user.isSuperAdmin) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền Super admin',
+        });
+    }
+
+    const updateData = {};
+
+    if (displayName !== undefined) {
+        updateData.displayName = displayName.trim();
+    }
+
+    if (email !== undefined && email !== user.email) {
+        const existingUser = await User.findOne({
+            email: email.toLowerCase().trim(),
+            _id: { $ne: userId },
+        });
+
+        if (existingUser) {
+            return res.status(400).json({
+                message: 'Email đã tồn tại',
+            });
+        }
+
+        updateData.email = email.toLowerCase().trim();
+    }
+
+    if (bio !== undefined) {
+        updateData.bio = bio.trim() || undefined;
+    }
+
+    // isAdmin and isSuperAdmin should not be updated through this endpoint
+    // Admin roles should be managed through the AdminRole system only
+
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
+        new: true,
+        runValidators: true,
+    }).select('-hashedPassword');
+
+    res.status(200).json({
+        message: 'Cập nhật thành công',
+        user: updatedUser,
+    });
+});
+
+export const deleteUser = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+
+    // Check permission (only super admin or admin with deleteUsers permission)
+    if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.deleteUsers) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền admin',
+        });
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+        return res.status(404).json({
+            message: 'Không tìm thấy tên tài khoản',
+        });
+    }
+
+    // Prevent deleting yourself
+    if (userId === req.user._id.toString()) {
+        return res.status(400).json({
+            message: 'Không thể xóa tài khoản của bạn',
+        });
+    }
+
+    // Prevent non-super admins from deleting super admin users
+    if (user.isSuperAdmin && !req.user.isSuperAdmin) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền Super admin',
+        });
+    }
+
+    // Get all user's images
+    const userImages = await Image.find({ uploadedBy: userId }).select('publicId');
+
+    // Delete images from Cloudinary
+    for (const image of userImages) {
+        try {
+            await cloudinary.uploader.destroy(image.publicId);
+        } catch (error) {
+            logger.warn(`Lỗi không thể xoá ảnh ${image.publicId} từ Cloudinary:`, error);
+        }
+    }
+
+    // Delete images from database
+    await Image.deleteMany({ uploadedBy: userId });
+
+    // Delete user
+    await User.findByIdAndDelete(userId);
+
+    res.status(200).json({
+        message: 'Xoá tài khoản thành công',
+    });
+});
+
+// Image Management
+export const getAllImagesAdmin = asyncHandler(async (req, res) => {
+    // Check permission (super admin or admin with manageImages permission)
+    if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.manageImages) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền admin',
+        });
+    }
+
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 20), 100);
+    const skip = (page - 1) * limit;
+    const search = req.query.search?.trim();
+    const category = req.query.category?.trim();
+    const userId = req.query.userId?.trim();
+
+    const query = {};
+
+    if (search) {
+        query.$or = [
+            { imageTitle: { $regex: search, $options: 'i' } },
+            { location: { $regex: search, $options: 'i' } },
+        ];
+    }
+
+    if (category) {
+        // Find category by name (case-insensitive)
+        const categoryDoc = await Category.findOne({
+            name: { $regex: new RegExp(`^${category}$`, 'i') },
+            isActive: true,
+        });
+        if (categoryDoc) {
+            query.imageCategory = categoryDoc._id;
+        } else {
+            // If category not found, return empty results
+            return res.status(200).json({
+                images: [],
+                pagination: {
+                    page,
+                    limit,
+                    total: 0,
+                    pages: 0,
+                },
+            });
+        }
+    }
+
+    if (userId) {
+        query.uploadedBy = userId;
+    }
+
+    const [images, total] = await Promise.all([
+        Image.find(query)
+            .populate('uploadedBy', 'username displayName email')
+            .populate('imageCategory', 'name description')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean(),
+        Image.countDocuments(query),
+    ]);
+
+    res.status(200).json({
+        images,
+        pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit),
+        },
+    });
+});
+
+export const deleteImage = asyncHandler(async (req, res) => {
+    const { imageId } = req.params;
+
+    // Check permission (only super admin or admin with deleteImages permission)
+    if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.deleteImages) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền admin',
+        });
+    }
+
+    const image = await Image.findById(imageId);
+
+    if (!image) {
+        return res.status(404).json({
+            message: 'Không tìm thấy ảnh',
+        });
+    }
+
+    // Delete from Cloudinary
+    try {
+        await cloudinary.uploader.destroy(image.publicId);
+    } catch (error) {
+        logger.warn(`Lỗi không thể xoá ảnh ${image.publicId} từ Cloudinary:`, error);
+    }
+
+    // Delete from database
+    await Image.findByIdAndDelete(imageId);
+
+    res.status(200).json({
+        message: 'Xoá ảnh thành công',
+    });
+});
+
+// Admin Role Management (Only Super Admin)
+export const getAllAdminRoles = asyncHandler(async (req, res) => {
+    // Only super admin can view all admin roles
+    if (!req.user.isSuperAdmin && (!req.adminRole || req.adminRole.role !== 'super_admin')) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền Super admin',
+        });
+    }
+
+    const adminRoles = await AdminRole.find()
+        .populate('userId', 'username email displayName isSuperAdmin')
+        .populate('grantedBy', 'username displayName')
+        .sort({ createdAt: -1 })
+        .lean();
+
+    // Filter out any admin roles for super admin users (they shouldn't have AdminRole entries)
+    const filteredRoles = adminRoles.filter(role => {
+        const userId = role.userId;
+        // Handle both populated and non-populated userId
+        if (userId && typeof userId === 'object' && 'isSuperAdmin' in userId) {
+            return !userId.isSuperAdmin;
+        }
+        return true;
+    });
+
+    res.status(200).json({
+        adminRoles: filteredRoles,
+    });
+});
+
+export const getAdminRole = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+
+    // Users can view their own role, super admin can view any
+    if (userId !== req.user._id.toString() && !req.user.isSuperAdmin && (!req.adminRole || req.adminRole.role !== 'super_admin')) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền Super admin',
+        });
+    }
+
+    const adminRole = await AdminRole.findOne({ userId })
+        .populate('userId', 'username email displayName')
+        .populate('grantedBy', 'username displayName')
+        .lean();
+
+    if (!adminRole) {
+        return res.status(404).json({
+            message: 'Không tìm thấy quyền admin',
+        });
+    }
+
+    res.status(200).json({
+        adminRole,
+    });
+});
+
+export const createAdminRole = asyncHandler(async (req, res) => {
+    // Only super admin can create admin roles
+    if (!req.user.isSuperAdmin && (!req.adminRole || req.adminRole.role !== 'super_admin')) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền Super admin',
+        });
+    }
+
+    const { userId, role, permissions } = req.body;
+
+    if (!userId) {
+        return res.status(400).json({
+            message: 'Cần ID tên tài khoản',
+        });
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+        return res.status(404).json({
+            message: 'Không tìm thấy tài khoản',
+        });
+    }
+
+    // Prevent creating admin role for super admin users
+    if (user.isSuperAdmin) {
+        return res.status(400).json({
+            message: 'Tài khoản hiện tại là Super admin, không thể tạo quyền admin cho Super admin',
+        });
+    }
+
+    // Check if admin role already exists
+    const existingRole = await AdminRole.findOne({ userId });
+
+    if (existingRole) {
+        return res.status(400).json({
+            message: 'Tài khoản đang có quyền admin',
+        });
+    }
+
+    // Set user as admin
+    user.isAdmin = true;
+    await user.save();
+
+    // Create admin role
+    const adminRole = await AdminRole.create({
+        userId,
+        role: role || 'admin',
+        permissions: permissions || {
+            manageUsers: false,
+            deleteUsers: false,
+            manageImages: false,
+            deleteImages: false,
+            manageCategories: false,
+            manageAdmins: false,
+            viewDashboard: true,
+        },
+        grantedBy: req.user._id,
+    });
+
+    await adminRole.populate('userId', 'username email displayName');
+    await adminRole.populate('grantedBy', 'username displayName');
+
+    res.status(201).json({
+        message: 'Thêm quyền admin thành công',
+        adminRole,
+    });
+});
+
+export const updateAdminRole = asyncHandler(async (req, res) => {
+    // Only super admin can update admin roles
+    if (!req.user.isSuperAdmin && (!req.adminRole || req.adminRole.role !== 'super_admin')) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền admin',
+        });
+    }
+
+    const { userId } = req.params;
+    const { role, permissions } = req.body;
+
+    const adminRole = await AdminRole.findOne({ userId });
+
+    if (!adminRole) {
+        return res.status(404).json({
+            message: 'Tài khoản này không có quyền admin',
+        });
+    }
+
+    // Check if user is super admin
+    const user = await User.findById(userId);
+    if (user && user.isSuperAdmin) {
+        return res.status(400).json({
+            message: 'Tại khoản hiện tại là Super admin, không thể thay đổi quyền admin cho Super admin',
+        });
+    }
+
+    // Prevent changing your own role
+    if (userId === req.user._id.toString()) {
+        return res.status(400).json({
+            message: 'Không thể thay đổi quyền admin của tài khoản hiện tại',
+        });
+    }
+
+    const updateData = {};
+
+    if (role !== undefined) {
+        updateData.role = role;
+    }
+
+    if (permissions !== undefined) {
+        updateData.permissions = {
+            ...adminRole.permissions,
+            ...permissions,
+        };
+    }
+
+    const updatedRole = await AdminRole.findOneAndUpdate(
+        { userId },
+        updateData,
+        { new: true, runValidators: true }
+    )
+        .populate('userId', 'username email displayName')
+        .populate('grantedBy', 'username displayName');
+
+    res.status(200).json({
+        message: 'Cập nhật quyền admin thành công',
+        adminRole: updatedRole,
+    });
+});
+
+export const deleteAdminRole = asyncHandler(async (req, res) => {
+    // Only super admin can delete admin roles
+    if (!req.user.isSuperAdmin && (!req.adminRole || req.adminRole.role !== 'super_admin')) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền admin',
+        });
+    }
+
+    const { userId } = req.params;
+
+    // Prevent removing your own role
+    if (userId === req.user._id.toString()) {
+        return res.status(400).json({
+            message: 'Không thể tự xóa quyền admin của tài khoản hiện tại',
+        });
+    }
+
+    const adminRole = await AdminRole.findOne({ userId });
+
+    if (!adminRole) {
+        return res.status(404).json({
+            message: 'Tải khoản này không có quyền admin',
+        });
+    }
+
+    // Check if user is super admin
+    const user = await User.findById(userId);
+    if (user && user.isSuperAdmin) {
+        return res.status(400).json({
+            message: 'Không thể xóa quyền admin cho Super admin',
+        });
+    }
+
+    // Remove admin role
+    await AdminRole.findOneAndDelete({ userId });
+
+    // Update user's isAdmin status (reuse the user variable from above)
+    if (user) {
+        user.isAdmin = false;
+        await user.save();
+    }
+
+    res.status(200).json({
+        message: 'Xoá quyền admin thành công',
+    });
+});
+

@@ -1,0 +1,100 @@
+import express from 'express';
+import { env } from './libs/env.js';
+import { CONNECT_DB } from './configs/db.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import authRoute from './routes/authRoute.js';
+import cookieParser from 'cookie-parser';
+import userRoute from './routes/userRoute.js';
+import cors from 'cors';
+import compression from 'compression';
+import imageRoute from './routes/imageRoute.js';
+import adminRoute from './routes/adminRoute.js';
+import categoryRoute from './routes/categoryRoute.js';
+import { errorHandler } from './middlewares/errorHandler.js';
+import { apiLimiter } from './middlewares/rateLimiter.js';
+import { logger } from './utils/logger.js';
+import { startSessionCleanup } from './utils/sessionCleanup.js';
+import 'dotenv/config';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const app = express();
+
+// Trust proxy for secure cookies in production
+if (env.NODE_ENV === 'production') {
+    app.set('trust proxy', 1);
+}
+
+// Middleware
+// Compression middleware - reduces response size for better performance
+app.use(compression());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
+app.use(
+    cors({
+        origin: env.CLIENT_URL,
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+    })
+);
+
+// Apply rate limiting to all API routes
+app.use('/api', apiLimiter);
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    res.status(200).json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+    });
+});
+
+// API Routes
+app.use('/api/auth', authRoute);
+app.use('/api/users', userRoute);
+app.use('/api/images', imageRoute);
+app.use('/api/admin', adminRoute);
+app.use('/api/categories', categoryRoute);
+
+// Serve static files in production
+if (env.NODE_ENV === 'production') {
+    // __dirname is backend/src, so go up two levels to root, then into frontend/dist
+    const frontendDistPath = path.join(__dirname, '../../frontend/dist');
+    app.use(express.static(frontendDistPath));
+
+    app.get('*', (req, res) => {
+        // Don't serve index.html for API routes
+        if (req.path.startsWith('/api')) {
+            return res.status(404).json({ message: 'API route not found' });
+        }
+        res.sendFile(path.join(frontendDistPath, 'index.html'));
+    });
+}
+
+// Error handling middleware (must be last)
+app.use(errorHandler);
+
+// Start server and connect to database
+const startServer = async () => {
+    try {
+        await CONNECT_DB();
+
+        // Start session cleanup scheduler
+        startSessionCleanup();
+
+        const PORT = env.PORT;
+        app.listen(PORT, () => {
+            logger.info(`🚀 Server is running on port ${PORT}`);
+            logger.info(`📦 Environment: ${env.NODE_ENV}`);
+        });
+    } catch (error) {
+        logger.error('❌ Failed to start server', error);
+        process.exit(1);
+    }
+};
+
+startServer();
