@@ -87,17 +87,7 @@ const ProgressiveImage = memo(({
   useEffect(() => {
     if (!containerRef.current || preloadedRef.current) return;
 
-    // Check if already in viewport
-    const rect = containerRef.current.getBoundingClientRect();
-    const isInViewport = rect.top < window.innerHeight + 200 && rect.bottom > -200;
-
-    if (isInViewport && !preloadedRef.current) {
-      // Already visible, start loading immediately
-      preloadedRef.current = true;
-      // Use setTimeout to avoid synchronous setState in effect
-      setTimeout(() => setShouldLoadEagerly(true), 0);
-
-      // Preload small size in background
+    const loadSmallImage = () => {
       if (effectiveSmall !== effectiveThumbnail && !loadedSrcs.current.has(effectiveSmall)) {
         const smallImg = new Image();
         smallImg.onload = () => {
@@ -117,6 +107,20 @@ const ProgressiveImage = memo(({
         };
         smallImg.src = effectiveSmall;
       }
+    };
+
+    // Check if already in viewport
+    const rect = containerRef.current.getBoundingClientRect();
+    const isInViewport = rect.top < window.innerHeight + 200 && rect.bottom > -200;
+
+    if (isInViewport && !preloadedRef.current) {
+      // Already visible, start loading immediately
+      preloadedRef.current = true;
+      // Use requestAnimationFrame for better performance
+      requestAnimationFrame(() => {
+        setShouldLoadEagerly(true);
+        loadSmallImage();
+      });
       return;
     }
 
@@ -126,30 +130,11 @@ const ProgressiveImage = memo(({
           if (entry.isIntersecting && !preloadedRef.current) {
             // Image is about to be visible, preload it
             preloadedRef.current = true;
-            // Use setTimeout to avoid synchronous setState in effect
-            setTimeout(() => setShouldLoadEagerly(true), 0);
-
-            // Preload small size in background
-            if (effectiveSmall !== effectiveThumbnail && !loadedSrcs.current.has(effectiveSmall)) {
-              const smallImg = new Image();
-              smallImg.onload = () => {
-                loadedSrcs.current.add(effectiveSmall);
-                setCurrentSrc(effectiveSmall);
-                setIsLoaded(true);
-                if (onLoad && imgRef.current) {
-                  onLoad(imgRef.current);
-                }
-              };
-              smallImg.onerror = () => {
-                // If small size fails, keep thumbnail
-                setIsLoaded(true);
-                if (onLoad && imgRef.current) {
-                  onLoad(imgRef.current);
-                }
-              };
-              smallImg.src = effectiveSmall;
-            }
-
+            // Use requestAnimationFrame for better performance
+            requestAnimationFrame(() => {
+              setShouldLoadEagerly(true);
+              loadSmallImage();
+            });
             observer.disconnect();
           }
         });

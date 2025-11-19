@@ -10,6 +10,8 @@ import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { Upload, TrendingUp } from 'lucide-react';
 import type { Image } from '@/types/image';
+import { compressImage } from '@/utils/imageCompression';
+import { toast } from 'sonner';
 import './UploadPage.css';
 
 const uploadSchema = z.object({
@@ -86,8 +88,20 @@ function UploadPage() {
 
     const onSubmit = async (data: UploadFormValues) => {
         const { image, ...rest } = data;
-        await uploadImage({ image: image[0], ...rest });
-        navigate('/');
+        const originalFile = image[0];
+        
+        try {
+            // Compress image before upload for better performance
+            toast.info('Compressing image...', { duration: 2000 });
+            const compressedFile = await compressImage(originalFile);
+            
+            // Upload the compressed image
+            await uploadImage({ image: compressedFile, ...rest });
+            navigate('/');
+        } catch (error) {
+            console.error('Upload error:', error);
+            toast.error('Failed to upload image. Please try again.');
+        }
     };
 
     return (

@@ -30,7 +30,7 @@ router.get('/google/test', (req, res) => {
         hasClientId: !!env.GOOGLE_CLIENT_ID,
         hasClientSecret: !!env.GOOGLE_CLIENT_SECRET,
         redirectUri: env.GOOGLE_REDIRECT_URI || 'Not configured',
-        backendUrl: env.CLIENT_URL || `http://localhost:${env.PORT || 3000}`,
+        backendUrl: env.CLIENT_URL || 'Not configured',
     });
 });
 

@@ -9,6 +9,120 @@ import { Skeleton } from './ui/skeleton';
 import { toast } from 'sonner';
 import './ImageGrid.css';
 
+// Memoized image item component to prevent unnecessary re-renders
+const ImageGridItem = memo(({ 
+  image, 
+  imageType, 
+  onSelect, 
+  onDownload,
+  onImageLoad,
+  currentImageIds,
+  processedImages
+}: {
+  image: Image;
+  imageType: 'portrait' | 'landscape';
+  onSelect: (image: Image) => void;
+  onDownload: (image: Image, e: React.MouseEvent) => void;
+  onImageLoad: (imageId: string, img: HTMLImageElement) => void;
+  currentImageIds: Set<string>;
+  processedImages: React.MutableRefObject<Set<string>>;
+}) => {
+  const hasUserInfo = image.uploadedBy && (image.uploadedBy.displayName || image.uploadedBy.username);
+  
+  const handleClick = useCallback(() => {
+    onSelect(image);
+  }, [image, onSelect]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onSelect(image);
+    }
+  }, [image, onSelect]);
+
+  const handleDownload = useCallback((e: React.MouseEvent) => {
+    onDownload(image, e);
+  }, [image, onDownload]);
+
+  const handleImageLoad = useCallback((img: HTMLImageElement) => {
+    if (!processedImages.current.has(image._id) && currentImageIds.has(image._id)) {
+      onImageLoad(image._id, img);
+    }
+  }, [image._id, onImageLoad, currentImageIds, processedImages]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const overlay = e.currentTarget;
+    const rect = overlay.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const tooltipWidth = 200;
+    const tooltipHeight = 40;
+    const adjustedX = Math.max(tooltipWidth / 2, Math.min(x, rect.width - tooltipWidth / 2));
+    const adjustedY = Math.max(tooltipHeight / 2, Math.min(y, rect.height - tooltipHeight / 2));
+    overlay.style.setProperty('--mouse-x', `${adjustedX}px`);
+    overlay.style.setProperty('--mouse-y', `${adjustedY}px`);
+  }, []);
+
+  return (
+    <div
+      key={image._id}
+      className={`masonry-item ${imageType}`}
+      role="listitem"
+      aria-label={`Ảnh: ${image.imageTitle || 'Không có tiêu đề'}`}
+    >
+      <div
+        className="masonry-link"
+        onClick={handleClick}
+        style={{ cursor: 'pointer' }}
+        role="button"
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+        aria-label={`View ${image.imageTitle || 'image'}`}
+      >
+        <ProgressiveImage
+          src={image.imageUrl}
+          thumbnailUrl={image.thumbnailUrl}
+          smallUrl={image.smallUrl}
+          regularUrl={image.regularUrl}
+          alt={image.imageTitle || 'Photo'}
+          onLoad={handleImageLoad}
+        />
+        <div
+          className="masonry-overlay"
+          onMouseMove={handleMouseMove}
+        >
+          {image.imageTitle && (
+            <div className="image-title-tooltip">
+              {image.imageTitle}
+            </div>
+          )}
+
+          <div className="image-actions">
+            <button
+              className="image-action-btn download-btn"
+              onClick={handleDownload}
+              title="Download"
+              aria-label="Download image"
+            >
+              <Download size={20} />
+            </button>
+          </div>
+
+          {hasUserInfo && (
+            <div className="image-user-info">
+              <span className="image-user-name">
+                {image.uploadedBy?.displayName || image.uploadedBy?.username || 'Unknown'}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+ImageGridItem.displayName = 'ImageGridItem';
+
 const ImageGrid = memo(() => {
   const { images, loading, error, pagination, currentSearch, currentCategory, fetchImages } = useImageStore();
 

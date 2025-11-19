@@ -19,6 +19,11 @@
 			name="theme-color"
 			content="#ffffff" />
 		<title>PhotoApp - Discover Beautiful Photos</title>
+		<!-- Performance: Preconnect to external domains -->
+		<link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
+		<link rel="dns-prefetch" href="https://res.cloudinary.com" />
+		<!-- Performance: Preload critical resources -->
+		<link rel="modulepreload" href="/src/main.tsx" />
 	</head>
 	<body>
 		<div id="root"></div>
