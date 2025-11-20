@@ -19,6 +19,7 @@ import { imageService } from '@/services/imageService';
 import { favoriteService } from '@/services/favoriteService';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { toast } from 'sonner';
+import { generateImageSlug } from '@/lib/utils';
 import './ImageModal.css';
 
 interface ImageModalProps {
@@ -438,7 +439,8 @@ const ImageModal = ({
 
   // Get share URL and text
   const getShareData = useCallback(() => {
-    const shareUrl = `${window.location.origin}/?image=${image._id}`;
+    const slug = generateImageSlug(image.imageTitle, image._id);
+    const shareUrl = `${window.location.origin}/?image=${slug}`;
     const shareText = `Check out this photo: ${image.imageTitle || 'Untitled'}`;
     return { shareUrl, shareText };
   }, [image._id, image.imageTitle]);

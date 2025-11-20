@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { imageService } from "@/services/imageService";
 import Header from "@/components/Header";
@@ -11,6 +11,7 @@ import type { Image } from "@/types/image";
 import ImageModal from "@/components/ImageModal";
 import ProgressiveImage from "@/components/ProgressiveImage";
 import api from "@/lib/axios";
+import { generateImageSlug, extractIdFromSlug } from "@/lib/utils";
 import "./ProfilePage.css";
 
 type TabType = 'photos' | 'illustrations' | 'collections' | 'stats';
@@ -18,13 +19,13 @@ type TabType = 'photos' | 'illustrations' | 'collections' | 'stats';
 function ProfilePage() {
     const { user } = useAuthStore();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [activeTab, setActiveTab] = useState<TabType>('photos');
     const [images, setImages] = useState<Image[]>([]);
     const [loading, setLoading] = useState(true);
     const [photosCount, setPhotosCount] = useState(0);
     const [illustrationsCount, setIllustrationsCount] = useState(0);
     const [collectionsCount] = useState(1); // Placeholder
-    const [selectedImage, setSelectedImage] = useState<Image | null>(null);
     
     // Track image aspect ratios (portrait vs landscape)
     const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
@@ -128,6 +129,32 @@ function ProfilePage() {
         }
         return [];
     }, [activeTab, images]);
+
+    // Get selected image slug or ID from URL
+    const imageParamFromUrl = searchParams.get('image');
+    
+    // Find selected image from URL (supports both slug format and legacy ID format)
+    const selectedImage = useMemo(() => {
+        if (!imageParamFromUrl) return null;
+        
+        // Check if it's a MongoDB ObjectId (24 hex characters) - legacy format
+        const isObjectId = /^[0-9a-fA-F]{24}$/.test(imageParamFromUrl);
+        
+        if (isObjectId) {
+            // Legacy format: direct ID match
+            return displayImages.find(img => img._id === imageParamFromUrl) || null;
+        } else {
+            // New format: slug with short ID
+            const shortId = extractIdFromSlug(imageParamFromUrl);
+            if (!shortId) return null;
+            
+            // Find image by matching the last 12 characters of ID
+            return displayImages.find(img => {
+                const imgShortId = img._id.slice(-12);
+                return imgShortId === shortId;
+            }) || null;
+        }
+    }, [imageParamFromUrl, displayImages]);
 
     // Get current image IDs for comparison
     const currentImageIds = useMemo(() => new Set(displayImages.map(img => img._id)), [displayImages]);
@@ -362,7 +389,15 @@ function ProfilePage() {
                                             <div
                                                 key={image._id}
                                                 className={`profile-image-item ${imageType}`}
-                                                onClick={() => setSelectedImage(image)}
+                                                onClick={() => {
+                                                    // Update URL when image is selected with slug
+                                                    const slug = generateImageSlug(image.imageTitle, image._id);
+                                                    setSearchParams(prev => {
+                                                        const newParams = new URLSearchParams(prev);
+                                                        newParams.set('image', slug);
+                                                        return newParams;
+                                                    });
+                                                }}
                                                 style={{ cursor: 'pointer' }}
                                             >
                                                 <ProgressiveImage
@@ -402,8 +437,24 @@ function ProfilePage() {
                 <ImageModal
                     image={selectedImage}
                     images={displayImages}
-                    onClose={() => setSelectedImage(null)}
-                    onImageSelect={handleImageUpdate}
+                    onClose={() => {
+                        // Remove image param from URL when closing
+                        setSearchParams(prev => {
+                            const newParams = new URLSearchParams(prev);
+                            newParams.delete('image');
+                            return newParams;
+                        });
+                    }}
+                    onImageSelect={(updatedImage) => {
+                        handleImageUpdate(updatedImage);
+                        // Update URL to reflect the selected image with slug
+                        const slug = generateImageSlug(updatedImage.imageTitle, updatedImage._id);
+                        setSearchParams(prev => {
+                            const newParams = new URLSearchParams(prev);
+                            newParams.set('image', slug);
+                            return newParams;
+                        });
+                    }}
                     onDownload={handleDownloadImage}
                     imageTypes={imageTypes}
                     onImageLoad={handleImageLoad}
