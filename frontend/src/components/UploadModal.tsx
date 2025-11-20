@@ -491,7 +491,8 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                         display: 'grid',
                         gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
                         gap: '24px',
-                        marginBottom: '24px'
+                        marginBottom: '24px',
+                        alignItems: 'start' // Align items to start, not stretch
                     }}>
                         {imagesData.map((imgData, index) => (
                             <div key={index} style={{
@@ -499,7 +500,10 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                 borderRadius: '12px',
                                 padding: '16px',
                                 backgroundColor: 'white',
-                                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                height: 'fit-content', // Only take space needed
+                                display: 'flex',
+                                flexDirection: 'column'
                             }}>
                                 {/* Image Preview */}
                                 <div style={{ position: 'relative', marginBottom: '16px' }}>
