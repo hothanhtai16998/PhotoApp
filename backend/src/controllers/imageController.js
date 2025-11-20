@@ -16,6 +16,7 @@ export const getAllImages = asyncHandler(async (req, res) => {
     const skip = (page - 1) * limit;
     const search = req.query.search?.trim();
     const category = req.query.category?.trim();
+    const location = req.query.location?.trim();
 
     // Build query
     const query = {};
@@ -49,6 +50,10 @@ export const getAllImages = asyncHandler(async (req, res) => {
                 },
             });
         }
+    }
+    if (location) {
+        // Filter by location (case-insensitive partial match)
+        query.location = { $regex: new RegExp(location, 'i') };
     }
 
     // Get images with pagination
@@ -358,4 +363,47 @@ export const getImagesByUserId = asyncHandler(async (req, res) => {
             pages: Math.ceil(total / limit),
         },
     });
+});
+
+// Get unique locations for suggestions/filtering
+export const getLocations = asyncHandler(async (req, res) => {
+    try {
+        // Get unique locations from images (case-insensitive, sorted by popularity)
+        const locations = await Image.aggregate([
+            {
+                $match: {
+                    location: { $exists: true, $ne: null, $ne: '' }
+                }
+            },
+            {
+                $group: {
+                    _id: { $toLower: '$location' }, // Case-insensitive grouping
+                    originalLocation: { $first: '$location' }, // Keep original case for first occurrence
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $sort: { count: -1 } // Sort by popularity (most images first)
+            },
+            {
+                $limit: 50 // Limit to top 50 locations
+            },
+            {
+                $project: {
+                    _id: 0,
+                    location: '$originalLocation',
+                    count: 1
+                }
+            }
+        ]);
+
+        res.status(200).json({
+            locations: locations.map(loc => loc.location)
+        });
+    } catch (error) {
+        logger.error('Error fetching locations:', error);
+        res.status(500).json({
+            message: 'Lỗi khi lấy danh sách địa điểm',
+        });
+    }
 });

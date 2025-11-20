@@ -55,6 +55,7 @@ export interface ImageState {
 	} | null;
 	currentSearch?: string;
 	currentCategory?: string;
+	currentLocation?: string;
 	deletedImageIds: string[]; // Track deleted image IDs to filter them out
 	uploadImage: (
 		data: UploadImageData
@@ -64,6 +65,7 @@ export interface ImageState {
 		limit?: number;
 		search?: string;
 		category?: string;
+		location?: string;
 		_refresh?: boolean;
 	}) => Promise<void>;
 	removeImage: (imageId: string) => void;

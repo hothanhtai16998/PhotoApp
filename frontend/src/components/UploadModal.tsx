@@ -411,8 +411,8 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
     // Success Screen
     if (showSuccess) {
         return (
-            <div className="upload-modal-overlay">
-                <div className="upload-success-screen">
+            <div className="upload-modal-overlay" onClick={onClose}>
+                <div className="upload-success-screen" onClick={(e) => e.stopPropagation()}>
                     <div className="confetti-container" id="confetti-container"></div>
                     <div className="success-content">
                         <div className="success-header">

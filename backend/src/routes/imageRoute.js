@@ -5,6 +5,7 @@ import {
     getImagesByUserId,
     incrementView,
     incrementDownload,
+    getLocations,
 } from '../controllers/imageController.js';
 import { singleUpload } from '../middlewares/multerMiddleware.js';
 import { protectedRoute } from '../middlewares/authMiddleware.js';
@@ -25,6 +26,9 @@ router.get('/',
     validateGetImages, 
     getAllImages
 );
+
+// Public routes - get locations for suggestions/filtering
+router.get('/locations', getLocations);
 
 // Public routes - increment stats
 router.patch('/:imageId/view', incrementView);

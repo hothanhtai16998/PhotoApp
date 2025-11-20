@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useRef, useCallback, memo } from 'react';
 import { useImageStore } from '@/stores/useImageStore';
-import { Download } from 'lucide-react';
+import { Download, MapPin } from 'lucide-react';
 import type { Image } from '@/types/image';
 import ProgressiveImage from './ProgressiveImage';
 import CategoryNavigation from './CategoryNavigation';
@@ -97,6 +97,14 @@ const ImageGridItem = memo(({
             </div>
           )}
 
+          {/* Location Badge */}
+          {image.location && (
+            <div className="image-location-badge">
+              <MapPin size={14} />
+              <span className="location-text">{image.location}</span>
+            </div>
+          )}
+
           <div className="image-actions">
             <button
               className="image-action-btn download-btn"
@@ -147,7 +155,7 @@ const ImageGridItem = memo(({
 ImageGridItem.displayName = 'ImageGridItem';
 
 const ImageGrid = memo(() => {
-  const { images, loading, error, pagination, currentSearch, currentCategory, fetchImages } = useImageStore();
+  const { images, loading, error, pagination, currentSearch, currentCategory, currentLocation, fetchImages } = useImageStore();
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const isLoadingMoreRef = useRef(false);
@@ -192,11 +200,12 @@ const ImageGrid = memo(() => {
         ) {
           isLoadingMoreRef.current = true;
 
-          // Load next page with current search/category from store
+          // Load next page with current search/category/location from store
           fetchImages({
             page: pagination.page + 1,
             search: currentSearch,
             category: currentCategory,
+            location: currentLocation,
           }).finally(() => {
             isLoadingMoreRef.current = false;
           });
@@ -213,7 +222,7 @@ const ImageGrid = memo(() => {
       observer.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagination, loading, currentSearch, currentCategory]);
+  }, [pagination, loading, currentSearch, currentCategory, currentLocation]);
 
   // Group images by category to create collections (currently unused, kept for future use)
   // const collections = useMemo(() => {
@@ -368,6 +377,14 @@ const ImageGrid = memo(() => {
     return null
   }, [currentSearch, pagination])
 
+  // Location result count
+  const locationResultCount = useMemo(() => {
+    if (currentLocation && pagination) {
+      return pagination.total
+    }
+    return null
+  }, [currentLocation, pagination])
+
   return (
     <div className="image-grid-container">
       {/* Category Navigation */}
@@ -396,6 +413,29 @@ const ImageGrid = memo(() => {
         </div>
       )}
 
+      {/* Location Results Header */}
+      {currentLocation && !currentSearch && (
+        <div className="search-results-header">
+          <h2 className="search-results-title">
+            {loading ? (
+              'Đang tải...'
+            ) : locationResultCount !== null ? (
+              <>
+                {locationResultCount === 0 ? (
+                  'Không tìm thấy kết quả'
+                ) : (
+                  <>
+                    {locationResultCount.toLocaleString('vi-VN')} {locationResultCount === 1 ? 'ảnh' : 'ảnh'} tại "{currentLocation}"
+                  </>
+                )}
+              </>
+            ) : (
+              `Ảnh tại "${currentLocation}"`
+            )}
+          </h2>
+        </div>
+      )}
+
       {/* Main Image Grid */}
       {loading && images.length === 0 ? (
         <ImageGridSkeleton />
@@ -408,6 +448,13 @@ const ImageGrid = memo(() => {
                 Thử tìm kiếm với từ khóa khác hoặc xóa bộ lọc tìm kiếm
               </p>
             </>
+          ) : currentLocation ? (
+            <>
+              <p>Không có ảnh nào tại "{currentLocation}"</p>
+              <p className="empty-state-suggestions">
+                Thử chọn địa điểm khác hoặc xem tất cả ảnh
+              </p>
+            </>
           ) : currentCategory ? (
             <>
               <p>Không có ảnh nào trong danh mục "{currentCategory}"</p>
@@ -418,7 +465,6 @@ const ImageGrid = memo(() => {
           ) : (
             <p>Chưa có ảnh nào. Hãy tải ảnh lên để bắt đầu!</p>
           )}
-          <p>Chưa có ảnh nào, hãy thêm ảnh.</p>
         </div>
       ) : (
         <div className="masonry-grid" role="list" aria-label="Danh sách ảnh">

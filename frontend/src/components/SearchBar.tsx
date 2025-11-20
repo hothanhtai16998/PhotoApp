@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
-import { Search, X, Clock, TrendingUp } from "lucide-react"
+import { Search, X, Clock, TrendingUp, MapPin } from "lucide-react"
 import { useImageStore } from "@/stores/useImageStore"
 import { categoryService, type Category } from "@/services/categoryService"
+import { imageService } from "@/services/imageService"
 import './SearchBar.css'
 
 interface SearchHistoryItem {
@@ -22,6 +23,7 @@ export function SearchBar() {
   const [searchQuery, setSearchQuery] = useState('')
   const [isFocused, setIsFocused] = useState(false)
   const [suggestions, setSuggestions] = useState<string[]>([])
+  const [locations, setLocations] = useState<string[]>([])
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([])
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -42,18 +44,22 @@ export function SearchBar() {
     }
   }, [])
 
-  // Load categories for suggestions
+  // Load categories and locations for suggestions
   useEffect(() => {
-    const loadCategories = async () => {
+    const loadSuggestions = async () => {
       try {
-        const categories = await categoryService.fetchCategories()
+        const [categories, locationsData] = await Promise.all([
+          categoryService.fetchCategories(),
+          imageService.fetchLocations()
+        ])
         const categoryNames = categories.map((cat: Category) => cat.name)
         setSuggestions(categoryNames)
+        setLocations(locationsData)
       } catch (error) {
-        console.error('Failed to load categories for suggestions:', error)
+        console.error('Failed to load suggestions:', error)
       }
     }
-    loadCategories()
+    loadSuggestions()
   }, [])
 
   // Sync with current search from store
@@ -118,27 +124,40 @@ export function SearchBar() {
   // Filter suggestions based on input
   const filteredSuggestions = searchQuery.trim()
     ? [
-        // Show matching categories first
-        ...suggestions.filter(s => 
-          s.toLowerCase().includes(searchQuery.toLowerCase())
-        ),
-        // Then show matching history
+        // Show matching locations first (with location icon)
+        ...locations
+          .filter(loc => 
+            loc.toLowerCase().includes(searchQuery.toLowerCase())
+          )
+          .map(loc => ({ type: 'location', value: loc })),
+        // Then matching categories
+        ...suggestions
+          .filter(s => 
+            s.toLowerCase().includes(searchQuery.toLowerCase()) &&
+            !locations.some(loc => loc.toLowerCase() === s.toLowerCase())
+          )
+          .map(s => ({ type: 'category', value: s })),
+        // Then matching history
         ...searchHistory
           .filter(item => 
             item.query.toLowerCase().includes(searchQuery.toLowerCase()) &&
-            !suggestions.some(s => s.toLowerCase() === item.query.toLowerCase())
+            !suggestions.some(s => s.toLowerCase() === item.query.toLowerCase()) &&
+            !locations.some(loc => loc.toLowerCase() === item.query.toLowerCase())
           )
-          .map(item => item.query)
+          .map(item => ({ type: 'history', value: item.query }))
       ].slice(0, 8)
     : [
         // Show recent searches when input is empty
-        ...searchHistory.map(item => item.query),
+        ...searchHistory.map(item => ({ type: 'history', value: item.query })),
+        // Then popular locations
+        ...locations.slice(0, 3).map(loc => ({ type: 'location', value: loc })),
         // Then popular categories
-        ...suggestions.slice(0, 5 - searchHistory.length)
+        ...suggestions.slice(0, 5 - searchHistory.length - Math.min(3, locations.length)).map(s => ({ type: 'category', value: s }))
       ].slice(0, 8)
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query)
+  const handleSearch = (query: string | { type: string; value: string }) => {
+    const searchValue = typeof query === 'string' ? query : query.value
+    setSearchQuery(searchValue)
     setShowSuggestions(false)
     setSelectedIndex(-1)
     inputRef.current?.blur()
@@ -148,12 +167,20 @@ export function SearchBar() {
     }
     
     // Trigger search immediately
-    fetchImages({
-      search: query.trim() || undefined,
-    })
+    // If it's a location, we can filter by location specifically
+    const searchParams: { search?: string; location?: string } = {}
+    if (typeof query !== 'string' && query.type === 'location') {
+      // If user selects a location, filter by location
+      searchParams.location = searchValue
+    } else {
+      // Otherwise, use general search (searches both title and location)
+      searchParams.search = searchValue.trim() || undefined
+    }
     
-    if (query.trim()) {
-      saveToHistory(query.trim())
+    fetchImages(searchParams)
+    
+    if (searchValue.trim()) {
+      saveToHistory(searchValue.trim())
     }
   }
 
@@ -192,7 +219,8 @@ export function SearchBar() {
       case 'Enter':
         e.preventDefault()
         if (selectedIndex >= 0 && selectedIndex < filteredSuggestions.length) {
-          handleSearch(filteredSuggestions[selectedIndex])
+          const selected = filteredSuggestions[selectedIndex]
+          handleSearch(selected)
         } else {
           handleSearch(searchQuery)
         }
@@ -307,24 +335,34 @@ export function SearchBar() {
               )}
               <div className="suggestions-list">
                 {filteredSuggestions.map((suggestion, index) => {
+                  const suggestionValue = typeof suggestion === 'string' ? suggestion : suggestion.value
+                  const suggestionType = typeof suggestion === 'string' ? 'history' : suggestion.type
                   const isHistory = searchHistory.some(
-                    item => item.query.toLowerCase() === suggestion.toLowerCase()
-                  )
+                    item => item.query.toLowerCase() === suggestionValue.toLowerCase()
+                  ) || suggestionType === 'history'
+                  
                   return (
                     <button
-                      key={`${suggestion}-${index}`}
+                      key={`${suggestionValue}-${index}`}
                       type="button"
                       className={`suggestion-item ${selectedIndex === index ? 'selected' : ''}`}
                       onClick={() => handleSearch(suggestion)}
                       role="option"
                       aria-selected={selectedIndex === index}
                     >
-                      {isHistory ? (
+                      {suggestionType === 'location' ? (
+                        <MapPin size={16} className="suggestion-icon" style={{ color: '#059669' }} />
+                      ) : isHistory ? (
                         <Clock size={16} className="suggestion-icon" />
                       ) : (
                         <Search size={16} className="suggestion-icon" />
                       )}
-                      <span className="suggestion-text">{suggestion}</span>
+                      <span className="suggestion-text">{suggestionValue}</span>
+                      {suggestionType === 'location' && (
+                        <span style={{ fontSize: '11px', color: '#059669', marginLeft: 'auto', marginRight: '8px' }}>
+                          Địa điểm
+                        </span>
+                      )}
                       {selectedIndex === index && (
                         <div className="suggestion-hint">
                           <kbd>Enter</kbd>

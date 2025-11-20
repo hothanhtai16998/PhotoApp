@@ -20,6 +20,9 @@ export const useImageStore = create(
 		currentCategory: undefined as
 			| string
 			| undefined,
+		currentLocation: undefined as
+			| string
+			| undefined,
 		deletedImageIds: [] as string[],
 		uploadImage: async (
 			data: UploadImageData
@@ -157,6 +160,7 @@ export const useImageStore = create(
 			limit?: number;
 			search?: string;
 			category?: string;
+			location?: string;
 			_refresh?: boolean;
 		}) => {
 			// Prevent concurrent requests - if already loading and not a refresh, skip
@@ -197,21 +201,25 @@ export const useImageStore = create(
 						(img: Image) => !state.deletedImageIds.includes(img._id)
 					);
 
-					// Merge strategy: If it's a new search/category, replace. Otherwise, append for pagination
+					// Merge strategy: If it's a new search/category/location, replace. Otherwise, append for pagination
 					const isNewQuery =
 						params?.search !==
 							undefined ||
 						params?.category !==
 							undefined ||
+						params?.location !==
+							undefined ||
 						params?.page === 1 ||
 						!params?.page;
 
-					// Update current search/category for infinite scroll
+					// Update current search/category/location for infinite scroll
 					if (isNewQuery) {
 						state.currentSearch =
 							params?.search;
 						state.currentCategory =
 							params?.category;
+						state.currentLocation =
+							params?.location;
 					}
 
 					if (isNewQuery) {

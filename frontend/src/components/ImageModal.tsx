@@ -7,6 +7,8 @@ import {
   CheckCircle2,
   ChevronDown,
   Heart,
+  MapPin,
+  ExternalLink,
 } from 'lucide-react';
 import type { Image } from '@/types/image';
 import ProgressiveImage from './ProgressiveImage';
@@ -543,7 +545,34 @@ const ImageModal = ({
                 )}
                 {(image.location || image.cameraModel) && (
                   <div className="image-info-details">
-                    {image.location && <span>{image.location}</span>}
+                    {image.location && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <MapPin size={14} style={{ flexShrink: 0 }} />
+                        {image.coordinates ? (
+                          <a
+                            href={`https://www.google.com/maps?q=${image.coordinates.latitude},${image.coordinates.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              color: 'inherit',
+                              textDecoration: 'none',
+                              transition: 'opacity 0.2s',
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
+                            onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                            title="Xem trên Google Maps"
+                          >
+                            {image.location}
+                            <ExternalLink size={12} style={{ flexShrink: 0, opacity: 0.7 }} />
+                          </a>
+                        ) : (
+                          <span>{image.location}</span>
+                        )}
+                      </span>
+                    )}
                     {image.location && image.cameraModel && <span> • </span>}
                     {image.cameraModel && <span>{image.cameraModel}</span>}
                   </div>

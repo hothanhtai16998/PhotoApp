@@ -353,6 +353,81 @@ export const deleteImage = asyncHandler(async (req, res) => {
     });
 });
 
+// Update image (location, title, etc.)
+export const updateImage = asyncHandler(async (req, res) => {
+    const { imageId } = req.params;
+    const { location, coordinates, imageTitle, cameraModel } = req.body;
+
+    // Check permission (only super admin or admin with manageImages permission)
+    if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.manageImages) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền admin',
+        });
+    }
+
+    const image = await Image.findById(imageId);
+
+    if (!image) {
+        return res.status(404).json({
+            message: 'Không tìm thấy ảnh',
+        });
+    }
+
+    // Build update object
+    const updateData = {};
+    
+    if (location !== undefined) {
+        updateData.location = location?.trim() || null;
+    }
+    
+    if (coordinates !== undefined) {
+        // Parse and validate coordinates if provided
+        let parsedCoordinates;
+        if (coordinates) {
+            try {
+                parsedCoordinates = typeof coordinates === 'string' ? JSON.parse(coordinates) : coordinates;
+                if (parsedCoordinates.latitude && parsedCoordinates.longitude) {
+                    const lat = parseFloat(parsedCoordinates.latitude);
+                    const lng = parseFloat(parsedCoordinates.longitude);
+                    if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                        updateData.coordinates = { latitude: lat, longitude: lng };
+                    }
+                }
+            } catch (error) {
+                logger.warn('Invalid coordinates format:', error);
+            }
+        } else {
+            updateData.coordinates = null;
+        }
+    }
+    
+    if (imageTitle !== undefined) {
+        updateData.imageTitle = imageTitle?.trim() || image.imageTitle;
+    }
+    
+    if (cameraModel !== undefined) {
+        updateData.cameraModel = cameraModel?.trim() || null;
+    }
+
+    // Update image
+    const updatedImage = await Image.findByIdAndUpdate(
+        imageId,
+        { $set: updateData },
+        { new: true, runValidators: true }
+    )
+        .populate('uploadedBy', 'username displayName avatarUrl')
+        .populate('imageCategory', 'name description')
+        .lean();
+
+    // Clear cache for images endpoint
+    clearCache('/api/images');
+
+    res.status(200).json({
+        message: 'Cập nhật ảnh thành công',
+        image: updatedImage,
+    });
+});
+
 // Admin Role Management (Only Super Admin)
 export const getAllAdminRoles = asyncHandler(async (req, res) => {
     // Only super admin can view all admin roles

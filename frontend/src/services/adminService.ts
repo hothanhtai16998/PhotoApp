@@ -133,6 +133,18 @@ export const adminService = {
         return res.data;
     },
 
+    updateImage: async (imageId: string, updates: {
+        location?: string;
+        coordinates?: { latitude: number; longitude: number } | null;
+        imageTitle?: string;
+        cameraModel?: string;
+    }): Promise<{ image: AdminImage }> => {
+        const res = await api.put(`/admin/images/${imageId}`, updates, {
+            withCredentials: true,
+        });
+        return res.data;
+    },
+
     deleteImage: async (imageId: string): Promise<void> => {
         await api.delete(`/admin/images/${imageId}`, {
             withCredentials: true,

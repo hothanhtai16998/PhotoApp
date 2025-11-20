@@ -6,6 +6,7 @@ interface FetchImagesParams {
 	limit?: number;
 	search?: string;
 	category?: string;
+	location?: string;
 }
 
 import type { Image } from '@/types/image';
@@ -134,6 +135,12 @@ export const imageService = {
 				params.category
 			);
 		}
+		if (params?.location) {
+			queryParams.append(
+				'location',
+				params.location
+			);
+		}
 
 		// Add cache-busting timestamp if refresh is requested
 		if (params?._refresh) {
@@ -232,5 +239,13 @@ export const imageService = {
 			}
 		);
 		return res.data;
+	},
+
+	fetchLocations: async (): Promise<string[]> => {
+		const res = await api.get('/images/locations', {
+			withCredentials: true,
+		});
+		
+		return res.data.locations || [];
 	},
 };

@@ -7,6 +7,7 @@ import {
     deleteUser,
     getAllImagesAdmin,
     deleteImage,
+    updateImage,
     getAllAdminRoles,
     getAdminRole,
     createAdminRole,
@@ -35,6 +36,7 @@ router.delete('/users/:userId', validateCsrf, deleteUser);
 
 // Image Management
 router.get('/images', getAllImagesAdmin);
+router.put('/images/:imageId', validateCsrf, updateImage);
 router.delete('/images/:imageId', validateCsrf, deleteImage);
 
 // Admin Role Management (Super Admin Only)
