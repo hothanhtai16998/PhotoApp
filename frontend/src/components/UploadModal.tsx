@@ -52,10 +52,9 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
     const [locationSuggestions, setLocationSuggestions] = useState<Record<number, LocationSuggestion[]>>({});
     const [showLocationSuggestions, setShowLocationSuggestions] = useState<Record<number, boolean>>({});
     const [loadingLocationSuggestions, setLoadingLocationSuggestions] = useState<Record<number, boolean>>({});
-    const [focusedLocationIndex, setFocusedLocationIndex] = useState<number | null>(null);
     const locationInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
     const locationDropdownRefs = useRef<Record<number, HTMLDivElement | null>>({});
-    const locationSearchTimeoutRef = useRef<Record<number, NodeJS.Timeout>>({});
+    const locationSearchTimeoutRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
     const fileInputRef = useRef<HTMLInputElement>(null);
 
 
@@ -292,7 +291,6 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
             ...prev,
             [index]: false
         }));
-        setFocusedLocationIndex(null);
         
         // Clear search timeout
         if (locationSearchTimeoutRef.current[index]) {
@@ -822,17 +820,10 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                                     value={imgData.location}
                                                     onChange={(e) => updateImageData(index, 'location', e.target.value)}
                                                     onFocus={() => {
-                                                        setFocusedLocationIndex(index);
                                                         // If there's existing text, search for suggestions
                                                         if (imgData.location.trim().length >= 2) {
                                                             updateImageData(index, 'location', imgData.location);
                                                         }
-                                                    }}
-                                                    onBlur={() => {
-                                                        // Delay to allow click on suggestion
-                                                        setTimeout(() => {
-                                                            setFocusedLocationIndex(null);
-                                                        }, 200);
                                                     }}
                                                     placeholder="Nhập địa điểm (ví dụ: Phú Quốc, Việt Nam)"
                                                     ref={(el) => {

@@ -6,6 +6,7 @@ import type {
 	ImageState,
 	UploadImageData,
 } from '@/types/store';
+import type { Image } from '@/types/image';
 
 export const useImageStore = create(
 	immer<ImageState>((set) => ({

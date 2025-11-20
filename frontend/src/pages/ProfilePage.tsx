@@ -179,7 +179,6 @@ function ProfilePage() {
 
     // Update image in the state when stats change
     const handleImageUpdate = useCallback((updatedImage: Image) => {
-        setSelectedImage(updatedImage);
         // Update the image in the images array
         setImages(prevImages => {
             const index = prevImages.findIndex(img => img._id === updatedImage._id);
