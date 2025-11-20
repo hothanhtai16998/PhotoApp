@@ -38,7 +38,7 @@ if (env.NODE_ENV === 'production') {
         contentSecurityPolicy: {
             directives: {
                 defaultSrc: ["'self'"],
-                imgSrc: ["'self'", "https://res.cloudinary.com", "data:", "https:"],
+                imgSrc: ["'self'", "https://res.cloudinary.com", "data:", "https:", "blob:"],
                 // Production: allow unsafe-inline and data URIs for bundled Vite scripts
                 scriptSrc: ["'self'", "'unsafe-inline'", "data:"],
                 // Allow inline styles and event handlers (needed for some libraries)
