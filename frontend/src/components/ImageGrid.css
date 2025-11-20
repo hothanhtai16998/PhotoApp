@@ -766,21 +766,21 @@
   color: #111;
   font-weight: 500;
   z-index: 12;
-  opacity: 1;
-  transform: translateY(0);
-  transition: opacity 0.3s ease, transform 0.3s ease, background 0.3s ease;
-  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
   max-width: calc(100% - 100px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .masonry-item:hover .image-location-badge,
 .image-item:hover .image-location-badge {
-  background: rgba(255, 255, 255, 1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
 }
 
 .image-location-badge svg {

@@ -31,15 +31,16 @@ export const getAllImages = asyncHandler(async (req, res) => {
         useTextSearch = true;
     }
     if (category) {
-        // Find category by name (case-insensitive)
+        // Find category by name (case-insensitive) - must be active
         const categoryDoc = await Category.findOne({
-            name: { $regex: new RegExp(`^${category}$`, 'i') },
+            name: { $regex: new RegExp(`^${category.trim()}$`, 'i') },
             isActive: true,
         });
-        if (categoryDoc) {
+        if (categoryDoc && categoryDoc._id) {
+            // Strictly match only this category ID - use the ObjectId directly from the document
             query.imageCategory = categoryDoc._id;
         } else {
-            // If category not found, return empty results
+            // If category not found or inactive, return empty results
             return res.status(200).json({
                 images: [],
                 pagination: {
@@ -50,6 +51,10 @@ export const getAllImages = asyncHandler(async (req, res) => {
                 },
             });
         }
+    } else {
+        // When no category filter, ensure imageCategory exists and is not null
+        // This prevents images with invalid/null categories from appearing
+        query.imageCategory = { $exists: true, $ne: null };
     }
     if (location) {
         // Filter by location (case-insensitive partial match)
@@ -66,9 +71,10 @@ export const getAllImages = asyncHandler(async (req, res) => {
                 .populate('uploadedBy', 'username displayName avatarUrl')
                 .populate({
                     path: 'imageCategory',
-                    select: 'name description',
+                    select: 'name description isActive',
                     // Handle missing categories gracefully (for legacy data or deleted categories)
-                    justOne: true
+                    justOne: true,
+                    match: { isActive: true } // Only populate if category is active
                 })
                 // Sort by text relevance score if using text search, otherwise by date
                 .sort(useTextSearch ? { score: { $meta: 'textScore' }, createdAt: -1 } : { createdAt: -1 })
@@ -83,9 +89,16 @@ export const getAllImages = asyncHandler(async (req, res) => {
     } catch (error) {
         logger.error('Error fetching images (populate may have failed):', error);
         // If populate fails (e.g., invalid category references), try without populating category
+        // But we still need to populate category to validate it
         [imagesRaw, total] = await Promise.all([
             Image.find(query)
                 .populate('uploadedBy', 'username displayName avatarUrl')
+                .populate({
+                    path: 'imageCategory',
+                    select: 'name description isActive',
+                    justOne: true,
+                    match: { isActive: true }
+                })
                 .sort(useTextSearch ? { score: { $meta: 'textScore' }, createdAt: -1 } : { createdAt: -1 })
                 .skip(skip)
                 .limit(limit)
@@ -98,13 +111,43 @@ export const getAllImages = asyncHandler(async (req, res) => {
 
     // Handle images with invalid or missing category references
     // If category populate failed (null or invalid), set to null
-    const images = imagesRaw.map(img => ({
-        ...img,
-        // Ensure imageCategory is either an object with name or null
-        imageCategory: (img.imageCategory && typeof img.imageCategory === 'object' && img.imageCategory.name)
-            ? img.imageCategory
-            : null
-    }));
+    let images = imagesRaw.map(img => {
+        // Check if imageCategory is populated correctly
+        const hasValidCategory = img.imageCategory &&
+            typeof img.imageCategory === 'object' &&
+            img.imageCategory.name &&
+            img.imageCategory.isActive !== false; // Ensure category is active
+
+        return {
+            ...img,
+            // Ensure imageCategory is either an object with name or null
+            imageCategory: hasValidCategory ? img.imageCategory : null
+        };
+    });
+
+    // Filter out images with invalid or inactive categories
+    images = images.filter(img => img.imageCategory !== null);
+
+    // Additional validation: If category filter was applied, ensure populated category name matches
+    // This catches any edge cases where ObjectId might match but category name doesn't
+    // This is a safety net to ensure images only appear in their correct category
+    if (category) {
+        const normalizedCategory = category.toLowerCase().trim();
+        const originalCount = images.length;
+
+        images = images.filter(img => {
+            // Strict validation: imageCategory must be a valid object with name
+            if (!img.imageCategory ||
+                typeof img.imageCategory !== 'object' ||
+                !img.imageCategory.name ||
+                img.imageCategory.isActive === false) {
+                return false; // Filter out images with invalid or inactive categories
+            }
+            // Case-insensitive exact match to ensure category name matches
+            const imageCategoryName = img.imageCategory.name.toLowerCase().trim();
+            return imageCategoryName === normalizedCategory;
+        });
+    }
 
     // Set cache headers for better performance (like Unsplash)
     // Check if there's a cache-busting parameter
@@ -131,7 +174,7 @@ export const getAllImages = asyncHandler(async (req, res) => {
 export const uploadImage = asyncHandler(async (req, res) => {
     const userId = req.user._id;
     const { imageTitle, imageCategory, location, cameraModel, coordinates } = req.body;
-    
+
     // Parse coordinates if provided as JSON string
     let parsedCoordinates;
     if (coordinates) {
@@ -181,6 +224,7 @@ export const uploadImage = asyncHandler(async (req, res) => {
     }
 
     if (!categoryDoc) {
+        console.error('Category not found!');
         return res.status(400).json({
             message: 'Danh mục ảnh không tồn tại hoặc đã bị xóa',
         });
@@ -218,7 +262,7 @@ export const uploadImage = asyncHandler(async (req, res) => {
             regularUrl: uploadResult.regularUrl, // Regular size for detail
             publicId: uploadResult.publicId,
             imageTitle: imageTitle.trim(),
-            imageCategory: categoryDoc._id, // Use category ObjectId
+            imageCategory: categoryDoc._id, // Use category ObjectId directly
             uploadedBy: userId,
             location: location?.trim() || undefined,
             coordinates: parsedCoordinates || undefined,
@@ -246,9 +290,9 @@ export const uploadImage = asyncHandler(async (req, res) => {
         // Provide user-friendly error messages
         logger.error('Lỗi tải ảnh', {
             message: error.message,
-                fileSize: req.file?.size,
-                fileName: req.file?.originalname,
-            });
+            fileSize: req.file?.size,
+            fileName: req.file?.originalname,
+        });
 
         if (error.message?.includes('timeout') || error.message?.includes('Upload timeout')) {
             throw new Error('Lỗi tải ảnh: vui lòng thử lại với ảnh có dung lượng nhỏ hơn hoặc kiểm tra kết nối mạng của bạn.');

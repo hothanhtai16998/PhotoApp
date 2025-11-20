@@ -342,19 +342,6 @@ const ImageGrid = memo(() => {
     }
   }, []);
 
-  if (error) {
-    return (
-      <div className="image-grid-container" role="alert" aria-live="polite">
-        <div className="error-state">
-          <p>Lỗi: {error}</p>
-          <button onClick={() => fetchImages()} aria-label="Thử lại tải ảnh">
-            Vui lòng thử lại
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   // Loading skeleton component
   const ImageGridSkeleton = () => (
     <div className="masonry-grid" aria-label="Đang tải ảnh" aria-live="polite">
@@ -384,6 +371,20 @@ const ImageGrid = memo(() => {
     }
     return null
   }, [currentLocation, pagination])
+
+  // Early return for error - MUST be after all hooks
+  if (error) {
+    return (
+      <div className="image-grid-container" role="alert" aria-live="polite">
+        <div className="error-state">
+          <p>Lỗi: {error}</p>
+          <button onClick={() => fetchImages()} aria-label="Thử lại tải ảnh">
+            Vui lòng thử lại
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="image-grid-container">

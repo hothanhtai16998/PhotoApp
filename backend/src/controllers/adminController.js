@@ -269,6 +269,7 @@ export const getAllImagesAdmin = asyncHandler(async (req, res) => {
             isActive: true,
         });
         if (categoryDoc) {
+            // Strictly match only this category ID
             query.imageCategory = categoryDoc._id;
         } else {
             // If category not found, return empty results
@@ -283,12 +284,17 @@ export const getAllImagesAdmin = asyncHandler(async (req, res) => {
             });
         }
     }
+    // Always ensure imageCategory exists and is not null (even when no category filter)
+    // This prevents images with invalid/null categories from appearing
+    if (!query.imageCategory) {
+        query.imageCategory = { $exists: true, $ne: null };
+    }
 
     if (userId) {
         query.uploadedBy = userId;
     }
 
-    const [images, total] = await Promise.all([
+    const [imagesRaw, total] = await Promise.all([
         Image.find(query)
             .populate('uploadedBy', 'username displayName email')
             .populate('imageCategory', 'name description')
@@ -298,6 +304,28 @@ export const getAllImagesAdmin = asyncHandler(async (req, res) => {
             .lean(),
         Image.countDocuments(query),
     ]);
+
+    // Handle images with invalid or missing category references
+    let images = imagesRaw.map(img => ({
+        ...img,
+        // Ensure imageCategory is either an object with name or null
+        imageCategory: (img.imageCategory && typeof img.imageCategory === 'object' && img.imageCategory.name)
+            ? img.imageCategory
+            : null
+    }));
+
+    // Additional validation: If category filter was applied, ensure populated category name matches
+    // This catches any edge cases where ObjectId might match but category name doesn't
+    // This is a safety net to ensure images only appear in their correct category
+    if (category) {
+        images = images.filter(img => {
+            if (!img.imageCategory || typeof img.imageCategory !== 'object' || !img.imageCategory.name) {
+                return false; // Filter out images with invalid categories
+            }
+            // Case-insensitive match to ensure exact category match
+            return img.imageCategory.name.toLowerCase() === category.toLowerCase();
+        });
+    }
 
     res.status(200).json({
         images,

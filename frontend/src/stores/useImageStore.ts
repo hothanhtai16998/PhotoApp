@@ -176,11 +176,29 @@ export const useImageStore = create(
 			set((state) => {
 				state.loading = true;
 				state.error = null;
+				
+				// Clear images immediately when category/search/location changes to prevent showing old images
+				const currentCategory = state.currentCategory;
+				const currentSearch = state.currentSearch;
+				const currentLocation = state.currentLocation;
+				const categoryChanged = params?.category !== undefined && params.category !== currentCategory;
+				const searchChanged = params?.search !== undefined && params.search !== currentSearch;
+				const locationChanged = params?.location !== undefined && params.location !== currentLocation;
+				
+				// If it's a new query (category/search/location changed or page 1), clear images immediately
+				if (categoryChanged || searchChanged || locationChanged || params?.page === 1 || !params?.page) {
+					state.images = [];
+					state.pagination = null;
+				}
 			});
 			try {
-				// Always use cache-busting on initial load (when no params or page 1) to ensure fresh data
-				// This prevents deleted images from appearing after page refresh due to browser cache
-				const shouldBustCache = !params?.page || params.page === 1 || params?._refresh;
+				// Always use cache-busting on initial load, category change, or search change to ensure fresh data
+				// This prevents deleted images or wrong category images from appearing due to browser cache
+				const currentCategory = useImageStore.getState().currentCategory;
+				const currentSearch = useImageStore.getState().currentSearch;
+				const categoryChanged = params?.category !== undefined && params.category !== currentCategory;
+				const searchChanged = params?.search !== undefined && params.search !== currentSearch;
+				const shouldBustCache = !params?.page || params.page === 1 || params?._refresh || categoryChanged || searchChanged;
 				const fetchParams = shouldBustCache && !params?._refresh
 					? { ...params, _refresh: true }
 					: params;
@@ -232,10 +250,8 @@ export const useImageStore = create(
 								(img) => {
 									// Keep images that were uploaded in the last 15 minutes
 									// These might not be in the backend response yet or might be filtered out
-									// IMPORTANT: Preserve them even if category doesn't match, because:
-									// 1. Backend might not have indexed them yet
-									// 2. Category might be stored differently (string vs object)
-									// 3. User just uploaded it, so it should be visible
+									// BUT: Only preserve if they match the current category filter!
+									const currentCategory = params?.category;
 									if (img.createdAt) {
 										try {
 											const uploadTime =
@@ -252,14 +268,27 @@ export const useImageStore = create(
 														uploadTime <
 													900000; // 15 minutes
 												if (isRecent) {
-													return true; // Always preserve recent uploads
+													// Check if category matches current filter
+													if (currentCategory !== undefined) {
+														// If filtering by category, only preserve if category matches
+														const imgCategoryName = typeof img.imageCategory === 'string'
+															? img.imageCategory
+															: img.imageCategory?.name;
+														if (imgCategoryName && imgCategoryName.toLowerCase() === currentCategory.toLowerCase()) {
+															return true; // Preserve - category matches
+														}
+														return false; // Don't preserve - category doesn't match
+													}
+													// If no category filter, preserve all recent uploads
+													return true;
 												}
 											}
 										} catch {
-											// If date parsing fails, keep it as a safety measure during refresh
+											// If date parsing fails, only keep during refresh if no category filter
 											if (
 												params?._refresh ===
-												true
+												true &&
+												currentCategory === undefined
 											) {
 												return true;
 											}
