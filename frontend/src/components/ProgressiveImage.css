@@ -8,8 +8,8 @@
 
 .progressive-image {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto; /* Let height adjust based on aspect ratio */
+  display: block;
   transition: opacity 0.3s ease-in-out;
   image-rendering: -webkit-optimize-contrast; /* Better quality on WebKit browsers */
   image-rendering: high-quality; /* Better quality on modern browsers */

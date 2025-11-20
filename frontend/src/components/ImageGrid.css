@@ -556,9 +556,9 @@
 
 .masonry-item img {
 	width: 100%;
-	height: 100%;
+	height: auto; /* Preserve aspect ratio - let height adjust naturally */
 	display: block;
-	object-fit: cover;
+	object-fit: contain; /* Show full image without cropping */
 	transition: opacity 0.3s ease;
 	image-rendering: -webkit-optimize-contrast; /* Better quality on WebKit browsers */
 	image-rendering: high-quality; /* Better quality on modern browsers */

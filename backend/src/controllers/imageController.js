@@ -217,9 +217,9 @@ export const uploadImage = asyncHandler(async (req, res) => {
         // Provide user-friendly error messages
         logger.error('Lỗi tải ảnh', {
             message: error.message,
-            fileSize: req.file?.size,
-            fileName: req.file?.originalname,
-        });
+                fileSize: req.file?.size,
+                fileName: req.file?.originalname,
+            });
 
         if (error.message?.includes('timeout') || error.message?.includes('Upload timeout')) {
             throw new Error('Lỗi tải ảnh: vui lòng thử lại với ảnh có dung lượng nhỏ hơn hoặc kiểm tra kết nối mạng của bạn.');

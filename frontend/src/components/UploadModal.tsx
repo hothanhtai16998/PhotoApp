@@ -508,10 +508,12 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                         alt={`Preview ${index + 1}`}
                                         style={{
                                             width: '100%',
-                                            height: '200px',
-                                            objectFit: 'cover',
+                                            height: 'auto', // Preserve aspect ratio
+                                            maxHeight: '500px', // Limit max height for very tall images
+                                            objectFit: 'contain', // Show full image without cropping
                                             borderRadius: '8px',
-                                            border: '1px solid #e5e5e5'
+                                            border: '1px solid #e5e5e5',
+                                            display: 'block'
                                         }}
                                     />
                                     <button
@@ -652,7 +654,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                     {/* Footer with Submit Button */}
                     <div className="upload-modal-footer" style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #e5e5e5', position: 'sticky', bottom: 0, backgroundColor: 'white' }}>
                         <a href="#" className="footer-link"></a>
-                        <div className="footer-buttons" style={{ position: 'relative', display: 'flex', gap: '12px', alignItems: 'center' }}>
+                        <div className="footer-buttons" style={{ position: 'relative', display: 'flex', gap: '12px', alignItems: 'center', justifyContent: 'flex-end', width: '100%' }}>
                             <Button type="button" variant="outline" onClick={handleCancel}>
                                 Huỷ
                             </Button>

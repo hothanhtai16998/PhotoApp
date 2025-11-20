@@ -510,6 +510,10 @@
   margin-top: 24px;
 }
 
+.upload-modal-footer .footer-buttons {
+  justify-content: flex-end;
+}
+
 .footer-link {
   font-size: 0.875rem;
   color: #767676;
@@ -630,8 +634,16 @@
 
 .footer-buttons {
   width: 100%;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end; /* Align buttons to the right */
 }
 
-.footer-buttons button {
-  flex: 1;
+.footer-buttons button:first-child {
+  flex: 0 0 auto; /* Cancel button: don't expand, use natural width */
+}
+
+.footer-buttons button:last-child {
+  flex: 0 0 auto; /* Submit button: don't expand, use natural width */
+  min-width: 120px; /* Ensure minimum width for submit button */
 }

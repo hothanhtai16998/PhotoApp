@@ -1,7 +1,6 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { env } from './env.js';
 import sharp from 'sharp';
-import { Readable } from 'stream';
 
 // Initialize S3 client
 const s3Client = new S3Client({
@@ -11,13 +10,6 @@ const s3Client = new S3Client({
 		secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
 	},
 });
-
-/**
- * Convert buffer to stream
- */
-const bufferToStream = (buffer) => {
-	return Readable.from(buffer);
-};
 
 /**
  * Upload image to S3 with multiple sizes
@@ -34,32 +26,38 @@ export const uploadImageWithSizes = async (imageBuffer, folder = 'photo-app-imag
 		const extension = 'webp'; // Use WebP for better compression
 
 		// Process images with Sharp to create multiple sizes
-		const thumbnail = await sharp(imageBuffer)
+		// Use auto-rotate to respect EXIF orientation data (fixes portrait images)
+		// Sharp's rotate() without parameters auto-rotates based on EXIF orientation tag
+		const thumbnail = await sharp(imageBuffer, { failOnError: false })
+			.rotate() // Auto-rotate based on EXIF orientation (removes orientation tag)
 			.resize(200, null, { withoutEnlargement: true })
 			.webp({ quality: 60 })
 			.toBuffer();
 
-		const small = await sharp(imageBuffer)
+		const small = await sharp(imageBuffer, { failOnError: false })
+			.rotate() // Auto-rotate based on EXIF orientation
 			.resize(800, null, { withoutEnlargement: true })
 			.webp({ quality: 80 })
 			.toBuffer();
 
-		const regular = await sharp(imageBuffer)
+		const regular = await sharp(imageBuffer, { failOnError: false })
+			.rotate() // Auto-rotate based on EXIF orientation
 			.resize(1080, null, { withoutEnlargement: true })
 			.webp({ quality: 85 })
 			.toBuffer();
 
 		// Original (optimized but full size)
-		const original = await sharp(imageBuffer)
+		const original = await sharp(imageBuffer, { failOnError: false })
+			.rotate() // Auto-rotate based on EXIF orientation
 			.webp({ quality: 85 })
 			.toBuffer();
 
-		// Upload all sizes to S3
+		// Upload all sizes to S3 (use buffers directly)
 		const uploadPromises = [
-			uploadToS3(bufferToStream(thumbnail), `${folder}/${baseFilename}-thumbnail.${extension}`, 'image/webp'),
-			uploadToS3(bufferToStream(small), `${folder}/${baseFilename}-small.${extension}`, 'image/webp'),
-			uploadToS3(bufferToStream(regular), `${folder}/${baseFilename}-regular.${extension}`, 'image/webp'),
-			uploadToS3(bufferToStream(original), `${folder}/${baseFilename}-original.${extension}`, 'image/webp'),
+			uploadToS3(thumbnail, `${folder}/${baseFilename}-thumbnail.${extension}`, 'image/webp'),
+			uploadToS3(small, `${folder}/${baseFilename}-small.${extension}`, 'image/webp'),
+			uploadToS3(regular, `${folder}/${baseFilename}-regular.${extension}`, 'image/webp'),
+			uploadToS3(original, `${folder}/${baseFilename}-original.${extension}`, 'image/webp'),
 		];
 
 		const [thumbnailUrl, smallUrl, regularUrl, originalUrl] = await Promise.all(uploadPromises);
@@ -78,17 +76,17 @@ export const uploadImageWithSizes = async (imageBuffer, folder = 'photo-app-imag
 
 /**
  * Upload a single file to S3
- * @param {Readable} stream - File stream
+ * @param {Buffer} buffer - File buffer
  * @param {string} key - S3 object key (path)
  * @param {string} contentType - MIME type
  * @returns {Promise<string>} Public URL of uploaded file
  */
-const uploadToS3 = async (stream, key, contentType) => {
+const uploadToS3 = async (buffer, key, contentType) => {
 	try {
 		const command = new PutObjectCommand({
 			Bucket: env.AWS_S3_BUCKET_NAME,
 			Key: key,
-			Body: stream,
+			Body: buffer,
 			ContentType: contentType,
 			CacheControl: 'public, max-age=31536000', // Cache for 1 year
 		});
@@ -102,7 +100,17 @@ const uploadToS3 = async (stream, key, contentType) => {
 		}
 		return `https://${env.AWS_S3_BUCKET_NAME}.s3.${env.AWS_REGION}.amazonaws.com/${key}`;
 	} catch (error) {
-		throw new Error(`Failed to upload to S3: ${error.message}`);
+		// Provide more detailed error information
+		const errorMessage = error.message || 'Unknown error';
+		const errorCode = error.Code || error.code || 'UNKNOWN';
+		console.error('S3 Upload Error:', {
+			code: errorCode,
+			message: errorMessage,
+			bucket: env.AWS_S3_BUCKET_NAME,
+			key: key,
+			region: env.AWS_REGION,
+		});
+		throw new Error(`Failed to upload to S3 (${errorCode}): ${errorMessage}`);
 	}
 };
 
@@ -121,7 +129,8 @@ export const uploadAvatar = async (imageBuffer, folder = 'photo-app-avatars', fi
 		const extension = 'webp';
 
 		// Process avatar with Sharp: 200x200, face detection, WebP
-		const avatar = await sharp(imageBuffer)
+		const avatar = await sharp(imageBuffer, { failOnError: false })
+			.rotate() // Auto-rotate based on EXIF orientation
 			.resize(200, 200, {
 				fit: 'cover',
 				position: 'center',
@@ -131,7 +140,7 @@ export const uploadAvatar = async (imageBuffer, folder = 'photo-app-avatars', fi
 
 		// Upload to S3
 		const avatarUrl = await uploadToS3(
-			bufferToStream(avatar),
+			avatar,
 			`${folder}/${baseFilename}.${extension}`,
 			'image/webp'
 		);
