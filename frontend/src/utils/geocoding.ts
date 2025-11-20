@@ -112,3 +112,279 @@ export function delay(ms: number): Promise<void> {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+/**
+ * Location suggestion from geocoding API
+ */
+export interface LocationSuggestion {
+	displayName: string;
+	latitude: number;
+	longitude: number;
+	address?: {
+		city?: string;
+		state?: string;
+		country?: string;
+	};
+}
+
+/**
+ * Calculate relevance score for a location result based on query
+ */
+function calculateRelevanceScore(
+	query: string,
+	item: any,
+	address: any
+): number {
+	const queryLower = query.toLowerCase().trim();
+	const queryWords = queryLower.split(/[,\s]+/).filter(w => w.length > 1);
+	
+	let score = 0;
+	const displayName = (item.display_name || item.name || '').toLowerCase();
+	const name = (item.name || '').toLowerCase();
+	
+	// Check if query words appear in location name (exact match gets highest score)
+	queryWords.forEach(word => {
+		if (name.includes(word)) {
+			score += 10; // Exact name match
+		} else if (displayName.includes(word)) {
+			score += 5; // Display name match
+		}
+	});
+	
+	// Check address components
+	const city = (address.city || address.town || address.village || address.municipality || '').toLowerCase();
+	const state = (address.state || address.province || address.region || '').toLowerCase();
+	const district = (address.district || '').toLowerCase();
+	const ward = (address.ward || address.suburb || '').toLowerCase();
+	
+	queryWords.forEach(word => {
+		if (city.includes(word)) score += 8;
+		if (state.includes(word)) score += 6;
+		if (district.includes(word)) score += 7;
+		if (ward.includes(word)) score += 9;
+	});
+	
+	// Boost score for important location types
+	if (item.type === 'city' || item.type === 'town' || item.type === 'administrative') {
+		score += 5;
+	}
+	
+	// Penalize very long addresses (likely too specific)
+	if (displayName.length > 80) {
+		score -= 3;
+	}
+	
+	return score;
+}
+
+/**
+ * Build a clean, concise location name
+ */
+function buildLocationName(item: any, address: any): string {
+	// Prefer display_name but clean it up
+	let displayName = item.display_name || '';
+	
+	// If display_name is too long or contains too much detail, build our own
+	if (displayName.length > 80 || displayName.split(',').length > 4) {
+		const locationParts: string[] = [];
+		
+		// Priority order: ward/district -> city/town -> province -> country
+		if (address.ward || address.suburb) {
+			locationParts.push(address.ward || address.suburb);
+		}
+		
+		if (address.district && !locationParts.includes(address.district)) {
+			locationParts.push(address.district);
+		}
+		
+		if (address.city || address.town || address.village || address.municipality) {
+			const cityName = address.city || address.town || address.village || address.municipality;
+			if (!locationParts.includes(cityName)) {
+				locationParts.push(cityName);
+			}
+		}
+		
+		if (address.state || address.province || address.region) {
+			const state = address.state || address.province || address.region;
+			if (!locationParts.includes(state)) {
+				locationParts.push(state);
+			}
+		}
+		
+		if (address.country) {
+			const countryMap: Record<string, string> = {
+				'Vietnam': 'Việt Nam',
+				'Thailand': 'Thái Lan',
+				'Cambodia': 'Campuchia',
+				'Laos': 'Lào',
+				'China': 'Trung Quốc',
+				'Japan': 'Nhật Bản',
+				'Korea': 'Hàn Quốc',
+				'Singapore': 'Singapore',
+				'Malaysia': 'Malaysia',
+				'Indonesia': 'Indonesia',
+				'Philippines': 'Philippines',
+			};
+			const countryName = countryMap[address.country] || address.country;
+			if (!locationParts.includes(countryName)) {
+				locationParts.push(countryName);
+			}
+		}
+
+		displayName = locationParts.length > 0
+			? locationParts.join(', ')
+			: item.name || item.display_name || '';
+	}
+
+	// Clean up display name
+	displayName = displayName
+		.replace(/, Việt Nam, Việt Nam/g, ', Việt Nam')
+		.replace(/, ,/g, ',')
+		.replace(/\s+/g, ' ')
+		.trim();
+
+	return displayName;
+}
+
+/**
+ * Search for location suggestions (forward geocoding)
+ * Uses OpenStreetMap Nominatim API (free, no API key required)
+ * Similar to Google Maps search autocomplete
+ * @param query - Search query (location name)
+ * @param lang - Language code for location names (default: 'vi' for Vietnamese)
+ * @param limit - Maximum number of results (default: 8)
+ * @returns Promise with array of location suggestions
+ */
+export async function searchLocations(
+	query: string,
+	lang: string = 'vi',
+	limit: number = 8
+): Promise<LocationSuggestion[]> {
+	if (!query || query.trim().length < 2) {
+		return [];
+	}
+
+	try {
+		// Clean and normalize query
+		const cleanQuery = query.trim();
+		const queryWords = cleanQuery.toLowerCase().split(/[,\s]+/).filter(w => w.length > 1);
+		
+		// Try multiple search strategies for better results
+		const searchQueries: string[] = [];
+		
+		// Strategy 1: Full query
+		searchQueries.push(cleanQuery);
+		
+		// Strategy 2: If query contains comma, try the main part (usually the city/town)
+		if (cleanQuery.includes(',')) {
+			const parts = cleanQuery.split(',').map(p => p.trim());
+			// Use the last part (usually province/city) and first part (ward/district)
+			if (parts.length >= 2) {
+				searchQueries.push(parts[parts.length - 1]); // City/Province
+				searchQueries.push(`${parts[0]} ${parts[parts.length - 1]}`); // Ward + City
+			}
+		}
+		
+		// Strategy 3: If multiple words, try the most important ones
+		if (queryWords.length > 2) {
+			// Take last 2 words (usually city + province)
+			searchQueries.push(queryWords.slice(-2).join(' '));
+		}
+
+		const seen = new Set<string>();
+		const allResults: Array<{ item: any; score: number }> = [];
+
+		// Search with each query strategy
+		for (const searchQuery of searchQueries) {
+			if (searchQuery.length < 2) continue;
+
+			let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&accept-language=${lang}&addressdetails=1&limit=10&dedupe=1&countrycodes=vn`;
+
+			let response = await fetch(url, {
+				method: 'GET',
+				headers: {
+					'User-Agent': 'PhotoAppWeb/1.0',
+				},
+			});
+
+			if (!response.ok) continue;
+
+			const data = await response.json();
+			if (!Array.isArray(data) || data.length === 0) continue;
+
+			// Score and collect results
+			for (const item of data) {
+				const address = item.address || {};
+				const lat = parseFloat(item.lat);
+				const lon = parseFloat(item.lon);
+				const locationKey = `${lat.toFixed(4)},${lon.toFixed(4)}`;
+				
+				if (seen.has(locationKey)) continue;
+				seen.add(locationKey);
+
+				const score = calculateRelevanceScore(cleanQuery, item, address);
+				allResults.push({ item, score });
+			}
+
+			// Small delay to respect rate limits
+			await new Promise(resolve => setTimeout(resolve, 200));
+		}
+
+		// If no results with Vietnam filter, try without country restriction
+		if (allResults.length === 0) {
+			const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanQuery)}&accept-language=${lang}&addressdetails=1&limit=10&dedupe=1`;
+			
+			const response = await fetch(url, {
+				method: 'GET',
+				headers: {
+					'User-Agent': 'PhotoAppWeb/1.0',
+				},
+			});
+
+			if (response.ok) {
+				const data = await response.json();
+				if (Array.isArray(data) && data.length > 0) {
+					for (const item of data) {
+						const address = item.address || {};
+						const lat = parseFloat(item.lat);
+						const lon = parseFloat(item.lon);
+						const locationKey = `${lat.toFixed(4)},${lon.toFixed(4)}`;
+						
+						if (seen.has(locationKey)) continue;
+						seen.add(locationKey);
+
+						const score = calculateRelevanceScore(cleanQuery, item, address);
+						allResults.push({ item, score });
+					}
+				}
+			}
+		}
+
+		// Sort by relevance score (highest first)
+		allResults.sort((a, b) => b.score - a.score);
+
+		// Transform to LocationSuggestion format
+		const suggestions: LocationSuggestion[] = allResults
+			.slice(0, limit)
+			.map(({ item }) => {
+				const address = item.address || {};
+				const displayName = buildLocationName(item, address);
+
+				return {
+					displayName,
+					latitude: parseFloat(item.lat),
+					longitude: parseFloat(item.lon),
+					address: {
+						city: address.city || address.town || address.village || address.municipality,
+						state: address.state || address.province || address.region,
+						country: address.country,
+					},
+				};
+			});
+
+		return suggestions;
+	} catch (error) {
+		console.warn('Location search error:', error);
+		return [];
+	}
+}
+

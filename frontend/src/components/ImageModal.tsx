@@ -9,6 +9,8 @@ import {
   Heart,
   MapPin,
   ExternalLink,
+  Mail,
+  Link as LinkIcon,
 } from 'lucide-react';
 import type { Image } from '@/types/image';
 import ProgressiveImage from './ProgressiveImage';
@@ -48,12 +50,14 @@ const ImageModal = ({
   const [views, setViews] = useState<number>(image.views || 0);
   const [downloads, setDownloads] = useState<number>(image.downloads || 0);
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
   const [activeTab, setActiveTab] = useState<'views' | 'downloads'>('views');
   const [hoveredBar, setHoveredBar] = useState<{ date: string; views: number; downloads: number; x: number; y: number } | null>(null);
   const [isFavorited, setIsFavorited] = useState<boolean>(false);
   const [isTogglingFavorite, setIsTogglingFavorite] = useState<boolean>(false);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const infoButtonRef = useRef<HTMLButtonElement>(null);
+  const shareButtonRef = useRef<HTMLButtonElement>(null);
   const incrementedViewIds = useRef<Set<string>>(new Set());
   const currentImageIdRef = useRef<string | null>(null);
   const { accessToken } = useAuthStore();
@@ -108,28 +112,28 @@ const ImageModal = ({
     setViews(image.views || 0);
     setDownloads(image.downloads || 0);
     currentImageIdRef.current = image._id;
-    
+
     // Check favorite status when image changes (only if user is logged in)
     if (accessToken && image && image._id) {
       // Ensure imageId is a string and valid MongoDB ObjectId
       const imageId = String(image._id).trim();
-      
+
       // Validate MongoDB ObjectId format (24 hex characters)
       const isValidMongoId = /^[0-9a-fA-F]{24}$/.test(imageId);
-      
+
       if (!imageId || imageId === 'undefined' || imageId === 'null' || !isValidMongoId) {
         setIsFavorited(false);
         return;
       }
-      
+
       favoriteService.checkFavorites([imageId])
         .then((response) => {
           // Check response structure - backend returns { success: true, favorites: { imageId: boolean } }
           if (response && response.favorites && typeof response.favorites === 'object') {
             // Check both string and original ID format to handle any type mismatches
-            const isFavorited = response.favorites[imageId] === true || 
-                               response.favorites[String(image._id)] === true ||
-                               response.favorites[image._id] === true;
+            const isFavorited = response.favorites[imageId] === true ||
+              response.favorites[String(image._id)] === true ||
+              response.favorites[image._id] === true;
             setIsFavorited(!!isFavorited);
           } else {
             setIsFavorited(false);
@@ -166,6 +170,27 @@ const ImageModal = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showInfoModal]);
+
+  // Close share menu when clicking outside
+  useEffect(() => {
+    if (!showShareMenu) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        shareButtonRef.current &&
+        !shareButtonRef.current.contains(target) &&
+        !target.closest('.share-menu')
+      ) {
+        setShowShareMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showShareMenu]);
 
   // Increment view count when modal opens (only once per image)
   useEffect(() => {
@@ -275,12 +300,49 @@ const ImageModal = ({
     };
   }, [hasMoreRelatedImages, isLoadingRelatedImages]);
 
-  // Handle share functionality
-  const handleShare = useCallback(async () => {
+  // Get share URL and text
+  const getShareData = useCallback(() => {
     const shareUrl = `${window.location.origin}/?image=${image._id}`;
     const shareText = `Check out this photo: ${image.imageTitle || 'Untitled'}`;
+    return { shareUrl, shareText };
+  }, [image._id, image.imageTitle]);
 
-    // Use Web Share API if available (mobile)
+  // Handle share to Facebook
+  const handleShareFacebook = useCallback(() => {
+    const { shareUrl } = getShareData();
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+    window.open(facebookUrl, '_blank', 'width=600,height=400');
+    setShowShareMenu(false);
+  }, [getShareData]);
+
+  // Handle share to Pinterest
+  const handleSharePinterest = useCallback(() => {
+    const { shareUrl } = getShareData();
+    const pinterestUrl = `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(shareUrl)}&media=${encodeURIComponent(image.imageUrl)}&description=${encodeURIComponent(image.imageTitle || 'Photo')}`;
+    window.open(pinterestUrl, '_blank', 'width=600,height=400');
+    setShowShareMenu(false);
+  }, [getShareData, image.imageUrl, image.imageTitle]);
+
+  // Handle share to Twitter
+  const handleShareTwitter = useCallback(() => {
+    const { shareUrl, shareText } = getShareData();
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+    window.open(twitterUrl, '_blank', 'width=600,height=400');
+    setShowShareMenu(false);
+  }, [getShareData]);
+
+  // Handle share via Email
+  const handleShareEmail = useCallback(() => {
+    const { shareUrl, shareText } = getShareData();
+    const emailUrl = `mailto:?subject=${encodeURIComponent(image.imageTitle || 'Photo')}&body=${encodeURIComponent(`${shareText}\n\n${shareUrl}`)}`;
+    window.location.href = emailUrl;
+    setShowShareMenu(false);
+  }, [getShareData, image.imageTitle]);
+
+  // Handle share via Web Share API
+  const handleShareVia = useCallback(async () => {
+    const { shareUrl, shareText } = getShareData();
+
     if (navigator.share) {
       try {
         await navigator.share({
@@ -289,24 +351,36 @@ const ImageModal = ({
           url: shareUrl,
         });
         toast.success('Đã chia sẻ ảnh');
-        return;
+        setShowShareMenu(false);
       } catch (error) {
-        // User cancelled or error occurred, fall through to clipboard
         if ((error as Error).name !== 'AbortError') {
           console.error('Share failed:', error);
+          toast.error('Không thể chia sẻ. Vui lòng thử lại.');
         }
       }
+    } else {
+      toast.error('Trình duyệt của bạn không hỗ trợ tính năng này');
     }
+  }, [getShareData, image.imageTitle]);
 
-    // Fallback: Copy to clipboard
+  // Handle copy link
+  const handleCopyLink = useCallback(async () => {
+    const { shareUrl } = getShareData();
     try {
       await navigator.clipboard.writeText(shareUrl);
       toast.success('Đã sao chép liên kết vào clipboard');
+      setShowShareMenu(false);
     } catch (error) {
       console.error('Failed to copy to clipboard:', error);
-      toast.error('Không thể chia sẻ. Vui lòng thử lại.');
+      toast.error('Không thể sao chép liên kết. Vui lòng thử lại.');
     }
-  }, [image._id, image.imageTitle]);
+  }, [getShareData]);
+
+  // Handle share button click (opens menu)
+  const handleShare = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowShareMenu(!showShareMenu);
+  }, [showShareMenu]);
 
   // Handle toggle favorite
   const handleToggleFavorite = useCallback(async () => {
@@ -316,10 +390,10 @@ const ImageModal = ({
     try {
       const imageId = String(image._id);
       const response = await favoriteService.toggleFavorite(imageId);
-      
+
       // Update local state immediately
       setIsFavorited(response.isFavorited);
-      
+
       if (response.isFavorited) {
         toast.success('Đã thêm vào yêu thích');
       } else {
@@ -341,7 +415,7 @@ const ImageModal = ({
         onClose();
         return;
       }
-      
+
       // Only handle shortcuts when modal is open (not typing in inputs)
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
@@ -357,7 +431,7 @@ const ImageModal = ({
         e.preventDefault();
         return;
       }
-      
+
       if (e.key === 'ArrowRight' && images.length > 1) {
         const currentIndex = images.findIndex(img => img._id === image._id);
         if (currentIndex < images.length - 1) {
@@ -380,7 +454,7 @@ const ImageModal = ({
       // Share with Ctrl/Cmd + S
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
-        handleShare().catch(console.error);
+        setShowShareMenu(!showShareMenu);
         return;
       }
 
@@ -435,7 +509,7 @@ const ImageModal = ({
         (gridContainer as HTMLElement).style.overflow = '';
       }
     };
-  }, [onClose, images, image._id, onImageSelect, accessToken, isTogglingFavorite, handleShare, handleToggleFavorite]);
+  }, [onClose, images, image._id, onImageSelect, accessToken, isTogglingFavorite, showShareMenu, handleToggleFavorite]);
 
   return (
     <>
@@ -473,17 +547,6 @@ const ImageModal = ({
 
           {/* Right: Action Buttons */}
           <div className="modal-header-right">
-            <button
-              className="modal-action-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleShare();
-              }}
-              title="Share (Ctrl/Cmd + S)"
-              aria-label="Chia sẻ ảnh"
-            >
-              <Share2 size={20} />
-            </button>
             <button
               className="modal-download-btn"
               onClick={async (e) => {
@@ -598,18 +661,94 @@ const ImageModal = ({
                   disabled={isTogglingFavorite}
                   aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
                 >
-                  <Heart 
-                    size={18} 
+                  <Heart
+                    size={18}
                     fill={isFavorited ? 'currentColor' : 'none'}
                     className={isFavorited ? 'favorite-icon-filled' : ''}
                   />
                   <span>{isFavorited ? 'Đã lưu' : 'Lưu'}</span>
                 </button>
               )}
-              <button className="modal-footer-btn">
-                <Share2 size={18} />
-                <span>Chia sẻ</span>
-              </button>
+              <div style={{ position: 'relative' }}>
+                <button
+                  ref={shareButtonRef}
+                  className={`modal-footer-btn ${showShareMenu ? 'active' : ''}`}
+                  onClick={handleShare}
+                  title="Share (Ctrl/Cmd + S)"
+                  aria-label="Chia sẻ ảnh"
+                >
+                  <Share2 size={18} />
+                  <span>Chia sẻ</span>
+                </button>
+                {/* Share Menu */}
+                {showShareMenu && (
+                  <div className="share-menu-wrapper">
+                    <div className="share-menu">
+                      <button
+                        className="share-menu-item"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleShareFacebook();
+                        }}
+                      >
+                        <div className="share-menu-icon facebook-icon">f</div>
+                        <span>Facebook</span>
+                      </button>
+                      <button
+                        className="share-menu-item"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSharePinterest();
+                        }}
+                      >
+                        <div className="share-menu-icon pinterest-icon">P</div>
+                        <span>Pinterest</span>
+                      </button>
+                      <button
+                        className="share-menu-item"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleShareTwitter();
+                        }}
+                      >
+                        <div className="share-menu-icon twitter-icon">X</div>
+                        <span>Twitter</span>
+                      </button>
+                      <button
+                        className="share-menu-item"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleShareEmail();
+                        }}
+                      >
+                        <Mail size={20} className="share-menu-icon-svg" />
+                        <span>Email</span>
+                      </button>
+                      <button
+                        className="share-menu-item"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleShareVia();
+                        }}
+                      >
+                        <Share2 size={20} className="share-menu-icon-svg" />
+                        <span>Share via...</span>
+                      </button>
+                      <div className="share-menu-divider" />
+                      <button
+                        className="share-menu-item"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCopyLink();
+                        }}
+                      >
+                        <LinkIcon size={20} className="share-menu-icon-svg" />
+                        <span>Copy link</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
               <div style={{ position: 'relative' }}>
                 <button
                   ref={infoButtonRef}

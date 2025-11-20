@@ -8,7 +8,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { categoryService, type Category } from '@/services/categoryService';
 import { useNavigate } from 'react-router-dom';
 import { X, Upload, ArrowRight, MapPin } from 'lucide-react';
-import { reverseGeocode, delay } from '@/utils/geocoding';
+import { reverseGeocode, delay, searchLocations, type LocationSuggestion } from '@/utils/geocoding';
 import './UploadModal.css';
 
 // Schema removed - using manual validation
@@ -49,6 +49,13 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
     const [loadingCategories, setLoadingCategories] = useState(false);
     const [showTooltip, setShowTooltip] = useState(false);
     const [detectingLocationIndex, setDetectingLocationIndex] = useState<number | null>(null);
+    const [locationSuggestions, setLocationSuggestions] = useState<Record<number, LocationSuggestion[]>>({});
+    const [showLocationSuggestions, setShowLocationSuggestions] = useState<Record<number, boolean>>({});
+    const [loadingLocationSuggestions, setLoadingLocationSuggestions] = useState<Record<number, boolean>>({});
+    const [focusedLocationIndex, setFocusedLocationIndex] = useState<number | null>(null);
+    const locationInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+    const locationDropdownRefs = useRef<Record<number, HTMLDivElement | null>>({});
+    const locationSearchTimeoutRef = useRef<Record<number, NodeJS.Timeout>>({});
     const fileInputRef = useRef<HTMLInputElement>(null);
 
 
@@ -208,7 +215,114 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
             };
             return updated;
         });
+
+        // Search for location suggestions when location field changes (debounced)
+        if (field === 'location') {
+            // Clear previous timeout
+            if (locationSearchTimeoutRef.current[index]) {
+                clearTimeout(locationSearchTimeoutRef.current[index]);
+            }
+
+            if (value.trim().length >= 2) {
+                // Show loading state
+                setLoadingLocationSuggestions(prev => ({
+                    ...prev,
+                    [index]: true
+                }));
+
+                // Debounce search to avoid too many API calls
+                locationSearchTimeoutRef.current[index] = setTimeout(async () => {
+                    try {
+                        // Small initial delay to respect API rate limits
+                        await delay(300);
+                        const suggestions = await searchLocations(value.trim(), 'vi', 8);
+                        setLocationSuggestions(prev => ({
+                            ...prev,
+                            [index]: suggestions
+                        }));
+                        setShowLocationSuggestions(prev => ({
+                            ...prev,
+                            [index]: suggestions.length > 0
+                        }));
+                    } catch (error) {
+                        console.warn('Error searching locations:', error);
+                        setLocationSuggestions(prev => ({
+                            ...prev,
+                            [index]: []
+                        }));
+                        setShowLocationSuggestions(prev => ({
+                            ...prev,
+                            [index]: false
+                        }));
+                    } finally {
+                        setLoadingLocationSuggestions(prev => ({
+                            ...prev,
+                            [index]: false
+                        }));
+                    }
+                }, 500); // Wait 500ms after user stops typing
+            } else {
+                setShowLocationSuggestions(prev => ({
+                    ...prev,
+                    [index]: false
+                }));
+                setLocationSuggestions(prev => ({
+                    ...prev,
+                    [index]: []
+                }));
+            }
+        }
     };
+
+    // Handle location suggestion selection
+    const selectLocation = (index: number, suggestion: LocationSuggestion) => {
+        setImagesData(prev => {
+            const updated = [...prev];
+            updated[index] = {
+                ...updated[index],
+                location: suggestion.displayName,
+                coordinates: {
+                    latitude: suggestion.latitude,
+                    longitude: suggestion.longitude,
+                }
+            };
+            return updated;
+        });
+        setShowLocationSuggestions(prev => ({
+            ...prev,
+            [index]: false
+        }));
+        setFocusedLocationIndex(null);
+        
+        // Clear search timeout
+        if (locationSearchTimeoutRef.current[index]) {
+            clearTimeout(locationSearchTimeoutRef.current[index]);
+        }
+    };
+
+    // Handle click outside to close suggestions
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            Object.keys(locationDropdownRefs.current).forEach(key => {
+                const index = parseInt(key);
+                const dropdown = locationDropdownRefs.current[index];
+                const input = locationInputRefs.current[index];
+                if (dropdown && input && 
+                    !dropdown.contains(event.target as Node) && 
+                    !input.contains(event.target as Node)) {
+                    setShowLocationSuggestions(prev => ({
+                        ...prev,
+                        [index]: false
+                    }));
+                }
+            });
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     // Validate all images before submit
     const validateAllImages = (): boolean => {
@@ -691,7 +805,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                     </div>
 
                                     {/* Location */}
-                                    <div>
+                                    <div style={{ position: 'relative' }}>
                                         <Label htmlFor={`location-${index}`} style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500' }}>
                                             Địa điểm
                                             {imgData.coordinates && (
@@ -700,18 +814,148 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                                 </span>
                                             )}
                                         </Label>
-                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                            <Input
-                                                id={`location-${index}`}
-                                                type="text"
-                                                value={imgData.location}
-                                                onChange={(e) => updateImageData(index, 'location', e.target.value)}
-                                                placeholder="Phú Quốc,..."
-                                                style={{
-                                                    flex: 1,
-                                                    backgroundColor: imgData.location && imgData.coordinates ? '#f0fdf4' : undefined,
-                                                }}
-                                            />
+                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', position: 'relative' }}>
+                                            <div style={{ flex: 1, position: 'relative' }}>
+                                                <Input
+                                                    id={`location-${index}`}
+                                                    type="text"
+                                                    value={imgData.location}
+                                                    onChange={(e) => updateImageData(index, 'location', e.target.value)}
+                                                    onFocus={() => {
+                                                        setFocusedLocationIndex(index);
+                                                        // If there's existing text, search for suggestions
+                                                        if (imgData.location.trim().length >= 2) {
+                                                            updateImageData(index, 'location', imgData.location);
+                                                        }
+                                                    }}
+                                                    onBlur={() => {
+                                                        // Delay to allow click on suggestion
+                                                        setTimeout(() => {
+                                                            setFocusedLocationIndex(null);
+                                                        }, 200);
+                                                    }}
+                                                    placeholder="Nhập địa điểm (ví dụ: Phú Quốc, Việt Nam)"
+                                                    ref={(el) => {
+                                                        locationInputRefs.current[index] = el;
+                                                    }}
+                                                    style={{
+                                                        width: '100%',
+                                                        backgroundColor: imgData.location && imgData.coordinates ? '#f0fdf4' : undefined,
+                                                    }}
+                                                />
+                                                {/* Location Suggestions Dropdown */}
+                                                {showLocationSuggestions[index] && (
+                                                    <div
+                                                        ref={(el) => {
+                                                            locationDropdownRefs.current[index] = el;
+                                                        }}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            top: '100%',
+                                                            left: 0,
+                                                            right: 0,
+                                                            marginTop: '4px',
+                                                            backgroundColor: 'white',
+                                                            border: '1px solid #e5e5e5',
+                                                            borderRadius: '8px',
+                                                            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+                                                            zIndex: 1000,
+                                                            maxHeight: '240px',
+                                                            overflowY: 'auto',
+                                                            overflowX: 'hidden',
+                                                        }}
+                                                    >
+                                                        {loadingLocationSuggestions[index] ? (
+                                                            <div style={{
+                                                                padding: '12px',
+                                                                textAlign: 'center',
+                                                                color: '#666',
+                                                                fontSize: '14px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                gap: '8px'
+                                                            }}>
+                                                                <div style={{
+                                                                    width: '14px',
+                                                                    height: '14px',
+                                                                    border: '2px solid #6366f1',
+                                                                    borderTop: '2px solid transparent',
+                                                                    borderRadius: '50%',
+                                                                    animation: 'spin 0.8s linear infinite',
+                                                                }} />
+                                                                <span>Đang tìm kiếm...</span>
+                                                            </div>
+                                                        ) : locationSuggestions[index] && locationSuggestions[index].length > 0 ? (
+                                                            locationSuggestions[index].map((suggestion, sugIndex) => {
+                                                                // Highlight matching text
+                                                                const query = imgData.location.toLowerCase();
+                                                                const displayName = suggestion.displayName;
+                                                                const lowerDisplayName = displayName.toLowerCase();
+                                                                const matchIndex = lowerDisplayName.indexOf(query);
+                                                                
+                                                                let highlightedName;
+                                                                if (matchIndex !== -1 && query.length >= 2) {
+                                                                    const before = displayName.substring(0, matchIndex);
+                                                                    const match = displayName.substring(matchIndex, matchIndex + query.length);
+                                                                    const after = displayName.substring(matchIndex + query.length);
+                                                                    highlightedName = (
+                                                                        <>
+                                                                            {before}
+                                                                            <strong style={{ color: '#6366f1', fontWeight: '600' }}>{match}</strong>
+                                                                            {after}
+                                                                        </>
+                                                                    );
+                                                                } else {
+                                                                    highlightedName = displayName;
+                                                                }
+
+                                                                return (
+                                                                    <button
+                                                                        key={`${suggestion.latitude}-${suggestion.longitude}-${sugIndex}`}
+                                                                        type="button"
+                                                                        onClick={() => selectLocation(index, suggestion)}
+                                                                        onMouseDown={(e) => e.preventDefault()} // Prevent input blur
+                                                                        style={{
+                                                                            width: '100%',
+                                                                            padding: '10px 14px',
+                                                                            textAlign: 'left',
+                                                                            border: 'none',
+                                                                            borderBottom: sugIndex < locationSuggestions[index].length - 1 ? '1px solid #f0f0f0' : 'none',
+                                                                            backgroundColor: 'transparent',
+                                                                            cursor: 'pointer',
+                                                                            fontSize: '14px',
+                                                                            color: '#333',
+                                                                            display: 'flex',
+                                                                            alignItems: 'flex-start',
+                                                                            gap: '10px',
+                                                                            transition: 'background-color 0.15s ease',
+                                                                        }}
+                                                                        onMouseEnter={(e) => {
+                                                                            e.currentTarget.style.backgroundColor = '#f8f9fa';
+                                                                        }}
+                                                                        onMouseLeave={(e) => {
+                                                                            e.currentTarget.style.backgroundColor = 'transparent';
+                                                                        }}
+                                                                    >
+                                                                        <MapPin size={14} style={{ color: '#666', flexShrink: 0 }} />
+                                                                        <span style={{ flex: 1, lineHeight: '1.4' }}>{highlightedName}</span>
+                                                                    </button>
+                                                                );
+                                                            })
+                                                        ) : imgData.location.trim().length >= 2 ? (
+                                                            <div style={{
+                                                                padding: '12px',
+                                                                textAlign: 'center',
+                                                                color: '#999',
+                                                                fontSize: '14px'
+                                                            }}>
+                                                                Không tìm thấy địa điểm
+                                                            </div>
+                                                        ) : null}
+                                                    </div>
+                                                )}
+                                            </div>
                                             <Button
                                                 type="button"
                                                 onClick={() => handleDetectLocation(index)}
