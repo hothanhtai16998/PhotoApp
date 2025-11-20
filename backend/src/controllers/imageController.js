@@ -452,6 +452,87 @@ export const getLocations = asyncHandler(async (req, res) => {
     }
 });
 
+// Get a single image by ID
+export const getImageById = asyncHandler(async (req, res) => {
+    const imageId = req.params.imageId;
+
+    let image;
+
+    // Check if it's a valid MongoDB ObjectId (24 hex characters)
+    if (mongoose.Types.ObjectId.isValid(imageId) && imageId.length === 24) {
+        // Full ObjectId - use findById
+        image = await Image.findById(imageId)
+            .populate('uploadedBy', 'username displayName avatarUrl')
+            .populate({
+                path: 'imageCategory',
+                select: 'name description',
+                justOne: true
+            })
+            .lean();
+    } else if (imageId.length === 12 && /^[0-9a-fA-F]{12}$/.test(imageId)) {
+        // Short ID (12 hex characters) - search by last 12 characters of _id
+        // Use aggregation to find image where _id ends with the short ID
+        const result = await Image.aggregate([
+            {
+                $addFields: {
+                    idString: { $toString: '$_id' },
+                    idLength: { $strLenCP: { $toString: '$_id' } }
+                }
+            },
+            {
+                $addFields: {
+                    last12Chars: {
+                        $substr: [
+                            '$idString',
+                            { $subtract: ['$idLength', 12] },
+                            12
+                        ]
+                    }
+                }
+            },
+            {
+                $match: {
+                    $expr: {
+                        $eq: [
+                            { $toLower: '$last12Chars' },
+                            imageId.toLowerCase()
+                        ]
+                    }
+                }
+            },
+            {
+                $limit: 1
+            }
+        ]);
+
+        if (result.length > 0) {
+            // Populate the found image
+            image = await Image.findById(result[0]._id)
+                .populate('uploadedBy', 'username displayName avatarUrl')
+                .populate({
+                    path: 'imageCategory',
+                    select: 'name description',
+                    justOne: true
+                })
+                .lean();
+        }
+    } else {
+        return res.status(400).json({
+            message: 'ID ảnh không hợp lệ',
+        });
+    }
+
+    if (!image) {
+        return res.status(404).json({
+            message: 'Không tìm thấy ảnh',
+        });
+    }
+
+    res.status(200).json({
+        image,
+    });
+});
+
 // Download image - proxy from S3 to avoid CORS issues
 export const downloadImage = asyncHandler(async (req, res) => {
     const imageId = req.params.imageId;
@@ -515,4 +596,77 @@ export const downloadImage = asyncHandler(async (req, res) => {
             });
         }
     }
+});
+
+// Update image information
+export const updateImage = asyncHandler(async (req, res) => {
+    const imageId = req.params.imageId;
+    const { imageTitle, location, coordinates, cameraModel } = req.body;
+    const userId = req.user?._id;
+
+    // Find the image
+    const image = await Image.findById(imageId);
+    if (!image) {
+        return res.status(404).json({
+            message: 'Không tìm thấy ảnh',
+        });
+    }
+
+    // Check if user is the owner or admin
+    const isOwner = image.uploadedBy.toString() === userId?.toString();
+    const isAdmin = req.user?.isAdmin || req.user?.isSuperAdmin;
+
+    if (!isOwner && !isAdmin) {
+        return res.status(403).json({
+            message: 'Bạn không có quyền chỉnh sửa ảnh này',
+        });
+    }
+
+    // Build update object
+    const updateData = {};
+
+    if (imageTitle !== undefined) {
+        updateData.imageTitle = imageTitle.trim();
+    }
+
+    if (location !== undefined) {
+        updateData.location = location ? location.trim() : null;
+    }
+
+    if (coordinates !== undefined) {
+        if (coordinates && coordinates.latitude && coordinates.longitude) {
+            updateData.coordinates = {
+                latitude: parseFloat(coordinates.latitude),
+                longitude: parseFloat(coordinates.longitude),
+            };
+        } else {
+            updateData.coordinates = null;
+        }
+    }
+
+    if (cameraModel !== undefined) {
+        updateData.cameraModel = cameraModel ? cameraModel.trim() : null;
+    }
+
+    // Update the image
+    const updatedImage = await Image.findByIdAndUpdate(
+        imageId,
+        { $set: updateData },
+        { new: true, runValidators: true }
+    )
+        .populate('uploadedBy', 'username displayName avatarUrl')
+        .populate({
+            path: 'imageCategory',
+            select: 'name description',
+            justOne: true
+        })
+        .lean();
+
+    // Clear cache for this image
+    clearCache(`/api/images/${imageId}`);
+
+    res.status(200).json({
+        message: 'Cập nhật ảnh thành công',
+        image: updatedImage,
+    });
 });

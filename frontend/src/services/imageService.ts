@@ -248,4 +248,24 @@ export const imageService = {
 		
 		return res.data.locations || [];
 	},
+
+	updateImage: async (
+		imageId: string,
+		data: {
+			imageTitle?: string;
+			location?: string;
+			coordinates?: { latitude: number; longitude: number } | null;
+			cameraModel?: string;
+		}
+	): Promise<Image> => {
+		const res = await api.patch(
+			`/images/${imageId}`,
+			data,
+			{
+				withCredentials: true,
+			}
+		);
+		
+		return res.data.image;
+	},
 };

@@ -7,6 +7,8 @@ import {
     incrementDownload,
     getLocations,
     downloadImage,
+    getImageById,
+    updateImage,
 } from '../controllers/imageController.js';
 import { singleUpload } from '../middlewares/multerMiddleware.js';
 import { protectedRoute } from '../middlewares/authMiddleware.js';
@@ -41,6 +43,7 @@ router.get('/:imageId/download', downloadImage);
 
 // Protected routes (with CSRF protection for state-changing operations)
 router.post('/upload', protectedRoute, validateCsrf, uploadLimiter, singleUpload, validateImageUpload, uploadImage);
+router.patch('/:imageId', protectedRoute, validateCsrf, updateImage);
 router.get('/user/:userId', protectedRoute, validateUserId, validateGetImages, getImagesByUserId);
 
 export default router;

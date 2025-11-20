@@ -12,6 +12,7 @@ import {
   ExternalLink,
   Mail,
   Link as LinkIcon,
+  Edit2,
 } from 'lucide-react';
 import type { Image } from '@/types/image';
 import ProgressiveImage from './ProgressiveImage';
@@ -20,6 +21,7 @@ import { favoriteService } from '@/services/favoriteService';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { toast } from 'sonner';
 import { generateImageSlug } from '@/lib/utils';
+import EditImageModal from './EditImageModal';
 import './ImageModal.css';
 
 interface ImageModalProps {
@@ -48,6 +50,7 @@ const ImageModal = ({
   const modalContentRef = useRef<HTMLDivElement>(null);
   const relatedImagesLoadMoreRef = useRef<HTMLDivElement>(null);
   const [relatedImagesLimit, setRelatedImagesLimit] = useState(12);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [isLoadingRelatedImages, setIsLoadingRelatedImages] = useState(false);
   const [views, setViews] = useState<number>(image.views || 0);
   const [downloads, setDownloads] = useState<number>(image.downloads || 0);
@@ -1124,6 +1127,16 @@ const ImageModal = ({
                   </div>
                 )}
               </div>
+              {user && (user._id === image.uploadedBy._id || user.isAdmin || user.isSuperAdmin) && (
+                <button
+                  className="modal-footer-btn"
+                  onClick={() => setShowEditModal(true)}
+                  aria-label="Edit image"
+                  title="Edit image"
+                >
+                  <Edit2 size={18} />
+                </button>
+              )}
               <button className="modal-footer-btn">
                 <MoreVertical size={18} />
               </button>
@@ -1191,6 +1204,17 @@ const ImageModal = ({
           <X size={24} />
         </button> */}
       </div>
+
+      {/* Edit Image Modal */}
+      <EditImageModal
+        image={image}
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onUpdate={(updatedImage) => {
+          onImageSelect(updatedImage);
+          setShowEditModal(false);
+        }}
+      />
     </>
   );
 };
