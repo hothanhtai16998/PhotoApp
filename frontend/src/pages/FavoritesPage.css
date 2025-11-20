@@ -48,49 +48,82 @@
 
 .favorites-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 24px;
+    grid-template-columns: repeat(3, 1fr);
+    grid-auto-rows: 8px; /* Same as masonry grid */
+    grid-auto-flow: dense; /* Fill gaps automatically */
+    gap: 12px; /* Same as masonry grid */
+    width: 100%;
+    padding: 0;
+    background: #fff;
     margin-bottom: 40px;
 }
 
 .favorites-item {
     position: relative;
-    aspect-ratio: 4 / 3;
-    border-radius: 12px;
     overflow: hidden;
     cursor: pointer;
-    background: #f5f5f5;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background: #f0f0f0;
+    transition: opacity 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    grid-column: span 1;
+    border-radius: 0; /* Remove border radius to match masonry */
 }
 
 .favorites-item:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+    opacity: 0.9;
 }
 
-.favorites-item.portrait {
-    aspect-ratio: 3 / 4;
-}
-
-.favorites-image {
+.favorites-item .progressive-image-wrapper {
     width: 100%;
-    height: 100%;
-    object-fit: cover;
+    height: 100%; /* Fill the grid cell height */
+    display: block;
+}
+
+.favorites-item .progressive-image {
+    width: 100%;
+    height: 100%; /* Fill the grid cell height */
+    display: block;
+    object-fit: cover; /* Fill the space, crop if needed for consistency */
+    transition: opacity 0.3s ease;
+    image-rendering: -webkit-optimize-contrast; /* Better quality on WebKit browsers */
+    image-rendering: high-quality; /* Better quality on modern browsers */
+    image-rendering: auto; /* Fallback - smooth scaling for photos */
+}
+
+.favorites-item:hover .progressive-image {
+    opacity: 0.9;
+}
+
+/* Portrait images - same as masonry */
+.favorites-item.portrait {
+    grid-row: span 32; /* Same as masonry-item.portrait */
+}
+
+/* Landscape images - same as masonry */
+.favorites-item.landscape {
+    grid-row: span 16; /* Same as masonry-item.landscape */
 }
 
 .favorites-overlay {
     position: absolute;
-    bottom: 0;
+    top: 0;
     left: 0;
     right: 0;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
-    padding: 20px;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0);
     opacity: 0;
-    transition: opacity 0.2s ease;
+    transition: opacity 0.2s ease, background 0.2s ease;
+    pointer-events: none;
+    display: flex;
+    align-items: flex-end;
+    padding: 20px;
 }
 
 .favorites-item:hover .favorites-overlay {
     opacity: 1;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+    pointer-events: all;
 }
 
 .favorites-info {
@@ -187,10 +220,33 @@
     color: #767676;
 }
 
+@media (max-width: 1024px) {
+    .favorites-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px; /* Same as masonry grid at this breakpoint */
+    }
+
+    .favorites-item.portrait {
+        grid-row: span 28; /* Same as masonry-item.portrait */
+    }
+
+    .favorites-item.landscape {
+        grid-row: span 14; /* Same as masonry-item.landscape */
+    }
+}
+
 @media (max-width: 768px) {
     .favorites-grid {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 16px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px; /* Same as masonry grid */
+    }
+
+    .favorites-item.portrait {
+        grid-row: span 26; /* Same as masonry-item.portrait */
+    }
+
+    .favorites-item.landscape {
+        grid-row: span 12; /* Same as masonry-item.landscape */
     }
 
     .favorites-header {
@@ -200,6 +256,21 @@
 
     .favorites-title {
         font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .favorites-grid {
+        grid-template-columns: 1fr;
+        gap: 6px; /* Same as masonry grid */
+    }
+
+    .favorites-item.portrait {
+        grid-row: span 24; /* Same as masonry-item.portrait */
+    }
+
+    .favorites-item.landscape {
+        grid-row: span 12; /* Same as masonry-item.landscape */
     }
 }
 
