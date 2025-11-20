@@ -72,6 +72,9 @@ const ImageModal = ({
   const userProfileCardRef = useRef<HTMLDivElement>(null);
   const incrementedViewIds = useRef<Set<string>>(new Set());
   const currentImageIdRef = useRef<string | null>(null);
+  const [modalImageSrc, setModalImageSrc] = useState<string>('');
+  const [isModalImageLoaded, setIsModalImageLoaded] = useState(false);
+  const modalImageRef = useRef<HTMLImageElement>(null);
   const { accessToken, user } = useAuthStore();
   const navigate = useNavigate();
 
@@ -126,6 +129,24 @@ const ImageModal = ({
     setDownloads(image.downloads || 0);
     currentImageIdRef.current = image._id;
 
+    // Reset modal image state and start progressive loading
+    setIsModalImageLoaded(false);
+    // Start with regularUrl (1080px) for better performance, fallback to smallUrl or imageUrl
+    const initialSrc = image.regularUrl || image.smallUrl || image.imageUrl;
+    setModalImageSrc(initialSrc);
+
+    // If we have a full-size imageUrl and it's different from initial, preload it in background
+    if (image.imageUrl && image.imageUrl !== initialSrc && (image.regularUrl || image.smallUrl)) {
+      const fullSizeImg = new Image();
+      fullSizeImg.onload = () => {
+        // Upgrade to full size after initial load completes
+        if (currentImageIdRef.current === image._id) {
+          setModalImageSrc(image.imageUrl);
+        }
+      };
+      fullSizeImg.src = image.imageUrl;
+    }
+
     // Check favorite status when image changes (only if user is logged in)
     if (accessToken && image && image._id) {
       // Ensure imageId is a string and valid MongoDB ObjectId
@@ -159,9 +180,9 @@ const ImageModal = ({
     } else {
       setIsFavorited(false);
     }
-    // Use image._id instead of image object to ensure it triggers when image changes
+    // Dependencies: image URLs and accessToken
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [image._id, accessToken]);
+  }, [image._id, image.regularUrl, image.smallUrl, image.imageUrl, accessToken]);
 
   // Close info modal when clicking outside
   useEffect(() => {
@@ -799,9 +820,20 @@ const ImageModal = ({
           {/* Main Image */}
           <div className="modal-main-image-container">
             <img
-              src={image.imageUrl}
+              ref={modalImageRef}
+              src={modalImageSrc || image.regularUrl || image.smallUrl || image.imageUrl}
+              srcSet={
+                image.thumbnailUrl && image.smallUrl && image.regularUrl && image.imageUrl
+                  ? `${image.thumbnailUrl} 200w, ${image.smallUrl} 800w, ${image.regularUrl} 1080w, ${image.imageUrl} 1920w`
+                  : undefined
+              }
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1080px"
               alt={image.imageTitle || 'Photo'}
-              className="modal-image"
+              className={`modal-image ${isModalImageLoaded ? 'loaded' : 'loading'}`}
+              loading="eager"
+              decoding="async"
+              fetchPriority="high"
+              onLoad={() => setIsModalImageLoaded(true)}
             />
           </div>
 

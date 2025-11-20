@@ -201,6 +201,15 @@
   max-height: 70vh;
   object-fit: contain;
   border-radius: 8px;
+  transition: opacity 0.3s ease;
+}
+
+.modal-image.loading {
+  opacity: 0.7;
+}
+
+.modal-image.loaded {
+  opacity: 1;
 }
 
 /* Related Images Section */
