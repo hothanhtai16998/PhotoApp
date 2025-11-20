@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { imageService } from "@/services/imageService";
@@ -8,6 +8,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Edit2, Star, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import type { Image } from "@/types/image";
+import ImageModal from "@/components/ImageModal";
+import ProgressiveImage from "@/components/ProgressiveImage";
+import api from "@/lib/axios";
 import "./ProfilePage.css";
 
 type TabType = 'photos' | 'illustrations' | 'collections' | 'stats';
@@ -21,6 +24,11 @@ function ProfilePage() {
     const [photosCount, setPhotosCount] = useState(0);
     const [illustrationsCount, setIllustrationsCount] = useState(0);
     const [collectionsCount] = useState(1); // Placeholder
+    const [selectedImage, setSelectedImage] = useState<Image | null>(null);
+    
+    // Track image aspect ratios (portrait vs landscape)
+    const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
+    const processedImages = useRef<Set<string>>(new Set());
 
     const fetchUserImages = useCallback(async (refresh = false) => {
         if (!user?._id) return;
@@ -97,29 +105,134 @@ function ProfilePage() {
         toast.info('Availability update feature is coming soon! You\'ll be able to indicate if you\'re available for photography work.');
     };
 
-    if (!user) {
-        return null;
-    }
-
-    const displayImages = activeTab === 'photos'
-        ? images.filter(img => {
-            const categoryName = typeof img.imageCategory === 'string' 
-                ? img.imageCategory 
-                : img.imageCategory?.name;
-            return categoryName &&
-                !categoryName.toLowerCase().includes('illustration') &&
-                !categoryName.toLowerCase().includes('svg');
-        })
-        : activeTab === 'illustrations'
-            ? images.filter(img => {
+    // Calculate display images based on active tab
+    const displayImages = useMemo(() => {
+        if (activeTab === 'photos') {
+            return images.filter(img => {
+                const categoryName = typeof img.imageCategory === 'string' 
+                    ? img.imageCategory 
+                    : img.imageCategory?.name;
+                return categoryName &&
+                    !categoryName.toLowerCase().includes('illustration') &&
+                    !categoryName.toLowerCase().includes('svg');
+            });
+        } else if (activeTab === 'illustrations') {
+            return images.filter(img => {
                 const categoryName = typeof img.imageCategory === 'string' 
                     ? img.imageCategory 
                     : img.imageCategory?.name;
                 return categoryName &&
                     (categoryName.toLowerCase().includes('illustration') ||
                         categoryName.toLowerCase().includes('svg'));
-            })
-            : [];
+            });
+        }
+        return [];
+    }, [activeTab, images]);
+
+    // Get current image IDs for comparison
+    const currentImageIds = useMemo(() => new Set(displayImages.map(img => img._id)), [displayImages]);
+
+    // Determine image type when it loads
+    const handleImageLoad = useCallback((imageId: string, img: HTMLImageElement) => {
+        // Only process once per image and only if image still exists
+        if (!currentImageIds.has(imageId) || processedImages.current.has(imageId)) return;
+
+        processedImages.current.add(imageId);
+        const isPortrait = img.naturalHeight > img.naturalWidth;
+        const imageType = isPortrait ? 'portrait' : 'landscape';
+
+        // Update state only if not already set (prevent unnecessary re-renders)
+        setImageTypes(prev => {
+            if (prev.has(imageId)) return prev;
+            const newMap = new Map(prev);
+            newMap.set(imageId, imageType);
+            return newMap;
+        });
+    }, [currentImageIds]);
+
+    // Update image in the state when stats change
+    const handleImageUpdate = useCallback((updatedImage: Image) => {
+        setSelectedImage(updatedImage);
+        // Update the image in the images array
+        setImages(prevImages => {
+            const index = prevImages.findIndex(img => img._id === updatedImage._id);
+            if (index !== -1) {
+                const newImages = [...prevImages];
+                newImages[index] = updatedImage;
+                return newImages;
+            }
+            return prevImages;
+        });
+    }, []);
+
+    // Download image function - uses backend proxy to avoid CORS issues
+    const handleDownloadImage = useCallback(async (image: Image, e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        try {
+            if (!image._id) {
+                throw new Error('Lỗi khi lấy ID của ảnh');
+            }
+
+            // Use backend endpoint to download image (proxies from S3)
+            const response = await api.get(`/images/${image._id}/download`, {
+                responseType: 'blob',
+                withCredentials: true,
+            });
+
+            // Create blob URL from response
+            const blob = new Blob([response.data], { type: response.headers['content-type'] || 'image/webp' });
+            const blobUrl = URL.createObjectURL(blob);
+
+            // Create download link
+            const link = document.createElement('a');
+            link.href = blobUrl;
+
+            // Get filename from Content-Disposition header or use default
+            const contentDisposition = response.headers['content-disposition'];
+            let fileName = 'photo.webp';
+            if (contentDisposition) {
+                const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
+                if (fileNameMatch) {
+                    fileName = fileNameMatch[1];
+                }
+            } else {
+                // Fallback: generate filename from image title
+                const sanitizedTitle = (image.imageTitle || 'photo').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                const urlExtension = image.imageUrl?.match(/\.([a-z]+)(?:\?|$)/i)?.[1] || 'webp';
+                fileName = `${sanitizedTitle}.${urlExtension}`;
+            }
+            link.download = fileName;
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // Clean up the blob URL after a short delay
+            setTimeout(() => {
+                URL.revokeObjectURL(blobUrl);
+            }, 100);
+
+            toast.success('Tải ảnh thành công');
+        } catch (error) {
+            console.error('Tải ảnh thất bại:', error);
+            toast.error('Tải ảnh thất bại. Vui lòng thử lại.');
+
+            // Fallback: try opening in new tab if download fails
+            try {
+                if (image.imageUrl) {
+                    window.open(image.imageUrl, '_blank');
+                }
+            } catch (fallbackError) {
+                console.error('Lỗi fallback khi tải ảnh:', fallbackError);
+            }
+        }
+    }, []);
+
+    if (!user) {
+        return null;
+    }
 
     return (
         <>
@@ -243,16 +356,30 @@ function ProfilePage() {
                                 </div>
                             ) : (
                                 <div className="profile-image-grid">
-                                    {displayImages.map((image) => (
-                                        <div key={image._id} className="profile-image-item">
-                                            <img
-                                                src={image.imageUrl}
-                                                alt={image.imageTitle || 'Photo'}
-                                                className="profile-image"
-                                                loading="lazy"
-                                            />
-                                        </div>
-                                    ))}
+                                    {displayImages.map((image) => {
+                                        const imageType = imageTypes.get(image._id) || 'landscape';
+                                        return (
+                                            <div
+                                                key={image._id}
+                                                className={`profile-image-item ${imageType}`}
+                                                onClick={() => setSelectedImage(image)}
+                                                style={{ cursor: 'pointer' }}
+                                            >
+                                                <ProgressiveImage
+                                                    src={image.imageUrl}
+                                                    thumbnailUrl={image.thumbnailUrl}
+                                                    smallUrl={image.smallUrl}
+                                                    regularUrl={image.regularUrl}
+                                                    alt={image.imageTitle || 'Photo'}
+                                                    onLoad={(img) => {
+                                                        if (!processedImages.current.has(image._id) && currentImageIds.has(image._id)) {
+                                                            handleImageLoad(image._id, img);
+                                                        }
+                                                    }}
+                                                />
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )
                         ) : activeTab === 'collections' ? (
@@ -269,6 +396,21 @@ function ProfilePage() {
                     </div>
                 </div>
             </main>
+
+            {/* Image Modal */}
+            {selectedImage && (
+                <ImageModal
+                    image={selectedImage}
+                    images={displayImages}
+                    onClose={() => setSelectedImage(null)}
+                    onImageSelect={handleImageUpdate}
+                    onDownload={handleDownloadImage}
+                    imageTypes={imageTypes}
+                    onImageLoad={handleImageLoad}
+                    currentImageIds={currentImageIds}
+                    processedImages={processedImages}
+                />
+            )}
         </>
     );
 }

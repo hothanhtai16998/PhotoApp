@@ -182,38 +182,63 @@
 	min-height: 400px;
 }
 
-/* Image Grid */
+/* Image Grid - Use masonry grid style like ImageGrid */
 .profile-image-grid {
 	display: grid;
-	grid-template-columns: repeat(
-		auto-fill,
-		minmax(300px, 1fr)
-	);
-	gap: 24px;
+	grid-template-columns: repeat(3, 1fr);
+	grid-auto-rows: 8px; /* Same as masonry grid */
+	grid-auto-flow: dense; /* Fill gaps automatically */
+	gap: 12px; /* Same as masonry grid */
+	width: 100%;
+	padding: 0;
+	background: #fff;
 }
 
 .profile-image-item {
 	position: relative;
-	width: 100%;
-	padding-bottom: 100%;
 	overflow: hidden;
-	border-radius: 8px;
-	background: #f5f5f5;
 	cursor: pointer;
-	transition: transform 0.2s ease;
+	background: #f0f0f5;
+	transition: opacity 0.2s ease;
+	display: flex;
+	flex-direction: column;
+	grid-column: span 1;
+	border-radius: 0; /* Remove border radius to match masonry */
 }
 
 .profile-image-item:hover {
-	transform: scale(1.02);
+	opacity: 0.9;
 }
 
-.profile-image {
-	position: absolute;
-	top: 0;
-	left: 0;
+.profile-image-item .progressive-image-wrapper {
 	width: 100%;
-	height: 100%;
-	object-fit: cover;
+	height: 100%; /* Fill the grid cell height */
+	display: block;
+}
+
+.profile-image-item .progressive-image {
+	width: 100%;
+	height: 100%; /* Fill the grid cell height */
+	display: block;
+	object-fit: cover; /* Fill the space, crop if needed for consistency */
+	transition: opacity 0.3s ease;
+	image-rendering: -webkit-optimize-contrast; /* Better quality on WebKit browsers */
+	image-rendering: high-quality; /* Better quality on modern browsers */
+	image-rendering: auto; /* Fallback - smooth scaling for photos */
+}
+
+.profile-image-item:hover img {
+	opacity: 0.9;
+}
+
+/* Portrait images - same as masonry */
+.profile-image-item.portrait {
+	grid-row: span 32; /* Same as masonry-item.portrait */
+}
+
+/* Landscape images - same as masonry */
+.profile-image-item.landscape {
+	grid-row: span 16; /* Same as masonry-item.landscape */
 }
 
 /* Loading and Empty States */
@@ -296,11 +321,16 @@
 	}
 
 	.profile-image-grid {
-		grid-template-columns: repeat(
-			auto-fill,
-			minmax(200px, 1fr)
-		);
-		gap: 16px;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 10px; /* Same as masonry grid at this breakpoint */
+	}
+
+	.profile-image-item.portrait {
+		grid-row: span 28; /* Same as masonry-item.portrait */
+	}
+
+	.profile-image-item.landscape {
+		grid-row: span 14; /* Same as masonry-item.landscape */
 	}
 }
 
@@ -340,10 +370,15 @@
 	}
 
 	.profile-image-grid {
-		grid-template-columns: repeat(
-			auto-fill,
-			minmax(150px, 1fr)
-		);
-		gap: 12px;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 8px; /* Same as masonry grid */
+	}
+
+	.profile-image-item.portrait {
+		grid-row: span 26; /* Same as masonry-item.portrait */
+	}
+
+	.profile-image-item.landscape {
+		grid-row: span 12; /* Same as masonry-item.landscape */
 	}
 }
