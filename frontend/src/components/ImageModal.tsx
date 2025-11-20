@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Share2,
   Info,
@@ -55,12 +56,19 @@ const ImageModal = ({
   const [hoveredBar, setHoveredBar] = useState<{ date: string; views: number; downloads: number; x: number; y: number } | null>(null);
   const [isFavorited, setIsFavorited] = useState<boolean>(false);
   const [isTogglingFavorite, setIsTogglingFavorite] = useState<boolean>(false);
+  const [showUserProfileCard, setShowUserProfileCard] = useState(false);
+  const [isClosingProfileCard, setIsClosingProfileCard] = useState(false);
+  const [userImages, setUserImages] = useState<Image[]>([]);
+  const [isLoadingUserImages, setIsLoadingUserImages] = useState(false);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const infoButtonRef = useRef<HTMLButtonElement>(null);
   const shareButtonRef = useRef<HTMLButtonElement>(null);
+  const userInfoRef = useRef<HTMLDivElement>(null);
+  const userProfileCardRef = useRef<HTMLDivElement>(null);
   const incrementedViewIds = useRef<Set<string>>(new Set());
   const currentImageIdRef = useRef<string | null>(null);
-  const { accessToken } = useAuthStore();
+  const { accessToken, user } = useAuthStore();
+  const navigate = useNavigate();
 
   // Generate accurate chart data - only show actual data for today, 0 for previous days
   const chartData = useMemo(() => {
@@ -191,6 +199,134 @@ const ImageModal = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showShareMenu]);
+
+  // Fetch user images when hovering over user info
+  useEffect(() => {
+    if (!showUserProfileCard || !image.uploadedBy._id) return;
+
+    let isMounted = true;
+    setIsLoadingUserImages(true);
+
+    const fetchUserImages = async () => {
+      try {
+        const response = await imageService.fetchUserImages(image.uploadedBy._id, { limit: 3 });
+        if (isMounted) {
+          // Exclude current image from the list
+          const otherImages = (response.images || []).filter(
+            (img: Image) => img._id !== image._id
+          ).slice(0, 3);
+          setUserImages(otherImages);
+        }
+      } catch (error) {
+        console.error('Failed to fetch user images:', error);
+        if (isMounted) {
+          setUserImages([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingUserImages(false);
+        }
+      }
+    };
+
+    fetchUserImages();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [showUserProfileCard, image.uploadedBy._id, image._id]);
+
+  // Close user profile card when clicking outside
+  useEffect(() => {
+    if (!showUserProfileCard) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Clear hover timeout if any
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+        hoverTimeoutRef.current = null;
+      }
+
+      // Close if click is outside both user info and profile card
+      const isInsideUserInfo = userInfoRef.current?.contains(target);
+      const isInsideProfileCard = userProfileCardRef.current?.contains(target);
+
+      if (!isInsideUserInfo && !isInsideProfileCard) {
+        setIsClosingProfileCard(true);
+        // Wait for fade-out animation before actually hiding
+        setTimeout(() => {
+          setShowUserProfileCard(false);
+          setIsClosingProfileCard(false);
+        }, 250); // Match CSS transition duration
+      }
+    };
+
+    // Add listener immediately - clicks outside should always close
+    document.addEventListener('mousedown', handleClickOutside, true);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside, true);
+    };
+  }, [showUserProfileCard]);
+
+  // Use a timeout to handle mouse leave with a small delay (to allow moving to the card)
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMouseEnter = useCallback(() => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    setIsClosingProfileCard(false);
+    setShowUserProfileCard(true);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    // Add a delay before closing to allow moving to the card
+    // Increased delay for smoother UX
+    hoverTimeoutRef.current = setTimeout(() => {
+      setIsClosingProfileCard(true);
+      // Wait for fade-out animation before actually hiding
+      setTimeout(() => {
+        setShowUserProfileCard(false);
+        setIsClosingProfileCard(false);
+      }, 250); // Match CSS transition duration
+    }, 200);
+  }, []);
+
+  // Handle view profile navigation
+  const handleViewProfile = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    // Clear any pending hover timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    // Close card immediately
+    setShowUserProfileCard(false);
+    // Small delay to ensure card is closed before navigation
+    setTimeout(() => {
+      // If viewing own profile or if user is logged in, navigate to profile page
+      // Note: Currently the app only supports viewing own profile
+      if (user && user._id === image.uploadedBy._id) {
+        navigate('/profile');
+      } else {
+        // For other users, show a message (feature coming soon)
+        toast.info('Viewing other users\' profiles is coming soon!');
+      }
+    }, 50);
+  }, [navigate, image.uploadedBy._id, user]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Increment view count when modal opens (only once per image)
   useEffect(() => {
@@ -524,7 +660,13 @@ const ImageModal = ({
         {/* Modal Header */}
         <div className="image-modal-header">
           {/* Left: User Info */}
-          <div className="modal-header-left">
+          <div
+            className="modal-header-left"
+            ref={userInfoRef}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            style={{ position: 'relative' }}
+          >
             {image.uploadedBy.avatarUrl ? (
               <img
                 src={image.uploadedBy.avatarUrl}
@@ -537,12 +679,83 @@ const ImageModal = ({
               </div>
             )}
             <div className="modal-user-info">
-              <div className="modal-user-name">
+              <div
+                className="modal-user-name hoverable"
+                style={{ cursor: 'pointer' }}
+              >
                 {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}
                 <CheckCircle2 className="verified-badge" size={16} />
               </div>
               <div className="modal-user-status">Available for hire</div>
             </div>
+
+            {/* User Profile Card */}
+            {showUserProfileCard && (
+              <div
+                ref={userProfileCardRef}
+                className={`user-profile-card ${isClosingProfileCard ? 'closing' : ''}`}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+              >
+                <div className="user-profile-card-header">
+                  <div className="user-profile-card-avatar-section">
+                    {image.uploadedBy.avatarUrl ? (
+                      <img
+                        src={image.uploadedBy.avatarUrl}
+                        alt={image.uploadedBy.displayName || image.uploadedBy.username}
+                        className="user-profile-card-avatar"
+                      />
+                    ) : (
+                      <div className="user-profile-card-avatar-placeholder">
+                        {(image.uploadedBy.displayName || image.uploadedBy.username || 'U').charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="user-profile-card-name-section">
+                      <div className="user-profile-card-name">
+                        {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}
+                        <CheckCircle2 className="verified-badge" size={14} />
+                      </div>
+                      <div className="user-profile-card-username">@{image.uploadedBy.username}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {isLoadingUserImages && userImages.length === 0 ? (
+                  <div className="user-profile-card-loading">
+                    <div className="loading-spinner-small" />
+                  </div>
+                ) : userImages.length > 0 ? (
+                  <div className="user-profile-card-images">
+                    {userImages.map((userImage) => (
+                      <div
+                        key={userImage._id}
+                        className="user-profile-card-image-item"
+                        onClick={() => {
+                          setShowUserProfileCard(false);
+                          onImageSelect(userImage);
+                          if (modalContentRef.current) {
+                            modalContentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+                          }
+                        }}
+                      >
+                        <img
+                          src={userImage.thumbnailUrl || userImage.smallUrl || userImage.imageUrl}
+                          alt={userImage.imageTitle || 'Photo'}
+                          loading="lazy"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
+                <button
+                  className="user-profile-card-view-btn"
+                  onClick={handleViewProfile}
+                >
+                  View profile
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Right: Action Buttons */}
