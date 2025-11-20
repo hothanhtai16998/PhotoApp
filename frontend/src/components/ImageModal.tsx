@@ -13,6 +13,7 @@ import {
   Mail,
   Link as LinkIcon,
   Edit2,
+  ImageOff,
 } from 'lucide-react';
 import type { Image } from '@/types/image';
 import ProgressiveImage from './ProgressiveImage';
@@ -1144,55 +1145,64 @@ const ImageModal = ({
           </div>
 
           {/* Related Images Section */}
-          {relatedImages.length > 0 && (
-            <div className="modal-related-images">
-              <h3 className="related-images-title">Các ảnh cùng chủ đề</h3>
-              <div className="related-images-grid">
-                {relatedImages.map((relatedImage) => {
-                  const imageType = imageTypes.get(relatedImage._id) || 'landscape';
-                  return (
-                    <div
-                      key={relatedImage._id}
-                      className={`related-image-item ${imageType}`}
-                      onClick={() => {
-                        onImageSelect(relatedImage);
-                        // Scroll to top of modal content
-                        if (modalContentRef.current) {
-                          modalContentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-                        }
-                      }}
-                    >
-                      <ProgressiveImage
-                        src={relatedImage.imageUrl}
-                        thumbnailUrl={relatedImage.thumbnailUrl}
-                        smallUrl={relatedImage.smallUrl}
-                        regularUrl={relatedImage.regularUrl}
-                        alt={relatedImage.imageTitle || 'Photo'}
-                        onLoad={(img) => {
-                          if (!processedImages.current.has(relatedImage._id) && currentImageIds.has(relatedImage._id)) {
-                            onImageLoad(relatedImage._id, img);
+          <div className="modal-related-images">
+            <h3 className="related-images-title">Các ảnh cùng chủ đề</h3>
+            {relatedImages.length > 0 ? (
+              <>
+                <div className="related-images-grid">
+                  {relatedImages.map((relatedImage) => {
+                    const imageType = imageTypes.get(relatedImage._id) || 'landscape';
+                    return (
+                      <div
+                        key={relatedImage._id}
+                        className={`related-image-item ${imageType}`}
+                        onClick={() => {
+                          onImageSelect(relatedImage);
+                          // Scroll to top of modal content
+                          if (modalContentRef.current) {
+                            modalContentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
                           }
                         }}
-                      />
-                      <div className="related-image-overlay">
-                        <span className="related-image-title">{relatedImage.imageTitle}</span>
+                      >
+                        <ProgressiveImage
+                          src={relatedImage.imageUrl}
+                          thumbnailUrl={relatedImage.thumbnailUrl}
+                          smallUrl={relatedImage.smallUrl}
+                          regularUrl={relatedImage.regularUrl}
+                          alt={relatedImage.imageTitle || 'Photo'}
+                          onLoad={(img) => {
+                            if (!processedImages.current.has(relatedImage._id) && currentImageIds.has(relatedImage._id)) {
+                              onImageLoad(relatedImage._id, img);
+                            }
+                          }}
+                        />
+                        <div className="related-image-overlay">
+                          <span className="related-image-title">{relatedImage.imageTitle}</span>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-              {/* Infinite scroll trigger for related images */}
-              {hasMoreRelatedImages && (
-                <div ref={relatedImagesLoadMoreRef} className="related-images-load-more-trigger" />
-              )}
-              {isLoadingRelatedImages && (
-                <div className="related-images-loading">
-                  <div className="loading-spinner" />
-                  <p>Đang tải ảnh...</p>
+                    );
+                  })}
                 </div>
-              )}
-            </div>
-          )}
+                {/* Infinite scroll trigger for related images */}
+                {hasMoreRelatedImages && (
+                  <div ref={relatedImagesLoadMoreRef} className="related-images-load-more-trigger" />
+                )}
+                {isLoadingRelatedImages && (
+                  <div className="related-images-loading">
+                    <div className="loading-spinner" />
+                    <p>Đang tải ảnh...</p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="related-images-empty">
+                <div className="related-images-empty-icon">
+                  <ImageOff size={48} />
+                </div>
+                <p className="related-images-empty-text">Không có ảnh liên quan</p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Close Button */}

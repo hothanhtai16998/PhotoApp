@@ -17,7 +17,7 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'details' | 'tags' | 'exif' | 'settings'>('details');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Form state
   const [imageTitle, setImageTitle] = useState(image.imageTitle || '');
   const [location, setLocation] = useState(image.location || '');
@@ -36,14 +36,14 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
 
   // Check if user can edit (owner or admin)
   const canEdit = user && (
-    user._id === image.uploadedBy._id || 
-    user.isAdmin || 
+    user._id === image.uploadedBy._id ||
+    user.isAdmin ||
     user.isSuperAdmin
   );
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!canEdit) {
       toast.error('Bạn không có quyền chỉnh sửa ảnh này');
       return;
@@ -75,7 +75,7 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
       <div className="edit-image-modal" onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
         <div className="edit-modal-header">
-          <h2>Edit image</h2>
+          <h2>Sửa ảnh</h2>
           <button className="edit-modal-close" onClick={onClose} aria-label="Close">
             <X size={20} />
           </button>
@@ -87,7 +87,7 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
             className={`edit-modal-tab ${activeTab === 'details' ? 'active' : ''}`}
             onClick={() => setActiveTab('details')}
           >
-            Details
+            Chi tiết
           </button>
           <button
             className={`edit-modal-tab ${activeTab === 'tags' ? 'active' : ''}`}
@@ -107,7 +107,7 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
             onClick={() => setActiveTab('settings')}
             disabled
           >
-            Settings
+            Cài đặt
           </button>
         </div>
 
@@ -116,7 +116,7 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
           {activeTab === 'details' && (
             <div className="edit-modal-tab-panel">
               <div className="edit-form-group">
-                <label htmlFor="description">Description</label>
+                <label htmlFor="description">Mô tả</label>
                 <textarea
                   id="description"
                   className="edit-form-textarea"
@@ -130,7 +130,7 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
               </div>
 
               <div className="edit-form-group">
-                <label htmlFor="title">Title</label>
+                <label htmlFor="title">Tiêu đề</label>
                 <input
                   id="title"
                   type="text"
@@ -146,7 +146,7 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
               <div className="edit-form-group">
                 <label htmlFor="location">
                   <MapPin size={16} />
-                  Location
+                  Địa điểm
                 </label>
                 <input
                   id="location"
@@ -211,14 +211,14 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
               onClick={onClose}
               disabled={isSubmitting}
             >
-              Cancel
+              Huỷ
             </button>
             <button
               type="submit"
               className="edit-modal-btn edit-modal-btn-submit"
               disabled={isSubmitting || !canEdit}
             >
-              {isSubmitting ? 'Updating...' : 'Update info'}
+              {isSubmitting ? 'Đang cập nhật...' : 'Cập nhật'}
             </button>
           </div>
         </form>
