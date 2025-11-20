@@ -7,6 +7,7 @@ import CategoryNavigation from './CategoryNavigation';
 import ImageModal from './ImageModal';
 import { Skeleton } from './ui/skeleton';
 import { toast } from 'sonner';
+import api from '@/lib/axios';
 import './ImageGrid.css';
 
 // Memoized image item component to prevent unnecessary re-renders
@@ -282,41 +283,44 @@ const ImageGrid = memo(() => {
   //   fetchImages({ search, page: 1 });
   // };
 
-  // Download image function - uses the original/highest quality image URL
+  // Download image function - uses backend proxy to avoid CORS issues
   const handleDownloadImage = useCallback(async (image: Image, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
     try {
-      // Use the original imageUrl (highest quality) for download
-      // S3 stores the original optimized image, so we can use imageUrl directly
-      const downloadUrl = image.imageUrl || image.regularUrl || image.smallUrl || '';
-
-      if (!downloadUrl) {
-        throw new Error('Lỗi khi lấy Url của ảnh');
+      if (!image._id) {
+        throw new Error('Lỗi khi lấy ID của ảnh');
       }
 
-      // Fetch the image as a blob to handle CORS
-      const response = await fetch(downloadUrl, {
-        mode: 'cors',
-        credentials: 'omit',
+      // Use backend endpoint to download image (proxies from S3)
+      const response = await api.get(`/images/${image._id}/download`, {
+        responseType: 'blob',
+        withCredentials: true,
       });
 
-      if (!response.ok) {
-        throw new Error('Lỗi khi lấy ảnh');
-      }
-
-      const blob = await response.blob();
+      // Create blob URL from response
+      const blob = new Blob([response.data], { type: response.headers['content-type'] || 'image/webp' });
       const blobUrl = URL.createObjectURL(blob);
 
       // Create download link
       const link = document.createElement('a');
       link.href = blobUrl;
 
-      // Get file extension from the download URL or use default
-      const urlExtension = downloadUrl.match(/\.([a-z]+)(?:\?|$)/i)?.[1] || 'jpg';
-      const sanitizedTitle = (image.imageTitle || 'photo').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      const fileName = `${sanitizedTitle}.${urlExtension}`;
+      // Get filename from Content-Disposition header or use default
+      const contentDisposition = response.headers['content-disposition'];
+      let fileName = 'photo.webp';
+      if (contentDisposition) {
+        const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
+        if (fileNameMatch) {
+          fileName = fileNameMatch[1];
+        }
+      } else {
+        // Fallback: generate filename from image title
+        const sanitizedTitle = (image.imageTitle || 'photo').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        const urlExtension = image.imageUrl?.match(/\.([a-z]+)(?:\?|$)/i)?.[1] || 'webp';
+        fileName = `${sanitizedTitle}.${urlExtension}`;
+      }
       link.download = fileName;
 
       document.body.appendChild(link);
@@ -335,7 +339,9 @@ const ImageGrid = memo(() => {
 
       // Fallback: try opening in new tab if download fails
       try {
-        window.open(image.imageUrl, '_blank');
+        if (image.imageUrl) {
+          window.open(image.imageUrl, '_blank');
+        }
       } catch (fallbackError) {
         console.error('Lỗi fallback khi tải ảnh:', fallbackError);
       }

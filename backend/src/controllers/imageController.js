@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { uploadImageWithSizes, deleteImageFromS3 } from '../libs/s3.js';
+import { uploadImageWithSizes, deleteImageFromS3, getImageFromS3 } from '../libs/s3.js';
 import Image from '../models/Image.js';
 import Category from '../models/Category.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
@@ -449,5 +449,70 @@ export const getLocations = asyncHandler(async (req, res) => {
         res.status(500).json({
             message: 'Lỗi khi lấy danh sách địa điểm',
         });
+    }
+});
+
+// Download image - proxy from S3 to avoid CORS issues
+export const downloadImage = asyncHandler(async (req, res) => {
+    const imageId = req.params.imageId;
+
+    // Find the image in database
+    const image = await Image.findById(imageId);
+    if (!image) {
+        return res.status(404).json({
+            message: 'Không tìm thấy ảnh',
+        });
+    }
+
+    try {
+        // Use the original imageUrl (highest quality) for download
+        const imageUrl = image.imageUrl || image.regularUrl || image.smallUrl;
+        if (!imageUrl) {
+            return res.status(404).json({
+                message: 'Không tìm thấy URL ảnh',
+            });
+        }
+
+        // Get image from S3
+        const s3Response = await getImageFromS3(imageUrl);
+
+        // Set appropriate headers
+        const sanitizedTitle = (image.imageTitle || 'photo').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        const urlExtension = imageUrl.match(/\.([a-z]+)(?:\?|$)/i)?.[1] || 'webp';
+        const fileName = `${sanitizedTitle}.${urlExtension}`;
+
+        res.setHeader('Content-Type', s3Response.ContentType);
+        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+        if (s3Response.ContentLength) {
+            res.setHeader('Content-Length', s3Response.ContentLength);
+        }
+        res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+
+        // Stream the image to the response
+        s3Response.Body.pipe(res);
+
+        // Handle stream errors
+        s3Response.Body.on('error', (streamError) => {
+            logger.error('Error streaming image from S3:', streamError);
+            if (!res.headersSent) {
+                res.status(500).json({
+                    message: 'Lỗi khi tải ảnh',
+                });
+            }
+        });
+
+        // Handle client disconnect
+        res.on('close', () => {
+            if (s3Response.Body && typeof s3Response.Body.destroy === 'function') {
+                s3Response.Body.destroy();
+            }
+        });
+    } catch (error) {
+        logger.error('Error downloading image:', error);
+        if (!res.headersSent) {
+            res.status(500).json({
+                message: 'Lỗi khi tải ảnh',
+            });
+        }
     }
 });

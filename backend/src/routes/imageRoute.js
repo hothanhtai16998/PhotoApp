@@ -6,6 +6,7 @@ import {
     incrementView,
     incrementDownload,
     getLocations,
+    downloadImage,
 } from '../controllers/imageController.js';
 import { singleUpload } from '../middlewares/multerMiddleware.js';
 import { protectedRoute } from '../middlewares/authMiddleware.js';
@@ -33,6 +34,10 @@ router.get('/locations', getLocations);
 // Public routes - increment stats
 router.patch('/:imageId/view', incrementView);
 router.patch('/:imageId/download', incrementDownload);
+
+// Public route - download image (proxy from S3 to avoid CORS)
+// Must be after PATCH route to avoid conflicts
+router.get('/:imageId/download', downloadImage);
 
 // Protected routes (with CSRF protection for state-changing operations)
 router.post('/upload', protectedRoute, validateCsrf, uploadLimiter, singleUpload, validateImageUpload, uploadImage);

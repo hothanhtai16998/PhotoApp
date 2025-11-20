@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { env } from './env.js';
 import sharp from 'sharp';
 
@@ -196,6 +196,46 @@ export const deleteAvatarFromS3 = async (publicId) => {
 	} catch (error) {
 		// Log error but don't throw - deletion is not critical
 		console.error(`Failed to delete avatar from S3: ${error.message}`);
+	}
+};
+
+/**
+ * Get image from S3 as a stream
+ * @param {string} imageUrl - Full S3 URL or S3 key
+ * @returns {Promise<{Body: ReadableStream, ContentType: string, ContentLength: number}>}
+ */
+export const getImageFromS3 = async (imageUrl) => {
+	try {
+		// Extract S3 key from URL
+		// Handle both full URLs and keys
+		let key;
+		if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+			// Extract key from URL
+			// Format: https://bucket.s3.region.amazonaws.com/key or https://cloudfront.net/key
+			const url = new URL(imageUrl);
+			key = url.pathname.startsWith('/') ? url.pathname.substring(1) : url.pathname;
+		} else {
+			key = imageUrl;
+		}
+
+		const command = new GetObjectCommand({
+			Bucket: env.AWS_S3_BUCKET_NAME,
+			Key: key,
+		});
+
+		const response = await s3Client.send(command);
+		return {
+			Body: response.Body,
+			ContentType: response.ContentType || 'image/webp',
+			ContentLength: response.ContentLength,
+		};
+	} catch (error) {
+		console.error('S3 Get Error:', {
+			message: error.message,
+			code: error.Code || error.code,
+			imageUrl,
+		});
+		throw new Error(`Failed to get image from S3: ${error.message}`);
 	}
 };
 

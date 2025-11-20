@@ -713,9 +713,8 @@ const ImageModal = ({
                     <div className="user-profile-card-name-section">
                       <div className="user-profile-card-name">
                         {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}
-                        <CheckCircle2 className="verified-badge" size={14} />
                       </div>
-                      <div className="user-profile-card-username">@{image.uploadedBy.username}</div>
+                      <div className="user-profile-card-username">{image.uploadedBy.username}</div>
                     </div>
                   </div>
                 </div>
