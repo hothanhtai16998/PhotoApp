@@ -48,6 +48,19 @@ const imageSchema = new mongoose.Schema(
             trim: true,
             index: true,
         },
+        // GPS coordinates for automatic location detection
+        coordinates: {
+            latitude: {
+                type: Number,
+                min: -90,
+                max: 90,
+            },
+            longitude: {
+                type: Number,
+                min: -180,
+                max: 180,
+            },
+        },
         cameraModel: {
             type: String,
             trim: true,

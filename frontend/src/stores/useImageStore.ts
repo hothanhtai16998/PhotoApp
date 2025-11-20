@@ -20,6 +20,7 @@ export const useImageStore = create(
 		currentCategory: undefined as
 			| string
 			| undefined,
+		deletedImageIds: [] as string[],
 		uploadImage: async (
 			data: UploadImageData
 		) => {
@@ -173,16 +174,28 @@ export const useImageStore = create(
 				state.error = null;
 			});
 			try {
+				// Always use cache-busting on initial load (when no params or page 1) to ensure fresh data
+				// This prevents deleted images from appearing after page refresh due to browser cache
+				const shouldBustCache = !params?.page || params.page === 1 || params?._refresh;
+				const fetchParams = shouldBustCache && !params?._refresh
+					? { ...params, _refresh: true }
+					: params;
+				
 				const response =
 					await imageService.fetchImages(
-						params
+						fetchParams
 					);
 				set((state) => {
 					// Handle both array response and object with images property
-					const newImages =
+					const newImagesRaw =
 						Array.isArray(response)
 							? response
 							: response.images || [];
+					
+					// Filter out deleted images from the response
+					const newImages = newImagesRaw.filter(
+						(img: Image) => !state.deletedImageIds.includes(img._id)
+					);
 
 					// Merge strategy: If it's a new search/category, replace. Otherwise, append for pagination
 					const isNewQuery =
@@ -244,12 +257,9 @@ export const useImageStore = create(
 											}
 										}
 									}
-									// If no createdAt or invalid date, keep ALL existing images during refresh
-									// This ensures uploaded images stay visible even if backend hasn't returned them
-									return (
-										params?._refresh ===
-										true
-									);
+									// During refresh after deletion, don't preserve images without createdAt
+									// Only preserve images that were recently uploaded (have valid createdAt)
+									return false;
 								}
 							);
 
@@ -364,6 +374,30 @@ export const useImageStore = create(
 				});
 				toast.error(message);
 			}
+		},
+		removeImage: (imageId: string) => {
+			set((state) => {
+				// Add to deleted IDs array so it's filtered out in future fetches
+				if (!state.deletedImageIds.includes(imageId)) {
+					state.deletedImageIds.push(imageId);
+				}
+				
+				const beforeCount = state.images.length;
+				state.images = state.images.filter(img => img._id !== imageId);
+				const afterCount = state.images.length;
+				
+				// Debug: Log if image was actually removed from current store
+				if (beforeCount === afterCount) {
+					console.log(`Image ${imageId} not in current store, but added to deleted list to prevent future fetches`);
+				} else {
+					console.log(`Successfully removed image ${imageId} from store. Count: ${beforeCount} -> ${afterCount}`);
+				}
+				
+				// Update pagination total if it exists
+				if (state.pagination) {
+					state.pagination.total = Math.max(0, state.pagination.total - 1);
+				}
+			});
 		},
 	}))
 );

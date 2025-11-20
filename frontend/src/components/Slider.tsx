@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import './Slider.css';
 import { imageService } from '@/services/imageService';
+import { useImageStore } from '@/stores/useImageStore';
 import type { Image } from '@/types/image';
 import type { Slide } from '@/types/slide';
 const AUTO_PLAY_INTERVAL = 5000; // 5 seconds
 const SWIPE_THRESHOLD = 50; // Minimum distance for swipe
 
 function Slider() {
+    const { deletedImageIds } = useImageStore();
     const [slides, setSlides] = useState<Slide[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentSlide, setCurrentSlide] = useState(0);
@@ -25,14 +27,21 @@ function Slider() {
         const fetchImages = async () => {
             try {
                 setLoading(true);
+                // Use cache-busting to ensure fresh data (same as ImageGrid)
                 const response = await imageService.fetchImages({
                     limit: 10, // Fetch up to 10 images for the slider
-                    page: 1
+                    page: 1,
+                    _refresh: true // Cache-busting for fresh data
                 });
 
                 if (response.images && response.images.length > 0) {
+                    // Filter out deleted images
+                    const validImages = response.images.filter(
+                        (img: Image) => !deletedImageIds.includes(img._id)
+                    );
+
                     // Convert images to slides format
-                    const slidesDataPromises = response.images.map(async (img: Image, index: number) => {
+                    const slidesDataPromises = validImages.map(async (img: Image, index: number) => {
                         // Use optimized image sizes for better LCP
                         // First slide uses smaller size for faster LCP, others use regular size
                         const isFirstSlide = index === 0;
@@ -87,9 +96,19 @@ function Slider() {
                     });
 
                     const slidesData = await Promise.all(slidesDataPromises);
-                    setSlides(slidesData);
-                    // Reset to first slide when new images are loaded
-                    setCurrentSlide(0);
+                    
+                    // Filter out any slides that were deleted during async processing
+                    const finalSlides = slidesData.filter(
+                        (slide) => !deletedImageIds.includes(slide.id)
+                    );
+                    
+                    setSlides(finalSlides);
+                    // Reset to first slide when new images are loaded, but ensure valid index
+                    if (finalSlides.length > 0 && currentSlide >= finalSlides.length) {
+                        setCurrentSlide(0);
+                    } else if (finalSlides.length === 0) {
+                        setCurrentSlide(0);
+                    }
                 } else {
                     // If no images, set empty array
                     setSlides([]);
@@ -103,7 +122,25 @@ function Slider() {
         };
 
         fetchImages();
-    }, []);
+    }, [deletedImageIds]); // Re-fetch when deleted images change
+
+    // Filter out deleted slides when deletedImageIds changes
+    useEffect(() => {
+        if (slides.length > 0 && deletedImageIds.length > 0) {
+            const filteredSlides = slides.filter(
+                (slide) => !deletedImageIds.includes(slide.id)
+            );
+            if (filteredSlides.length !== slides.length) {
+                setSlides(filteredSlides);
+                // Adjust current slide index if needed
+                if (currentSlide >= filteredSlides.length && filteredSlides.length > 0) {
+                    setCurrentSlide(filteredSlides.length - 1);
+                } else if (filteredSlides.length === 0) {
+                    setCurrentSlide(0);
+                }
+            }
+        }
+    }, [deletedImageIds, slides, currentSlide]);
 
     const goToNext = useCallback(() => {
         if (isTransitioning || slides.length === 0) return;
@@ -269,7 +306,7 @@ function Slider() {
         >
             {/* Slides Container */}
             <div className="slider-container">
-                {slides.map((slide, index) => {
+                {slides.filter(slide => !deletedImageIds.includes(slide.id)).map((slide, index) => {
                     const isActive = index === currentSlide;
                     const isFirstSlide = index === 0;
                     const isPrev = index === (currentSlide - 1 + slides.length) % slides.length;

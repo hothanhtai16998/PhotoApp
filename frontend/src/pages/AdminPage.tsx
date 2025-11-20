@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useImageStore } from '@/stores/useImageStore';
 import { adminService, type DashboardStats, type User, type AdminImage, type AdminRole, type AdminRolePermissions } from '@/services/adminService';
 import { categoryService, type Category } from '@/services/categoryService';
 import type { User as AuthUser } from '@/types/user';
@@ -38,6 +39,7 @@ type TabType = 'dashboard' | 'users' | 'images' | 'categories' | 'roles';
 
 function AdminPage() {
     const { user, fetchMe } = useAuthStore();
+    const { removeImage } = useImageStore();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<TabType>('dashboard');
     const [loading, setLoading] = useState(true);
@@ -193,12 +195,34 @@ function AdminPage() {
     };
 
     const handleDeleteImage = async (imageId: string, imageTitle: string) => {
-        if (!confirm(`Bán có muốn xoá ảnh "${imageTitle}" không?`)) {
+        if (!confirm(`Bạn có muốn xoá ảnh "${imageTitle}" không?`)) {
             return;
         }
 
         try {
             await adminService.deleteImage(imageId);
+            
+            // Remove image from global image store immediately
+            // This ensures the image disappears from homepage ImageGrid if user is on homepage
+            removeImage(imageId);
+            
+            // Also trigger a refresh of the ImageGrid store to sync with backend
+            // This ensures deleted image doesn't reappear when user navigates back to homepage
+            // Wait a bit to ensure backend deletion is complete before refreshing
+            setTimeout(() => {
+                const imageStoreState = useImageStore.getState();
+                if (imageStoreState.images.length > 0 || imageStoreState.pagination) {
+                    // Homepage has been visited at some point, refresh to sync
+                    // Use _refresh flag to bypass cache and ensure we get fresh data
+                    imageStoreState.fetchImages({ 
+                        page: imageStoreState.pagination?.page || 1,
+                        search: imageStoreState.currentSearch,
+                        category: imageStoreState.currentCategory,
+                        _refresh: true 
+                    });
+                }
+            }, 200);
+            
             toast.success('Xoá ảnh thành công');
             loadImages(imagesPagination.page);
             if (activeTab === 'dashboard') loadDashboardStats();

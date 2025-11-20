@@ -15,6 +15,10 @@ export interface Image {
 	imageCategory: string | Category;
 	uploadedBy: User;
 	location?: string;
+	coordinates?: {
+		latitude: number;
+		longitude: number;
+	};
 	cameraModel?: string;
 	views?: number;
 	downloads?: number;

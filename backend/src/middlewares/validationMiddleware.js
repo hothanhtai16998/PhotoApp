@@ -103,6 +103,25 @@ export const validateImageUpload = [
         .escape() // Sanitize: escape HTML entities
         .isLength({ max: 200 })
         .withMessage('Location must be less than 200 characters'),
+    body('coordinates')
+        .optional()
+        .custom((value) => {
+            if (!value) return true;
+            try {
+                const coords = typeof value === 'string' ? JSON.parse(value) : value;
+                if (coords.latitude && coords.longitude) {
+                    const lat = parseFloat(coords.latitude);
+                    const lng = parseFloat(coords.longitude);
+                    if (isNaN(lat) || isNaN(lng)) return false;
+                    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return false;
+                    return true;
+                }
+                return false;
+            } catch {
+                return false;
+            }
+        })
+        .withMessage('Invalid coordinates format'),
     body('cameraModel')
         .optional()
         .trim()

@@ -1,8 +1,12 @@
 /* Search Bar Container */
 .search-bar-container {
-	position: relative;
-	flex: 1;
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
 	max-width: 600px;
+	width: calc(100% - 400px); /* Leave space for logo and buttons */
+	min-width: 300px;
+	z-index: 1;
 }
 
 /* Search Suggestions Dropdown */

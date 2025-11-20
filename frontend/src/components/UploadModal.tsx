@@ -7,7 +7,8 @@ import { useImageStore } from '@/stores/useImageStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { categoryService, type Category } from '@/services/categoryService';
 import { useNavigate } from 'react-router-dom';
-import { X, Upload, ArrowRight } from 'lucide-react';
+import { X, Upload, ArrowRight, MapPin } from 'lucide-react';
+import { reverseGeocode, delay } from '@/utils/geocoding';
 import './UploadModal.css';
 
 // Schema removed - using manual validation
@@ -22,6 +23,10 @@ interface ImageData {
     title: string;
     category: string;
     location: string;
+    coordinates?: {
+        latitude: number;
+        longitude: number;
+    };
     cameraModel: string;
     errors: {
         title?: string;
@@ -43,6 +48,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
     const [categories, setCategories] = useState<Category[]>([]);
     const [loadingCategories, setLoadingCategories] = useState(false);
     const [showTooltip, setShowTooltip] = useState(false);
+    const [detectingLocationIndex, setDetectingLocationIndex] = useState<number | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
 
@@ -71,7 +77,66 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
             img.category.trim().length > 0
         );
 
-    // Initialize imagesData when files are selected
+    // Detect user's current location and reverse geocode to location name (called on button click)
+    const handleDetectLocation = useCallback(async (index: number) => {
+        if (!navigator.geolocation) {
+            console.warn('Geolocation is not supported by this browser');
+            // You could show a toast notification here
+            return;
+        }
+
+        setDetectingLocationIndex(index);
+
+        try {
+            // Get GPS coordinates
+            const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(
+                    resolve,
+                    reject,
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000, // 10 seconds timeout
+                        maximumAge: 300000, // Accept cached location up to 5 minutes old
+                    }
+                );
+            });
+
+            const coords = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+            };
+
+            // Reverse geocode coordinates to location name
+            // Small delay to respect API rate limits (1 request per second)
+            await delay(1100);
+            const geocodeResult = await reverseGeocode(
+                coords.latitude,
+                coords.longitude,
+                'vi' // Vietnamese language
+            );
+
+            // Update the location for this specific image
+            setImagesData(prev => {
+                const updated = [...prev];
+                if (updated[index]) {
+                    updated[index] = {
+                        ...updated[index],
+                        location: geocodeResult.location || '',
+                        coordinates: coords,
+                    };
+                }
+                return updated;
+            });
+
+            setDetectingLocationIndex(null);
+        } catch (error) {
+            setDetectingLocationIndex(null);
+            console.warn('Error detecting location:', error);
+            // You could show a toast notification here for user feedback
+        }
+    }, []);
+
+    // Initialize imagesData when files are selected (without auto-detecting location)
     useEffect(() => {
         if (selectedFiles.length > 0) {
             setImagesData(prev => {
@@ -86,6 +151,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                         title: '',
                         category: '',
                         location: '',
+                        coordinates: undefined,
                         cameraModel: '',
                         errors: {}
                     };
@@ -182,6 +248,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                     imageTitle: imgData.title.trim(),
                     imageCategory: imgData.category.trim(),
                     location: imgData.location.trim() || undefined,
+                    coordinates: imgData.coordinates,
                     cameraModel: imgData.cameraModel.trim() || undefined,
                 });
 
@@ -627,14 +694,63 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                     <div>
                                         <Label htmlFor={`location-${index}`} style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500' }}>
                                             Địa điểm
+                                            {imgData.coordinates && (
+                                                <span style={{ marginLeft: '8px', fontSize: '12px', color: '#10b981', fontWeight: 'normal' }}>
+                                                    (GPS: {imgData.coordinates.latitude.toFixed(4)}, {imgData.coordinates.longitude.toFixed(4)})
+                                                </span>
+                                            )}
                                         </Label>
-                                        <Input
-                                            id={`location-${index}`}
-                                            type="text"
-                                            value={imgData.location}
-                                            onChange={(e) => updateImageData(index, 'location', e.target.value)}
-                                            placeholder="Phú Quốc,..."
-                                        />
+                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                            <Input
+                                                id={`location-${index}`}
+                                                type="text"
+                                                value={imgData.location}
+                                                onChange={(e) => updateImageData(index, 'location', e.target.value)}
+                                                placeholder="Phú Quốc,..."
+                                                style={{
+                                                    flex: 1,
+                                                    backgroundColor: imgData.location && imgData.coordinates ? '#f0fdf4' : undefined,
+                                                }}
+                                            />
+                                            <Button
+                                                type="button"
+                                                onClick={() => handleDetectLocation(index)}
+                                                disabled={detectingLocationIndex === index}
+                                                variant="outline"
+                                                size="sm"
+                                                style={{
+                                                    flexShrink: 0,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '6px',
+                                                    minWidth: '120px',
+                                                }}
+                                            >
+                                                {detectingLocationIndex === index ? (
+                                                    <>
+                                                        <div style={{
+                                                            width: '12px',
+                                                            height: '12px',
+                                                            border: '2px solid #6366f1',
+                                                            borderTop: '2px solid transparent',
+                                                            borderRadius: '50%',
+                                                            animation: 'spin 0.8s linear infinite',
+                                                        }} />
+                                                        <span>Đang tìm...</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <MapPin size={16} />
+                                                        <span>Vị trí hiện tại</span>
+                                                    </>
+                                                )}
+                                            </Button>
+                                        </div>
+                                        {imgData.location && imgData.coordinates && (
+                                            <p style={{ marginTop: '4px', fontSize: '12px', color: '#059669' }}>
+                                                ✓ Đã phát hiện tự động
+                                            </p>
+                                        )}
                                     </div>
 
                                     {/* Camera Model */}

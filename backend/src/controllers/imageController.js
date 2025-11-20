@@ -125,7 +125,30 @@ export const getAllImages = asyncHandler(async (req, res) => {
 
 export const uploadImage = asyncHandler(async (req, res) => {
     const userId = req.user._id;
-    const { imageTitle, imageCategory, location, cameraModel } = req.body;
+    const { imageTitle, imageCategory, location, cameraModel, coordinates } = req.body;
+    
+    // Parse coordinates if provided as JSON string
+    let parsedCoordinates;
+    if (coordinates) {
+        try {
+            parsedCoordinates = typeof coordinates === 'string' ? JSON.parse(coordinates) : coordinates;
+            // Validate coordinates
+            if (parsedCoordinates.latitude && parsedCoordinates.longitude) {
+                const lat = parseFloat(parsedCoordinates.latitude);
+                const lng = parseFloat(parsedCoordinates.longitude);
+                if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                    parsedCoordinates = undefined;
+                } else {
+                    parsedCoordinates = { latitude: lat, longitude: lng };
+                }
+            } else {
+                parsedCoordinates = undefined;
+            }
+        } catch (error) {
+            logger.warn('Invalid coordinates format:', error);
+            parsedCoordinates = undefined;
+        }
+    }
 
     if (!req.file) {
         return res.status(400).json({
@@ -193,6 +216,7 @@ export const uploadImage = asyncHandler(async (req, res) => {
             imageCategory: categoryDoc._id, // Use category ObjectId
             uploadedBy: userId,
             location: location?.trim() || undefined,
+            coordinates: parsedCoordinates || undefined,
             cameraModel: cameraModel?.trim() || undefined,
         });
 

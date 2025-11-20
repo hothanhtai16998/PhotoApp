@@ -47,6 +47,12 @@ export const imageService = {
 				data.location
 			);
 		}
+		if (data.coordinates) {
+			formData.append(
+				'coordinates',
+				JSON.stringify(data.coordinates)
+			);
+		}
 		if (data.cameraModel) {
 			formData.append(
 				'cameraModel',

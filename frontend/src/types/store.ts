@@ -6,6 +6,10 @@ export type UploadImageData = {
 	imageTitle: string;
 	imageCategory: string;
 	location?: string;
+	coordinates?: {
+		latitude: number;
+		longitude: number;
+	};
 	cameraModel?: string;
 };
 
@@ -51,6 +55,7 @@ export interface ImageState {
 	} | null;
 	currentSearch?: string;
 	currentCategory?: string;
+	deletedImageIds: string[]; // Track deleted image IDs to filter them out
 	uploadImage: (
 		data: UploadImageData
 	) => Promise<void>;
@@ -61,4 +66,5 @@ export interface ImageState {
 		category?: string;
 		_refresh?: boolean;
 	}) => Promise<void>;
+	removeImage: (imageId: string) => void;
 }

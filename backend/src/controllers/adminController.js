@@ -6,6 +6,7 @@ import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { logger } from '../utils/logger.js';
 import { deleteImageFromS3 } from '../libs/s3.js';
 import { PERMISSIONS } from '../middlewares/permissionMiddleware.js';
+import { clearCache } from '../middlewares/cacheMiddleware.js';
 
 // Statistics
 export const getDashboardStats = asyncHandler(async (req, res) => {
@@ -334,8 +335,18 @@ export const deleteImage = asyncHandler(async (req, res) => {
         logger.warn(`Lỗi không thể xoá ảnh ${image.publicId} từ S3:`, error);
     }
 
+    // Remove image from all users' favorites
+    await User.updateMany(
+        { favorites: imageId },
+        { $pull: { favorites: imageId } }
+    );
+
     // Delete from database
     await Image.findByIdAndDelete(imageId);
+
+    // Clear ALL cache entries for images endpoint (including all query variations)
+    // This ensures deleted image doesn't appear in any cached responses
+    clearCache('/api/images');
 
     res.status(200).json({
         message: 'Xoá ảnh thành công',
