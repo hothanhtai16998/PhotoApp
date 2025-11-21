@@ -73,6 +73,7 @@ export const useImageUpload = ({ onSuccess }: UseImageUploadProps = {}) => {
       for (let i = 0; i < imagesData.length; i++) {
         setUploadingIndex(i);
         const imgData = imagesData[i];
+        if (!imgData) continue;
 
         await uploadImage({
           image: imgData.file,

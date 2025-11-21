@@ -72,6 +72,7 @@ export const ImageModalChart = ({ image, activeTab }: ImageModalChartProps) => {
 
           if (hoveredBarIndex >= 0 && hoveredBarIndex < chartData.length) {
             const data = chartData[hoveredBarIndex];
+            if (!data) return;
             // Format date in local timezone - use simple formatting to avoid UTC label
             const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             const dateStr = `${monthNames[data.date.getMonth()]} ${data.date.getDate()}, ${data.date.getFullYear()}`;
@@ -91,13 +92,15 @@ export const ImageModalChart = ({ image, activeTab }: ImageModalChartProps) => {
               finalX = (tooltipWidth / 2) + margin;
             }
 
-            setHoveredBar({
-              date: dateStr,
-              views: data.views,
-              downloads: data.downloads,
-              x: finalX,
-              y: barTopY - 8
-            });
+            if (data) {
+              setHoveredBar({
+                date: dateStr,
+                views: data.views,
+                downloads: data.downloads,
+                x: finalX,
+                y: barTopY - 8
+              });
+            }
           } else {
             setHoveredBar(null);
           }

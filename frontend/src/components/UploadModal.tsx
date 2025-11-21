@@ -114,14 +114,16 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
     const updateImageData = (index: number, field: 'title' | 'category' | 'location' | 'cameraModel', value: string) => {
         setImagesData(prev => {
             const updated = [...prev];
-            const newErrors = { ...updated[index].errors };
+            const current = updated[index];
+            if (!current) return updated;
+            const newErrors = { ...current.errors };
             if (field === 'title') {
                 newErrors.title = undefined;
             } else if (field === 'category') {
                 newErrors.category = undefined;
             }
             updated[index] = {
-                ...updated[index],
+                ...current,
                 [field]: value,
                 errors: newErrors
             };
@@ -133,8 +135,10 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
     const updateImageCoordinates = (index: number, coordinates: { latitude: number; longitude: number } | undefined) => {
         setImagesData(prev => {
             const updated = [...prev];
+            const current = updated[index];
+            if (!current) return updated;
             updated[index] = {
-                ...updated[index],
+                ...current,
                 coordinates,
             };
             return updated;
@@ -225,7 +229,10 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                 const confetti = document.createElement('div');
                 confetti.className = 'confetti';
                 confetti.style.left = `${Math.random() * 100}%`;
-                confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                if (color) {
+                  confetti.style.background = color;
+                }
                 confetti.style.animationDelay = `${Math.random() * 2}s`;
                 confetti.style.animationDuration = `${2 + Math.random() * 2}s`;
                 container.appendChild(confetti);

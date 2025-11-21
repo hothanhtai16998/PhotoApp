@@ -9,14 +9,14 @@ interface ErrorContext {
 
 class ErrorTracker {
   private enabled: boolean = false;
-  private dsn?: string;
 
   /**
    * Initialize error tracking (e.g., with Sentry)
    */
   init(options?: { dsn?: string; enabled?: boolean }) {
     this.enabled = options?.enabled ?? import.meta.env.PROD;
-    this.dsn = options?.dsn;
+    // DSN would be used here if Sentry was integrated
+    void options?.dsn;
 
     // In production, you would initialize Sentry here:
     // if (this.enabled && this.dsn) {
@@ -94,7 +94,7 @@ class ErrorTracker {
   /**
    * Add breadcrumb for debugging
    */
-  addBreadcrumb(message: string, category: string = 'default', level: 'info' | 'warning' | 'error' = 'info', data?: Record<string, unknown>) {
+  addBreadcrumb(message: string, category: string = 'default', _level: 'info' | 'warning' | 'error' = 'info', data?: Record<string, unknown>) {
     if (!this.enabled) {
       console.debug(`[Breadcrumb] [${category}]`, message, data);
       return;

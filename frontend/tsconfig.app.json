@@ -34,7 +34,7 @@
 		"strictPropertyInitialization": true,
 		"noImplicitThis": true,
 		"alwaysStrict": true,
-		"noUnusedIndexedAccess": true,
+		"noUncheckedIndexedAccess": true,
 
 		//shad-cn
 		"baseUrl": ".",

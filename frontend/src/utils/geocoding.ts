@@ -211,26 +211,23 @@ function buildLocationName(item: NominatimItem, address: NominatimAddress): stri
 		const locationParts: string[] = [];
 		
 		// Priority order: ward/district -> city/town -> province -> country
-		if (address.ward || address.suburb) {
-			locationParts.push(address.ward || address.suburb);
+		const wardOrSuburb = address.ward || address.suburb;
+		if (wardOrSuburb) {
+			locationParts.push(wardOrSuburb);
 		}
 		
 		if (address.district && !locationParts.includes(address.district)) {
 			locationParts.push(address.district);
 		}
 		
-		if (address.city || address.town || address.village || address.municipality) {
-			const cityName = address.city || address.town || address.village || address.municipality;
-			if (!locationParts.includes(cityName)) {
-				locationParts.push(cityName);
-			}
+		const cityName = address.city || address.town || address.village || address.municipality;
+		if (cityName && !locationParts.includes(cityName)) {
+			locationParts.push(cityName);
 		}
 		
-		if (address.state || address.province || address.region) {
-			const state = address.state || address.province || address.region;
-			if (!locationParts.includes(state)) {
-				locationParts.push(state);
-			}
+		const state = address.state || address.province || address.region;
+		if (state && !locationParts.includes(state)) {
+			locationParts.push(state);
 		}
 		
 		if (address.country) {
@@ -302,8 +299,12 @@ export async function searchLocations(
 			const parts = cleanQuery.split(',').map(p => p.trim());
 			// Use the last part (usually province/city) and first part (ward/district)
 			if (parts.length >= 2) {
-				searchQueries.push(parts[parts.length - 1]); // City/Province
-				searchQueries.push(`${parts[0]} ${parts[parts.length - 1]}`); // Ward + City
+				const lastPart = parts[parts.length - 1];
+				const firstPart = parts[0];
+				if (lastPart && firstPart) {
+					searchQueries.push(lastPart); // City/Province
+					searchQueries.push(`${firstPart} ${lastPart}`); // Ward + City
+				}
 			}
 		}
 		
@@ -337,6 +338,7 @@ export async function searchLocations(
 			// Score and collect results
 			for (const item of data) {
 				const address = item.address || {};
+				if (!item.lat || !item.lon) continue;
 				const lat = parseFloat(item.lat);
 				const lon = parseFloat(item.lon);
 				const locationKey = `${lat.toFixed(4)},${lon.toFixed(4)}`;
@@ -368,6 +370,7 @@ export async function searchLocations(
 				if (Array.isArray(data) && data.length > 0) {
 					for (const item of data) {
 						const address = item.address || {};
+						if (!item.lat || !item.lon) continue;
 						const lat = parseFloat(item.lat);
 						const lon = parseFloat(item.lon);
 						const locationKey = `${lat.toFixed(4)},${lon.toFixed(4)}`;
@@ -388,14 +391,15 @@ export async function searchLocations(
 		// Transform to LocationSuggestion format
 		const suggestions: LocationSuggestion[] = allResults
 			.slice(0, limit)
+			.filter(({ item }) => item.lat && item.lon)
 			.map(({ item }) => {
 				const address = item.address || {};
 				const displayName = buildLocationName(item, address);
 
 				return {
 					displayName,
-					latitude: parseFloat(item.lat),
-					longitude: parseFloat(item.lon),
+					latitude: parseFloat(item.lat!),
+					longitude: parseFloat(item.lon!),
 					address: {
 						city: address.city || address.town || address.village || address.municipality,
 						state: address.state || address.province || address.region,

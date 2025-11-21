@@ -110,13 +110,19 @@ export const useImageModal = ({
   // Navigation handlers for keyboard shortcuts
   const handleNavigateLeft = useCallback(() => {
     if (currentImageIndex > 0) {
-      onImageSelect(images[currentImageIndex - 1]);
+      const prevImage = images[currentImageIndex - 1];
+      if (prevImage) {
+        onImageSelect(prevImage);
+      }
     }
   }, [currentImageIndex, images, onImageSelect]);
 
   const handleNavigateRight = useCallback(() => {
     if (currentImageIndex < images.length - 1) {
-      onImageSelect(images[currentImageIndex + 1]);
+      const nextImage = images[currentImageIndex + 1];
+      if (nextImage) {
+        onImageSelect(nextImage);
+      }
     }
   }, [currentImageIndex, images, onImageSelect]);
 

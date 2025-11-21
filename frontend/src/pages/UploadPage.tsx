@@ -89,6 +89,10 @@ function UploadPage() {
     const onSubmit = async (data: UploadFormValues) => {
         const { image, ...rest } = data;
         const originalFile = image[0];
+        if (!originalFile) {
+          toast.error('No file selected');
+          return;
+        }
         
         try {
             // Compress image before upload for better performance

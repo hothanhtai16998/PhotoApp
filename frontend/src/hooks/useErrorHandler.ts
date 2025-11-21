@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import type { AxiosError } from 'axios';
 
 interface ErrorHandlerOptions {
   showToast?: boolean;
@@ -94,7 +93,7 @@ export function useErrorHandler(options: ErrorHandlerOptions = {}) {
         return [result, null];
       } catch (error) {
         const mergedOptions = { ...options, ...options };
-        const message = handleError(error, mergedOptions.fallbackMessage);
+        handleError(error, mergedOptions.fallbackMessage);
         return [null, error as Error];
       }
     },

@@ -36,6 +36,7 @@ export const useInfiniteScroll = ({
       (entries) => {
         const entry = entries[0];
         if (
+          entry &&
           entry.isIntersecting &&
           hasMore &&
           !isLoading &&

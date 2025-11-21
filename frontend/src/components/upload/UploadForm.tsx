@@ -30,7 +30,7 @@ export const UploadForm = ({
   const [loadingLocationSuggestions, setLoadingLocationSuggestions] = useState(false);
   const locationInputRef = useRef<HTMLInputElement | null>(null);
   const locationDropdownRef = useRef<HTMLDivElement | null>(null);
-  const locationSearchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const locationSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Detect user's current location and reverse geocode to location name (called on button click)
   const handleDetectLocation = useCallback(async () => {

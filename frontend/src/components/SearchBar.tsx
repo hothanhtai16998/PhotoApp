@@ -220,7 +220,9 @@ export function SearchBar() {
         e.preventDefault()
         if (selectedIndex >= 0 && selectedIndex < filteredSuggestions.length) {
           const selected = filteredSuggestions[selectedIndex]
-          handleSearch(selected)
+          if (selected) {
+            handleSearch(selected)
+          }
         } else {
           handleSearch(searchQuery)
         }
