@@ -4,7 +4,7 @@ import { imageService } from '@/services/imageService';
 import { useImageStore } from '@/stores/useImageStore';
 import type { Image } from '@/types/image';
 import type { Slide } from '@/types/slide';
-const AUTO_PLAY_INTERVAL = 5000; // 5 seconds
+const AUTO_PLAY_INTERVAL = 6300; // 6.3 seconds (full cycle: 1.2s transition + 5.1s visible)
 const SWIPE_THRESHOLD = 50; // Minimum distance for swipe
 
 function Slider() {
@@ -15,12 +15,14 @@ function Slider() {
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [animatingSlide, setAnimatingSlide] = useState<number | null>(null);
     const [progress, setProgress] = useState(0);
-    const [showProgress, setShowProgress] = useState(false);
 
     // Touch/swipe handlers
     const touchStartX = useRef<number>(0);
     const touchEndX = useRef<number>(0);
     const sliderRef = useRef<HTMLDivElement>(null);
+    const progressRunningRef = useRef(false);
+    const lastSlideIndexRef = useRef<number>(-1);
+    const progressStartTimeRef = useRef<number>(0);
 
     // Fetch images from backend
     useEffect(() => {
@@ -144,15 +146,13 @@ function Slider() {
 
     const goToNext = useCallback(() => {
         if (isTransitioning || slides.length === 0) return;
-        setProgress(0);
         setIsTransitioning(true);
         setCurrentSlide((prev) => (prev + 1) % slides.length);
         setTimeout(() => setIsTransitioning(false), 1200);
-    }, [isTransitioning, slides.length]);
+    }, [slides.length]);
 
     const goToPrev = useCallback(() => {
         if (isTransitioning || slides.length === 0) return;
-        setProgress(0);
         setIsTransitioning(true);
         setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
         setTimeout(() => setIsTransitioning(false), 1200);
@@ -175,53 +175,71 @@ function Slider() {
     }, [currentSlide, isTransitioning]);
 
     // Auto-play functionality with progress indicator
-    // Progress circle appears when slide becomes visible (after transition completes)
+    // Progress ring runs continuously for the full cycle (6.3s including transition)
     useEffect(() => {
-        if (isTransitioning || slides.length === 0) {
+        if (slides.length === 0) {
             setProgress(0);
-            setShowProgress(false);
+            progressRunningRef.current = false;
+            lastSlideIndexRef.current = -1;
             return;
         }
+
+        // Only start progress if slide actually changed
+        const slideChanged = currentSlide !== lastSlideIndexRef.current;
+        
+        if (!slideChanged) {
+            // Slide hasn't changed, don't restart
+            return;
+        }
+
+        // Slide changed - reset and start fresh
+        // Always reset refs to ensure clean state
+        lastSlideIndexRef.current = currentSlide;
+        progressRunningRef.current = true;
+        progressStartTimeRef.current = Date.now();
+        setProgress(0);
 
         let animationFrameId: number | null = null;
         let slideTimeout: ReturnType<typeof setTimeout> | null = null;
 
-        // Wait for transition to complete before starting progress
-        // Transition takes 1200ms, so wait a bit to ensure slide is fully visible
-        const startDelay = setTimeout(() => {
-            setProgress(0);
-            setShowProgress(true);
+        const animate = () => {
+            // Check if we should still be running (slide hasn't changed)
+            if (currentSlide !== lastSlideIndexRef.current || !progressRunningRef.current) {
+                return;
+            }
 
-            const startTime = Date.now();
+            const elapsed = Date.now() - progressStartTimeRef.current;
+            const newProgress = Math.min((elapsed / AUTO_PLAY_INTERVAL) * 100, 100);
+            setProgress(newProgress);
 
-            const animate = () => {
-                const elapsed = Date.now() - startTime;
-                const newProgress = Math.min((elapsed / AUTO_PLAY_INTERVAL) * 100, 100);
-                setProgress(newProgress);
+            if (newProgress < 100) {
+                animationFrameId = requestAnimationFrame(animate);
+            } else {
+                // Progress completed, but don't set progressRunningRef to false here
+                // Let the timeout handle the next slide transition
+            }
+        };
 
-                if (newProgress < 100) {
-                    animationFrameId = requestAnimationFrame(animate);
-                }
-            };
+        animationFrameId = requestAnimationFrame(animate);
 
-            animationFrameId = requestAnimationFrame(animate);
-
-            // Advance to next slide after AUTO_PLAY_INTERVAL
-            slideTimeout = setTimeout(() => {
-                goToNext();
-            }, AUTO_PLAY_INTERVAL);
-        }, 100); // Small delay to ensure transition is visually complete
+        // Advance to next slide after AUTO_PLAY_INTERVAL (full cycle)
+        slideTimeout = setTimeout(() => {
+            // Only advance if we're still on the same slide
+            if (currentSlide === lastSlideIndexRef.current) {
+                // Inline goToNext logic to avoid dependency on isTransitioning
+                setIsTransitioning(true);
+                setCurrentSlide((prev) => (prev + 1) % slides.length);
+                setTimeout(() => setIsTransitioning(false), 1200);
+            }
+        }, AUTO_PLAY_INTERVAL);
 
         return () => {
-            clearTimeout(startDelay);
             if (animationFrameId !== null) {
                 cancelAnimationFrame(animationFrameId);
             }
             if (slideTimeout) clearTimeout(slideTimeout);
-            setProgress(0);
-            setShowProgress(false);
         };
-    }, [currentSlide, isTransitioning, goToNext, slides.length]);
+    }, [currentSlide, slides.length]);
 
     // Keyboard navigation
     useEffect(() => {
@@ -274,7 +292,6 @@ function Slider() {
         if (slides.length > 0 && !loading) {
             const timer = setTimeout(() => {
                 setAnimatingSlide(0);
-                setShowProgress(true);
             }, 200);
             return () => clearTimeout(timer);
         }
@@ -475,7 +492,7 @@ function Slider() {
 
             {/* Circular Progress Indicator - Bottom Right */}
             {slides.length > 0 && (
-                <div className={`progress-indicator ${showProgress ? 'visible' : ''}`}>
+                <div className="progress-indicator visible">
                     <svg className="progress-ring" width="60" height="60" viewBox="0 0 60 60">
                         <circle
                             className="progress-ring-circle-bg"
