@@ -22,6 +22,9 @@ export interface Image {
 	cameraModel?: string;
 	views?: number;
 	downloads?: number;
+	// Daily views and downloads tracking (date string as key: "YYYY-MM-DD")
+	dailyViews?: Record<string, number>;
+	dailyDownloads?: Record<string, number>;
 	createdAt: string;
 	updatedAt: string;
 }

@@ -217,7 +217,7 @@ export const imageService = {
 
 	incrementView: async (
 		imageId: string
-	): Promise<{ views: number }> => {
+	): Promise<{ views: number; dailyViews: Record<string, number> }> => {
 		const res = await api.patch(
 			`/images/${imageId}/view`,
 			{},
@@ -230,7 +230,7 @@ export const imageService = {
 
 	incrementDownload: async (
 		imageId: string
-	): Promise<{ downloads: number }> => {
+	): Promise<{ downloads: number; dailyDownloads: Record<string, number> }> => {
 		const res = await api.patch(
 			`/images/${imageId}/download`,
 			{},

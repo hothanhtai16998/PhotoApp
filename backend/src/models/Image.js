@@ -75,6 +75,18 @@ const imageSchema = new mongoose.Schema(
             default: 0,
             min: 0,
         },
+        // Track views per day (date string as key: "YYYY-MM-DD")
+        dailyViews: {
+            type: Map,
+            of: Number,
+            default: {},
+        },
+        // Track downloads per day (date string as key: "YYYY-MM-DD")
+        dailyDownloads: {
+            type: Map,
+            of: Number,
+            default: {},
+        },
     },
     {
         timestamps: true,

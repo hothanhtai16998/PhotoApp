@@ -118,10 +118,35 @@ export const getAllImages = asyncHandler(async (req, res) => {
             img.imageCategory.name &&
             img.imageCategory.isActive !== false; // Ensure category is active
 
+        // Convert dailyViews and dailyDownloads Maps to plain objects
+        // When using .lean(), Maps are already plain objects, so we need to handle both cases
+        let dailyViewsObj = {};
+        if (img.dailyViews) {
+            if (img.dailyViews instanceof Map) {
+                dailyViewsObj = Object.fromEntries(img.dailyViews);
+            } else {
+                // Already a plain object from .lean()
+                dailyViewsObj = img.dailyViews;
+            }
+        }
+        
+        let dailyDownloadsObj = {};
+        if (img.dailyDownloads) {
+            if (img.dailyDownloads instanceof Map) {
+                dailyDownloadsObj = Object.fromEntries(img.dailyDownloads);
+            } else {
+                // Already a plain object from .lean()
+                dailyDownloadsObj = img.dailyDownloads;
+            }
+        }
+
         return {
             ...img,
             // Ensure imageCategory is either an object with name or null
-            imageCategory: hasValidCategory ? img.imageCategory : null
+            imageCategory: hasValidCategory ? img.imageCategory : null,
+            // Include daily views and downloads
+            dailyViews: dailyViewsObj,
+            dailyDownloads: dailyDownloadsObj,
         };
     });
 
@@ -315,9 +340,19 @@ export const uploadImage = asyncHandler(async (req, res) => {
 export const incrementView = asyncHandler(async (req, res) => {
     const imageId = req.params.imageId;
 
+    // Get current date in UTC as YYYY-MM-DD string
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+
+    // Increment both total views and daily views
     const image = await Image.findByIdAndUpdate(
         imageId,
-        { $inc: { views: 1 } },
+        {
+            $inc: {
+                views: 1,
+                [`dailyViews.${todayStr}`]: 1,
+            },
+        },
         { new: true, runValidators: true }
     );
 
@@ -327,8 +362,12 @@ export const incrementView = asyncHandler(async (req, res) => {
         });
     }
 
+    // Convert dailyViews Map to plain object for JSON response
+    const dailyViewsObj = image.dailyViews ? Object.fromEntries(image.dailyViews) : {};
+
     res.status(200).json({
         views: image.views,
+        dailyViews: dailyViewsObj,
     });
 });
 
@@ -336,9 +375,19 @@ export const incrementView = asyncHandler(async (req, res) => {
 export const incrementDownload = asyncHandler(async (req, res) => {
     const imageId = req.params.imageId;
 
+    // Get current date in UTC as YYYY-MM-DD string
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+
+    // Increment both total downloads and daily downloads
     const image = await Image.findByIdAndUpdate(
         imageId,
-        { $inc: { downloads: 1 } },
+        {
+            $inc: {
+                downloads: 1,
+                [`dailyDownloads.${todayStr}`]: 1,
+            },
+        },
         { new: true, runValidators: true }
     );
 
@@ -348,8 +397,12 @@ export const incrementDownload = asyncHandler(async (req, res) => {
         });
     }
 
+    // Convert dailyDownloads Map to plain object for JSON response
+    const dailyDownloadsObj = image.dailyDownloads ? Object.fromEntries(image.dailyDownloads) : {};
+
     res.status(200).json({
         downloads: image.downloads,
+        dailyDownloads: dailyDownloadsObj,
     });
 });
 
@@ -378,13 +431,40 @@ export const getImagesByUserId = asyncHandler(async (req, res) => {
     ]);
 
     // Handle images with invalid or missing category references
-    const images = imagesRaw.map(img => ({
-        ...img,
-        // Ensure imageCategory is either an object with name or null
-        imageCategory: (img.imageCategory && typeof img.imageCategory === 'object' && img.imageCategory.name)
-            ? img.imageCategory
-            : null
-    }));
+    const images = imagesRaw.map(img => {
+        // Convert dailyViews and dailyDownloads Maps to plain objects
+        // When using .lean(), Maps are already plain objects, so we need to handle both cases
+        let dailyViewsObj = {};
+        if (img.dailyViews) {
+            if (img.dailyViews instanceof Map) {
+                dailyViewsObj = Object.fromEntries(img.dailyViews);
+            } else {
+                // Already a plain object from .lean()
+                dailyViewsObj = img.dailyViews;
+            }
+        }
+        
+        let dailyDownloadsObj = {};
+        if (img.dailyDownloads) {
+            if (img.dailyDownloads instanceof Map) {
+                dailyDownloadsObj = Object.fromEntries(img.dailyDownloads);
+            } else {
+                // Already a plain object from .lean()
+                dailyDownloadsObj = img.dailyDownloads;
+            }
+        }
+
+        return {
+            ...img,
+            // Ensure imageCategory is either an object with name or null
+            imageCategory: (img.imageCategory && typeof img.imageCategory === 'object' && img.imageCategory.name)
+                ? img.imageCategory
+                : null,
+            // Include daily views and downloads
+            dailyViews: dailyViewsObj,
+            dailyDownloads: dailyDownloadsObj,
+        };
+    });
 
     // Set cache headers for better performance
     // Use shorter cache for user-specific images since they change more frequently

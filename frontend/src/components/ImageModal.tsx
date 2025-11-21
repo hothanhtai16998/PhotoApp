@@ -59,6 +59,7 @@ const ImageModal = ({
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [activeTab, setActiveTab] = useState<'views' | 'downloads'>('views');
   const [hoveredBar, setHoveredBar] = useState<{ date: string; views: number; downloads: number; x: number; y: number } | null>(null);
+  const mouseMoveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isFavorited, setIsFavorited] = useState<boolean>(false);
   const [isTogglingFavorite, setIsTogglingFavorite] = useState<boolean>(false);
   const [showUserProfileCard, setShowUserProfileCard] = useState(false);
@@ -78,40 +79,114 @@ const ImageModal = ({
   const { accessToken, user } = useAuthStore();
   const navigate = useNavigate();
 
-  // Generate accurate chart data - only show actual data for today, 0 for previous days
-  const chartData = useMemo(() => {
-    const publishedDate = new Date(image.createdAt);
-    publishedDate.setHours(0, 0, 0, 0);
+  // Memoize formatted date to avoid recalculation on every render
+  const formattedDate = useMemo(() => {
+    if (!image.createdAt) return null;
+    return new Date(image.createdAt).toLocaleDateString('vi-VN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }, [image.createdAt]);
 
-    // Get today's date in local timezone
+  // Generate accurate chart data - show views/downloads on the published date
+  // Since we only have total counts (not per-day), we show all views on the published date
+  // Memoize chart data and max values together to avoid recalculation
+  const { chartData, maxViews, maxDownloads } = useMemo(() => {
+    // Parse published date - backend stores dates in UTC
+    const publishedDate = new Date(image.createdAt);
+
+    // Get today's date in local timezone for chart display
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    // Helper to format date as YYYY-MM-DD for reliable comparison (using local timezone)
-    const formatDate = (d: Date) => {
+    // Helper to format date as YYYY-MM-DD using local timezone
+    const formatDateLocal = (d: Date) => {
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const day = String(d.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     };
 
-    const todayStr = formatDate(today);
+    // Helper to convert UTC date string (YYYY-MM-DD) to local date string
+    // Backend stores dates in UTC, but we need to match them to local dates
+    const convertUTCToLocalDateStr = (utcDateStr: string) => {
+      // Parse UTC date string and convert to local date
+      const utcDate = new Date(utcDateStr + 'T00:00:00.000Z');
+      return formatDateLocal(utcDate);
+    };
 
-    return Array.from({ length: 14 }, (_, i) => {
+    // Convert UTC published date to local date for comparison
+    const publishedLocalDate = new Date(
+      publishedDate.getUTCFullYear(),
+      publishedDate.getUTCMonth(),
+      publishedDate.getUTCDate()
+    );
+    const publishedStr = formatDateLocal(publishedLocalDate);
+
+    // Get daily views and downloads from image (backend stores in UTC date strings)
+    const dailyViews = image.dailyViews || {};
+    const dailyDownloads = image.dailyDownloads || {};
+
+    // Check if we have any per-day data
+    // An empty object {} means no per-day data exists (old images)
+    const hasDailyViews = dailyViews && typeof dailyViews === 'object' && Object.keys(dailyViews).length > 0;
+    const hasDailyDownloads = dailyDownloads && typeof dailyDownloads === 'object' && Object.keys(dailyDownloads).length > 0;
+
+    // Calculate total tracked views/downloads and remaining untracked ones
+    const totalTrackedViews = hasDailyViews
+      ? Object.values(dailyViews).reduce((sum, count) => sum + (count || 0), 0)
+      : 0;
+    const totalTrackedDownloads = hasDailyDownloads
+      ? Object.values(dailyDownloads).reduce((sum, count) => sum + (count || 0), 0)
+      : 0;
+
+    const remainingViews = Math.max(0, (image.views || 0) - totalTrackedViews);
+    const remainingDownloads = Math.max(0, (image.downloads || 0) - totalTrackedDownloads);
+
+    const data = Array.from({ length: 14 }, (_, i) => {
       // Calculate date: i=0 is 13 days ago, i=13 is today (0 days ago)
       const daysAgo = 13 - i;
       const date = new Date(today);
       date.setDate(today.getDate() - daysAgo);
-      date.setHours(0, 0, 0, 0);
 
-      // Compare dates properly to determine if this is today
-      const dateStr = formatDate(date);
-      const isToday = dateStr === todayStr;
-      const isBeforePublished = date < publishedDate;
+      // Format chart date in local timezone
+      const dateStr = formatDateLocal(date);
+      const isBeforePublished = dateStr < publishedStr;
 
-      // Only show actual data for today, 0 for all previous days
-      const viewsValue = (isToday && !isBeforePublished) ? (views || 0) : 0;
-      const downloadsValue = (isToday && !isBeforePublished) ? (downloads || 0) : 0;
+      let viewsValue = 0;
+      let downloadsValue = 0;
+
+      // Show per-day tracked views (real data)
+      if (hasDailyViews) {
+        for (const [utcDateStr, count] of Object.entries(dailyViews)) {
+          const localDateStr = convertUTCToLocalDateStr(utcDateStr);
+          if (localDateStr === dateStr && !isBeforePublished) {
+            viewsValue += count;
+          }
+        }
+      }
+
+      // Show remaining untracked views on published date (fallback for old views)
+      // This handles views that happened before per-day tracking was implemented
+      if (remainingViews > 0 && dateStr === publishedStr && !isBeforePublished) {
+        viewsValue += remainingViews;
+      }
+
+      // Show per-day tracked downloads (real data)
+      if (hasDailyDownloads) {
+        for (const [utcDateStr, count] of Object.entries(dailyDownloads)) {
+          const localDateStr = convertUTCToLocalDateStr(utcDateStr);
+          if (localDateStr === dateStr && !isBeforePublished) {
+            downloadsValue += count;
+          }
+        }
+      }
+
+      // Show remaining untracked downloads on published date (fallback for old downloads)
+      if (remainingDownloads > 0 && dateStr === publishedStr && !isBeforePublished) {
+        downloadsValue += remainingDownloads;
+      }
 
       return {
         date,
@@ -120,7 +195,13 @@ const ImageModal = ({
         isBeforePublished,
       };
     });
-  }, [image.createdAt, views, downloads]);
+
+    // Calculate max values once
+    const maxViews = Math.max(...data.map(d => d.views), 1);
+    const maxDownloads = Math.max(...data.map(d => d.downloads), 1);
+
+    return { chartData: data, maxViews, maxDownloads };
+  }, [image.createdAt, image.dailyViews, image.dailyDownloads, image.views, image.downloads]);
 
   // Reset related images limit and update stats when image changes
   useEffect(() => {
@@ -128,6 +209,7 @@ const ImageModal = ({
     setViews(image.views || 0);
     setDownloads(image.downloads || 0);
     currentImageIdRef.current = image._id;
+    // Note: dailyViews and dailyDownloads are used directly from image prop in chart calculation
 
     // Reset modal image state and start progressive loading
     setIsModalImageLoaded(false);
@@ -345,11 +427,14 @@ const ImageModal = ({
     }, 50);
   }, [navigate, image.uploadedBy._id, user]);
 
-  // Cleanup timeout on unmount
+  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       if (hoverTimeoutRef.current) {
         clearTimeout(hoverTimeoutRef.current);
+      }
+      if (mouseMoveTimeoutRef.current) {
+        clearTimeout(mouseMoveTimeoutRef.current);
       }
     };
   }, []);
@@ -367,7 +452,16 @@ const ImageModal = ({
           // Use the current image from the ref to avoid stale closure
           const currentImage = image;
           if (onImageSelect && currentImage) {
-            onImageSelect({ ...currentImage, views: response.views });
+            // Merge dailyViews to ensure we have all historical data
+            const mergedDailyViews = {
+              ...(currentImage.dailyViews || {}),
+              ...(response.dailyViews || {})
+            };
+            onImageSelect({
+              ...currentImage,
+              views: response.views,
+              dailyViews: mergedDailyViews
+            });
           }
         })
         .catch((error) => {
@@ -381,8 +475,11 @@ const ImageModal = ({
   }, [image._id]);
 
   // Get related images (same category, excluding current image) with infinite scroll
-  const relatedImages = useMemo(() => {
-    if (!image || images.length === 0) return [];
+  // Combined calculation to avoid duplicate filtering
+  const { relatedImages, hasMoreRelatedImages } = useMemo(() => {
+    if (!image || images.length === 0) {
+      return { relatedImages: [], hasMoreRelatedImages: false };
+    }
 
     const currentCategoryId = typeof image.imageCategory === 'string'
       ? image.imageCategory
@@ -404,33 +501,11 @@ const ImageModal = ({
       });
     }
 
-    // Return limited images for infinite scroll
-    return filtered.slice(0, relatedImagesLimit);
-  }, [image, images, relatedImagesLimit]);
-
-  // Check if there are more related images to load
-  const hasMoreRelatedImages = useMemo(() => {
-    if (!image || images.length === 0) return false;
-
-    const currentCategoryId = typeof image.imageCategory === 'string'
-      ? image.imageCategory
-      : image.imageCategory?._id;
-
-    let filtered: Image[];
-
-    if (!currentCategoryId) {
-      filtered = images.filter(img => img._id !== image._id);
-    } else {
-      filtered = images.filter(img => {
-        if (img._id === image._id) return false;
-        const imgCategoryId = typeof img.imageCategory === 'string'
-          ? img.imageCategory
-          : img.imageCategory?._id;
-        return imgCategoryId === currentCategoryId;
-      });
-    }
-
-    return filtered.length > relatedImagesLimit;
+    // Return limited images for infinite scroll and check if more available
+    return {
+      relatedImages: filtered.slice(0, relatedImagesLimit),
+      hasMoreRelatedImages: filtered.length > relatedImagesLimit,
+    };
   }, [image, images, relatedImagesLimit]);
 
   // Infinite scroll for related images (modal content scrolling)
@@ -570,6 +645,11 @@ const ImageModal = ({
     }
   }, [accessToken, image._id, isTogglingFavorite]);
 
+  // Memoize current image index to avoid recalculation
+  const currentImageIndex = useMemo(() => {
+    return images.findIndex(img => img._id === image._id);
+  }, [images, image._id]);
+
   // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyboard = (e: KeyboardEvent) => {
@@ -587,18 +667,16 @@ const ImageModal = ({
 
       // Arrow keys for navigation (if multiple images)
       if (e.key === 'ArrowLeft' && images.length > 1) {
-        const currentIndex = images.findIndex(img => img._id === image._id);
-        if (currentIndex > 0) {
-          onImageSelect(images[currentIndex - 1]);
+        if (currentImageIndex > 0) {
+          onImageSelect(images[currentImageIndex - 1]);
         }
         e.preventDefault();
         return;
       }
 
       if (e.key === 'ArrowRight' && images.length > 1) {
-        const currentIndex = images.findIndex(img => img._id === image._id);
-        if (currentIndex < images.length - 1) {
-          onImageSelect(images[currentIndex + 1]);
+        if (currentImageIndex < images.length - 1) {
+          onImageSelect(images[currentImageIndex + 1]);
         }
         e.preventDefault();
         return;
@@ -617,7 +695,7 @@ const ImageModal = ({
       // Share with Ctrl/Cmd + S
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
-        setShowShareMenu(!showShareMenu);
+        setShowShareMenu(prev => !prev);
         return;
       }
 
@@ -672,7 +750,7 @@ const ImageModal = ({
         (gridContainer as HTMLElement).style.overflow = '';
       }
     };
-  }, [onClose, images, image._id, onImageSelect, accessToken, isTogglingFavorite, showShareMenu, handleToggleFavorite]);
+  }, [onClose, images, currentImageIndex, onImageSelect, accessToken, isTogglingFavorite, handleToggleFavorite, image._id]);
 
   return (
     <>
@@ -796,7 +874,11 @@ const ImageModal = ({
                   setDownloads(response.downloads);
                   // Update the image in the parent component and store
                   if (onImageSelect) {
-                    onImageSelect({ ...image, downloads: response.downloads });
+                    onImageSelect({
+                      ...image,
+                      downloads: response.downloads,
+                      dailyDownloads: response.dailyDownloads || image.dailyDownloads
+                    });
                   }
                 } catch (error) {
                   console.error('Failed to increment download:', error);
@@ -890,13 +972,9 @@ const ImageModal = ({
                     {image.cameraModel && <span>{image.cameraModel}</span>}
                   </div>
                 )}
-                {image.createdAt && (
+                {formattedDate && (
                   <div className="image-info-date">
-                    {new Date(image.createdAt).toLocaleDateString('vi-VN', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
+                    {formattedDate}
                   </div>
                 )}
               </div>
@@ -1037,78 +1115,93 @@ const ImageModal = ({
                           className="info-chart-container"
                           ref={chartContainerRef}
                           onMouseMove={(e) => {
-                            if (!chartContainerRef.current) return;
-
-                            const chartInner = chartContainerRef.current.querySelector('.info-chart') as HTMLElement;
-                            if (!chartInner) return;
-
-                            // Get all bar elements to find exact positions
-                            const bars = Array.from(chartInner.querySelectorAll('.info-chart-bar'));
-                            if (bars.length === 0) return;
-
-                            const chartInnerRect = chartInner.getBoundingClientRect();
-
-                            // Find which bar the mouse is closest to horizontally
-                            let hoveredBarIndex = -1;
-                            let minDistance = Infinity;
-                            let barCenterX = 0;
-                            let barTopY = 0;
-
-                            bars.forEach((bar, index) => {
-                              const barRect = bar.getBoundingClientRect();
-                              const barCenter = barRect.left + (barRect.width / 2);
-                              const distance = Math.abs(e.clientX - barCenter);
-
-                              // Also check if mouse is within the chart area vertically
-                              if (e.clientY >= chartInnerRect.top && e.clientY <= chartInnerRect.bottom) {
-                                if (distance < minDistance) {
-                                  minDistance = distance;
-                                  hoveredBarIndex = index;
-                                  barCenterX = barCenter;
-                                  // Get the top of the bar (where the tooltip should appear)
-                                  barTopY = barRect.top;
-                                }
-                              }
-                            });
-
-                            if (hoveredBarIndex >= 0 && hoveredBarIndex < chartData.length) {
-                              const data = chartData[hoveredBarIndex];
-                              const dateStr = data.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
-                              // Ensure tooltip stays within viewport
-                              const tooltipWidth = 200;
-                              const margin = 10;
-                              let finalX = barCenterX;
-
-                              // Adjust if too far right
-                              if (finalX + (tooltipWidth / 2) > window.innerWidth - margin) {
-                                finalX = window.innerWidth - (tooltipWidth / 2) - margin;
-                              }
-
-                              // Adjust if too far left
-                              if (finalX - (tooltipWidth / 2) < margin) {
-                                finalX = (tooltipWidth / 2) + margin;
-                              }
-
-                              setHoveredBar({
-                                date: dateStr,
-                                views: data.views,
-                                downloads: data.downloads,
-                                x: finalX,
-                                y: barTopY - 8
-                              });
-                            } else {
-                              setHoveredBar(null);
+                            // Throttle mouse move handler to improve performance
+                            if (mouseMoveTimeoutRef.current) {
+                              return;
                             }
+
+                            mouseMoveTimeoutRef.current = setTimeout(() => {
+                              mouseMoveTimeoutRef.current = null;
+
+                              if (!chartContainerRef.current) return;
+
+                              const chartInner = chartContainerRef.current.querySelector('.info-chart') as HTMLElement;
+                              if (!chartInner) return;
+
+                              // Get all bar elements to find exact positions
+                              const bars = Array.from(chartInner.querySelectorAll('.info-chart-bar'));
+                              if (bars.length === 0) return;
+
+                              const chartInnerRect = chartInner.getBoundingClientRect();
+
+                              // Find which bar the mouse is closest to horizontally
+                              let hoveredBarIndex = -1;
+                              let minDistance = Infinity;
+                              let barCenterX = 0;
+                              let barTopY = 0;
+
+                              bars.forEach((bar, index) => {
+                                const barRect = bar.getBoundingClientRect();
+                                const barCenter = barRect.left + (barRect.width / 2);
+                                const distance = Math.abs(e.clientX - barCenter);
+
+                                // Also check if mouse is within the chart area vertically
+                                if (e.clientY >= chartInnerRect.top && e.clientY <= chartInnerRect.bottom) {
+                                  if (distance < minDistance) {
+                                    minDistance = distance;
+                                    hoveredBarIndex = index;
+                                    barCenterX = barCenter;
+                                    // Get the top of the bar (where the tooltip should appear)
+                                    barTopY = barRect.top;
+                                  }
+                                }
+                              });
+
+                              if (hoveredBarIndex >= 0 && hoveredBarIndex < chartData.length) {
+                                const data = chartData[hoveredBarIndex];
+                                // Format date in local timezone - use simple formatting to avoid UTC label
+                                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                                const dateStr = `${monthNames[data.date.getMonth()]} ${data.date.getDate()}, ${data.date.getFullYear()}`;
+
+                                // Ensure tooltip stays within viewport
+                                const tooltipWidth = 200;
+                                const margin = 10;
+                                let finalX = barCenterX;
+
+                                // Adjust if too far right
+                                if (finalX + (tooltipWidth / 2) > window.innerWidth - margin) {
+                                  finalX = window.innerWidth - (tooltipWidth / 2) - margin;
+                                }
+
+                                // Adjust if too far left
+                                if (finalX - (tooltipWidth / 2) < margin) {
+                                  finalX = (tooltipWidth / 2) + margin;
+                                }
+
+                                setHoveredBar({
+                                  date: dateStr,
+                                  views: data.views,
+                                  downloads: data.downloads,
+                                  x: finalX,
+                                  y: barTopY - 8
+                                });
+                              } else {
+                                setHoveredBar(null);
+                              }
+                            }, 16); // ~60fps throttling
                           }}
-                          onMouseLeave={() => setHoveredBar(null)}
+                          onMouseLeave={() => {
+                            if (mouseMoveTimeoutRef.current) {
+                              clearTimeout(mouseMoveTimeoutRef.current);
+                              mouseMoveTimeoutRef.current = null;
+                            }
+                            setHoveredBar(null);
+                          }}
                         >
                           <div className="info-chart">
                             {chartData.map((data, i) => {
                               const value = activeTab === 'views' ? data.views : data.downloads;
-                              const maxValue = activeTab === 'views'
-                                ? Math.max(...chartData.map(d => d.views), 1)
-                                : Math.max(...chartData.map(d => d.downloads), 1);
+                              const maxValue = activeTab === 'views' ? maxViews : maxDownloads;
                               const height = maxValue > 0 ? (value / maxValue) * 100 : 0;
 
                               return (
@@ -1129,7 +1222,7 @@ const ImageModal = ({
                                 transform: 'translate(-50%, -100%)'
                               }}
                             >
-                              <div>{hoveredBar.date} (UTC)</div>
+                              <div>{hoveredBar.date}</div>
                               {activeTab === 'views' ? (
                                 <div>Đã xem {hoveredBar.views.toLocaleString()} lần</div>
                               ) : (
