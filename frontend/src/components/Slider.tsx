@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import './Slider.css';
 import { imageService } from '@/services/imageService';
 import { useImageStore } from '@/stores/useImageStore';
@@ -433,7 +434,8 @@ function Slider() {
                                         onClick={goToPrev}
                                         aria-label="Previous slide"
                                     >
-                                        Quay lại
+                                        <ChevronLeft size={18} className="nav-icon" />
+                                        <span className="nav-text">Quay lại</span>
                                     </button>
                                     <span className="nav-separator">/</span>
                                     <button
@@ -441,7 +443,8 @@ function Slider() {
                                         onClick={goToNext}
                                         aria-label="Next slide"
                                     >
-                                        Tiếp theo
+                                        <span className="nav-text">Tiếp theo</span>
+                                        <ChevronRight size={18} className="nav-icon" />
                                     </button>
                                 </div>
                             </div>
@@ -498,6 +501,22 @@ function Slider() {
             <div className="block-bottom-2"></div> */}
 
 
+
+            {/* Floating Side Navigation Buttons - Mobile Only */}
+            <button
+                className="slider-side-nav-btn slider-side-nav-left"
+                onClick={goToPrev}
+                aria-label="Previous slide"
+            >
+                <ChevronLeft size={24} />
+            </button>
+            <button
+                className="slider-side-nav-btn slider-side-nav-right"
+                onClick={goToNext}
+                aria-label="Next slide"
+            >
+                <ChevronRight size={24} />
+            </button>
 
             {/* Circular Progress Indicator - Bottom Right */}
             {slides.length > 0 && (
