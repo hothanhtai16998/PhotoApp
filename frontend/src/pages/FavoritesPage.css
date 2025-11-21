@@ -221,6 +221,10 @@
 }
 
 @media (max-width: 1024px) {
+    .favorites-container {
+        padding: 32px 16px;
+    }
+
     .favorites-grid {
         grid-template-columns: repeat(3, 1fr);
         gap: 10px; /* Same as masonry grid at this breakpoint */
@@ -236,6 +240,34 @@
 }
 
 @media (max-width: 768px) {
+    .favorites-page {
+        padding-top: 60px;
+    }
+
+    .favorites-container {
+        padding: 24px 12px;
+    }
+
+    .favorites-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 32px;
+    }
+
+    .favorites-header-icon {
+        width: 56px;
+        height: 56px;
+    }
+
+    .favorites-title {
+        font-size: 1.5rem;
+    }
+
+    .favorites-subtitle {
+        font-size: 0.9375rem;
+    }
+
     .favorites-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 8px; /* Same as masonry grid */
@@ -248,18 +280,30 @@
     .favorites-item.landscape {
         grid-row: span 12; /* Same as masonry-item.landscape */
     }
-
-    .favorites-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .favorites-title {
-        font-size: 1.5rem;
-    }
 }
 
 @media (max-width: 480px) {
+    .favorites-container {
+        padding: 20px 8px;
+    }
+
+    .favorites-header {
+        margin-bottom: 24px;
+    }
+
+    .favorites-header-icon {
+        width: 48px;
+        height: 48px;
+    }
+
+    .favorites-title {
+        font-size: 1.25rem;
+    }
+
+    .favorites-subtitle {
+        font-size: 0.875rem;
+    }
+
     .favorites-grid {
         grid-template-columns: 1fr;
         gap: 6px; /* Same as masonry grid */

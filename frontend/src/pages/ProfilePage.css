@@ -275,19 +275,45 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+	.profile-page {
+		padding: 20px 12px;
+	}
+
 	.profile-container {
-		padding: 0 16px;
+		padding: 0;
 	}
 
 	.profile-header {
 		flex-direction: column;
-		gap: 24px;
+		gap: 20px;
+		padding-bottom: 24px;
+		margin-bottom: 32px;
+	}
+
+	.profile-avatar-container {
+		align-self: center;
+	}
+
+	.profile-avatar,
+	.profile-avatar-placeholder {
+		width: 100px;
+		height: 100px;
+	}
+
+	.profile-info {
+		width: 100%;
+		text-align: center;
 	}
 
 	.profile-name-section {
 		flex-direction: column;
-		align-items: flex-start;
+		align-items: center;
 		gap: 16px;
+	}
+
+	.profile-name {
+		font-size: 1.75rem;
+		text-align: center;
 	}
 
 	.profile-actions {
@@ -304,10 +330,19 @@
 		min-height: 44px; /* Better touch target */
 	}
 
+	.profile-description {
+		text-align: center;
+	}
+
+	.profile-availability {
+		justify-content: center;
+	}
+
 	.profile-tabs {
 		overflow-x: auto;
 		-webkit-overflow-scrolling: touch;
 		scrollbar-width: none;
+		margin-bottom: 24px;
 	}
 
 	.profile-tabs::-webkit-scrollbar {
@@ -321,31 +356,44 @@
 	}
 
 	.profile-image-grid {
-		grid-template-columns: repeat(3, 1fr);
-		gap: 10px; /* Same as masonry grid at this breakpoint */
+		grid-template-columns: repeat(2, 1fr);
+		gap: 8px; /* Same as masonry grid at this breakpoint */
 	}
 
 	.profile-image-item.portrait {
-		grid-row: span 28; /* Same as masonry-item.portrait */
+		grid-row: span 26; /* Same as masonry-item.portrait */
 	}
 
 	.profile-image-item.landscape {
-		grid-row: span 14; /* Same as masonry-item.landscape */
+		grid-row: span 12; /* Same as masonry-item.landscape */
 	}
 }
 
 @media (max-width: 480px) {
+	.profile-page {
+		padding: 16px 8px;
+	}
+
 	.profile-container {
-		padding: 0 12px;
+		padding: 0;
 	}
 
 	.profile-header {
-		gap: 20px;
+		gap: 16px;
+		padding-bottom: 20px;
+		margin-bottom: 24px;
 	}
 
 	.profile-avatar-container {
 		width: 80px;
 		height: 80px;
+	}
+
+	.profile-avatar,
+	.profile-avatar-placeholder {
+		width: 80px;
+		height: 80px;
+		font-size: 36px;
 	}
 
 	.profile-name {
@@ -359,6 +407,7 @@
 	.profile-tab {
 		padding: 10px 12px;
 		font-size: 0.875rem;
+		min-height: 44px;
 	}
 
 	.tab-icon {
@@ -370,12 +419,12 @@
 	}
 
 	.profile-image-grid {
-		grid-template-columns: repeat(2, 1fr);
-		gap: 8px; /* Same as masonry grid */
+		grid-template-columns: 1fr;
+		gap: 6px; /* Same as masonry grid */
 	}
 
 	.profile-image-item.portrait {
-		grid-row: span 26; /* Same as masonry-item.portrait */
+		grid-row: span 24; /* Same as masonry-item.portrait */
 	}
 
 	.profile-image-item.landscape {

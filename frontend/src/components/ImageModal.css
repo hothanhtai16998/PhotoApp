@@ -548,10 +548,30 @@
     width: 100%;
     max-width: none;
     border-radius: 0;
+    top: 0;
+    height: 100vh;
   }
 
   .image-modal-header {
-    padding: 16px 20px;
+    padding: 12px 16px;
+  }
+
+  .modal-header-left {
+    gap: 8px;
+  }
+
+  .modal-user-avatar,
+  .modal-user-avatar-placeholder {
+    width: 32px;
+    height: 32px;
+  }
+
+  .modal-user-name {
+    font-size: 0.875rem;
+  }
+
+  .modal-user-status {
+    font-size: 0.75rem;
   }
 
   .modal-header-right {
@@ -561,11 +581,14 @@
   .modal-action-btn {
     width: 36px;
     height: 36px;
+    min-width: 36px;
+    min-height: 36px;
   }
 
   .modal-download-btn {
     padding: 6px 12px;
     font-size: 0.8125rem;
+    min-height: 36px;
   }
 
   .modal-download-btn span {
@@ -574,25 +597,30 @@
 
   .image-modal-footer {
     flex-wrap: wrap;
-    padding: 16px 20px;
+    padding: 12px 16px;
     gap: 12px;
   }
 
   .modal-footer-left {
     gap: 12px;
+    width: 100%;
   }
 
   .modal-footer-left-stats {
     gap: 16px;
+    flex-wrap: wrap;
   }
 
   .modal-footer-right {
     gap: 4px;
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .modal-footer-btn {
     min-height: 44px; /* Better touch target */
     min-width: 44px;
+    padding: 10px 14px;
   }
 
   .modal-footer-btn span {
@@ -604,28 +632,24 @@
   }
 
   .modal-main-image-container {
-    min-height: 75vh;
-    padding: 10px 0;
+    min-height: 60vh;
+    padding: 10px;
   }
 
   .modal-image {
-    max-height: 80vh;
+    max-height: 70vh;
   }
 
   .modal-related-images {
     margin-top: 24px;
     padding-top: 24px;
+    padding-left: 16px;
+    padding-right: 16px;
   }
 
   .related-images-title {
     font-size: 1.125rem;
     margin-bottom: 16px;
-  }
-
-  .modal-action-btn,
-  .modal-footer-btn {
-    min-height: 44px; /* Better touch target */
-    min-width: 44px;
   }
 
   .related-images-grid {
@@ -639,6 +663,50 @@
 
   .related-image-item.landscape {
     grid-row: span 12; /* Same as masonry-item.landscape */
+  }
+}
+
+@media (max-width: 480px) {
+  .image-modal-header {
+    padding: 10px 12px;
+  }
+
+  .modal-main-image-container {
+    min-height: 50vh;
+    padding: 8px;
+  }
+
+  .modal-image {
+    max-height: 60vh;
+  }
+
+  .image-modal-footer {
+    padding: 10px 12px;
+  }
+
+  .modal-footer-left-stats {
+    gap: 12px;
+  }
+
+  .stat-label {
+    font-size: 0.6875rem;
+  }
+
+  .stat-value {
+    font-size: 0.875rem;
+  }
+
+  .related-images-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .related-image-item.portrait {
+    grid-row: span 24;
+  }
+
+  .related-image-item.landscape {
+    grid-row: span 12;
   }
 }
 
