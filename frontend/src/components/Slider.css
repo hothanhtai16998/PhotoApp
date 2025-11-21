@@ -15,7 +15,7 @@
 .slider-page {
 	position: relative;
 	width: 100%;
-	height: 90vh;
+	height: calc(100vh - var(--header-height, 80px)); /* Full viewport minus header */
 	min-height: 400px;
 	overflow: hidden;
 	background: #3d2a1f;
@@ -24,6 +24,8 @@
 		'Segoe UI', 'Roboto', 'Oxygen',
 		'Ubuntu', 'Cantarell', sans-serif;
 	touch-action: pan-y pinch-zoom;
+	margin: 0;
+	padding: 0;
 }
 
 /* Slides Container */
@@ -411,7 +413,7 @@
 
 @media (max-width: 1024px) {
 	.slider-page {
-		height: 85vh;
+		height: calc(100vh - var(--header-height, 80px));
 		min-height: 500px;
 	}
 
@@ -448,7 +450,7 @@
 
 @media (max-width: 768px) {
 	.slider-page {
-		height: 80vh;
+		height: calc(100vh - var(--header-height, 80px));
 		min-height: 450px;
 	}
 
@@ -526,7 +528,7 @@
 
 @media (max-width: 480px) {
 	.slider-page {
-		height: 75vh;
+		height: calc(100vh - var(--header-height, 80px));
 		min-height: 400px;
 	}
 
@@ -599,7 +601,7 @@
 
 @media (max-width: 360px) {
 	.slider-page {
-		height: 70vh;
+		height: calc(100vh - var(--header-height, 80px));
 		min-height: 350px;
 	}
 
