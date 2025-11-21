@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import { Info } from 'lucide-react';
 import { ImageModalChart } from './ImageModalChart';
 import type { Image } from '@/types/image';
@@ -7,7 +7,7 @@ interface ImageModalInfoProps {
   image: Image;
 }
 
-export const ImageModalInfo = ({ image }: ImageModalInfoProps) => {
+export const ImageModalInfo = memo(({ image }: ImageModalInfoProps) => {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'views' | 'downloads'>('views');
   const infoButtonRef = useRef<HTMLButtonElement>(null);
@@ -91,5 +91,7 @@ export const ImageModalInfo = ({ image }: ImageModalInfoProps) => {
       )}
     </div>
   );
-};
+});
+
+ImageModalInfo.displayName = 'ImageModalInfo';
 

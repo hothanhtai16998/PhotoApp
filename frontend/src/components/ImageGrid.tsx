@@ -10,6 +10,7 @@ import { Skeleton } from './ui/skeleton';
 import { toast } from 'sonner';
 import api from '@/lib/axios';
 import { generateImageSlug, extractIdFromSlug } from '@/lib/utils';
+import { useInfiniteScroll } from './image/hooks/useInfiniteScroll';
 import './ImageGrid.css';
 
 // Memoized image item component to prevent unnecessary re-renders
@@ -160,9 +161,6 @@ ImageGridItem.displayName = 'ImageGridItem';
 const ImageGrid = memo(() => {
   const { images, loading, error, pagination, currentSearch, currentCategory, currentLocation, fetchImages } = useImageStore();
   const [searchParams, setSearchParams] = useSearchParams();
-
-  const loadMoreRef = useRef<HTMLDivElement>(null);
-  const isLoadingMoreRef = useRef(false);
   
   // Get selected image slug from URL
   const imageSlugFromUrl = searchParams.get('image');
@@ -204,45 +202,23 @@ const ImageGrid = memo(() => {
   // ImageGrid doesn't need to listen to refresh events to avoid conflicts
 
   // Infinite scroll: Load more when reaching bottom
-  useEffect(() => {
-    if (!loadMoreRef.current || !pagination) return;
+  const handleLoadMore = useCallback(async () => {
+    if (!pagination || loading) return;
+    
+    await fetchImages({
+      page: pagination.page + 1,
+      search: currentSearch,
+      category: currentCategory,
+      location: currentLocation,
+    });
+  }, [pagination, loading, currentSearch, currentCategory, currentLocation, fetchImages]);
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-
-        // If load more trigger is visible and we have more pages
-        if (
-          entry.isIntersecting &&
-          !loading &&
-          !isLoadingMoreRef.current &&
-          pagination.page < pagination.pages
-        ) {
-          isLoadingMoreRef.current = true;
-
-          // Load next page with current search/category/location from store
-          fetchImages({
-            page: pagination.page + 1,
-            search: currentSearch,
-            category: currentCategory,
-            location: currentLocation,
-          }).finally(() => {
-            isLoadingMoreRef.current = false;
-          });
-        }
-      },
-      {
-        rootMargin: '400px', // Start loading 400px before reaching bottom
-      }
-    );
-
-    observer.observe(loadMoreRef.current);
-
-    return () => {
-      observer.disconnect();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagination, loading, currentSearch, currentCategory, currentLocation]);
+  const { loadMoreRef } = useInfiniteScroll({
+    hasMore: pagination ? pagination.page < pagination.pages : false,
+    isLoading: loading,
+    onLoadMore: handleLoadMore,
+    rootMargin: '400px', // Start loading 400px before reaching bottom
+  });
 
   // Group images by category to create collections (currently unused, kept for future use)
   // const collections = useMemo(() => {

@@ -16,6 +16,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { toast } from 'sonner';
 import EditImageModal from './EditImageModal';
 import { useImageModal } from './image/hooks/useImageModal';
+import { useInfiniteScroll } from './image/hooks/useInfiniteScroll';
 import { ImageModalInfo } from './image/ImageModalInfo';
 import { ImageModalShare } from './image/ImageModalShare';
 import './ImageModal.css';
@@ -44,10 +45,8 @@ const ImageModal = ({
   processedImages,
 }: ImageModalProps) => {
   const modalContentRef = useRef<HTMLDivElement>(null);
-  const relatedImagesLoadMoreRef = useRef<HTMLDivElement>(null);
   const [relatedImagesLimit, setRelatedImagesLimit] = useState(12);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [isLoadingRelatedImages, setIsLoadingRelatedImages] = useState(false);
   const [showUserProfileCard, setShowUserProfileCard] = useState(false);
   const [isClosingProfileCard, setIsClosingProfileCard] = useState(false);
   const [userImages, setUserImages] = useState<Image[]>([]);
@@ -249,34 +248,26 @@ const ImageModal = ({
     };
   }, [image, images, relatedImagesLimit]);
 
+  // State for tracking loading status separately to avoid circular dependency
+  const [isLoadingRelatedImages, setIsLoadingRelatedImages] = useState(false);
+
+  // Load more related images handler
+  const handleLoadMoreRelatedImages = useCallback(async () => {
+    setIsLoadingRelatedImages(true);
+    setRelatedImagesLimit(prev => prev + 12);
+    // Reset loading state after a delay
+    setTimeout(() => setIsLoadingRelatedImages(false), 300);
+  }, []);
+
   // Infinite scroll for related images (modal content scrolling)
-  useEffect(() => {
-    if (!relatedImagesLoadMoreRef.current || isLoadingRelatedImages || !modalContentRef.current) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (entry.isIntersecting && hasMoreRelatedImages && !isLoadingRelatedImages) {
-          setIsLoadingRelatedImages(true);
-          // Load more images after a short delay for smooth UX
-          setTimeout(() => {
-            setRelatedImagesLimit(prev => prev + 12);
-            setIsLoadingRelatedImages(false);
-          }, 300);
-        }
-      },
-      {
-        root: modalContentRef.current, // Use modal content as root for scrolling detection
-        rootMargin: '200px',
-      }
-    );
-
-    observer.observe(relatedImagesLoadMoreRef.current);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [hasMoreRelatedImages, isLoadingRelatedImages]);
+  const { loadMoreRef: relatedImagesLoadMoreRef } = useInfiniteScroll({
+    hasMore: hasMoreRelatedImages,
+    isLoading: isLoadingRelatedImages,
+    onLoadMore: handleLoadMoreRelatedImages,
+    root: modalContentRef.current,
+    rootMargin: '200px',
+    delay: 300,
+  });
 
   return (
     <>

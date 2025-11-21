@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { Share2, Mail, Link as LinkIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateImageSlug } from '@/lib/utils';
@@ -8,7 +8,7 @@ interface ImageModalShareProps {
   image: Image;
 }
 
-export const ImageModalShare = ({ image }: ImageModalShareProps) => {
+export const ImageModalShare = memo(({ image }: ImageModalShareProps) => {
   const [showShareMenu, setShowShareMenu] = useState(false);
   const shareButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -198,5 +198,7 @@ export const ImageModalShare = ({ image }: ImageModalShareProps) => {
       )}
     </div>
   );
-};
+});
+
+ImageModalShare.displayName = 'ImageModalShare';
 
