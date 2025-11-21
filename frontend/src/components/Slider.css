@@ -384,8 +384,7 @@
 }
 
 .progress-ring-circle {
-	transition: stroke-dashoffset 0.05s
-		linear;
+	transition: none;
 }
 
 .progress-ring-circle-bg {

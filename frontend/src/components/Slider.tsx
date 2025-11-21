@@ -175,7 +175,7 @@ function Slider() {
     }, [currentSlide, isTransitioning]);
 
     // Auto-play functionality with progress indicator
-    // Progress circle appears at the same time as image change
+    // Progress circle appears when slide becomes visible (after transition completes)
     useEffect(() => {
         if (isTransitioning || slides.length === 0) {
             setProgress(0);
@@ -183,27 +183,43 @@ function Slider() {
             return;
         }
 
-        setProgress(0);
-        setShowProgress(true); // Show immediately when transition completes
+        let animationFrameId: number | null = null;
+        let slideTimeout: ReturnType<typeof setTimeout> | null = null;
 
-        let progressInterval: ReturnType<typeof setInterval> | null = null;
-        let slideInterval: ReturnType<typeof setTimeout> | null = null;
+        // Wait for transition to complete before starting progress
+        // Transition takes 1200ms, so wait a bit to ensure slide is fully visible
+        const startDelay = setTimeout(() => {
+            setProgress(0);
+            setShowProgress(true);
 
-        const startTime = Date.now();
+            const startTime = Date.now();
 
-        progressInterval = setInterval(() => {
-            const elapsed = Date.now() - startTime;
-            const newProgress = Math.min((elapsed / AUTO_PLAY_INTERVAL) * 100, 100);
-            setProgress(newProgress);
-        }, 16); // ~60fps
+            const animate = () => {
+                const elapsed = Date.now() - startTime;
+                const newProgress = Math.min((elapsed / AUTO_PLAY_INTERVAL) * 100, 100);
+                setProgress(newProgress);
 
-        slideInterval = setInterval(() => {
-            goToNext();
-        }, AUTO_PLAY_INTERVAL);
+                if (newProgress < 100) {
+                    animationFrameId = requestAnimationFrame(animate);
+                }
+            };
+
+            animationFrameId = requestAnimationFrame(animate);
+
+            // Advance to next slide after AUTO_PLAY_INTERVAL
+            slideTimeout = setTimeout(() => {
+                goToNext();
+            }, AUTO_PLAY_INTERVAL);
+        }, 100); // Small delay to ensure transition is visually complete
 
         return () => {
-            if (progressInterval) clearInterval(progressInterval);
-            if (slideInterval) clearInterval(slideInterval);
+            clearTimeout(startDelay);
+            if (animationFrameId !== null) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            if (slideTimeout) clearTimeout(slideTimeout);
+            setProgress(0);
+            setShowProgress(false);
         };
     }, [currentSlide, isTransitioning, goToNext, slides.length]);
 
@@ -458,31 +474,33 @@ function Slider() {
 
 
             {/* Circular Progress Indicator - Bottom Right */}
-            <div className={`progress-indicator ${showProgress ? 'visible' : ''}`}>
-                <svg className="progress-ring" width="60" height="60" viewBox="0 0 60 60">
-                    <circle
-                        className="progress-ring-circle-bg"
-                        stroke="rgba(236, 222, 195, 0.2)"
-                        strokeWidth="5"
-                        fill="transparent"
-                        r="20"
-                        cx="30"
-                        cy="30"
-                    />
-                    <circle
-                        className="progress-ring-circle"
-                        stroke="rgb(236, 222, 195)"
-                        strokeWidth="5"
-                        fill="transparent"
-                        r="20"
-                        cx="30"
-                        cy="30"
-                        strokeDasharray={`${2 * Math.PI * 20}`}
-                        strokeDashoffset={`${2 * Math.PI * 20 * (1 - progress / 100)}`}
-                        strokeLinecap="round"
-                    />
-                </svg>
-            </div>
+            {slides.length > 0 && (
+                <div className={`progress-indicator ${showProgress ? 'visible' : ''}`}>
+                    <svg className="progress-ring" width="60" height="60" viewBox="0 0 60 60">
+                        <circle
+                            className="progress-ring-circle-bg"
+                            stroke="rgba(236, 222, 195, 0.2)"
+                            strokeWidth="5"
+                            fill="transparent"
+                            r="20"
+                            cx="30"
+                            cy="30"
+                        />
+                        <circle
+                            className="progress-ring-circle"
+                            stroke="rgb(236, 222, 195)"
+                            strokeWidth="5"
+                            fill="transparent"
+                            r="20"
+                            cx="30"
+                            cy="30"
+                            strokeDasharray={125.66}
+                            strokeDashoffset={125.66 * (1 - progress / 100)}
+                            strokeLinecap="round"
+                        />
+                    </svg>
+                </div>
+            )}
         </div>
     );
 }
