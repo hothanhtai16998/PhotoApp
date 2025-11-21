@@ -8,6 +8,7 @@ import {
   Heart,
   Edit2,
   ChevronDown,
+  X,
 } from 'lucide-react';
 import type { Image } from '@/types/image';
 import ProgressiveImage from './ProgressiveImage';
@@ -289,6 +290,7 @@ const ImageModal = ({
           >
             <Avatar
               user={image.uploadedBy}
+              size={40}
               className="modal-user-avatar"
               fallbackClassName="modal-user-avatar-placeholder"
             />
@@ -315,6 +317,7 @@ const ImageModal = ({
                   <div className="user-profile-card-avatar-section">
                     <Avatar
                       user={image.uploadedBy}
+                      size={48}
                       className="user-profile-card-avatar"
                       fallbackClassName="user-profile-card-avatar-placeholder"
                     />
@@ -365,7 +368,7 @@ const ImageModal = ({
             )}
           </div>
 
-          {/* Right: Download Button */}
+          {/* Right: Download Button and Close Button */}
           <div className="modal-header-right">
             <button
               className="modal-download-btn"
@@ -374,6 +377,14 @@ const ImageModal = ({
             >
               <span>Tải xuống</span>
               <ChevronDown size={16} />
+            </button>
+            <button
+              className="modal-close-btn-header"
+              onClick={onClose}
+              title="Close"
+              aria-label="Close modal"
+            >
+              <X size={20} />
             </button>
           </div>
         </div>

@@ -9,6 +9,8 @@
   z-index: 1000;
   cursor: pointer;
   animation: fadeIn 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 @keyframes fadeIn {
@@ -134,6 +136,11 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* Close button in header - hidden on desktop, shown on mobile */
+.modal-close-btn-header {
+  display: none;
 }
 
 .modal-action-btn {
@@ -629,6 +636,30 @@
 
   .modal-close-btn {
     display: none;
+  }
+
+  /* Show close button in header on mobile */
+  .modal-close-btn-header {
+    display: flex !important;
+    position: static;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 8px;
+    background: #f5f5f5;
+    border: none;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    color: #111;
+    transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .modal-close-btn-header:hover,
+  .modal-close-btn-header:active {
+    background: #e5e5e5;
   }
 
   .modal-main-image-container {

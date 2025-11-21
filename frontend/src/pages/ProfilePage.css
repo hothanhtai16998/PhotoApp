@@ -303,17 +303,20 @@
 	.profile-info {
 		width: 100%;
 		text-align: center;
+		align-items: center;
 	}
 
 	.profile-name-section {
 		flex-direction: column;
 		align-items: center;
 		gap: 16px;
+		width: 100%;
 	}
 
 	.profile-name {
 		font-size: 1.75rem;
 		text-align: center;
+		margin: 0;
 	}
 
 	.profile-actions {
@@ -336,6 +339,8 @@
 
 	.profile-availability {
 		justify-content: center;
+		text-align: center;
+		flex-wrap: wrap;
 	}
 
 	.profile-tabs {

@@ -85,10 +85,18 @@
 	transform-origin: center center;
 }
 
-/* Zoom animation only for landscape images */
+/* Zoom animation only for landscape images - disabled on mobile to prevent shaking */
 .slider-slide.active.landscape {
 	/* Continuous zoom-out animation from center while slide is showing */
 	animation: image-zoom-out 30s ease-out forwards;
+}
+
+/* Disable zoom animation on mobile to prevent image shaking */
+@media (max-width: 768px) {
+	.slider-slide.active.landscape {
+		animation: none;
+		background-size: cover !important;
+	}
 }
 
 /* Portrait images don't need zoom animation */
@@ -454,17 +462,31 @@
 		min-height: 450px;
 	}
 
+	/* Ensure images fill the space properly - no brown background showing */
+	.slider-slide {
+		background-size: cover !important;
+		background-position: center center;
+	}
+
+	.slider-slide.portrait {
+		background-size: cover !important;
+		background-color: #000;
+	}
+
 	.slide-content-left {
-		bottom: 100px;
-		left: 30px;
-		right: 30px;
+		bottom: 120px;
+		left: 20px;
+		right: 20px;
+		max-width: calc(100% - 40px);
 	}
 
 	.slide-title {
-		font-size: 50px;
-		line-height: 55px;
-		letter-spacing: -1px;
-		margin-bottom: 15px;
+		font-size: 42px;
+		line-height: 48px;
+		letter-spacing: -0.5px;
+		margin-bottom: 12px;
+		word-wrap: break-word;
+		overflow-wrap: break-word;
 	}
 
 	.slide-nav-btn {
@@ -532,17 +554,31 @@
 		min-height: 400px;
 	}
 
+	/* Ensure images fill the space properly - no brown background showing */
+	.slider-slide {
+		background-size: cover !important;
+		background-position: center center;
+	}
+
+	.slider-slide.portrait {
+		background-size: cover !important;
+		background-color: #000;
+	}
+
 	.slide-content-left {
-		bottom: 80px;
-		left: 20px;
-		right: 20px;
+		bottom: 100px;
+		left: 16px;
+		right: 16px;
+		max-width: calc(100% - 32px);
 	}
 
 	.slide-title {
-		font-size: 36px;
-		line-height: 42px;
+		font-size: 32px;
+		line-height: 38px;
 		letter-spacing: -0.5px;
-		margin-bottom: 12px;
+		margin-bottom: 10px;
+		word-wrap: break-word;
+		overflow-wrap: break-word;
 	}
 
 	.slide-nav-buttons {
@@ -605,15 +641,29 @@
 		min-height: 350px;
 	}
 
+	/* Ensure images fill the space properly - no brown background showing */
+	.slider-slide {
+		background-size: cover !important;
+		background-position: center center;
+	}
+
+	.slider-slide.portrait {
+		background-size: cover !important;
+		background-color: #000;
+	}
+
 	.slide-title {
 		font-size: 28px;
 		line-height: 34px;
+		word-wrap: break-word;
+		overflow-wrap: break-word;
 	}
 
 	.slide-content-left {
-		bottom: 60px;
-		left: 16px;
-		right: 16px;
+		bottom: 80px;
+		left: 12px;
+		right: 12px;
+		max-width: calc(100% - 24px);
 	}
 
 	.slide-content-right {

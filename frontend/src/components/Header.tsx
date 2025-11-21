@@ -2,7 +2,7 @@
 
 import { memo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Shield, Heart } from "lucide-react"
+import { Shield, Heart, Menu, X } from "lucide-react"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { useImageStore } from "@/stores/useImageStore"
 import UploadModal from "./UploadModal"
@@ -14,6 +14,7 @@ export const Header = memo(function Header() {
   const { fetchImages } = useImageStore()
   const navigate = useNavigate()
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const handleLogoClick = () => {
     if (window.location.pathname !== '/') {
@@ -41,8 +42,18 @@ export const Header = memo(function Header() {
           {/* Search Bar */}
           <SearchBar />
 
-          {/* Right Actions */}
-          <div className="header-actions">
+          {/* Mobile Menu Button */}
+          <button 
+            className="mobile-menu-button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle menu"
+            aria-expanded={mobileMenuOpen}
+          >
+            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+
+          {/* Right Actions - Desktop */}
+          <div className="header-actions desktop-only">
             {accessToken ? (
               <>
                 <button onClick={() => setUploadModalOpen(true)} className="header-link">Thêm ảnh</button>
@@ -68,6 +79,46 @@ export const Header = memo(function Header() {
           </div>
         </div>
       </div>
+
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <div className="mobile-menu">
+          <div className="mobile-menu-content">
+            {accessToken ? (
+              <>
+                <button onClick={() => { setUploadModalOpen(true); setMobileMenuOpen(false); }} className="mobile-menu-link">
+                  Thêm ảnh
+                </button>
+                <Link to="/favorites" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                  <Heart size={18} />
+                  <span>Yêu thích</span>
+                </Link>
+                {user?.isAdmin && (
+                  <Link to="/admin" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                    <Shield size={18} />
+                    <span>Admin</span>
+                  </Link>
+                )}
+                <Link to="/profile" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                  Tài khoản
+                </Link>
+                <button onClick={() => { handleSignOut(); setMobileMenuOpen(false); }} className="mobile-menu-link">
+                  Đăng xuất
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/signin" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                  Đăng nhập
+                </Link>
+                <button onClick={() => { navigate('/signin'); setMobileMenuOpen(false); }} className="mobile-menu-button-action">
+                  Thêm ảnh
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Upload Modal */}
       <UploadModal isOpen={uploadModalOpen} onClose={() => setUploadModalOpen(false)} />

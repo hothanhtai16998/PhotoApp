@@ -271,6 +271,7 @@ function ProfilePage() {
                         <div className="profile-avatar-container">
                             <Avatar
                                 user={user}
+                                size={120}
                                 className="profile-avatar"
                                 fallbackClassName="profile-avatar-placeholder"
                             />

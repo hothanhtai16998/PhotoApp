@@ -359,3 +359,125 @@
 		padding: 8px;
 	}
 }
+
+/* Mobile Menu Button */
+.mobile-menu-button {
+	display: none;
+	background: transparent;
+	border: none;
+	color: #111;
+	cursor: pointer;
+	padding: 8px;
+	min-width: 44px;
+	min-height: 44px;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	-webkit-tap-highlight-color: transparent;
+}
+
+.mobile-menu-button:focus {
+	outline: 2px solid #111;
+	outline-offset: 2px;
+}
+
+/* Desktop Only - Hide on mobile */
+@media (max-width: 768px) {
+	.desktop-only {
+		display: none !important;
+	}
+
+	.mobile-menu-button {
+		display: flex;
+		margin-left: auto;
+	}
+
+	.header-logo {
+		order: 1;
+	}
+
+	.search-bar-container {
+		order: 2;
+	}
+
+	.mobile-menu-button {
+		order: 3;
+	}
+}
+
+/* Mobile Menu */
+.mobile-menu {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	right: 0;
+	background: #fff;
+	border-bottom: 1px solid #e5e5e5;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	z-index: 1000;
+	animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+	from {
+		opacity: 0;
+		transform: translateY(-10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.mobile-menu-content {
+	display: flex;
+	flex-direction: column;
+	padding: 8px 0;
+}
+
+.mobile-menu-link {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 12px 20px;
+	color: #111;
+	text-decoration: none;
+	font-size: 0.9375rem;
+	font-weight: 400;
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	text-align: left;
+	transition: background-color 0.2s ease;
+	min-height: 44px;
+	-webkit-tap-highlight-color: transparent;
+}
+
+.mobile-menu-link:hover,
+.mobile-menu-link:active {
+	background: #f5f5f5;
+}
+
+.mobile-menu-link svg {
+	flex-shrink: 0;
+}
+
+.mobile-menu-button-action {
+	padding: 12px 20px;
+	margin: 8px 20px;
+	background: #111;
+	color: #fff;
+	border: none;
+	border-radius: 6px;
+	font-size: 0.9375rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: background-color 0.2s ease;
+	min-height: 44px;
+	-webkit-tap-highlight-color: transparent;
+}
+
+.mobile-menu-button-action:hover,
+.mobile-menu-button-action:active {
+	background: #333;
+}
