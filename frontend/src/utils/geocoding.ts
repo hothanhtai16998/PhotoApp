@@ -126,13 +126,36 @@ export interface LocationSuggestion {
 	};
 }
 
+interface NominatimItem {
+	display_name?: string;
+	name?: string;
+	lat?: string;
+	lon?: string;
+	type?: string;
+	address?: NominatimAddress;
+}
+
+interface NominatimAddress {
+	city?: string;
+	town?: string;
+	village?: string;
+	municipality?: string;
+	state?: string;
+	province?: string;
+	region?: string;
+	district?: string;
+	ward?: string;
+	suburb?: string;
+	country?: string;
+}
+
 /**
  * Calculate relevance score for a location result based on query
  */
 function calculateRelevanceScore(
 	query: string,
-	item: any,
-	address: any
+	item: NominatimItem,
+	address: NominatimAddress
 ): number {
 	const queryLower = query.toLowerCase().trim();
 	const queryWords = queryLower.split(/[,\s]+/).filter(w => w.length > 1);
@@ -179,7 +202,7 @@ function calculateRelevanceScore(
 /**
  * Build a clean, concise location name
  */
-function buildLocationName(item: any, address: any): string {
+function buildLocationName(item: NominatimItem, address: NominatimAddress): string {
 	// Prefer display_name but clean it up
 	let displayName = item.display_name || '';
 	
@@ -291,7 +314,7 @@ export async function searchLocations(
 		}
 
 		const seen = new Set<string>();
-		const allResults: Array<{ item: any; score: number }> = [];
+		const allResults: Array<{ item: NominatimItem; score: number }> = [];
 
 		// Search with each query strategy
 		for (const searchQuery of searchQueries) {

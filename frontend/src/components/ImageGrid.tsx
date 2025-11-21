@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import api from '@/lib/axios';
 import { generateImageSlug, extractIdFromSlug } from '@/lib/utils';
 import { useInfiniteScroll } from './image/hooks/useInfiniteScroll';
+import { Avatar } from './Avatar';
 import './ImageGrid.css';
 
 // Memoized image item component to prevent unnecessary re-renders
@@ -123,22 +124,12 @@ const ImageGridItem = memo(({
           {hasUserInfo && (
             <div className="image-info">
               <div className="image-author-info">
-                {image.uploadedBy.avatarUrl ? (
-                  <img
-                    src={image.uploadedBy.avatarUrl}
-                    alt={image.uploadedBy.displayName || image.uploadedBy.username}
-                    className="author-avatar"
-                    style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px', maxWidth: '32px', maxHeight: '32px' }}
-                    onError={(e) => {
-                      // Hide avatar if it fails to load
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <div className="author-avatar-placeholder" style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px', maxWidth: '32px', maxHeight: '32px' }}>
-                    {(image.uploadedBy.displayName || image.uploadedBy.username || 'U').charAt(0).toUpperCase()}
-                  </div>
-                )}
+                <Avatar
+                  user={image.uploadedBy}
+                  size={32}
+                  className="author-avatar"
+                  fallbackClassName="author-avatar-placeholder"
+                />
                 <div className="author-details">
                   <span className="image-author-name">
                     {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}

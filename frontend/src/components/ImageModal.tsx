@@ -19,6 +19,8 @@ import { useImageModal } from './image/hooks/useImageModal';
 import { useInfiniteScroll } from './image/hooks/useInfiniteScroll';
 import { ImageModalInfo } from './image/ImageModalInfo';
 import { ImageModalShare } from './image/ImageModalShare';
+import { Avatar } from './Avatar';
+import { useFormattedDate } from '@/hooks/useFormattedDate';
 import './ImageModal.css';
 
 interface ImageModalProps {
@@ -76,15 +78,11 @@ const ImageModal = ({
     onDownload,
   });
 
-  // Memoize formatted date to avoid recalculation on every render
-  const formattedDate = useMemo(() => {
-    if (!image.createdAt) return null;
-    return new Date(image.createdAt).toLocaleDateString('vi-VN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  }, [image.createdAt]);
+  // Use the custom hook for formatted date
+  const formattedDate = useFormattedDate(image.createdAt, {
+    locale: 'vi-VN',
+    format: 'long',
+  });
 
   // Fetch user images when hovering over user info
   useEffect(() => {
@@ -289,17 +287,11 @@ const ImageModal = ({
             onMouseLeave={handleMouseLeave}
             style={{ position: 'relative' }}
           >
-            {image.uploadedBy.avatarUrl ? (
-              <img
-                src={image.uploadedBy.avatarUrl}
-                alt={image.uploadedBy.displayName || image.uploadedBy.username}
-                className="modal-user-avatar"
-              />
-            ) : (
-              <div className="modal-user-avatar-placeholder">
-                {(image.uploadedBy.displayName || image.uploadedBy.username || 'U').charAt(0).toUpperCase()}
-              </div>
-            )}
+            <Avatar
+              user={image.uploadedBy}
+              className="modal-user-avatar"
+              fallbackClassName="modal-user-avatar-placeholder"
+            />
             <div className="modal-user-info">
               <div
                 className="modal-user-name hoverable"
@@ -321,17 +313,11 @@ const ImageModal = ({
               >
                 <div className="user-profile-card-header">
                   <div className="user-profile-card-avatar-section">
-                    {image.uploadedBy.avatarUrl ? (
-                      <img
-                        src={image.uploadedBy.avatarUrl}
-                        alt={image.uploadedBy.displayName || image.uploadedBy.username}
-                        className="user-profile-card-avatar"
-                      />
-                    ) : (
-                      <div className="user-profile-card-avatar-placeholder">
-                        {(image.uploadedBy.displayName || image.uploadedBy.username || 'U').charAt(0).toUpperCase()}
-                      </div>
-                    )}
+                    <Avatar
+                      user={image.uploadedBy}
+                      className="user-profile-card-avatar"
+                      fallbackClassName="user-profile-card-avatar-placeholder"
+                    />
                     <div className="user-profile-card-name-section">
                       <div className="user-profile-card-name">
                         {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}

@@ -60,9 +60,12 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
       toast.success('Cập nhật thông tin ảnh thành công');
       onUpdate(updatedImage);
       onClose();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to update image:', error);
-      toast.error(error.response?.data?.message || 'Cập nhật thông tin ảnh thất bại');
+      const errorMessage =
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        'Cập nhật thông tin ảnh thất bại';
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

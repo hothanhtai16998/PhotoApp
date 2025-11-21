@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from 'react';
 import { toast } from 'sonner';
+import { errorTracker } from '@/utils/errorTracking';
 
 interface Props {
 	children: ReactNode;
@@ -22,8 +23,12 @@ export class ErrorBoundary extends Component<Props, State> {
 	}
 
 	componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-		// In production, send to error tracking service (e.g., Sentry)
-		// For now, just show user-friendly message
+		// Track error with error tracking service
+		errorTracker.captureException(error, {
+			componentStack: errorInfo.componentStack,
+			boundary: 'global',
+		});
+
 		if (import.meta.env.MODE === 'development') {
 			console.error('ErrorBoundary caught an error:', error, errorInfo);
 		}

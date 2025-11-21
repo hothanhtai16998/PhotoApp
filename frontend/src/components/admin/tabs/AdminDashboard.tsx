@@ -1,8 +1,14 @@
 import type { DashboardStats } from '@/services/adminService';
+import { useFormattedDate } from '@/hooks/useFormattedDate';
 
 interface AdminDashboardProps {
     stats: DashboardStats | null;
     loading: boolean;
+}
+
+function DateCell({ date }: { date: string }) {
+    const formattedDate = useFormattedDate(date, { format: 'short' });
+    return <td>{formattedDate || date}</td>;
 }
 
 export function AdminDashboard({ stats, loading }: AdminDashboardProps) {
@@ -76,7 +82,7 @@ export function AdminDashboard({ stats, loading }: AdminDashboardProps) {
                                             <span className="admin-status-badge none">No</span>
                                         )}
                                     </td>
-                                    <td>{new Date(u.createdAt).toLocaleDateString()}</td>
+                                    <DateCell date={u.createdAt} />
                                 </tr>
                             ))}
                         </tbody>
@@ -107,7 +113,7 @@ export function AdminDashboard({ stats, loading }: AdminDashboardProps) {
                                             : img.imageCategory?.name || 'Unknown'}
                                     </td>
                                     <td>{img.uploadedBy?.displayName || img.uploadedBy?.username}</td>
-                                    <td>{new Date(img.createdAt).toLocaleDateString()}</td>
+                                    <DateCell date={img.createdAt} />
                                 </tr>
                             ))}
                         </tbody>

@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import type { Image } from "@/types/image";
 import ImageModal from "@/components/ImageModal";
 import ProgressiveImage from "@/components/ProgressiveImage";
+import { Avatar } from "@/components/Avatar";
 import api from "@/lib/axios";
 import { generateImageSlug, extractIdFromSlug } from "@/lib/utils";
 import "./ProfilePage.css";
@@ -268,17 +269,11 @@ function ProfilePage() {
                     {/* Profile Header */}
                     <div className="profile-header">
                         <div className="profile-avatar-container">
-                            {user.avatarUrl ? (
-                                <img
-                                    src={user.avatarUrl}
-                                    alt={user.displayName || user.username}
-                                    className="profile-avatar"
-                                />
-                            ) : (
-                                <div className="profile-avatar-placeholder">
-                                    {(user.displayName || user.username)?.charAt(0).toUpperCase()}
-                                </div>
-                            )}
+                            <Avatar
+                                user={user}
+                                className="profile-avatar"
+                                fallbackClassName="profile-avatar-placeholder"
+                            />
                         </div>
                         <div className="profile-info">
                             <div className="profile-name-section">
