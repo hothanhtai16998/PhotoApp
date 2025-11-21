@@ -4,7 +4,16 @@ import { imageService } from '@/services/imageService';
 import { useImageStore } from '@/stores/useImageStore';
 import type { Image } from '@/types/image';
 import type { Slide } from '@/types/slide';
-const AUTO_PLAY_INTERVAL = 6300; // 6.3 seconds (full cycle: 1.2s transition + 5.1s visible)
+// ============================================
+// SLIDE TIMING CONFIGURATION
+// ============================================
+// Change these values to adjust slide timing:
+const TRANSITION_DURATION = 1200; // Time for slide transition animation (ms)
+const IMAGE_VISIBLE_TIME = 5000; // Time image stays visible after transition (ms)
+// Total cycle time = TRANSITION_DURATION + IMAGE_VISIBLE_TIME
+const AUTO_PLAY_INTERVAL = TRANSITION_DURATION + IMAGE_VISIBLE_TIME;
+// ============================================
+
 const SWIPE_THRESHOLD = 50; // Minimum distance for swipe
 
 function Slider() {
@@ -148,14 +157,14 @@ function Slider() {
         if (isTransitioning || slides.length === 0) return;
         setIsTransitioning(true);
         setCurrentSlide((prev) => (prev + 1) % slides.length);
-        setTimeout(() => setIsTransitioning(false), 1200);
+        setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
     }, [slides.length]);
 
     const goToPrev = useCallback(() => {
         if (isTransitioning || slides.length === 0) return;
         setIsTransitioning(true);
         setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
-        setTimeout(() => setIsTransitioning(false), 1200);
+        setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
     }, [isTransitioning, slides.length]);
 
     // Trigger text animation when slide becomes active
@@ -229,7 +238,7 @@ function Slider() {
                 // Inline goToNext logic to avoid dependency on isTransitioning
                 setIsTransitioning(true);
                 setCurrentSlide((prev) => (prev + 1) % slides.length);
-                setTimeout(() => setIsTransitioning(false), 1200);
+                setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
             }
         }, AUTO_PLAY_INTERVAL);
 
