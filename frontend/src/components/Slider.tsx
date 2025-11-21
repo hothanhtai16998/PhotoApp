@@ -428,6 +428,43 @@ function Slider() {
                             {/* Title and Navigation in Bottom Left */}
                             <div className={`slide-content-left ${isActive && !isTransitioning && animatingSlide === index ? 'active' : ''}`}>
                                 <h1 className={`slide-title ${isActive && !isTransitioning && animatingSlide === index ? 'active' : ''}`}>{slide.title}</h1>
+                                
+                                {/* Image Info - Mobile Only */}
+                                <div className="slide-image-info-mobile">
+                                    {slide.uploadedBy && (
+                                        <div className="info-item">
+                                            <span className="info-label">Người đăng:</span>
+                                            <span className="info-value">
+                                                {slide.uploadedBy.displayName || slide.uploadedBy.username || 'Unknown'}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {slide.location && (
+                                        <div className="info-item">
+                                            <span className="info-label">Địa điểm:</span>
+                                            <span className="info-value">{slide.location}</span>
+                                        </div>
+                                    )}
+                                    {slide.cameraModel && (
+                                        <div className="info-item">
+                                            <span className="info-label">Camera:</span>
+                                            <span className="info-value">{slide.cameraModel}</span>
+                                        </div>
+                                    )}
+                                    {slide.createdAt && (
+                                        <div className="info-item">
+                                            <span className="info-label">Ngày:</span>
+                                            <span className="info-value">
+                                                {new Date(slide.createdAt).toLocaleDateString('vi-VN', {
+                                                    day: 'numeric',
+                                                    month: 'long',
+                                                    year: 'numeric'
+                                                })}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+
                                 <div className="slide-nav-buttons">
                                     <button
                                         className="slide-nav-btn prev-btn"
