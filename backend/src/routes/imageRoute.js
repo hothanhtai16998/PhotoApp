@@ -1,15 +1,19 @@
 import express from 'express';
 import {
-    getAllImages,
     uploadImage,
     getImagesByUserId,
-    incrementView,
-    incrementDownload,
-    getLocations,
     downloadImage,
     getImageById,
     updateImage,
 } from '../controllers/imageController.js';
+import {
+    incrementView,
+    incrementDownload,
+} from '../controllers/imageStatsController.js';
+import {
+    getAllImages,
+    getLocations,
+} from '../controllers/imageSearchController.js';
 import { singleUpload } from '../middlewares/multerMiddleware.js';
 import { protectedRoute } from '../middlewares/authMiddleware.js';
 import { uploadLimiter } from '../middlewares/rateLimiter.js';

@@ -1,80 +1,52 @@
-// Removed react-hook-form - using manual state management for per-image forms
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useImageStore } from '@/stores/useImageStore';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { categoryService, type Category } from '@/services/categoryService';
 import { useNavigate } from 'react-router-dom';
-import { X, Upload, ArrowRight, MapPin } from 'lucide-react';
-import { reverseGeocode, delay, searchLocations, type LocationSuggestion } from '@/utils/geocoding';
+import { X, Upload, ArrowRight } from 'lucide-react';
+import { useImageUpload, type ImageData } from './upload/hooks/useImageUpload';
+import { UploadProgress } from './upload/UploadProgress';
+import { UploadPreview } from './upload/UploadPreview';
+import { UploadForm } from './upload/UploadForm';
 import './UploadModal.css';
-
-// Schema removed - using manual validation
 
 interface UploadModalProps {
     isOpen: boolean;
     onClose: () => void;
 }
 
-interface ImageData {
-    file: File;
-    title: string;
-    category: string;
-    location: string;
-    coordinates?: {
-        latitude: number;
-        longitude: number;
-    };
-    cameraModel: string;
-    errors: {
-        title?: string;
-        category?: string;
-    };
-}
-
 function UploadModal({ isOpen, onClose }: UploadModalProps) {
-    const { uploadImage, loading, uploadProgress } = useImageStore();
     const { accessToken } = useAuthStore();
     const navigate = useNavigate();
     const [dragActive, setDragActive] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [imagesData, setImagesData] = useState<ImageData[]>([]);
-    const [showProgress, setShowProgress] = useState(false);
-    const [showSuccess, setShowSuccess] = useState(false);
-    const [uploadingIndex, setUploadingIndex] = useState(0);
-    const [totalUploads, setTotalUploads] = useState(0);
-    const [categories, setCategories] = useState<Category[]>([]);
-    const [loadingCategories, setLoadingCategories] = useState(false);
     const [showTooltip, setShowTooltip] = useState(false);
-    const [detectingLocationIndex, setDetectingLocationIndex] = useState<number | null>(null);
-    const [locationSuggestions, setLocationSuggestions] = useState<Record<number, LocationSuggestion[]>>({});
-    const [showLocationSuggestions, setShowLocationSuggestions] = useState<Record<number, boolean>>({});
-    const [loadingLocationSuggestions, setLoadingLocationSuggestions] = useState<Record<number, boolean>>({});
-    const locationInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
-    const locationDropdownRefs = useRef<Record<number, HTMLDivElement | null>>({});
-    const locationSearchTimeoutRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const {
+        categories,
+        loadingCategories,
+        loadCategories,
+        showProgress,
+        showSuccess,
+        uploadingIndex,
+        totalUploads,
+        uploadProgress,
+        loading,
+        handleSubmitAll,
+        resetUploadState,
+    } = useImageUpload({
+        onSuccess: () => {
+            // Success handling is done in the hook
+        },
+    });
 
     // Fetch categories when modal opens
     useEffect(() => {
         if (isOpen) {
-            const loadCategories = async () => {
-                try {
-                    setLoadingCategories(true);
-                    const fetchedCategories = await categoryService.fetchCategories();
-                    setCategories(fetchedCategories);
-                } catch (error) {
-                    console.error('Failed to load categories:', error);
-                } finally {
-                    setLoadingCategories(false);
-                }
-            };
             loadCategories();
         }
-    }, [isOpen]);
+    }, [isOpen, loadCategories]);
 
     // Check if all images have required fields filled
     const isFormValid = imagesData.length > 0 &&
@@ -83,66 +55,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
             img.category.trim().length > 0
         );
 
-    // Detect user's current location and reverse geocode to location name (called on button click)
-    const handleDetectLocation = useCallback(async (index: number) => {
-        if (!navigator.geolocation) {
-            console.warn('Geolocation is not supported by this browser');
-            // You could show a toast notification here
-            return;
-        }
-
-        setDetectingLocationIndex(index);
-
-        try {
-            // Get GPS coordinates
-            const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(
-                    resolve,
-                    reject,
-                    {
-                        enableHighAccuracy: true,
-                        timeout: 10000, // 10 seconds timeout
-                        maximumAge: 300000, // Accept cached location up to 5 minutes old
-                    }
-                );
-            });
-
-            const coords = {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-            };
-
-            // Reverse geocode coordinates to location name
-            // Small delay to respect API rate limits (1 request per second)
-            await delay(1100);
-            const geocodeResult = await reverseGeocode(
-                coords.latitude,
-                coords.longitude,
-                'vi' // Vietnamese language
-            );
-
-            // Update the location for this specific image
-            setImagesData(prev => {
-                const updated = [...prev];
-                if (updated[index]) {
-                    updated[index] = {
-                        ...updated[index],
-                        location: geocodeResult.location || '',
-                        coordinates: coords,
-                    };
-                }
-                return updated;
-            });
-
-            setDetectingLocationIndex(null);
-        } catch (error) {
-            setDetectingLocationIndex(null);
-            console.warn('Error detecting location:', error);
-            // You could show a toast notification here for user feedback
-        }
-    }, []);
-
-    // Initialize imagesData when files are selected (without auto-detecting location)
+    // Initialize imagesData when files are selected
     useEffect(() => {
         if (selectedFiles.length > 0) {
             setImagesData(prev => {
@@ -214,116 +127,22 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
             };
             return updated;
         });
-
-        // Search for location suggestions when location field changes (debounced)
-        if (field === 'location') {
-            // Clear previous timeout
-            if (locationSearchTimeoutRef.current[index]) {
-                clearTimeout(locationSearchTimeoutRef.current[index]);
-            }
-
-            if (value.trim().length >= 2) {
-                // Show loading state
-                setLoadingLocationSuggestions(prev => ({
-                    ...prev,
-                    [index]: true
-                }));
-
-                // Debounce search to avoid too many API calls
-                locationSearchTimeoutRef.current[index] = setTimeout(async () => {
-                    try {
-                        // Small initial delay to respect API rate limits
-                        await delay(300);
-                        const suggestions = await searchLocations(value.trim(), 'vi', 8);
-                        setLocationSuggestions(prev => ({
-                            ...prev,
-                            [index]: suggestions
-                        }));
-                        setShowLocationSuggestions(prev => ({
-                            ...prev,
-                            [index]: suggestions.length > 0
-                        }));
-                    } catch (error) {
-                        console.warn('Error searching locations:', error);
-                        setLocationSuggestions(prev => ({
-                            ...prev,
-                            [index]: []
-                        }));
-                        setShowLocationSuggestions(prev => ({
-                            ...prev,
-                            [index]: false
-                        }));
-                    } finally {
-                        setLoadingLocationSuggestions(prev => ({
-                            ...prev,
-                            [index]: false
-                        }));
-                    }
-                }, 500); // Wait 500ms after user stops typing
-            } else {
-                setShowLocationSuggestions(prev => ({
-                    ...prev,
-                    [index]: false
-                }));
-                setLocationSuggestions(prev => ({
-                    ...prev,
-                    [index]: []
-                }));
-            }
-        }
     };
 
-    // Handle location suggestion selection
-    const selectLocation = (index: number, suggestion: LocationSuggestion) => {
+    // Update coordinates for an image
+    const updateImageCoordinates = (index: number, coordinates: { latitude: number; longitude: number } | undefined) => {
         setImagesData(prev => {
             const updated = [...prev];
             updated[index] = {
                 ...updated[index],
-                location: suggestion.displayName,
-                coordinates: {
-                    latitude: suggestion.latitude,
-                    longitude: suggestion.longitude,
-                }
+                coordinates,
             };
             return updated;
         });
-        setShowLocationSuggestions(prev => ({
-            ...prev,
-            [index]: false
-        }));
-        
-        // Clear search timeout
-        if (locationSearchTimeoutRef.current[index]) {
-            clearTimeout(locationSearchTimeoutRef.current[index]);
-        }
     };
 
-    // Handle click outside to close suggestions
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            Object.keys(locationDropdownRefs.current).forEach(key => {
-                const index = parseInt(key);
-                const dropdown = locationDropdownRefs.current[index];
-                const input = locationInputRefs.current[index];
-                if (dropdown && input && 
-                    !dropdown.contains(event.target as Node) && 
-                    !input.contains(event.target as Node)) {
-                    setShowLocationSuggestions(prev => ({
-                        ...prev,
-                        [index]: false
-                    }));
-                }
-            });
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, []);
-
-    // Validate all images before submit
-    const validateAllImages = (): boolean => {
+    const handleSubmit = async () => {
+        // Validate all images first
         const updated = imagesData.map(img => {
             const errors: { title?: string; category?: string } = {};
             if (!img.title.trim()) {
@@ -335,75 +154,18 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
             return { ...img, errors };
         });
         setImagesData(updated);
-        return updated.every(img => Object.keys(img.errors).length === 0);
-    };
 
-    const handleSubmitAll = async () => {
-        // Validate all images
-        if (!validateAllImages()) {
+        if (!updated.every(img => Object.keys(img.errors).length === 0)) {
             return;
         }
 
-        // Show progress screen
-        setShowProgress(true);
-        setTotalUploads(imagesData.length);
-        setUploadingIndex(0);
-
-        try {
-            // Upload all images sequentially with their own metadata
-            for (let i = 0; i < imagesData.length; i++) {
-                setUploadingIndex(i);
-                const imgData = imagesData[i];
-
-                await uploadImage({
-                    image: imgData.file,
-                    imageTitle: imgData.title.trim(),
-                    imageCategory: imgData.category.trim(),
-                    location: imgData.location.trim() || undefined,
-                    coordinates: imgData.coordinates,
-                    cameraModel: imgData.cameraModel.trim() || undefined,
-                });
-
-                // Small delay between uploads
-                if (i < imagesData.length - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                }
-            }
-
-            // Wait a moment before showing success
-            await new Promise(resolve => setTimeout(resolve, 800));
-
-            setShowProgress(false);
-            setShowSuccess(true);
-
-            // Dispatch refresh events
-            window.dispatchEvent(new CustomEvent('refreshProfile'));
-
-            // Get category names (use first image's category for refresh)
-            const firstCategoryId = imagesData[0]?.category;
-            const firstCategory = categories.find(cat => cat._id === firstCategoryId);
-            const categoryName = firstCategory?.name || null;
-
-            setTimeout(() => {
-                const refreshEvent = new CustomEvent('refreshImages', {
-                    detail: { categoryName }
-                });
-                window.dispatchEvent(refreshEvent);
-            }, 300);
-        } catch {
-            setShowProgress(false);
-            setShowSuccess(false);
-        }
+        await handleSubmitAll(imagesData);
     };
-
 
     const handleViewProfile = () => {
         setSelectedFiles([]);
         setImagesData([]);
-        setShowSuccess(false);
-        setShowProgress(false);
-        setUploadingIndex(0);
-        setTotalUploads(0);
+        resetUploadState();
         onClose();
         // Dispatch custom event to trigger image refresh
         window.dispatchEvent(new CustomEvent('refreshProfile'));
@@ -414,12 +176,9 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
         if (showProgress || showSuccess) return; // Prevent closing during upload/success
         setSelectedFiles([]);
         setImagesData([]);
-        setShowProgress(false);
-        setShowSuccess(false);
-        setUploadingIndex(0);
-        setTotalUploads(0);
+        resetUploadState();
         onClose();
-    }, [onClose, showProgress, showSuccess]);
+    }, [onClose, showProgress, showSuccess, resetUploadState]);
 
     // Handle ESC key
     useEffect(() => {
@@ -482,41 +241,12 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
 
     // Progress Screen
     if (showProgress) {
-        // Calculate progress for multiple uploads
-        // Each image contributes 100/totalUploads to the overall progress
-        const progressPerImage = 100 / totalUploads;
-        const completedImages = uploadingIndex;
-        const currentImageProgress = uploadProgress;
-        const overallProgress = (completedImages * progressPerImage) + (currentImageProgress * progressPerImage / 100);
-        const displayProgress = Math.max(0, Math.min(100, overallProgress));
-        // Published count updates as each image completes
-        const publishedCount = uploadProgress === 100 ? uploadingIndex + 1 : uploadingIndex;
-
         return (
-            <div className="upload-modal-overlay">
-                <div className="upload-progress-screen">
-                    <div className="progress-circle-container">
-                        <svg className="progress-circle" viewBox="0 0 100 100">
-                            <circle
-                                className="progress-circle-bg"
-                                cx="50"
-                                cy="50"
-                                r="45"
-                            />
-                            <circle
-                                className="progress-circle-fill"
-                                cx="50"
-                                cy="50"
-                                r="45"
-                                strokeDasharray={`${2 * Math.PI * 45}`}
-                                strokeDashoffset={`${2 * Math.PI * 45 * (1 - displayProgress / 100)}`}
-                            />
-                        </svg>
-                        <div className="progress-percentage">{Math.round(displayProgress)}%</div>
-                    </div>
-                    <p className="progress-text">Published <strong>{publishedCount}</strong> of <strong>{totalUploads}</strong> images...</p>
-                </div>
-            </div>
+            <UploadProgress
+                uploadingIndex={uploadingIndex}
+                totalUploads={totalUploads}
+                uploadProgress={uploadProgress}
+            />
         );
     }
 
@@ -553,9 +283,6 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                     {/* Header */}
                     <div className="upload-modal-header">
                         <h2 className="upload-modal-title">Thêm ảnh vào PhotoApp</h2>
-                        {/* <button className="upload-modal-help" onClick={() => window.open('#', '_blank')}>
-                            Need help?
-                        </button> */}
                         <button className="upload-modal-close" onClick={handleCancel}>
                             <X size={20} />
                         </button>
@@ -624,9 +351,6 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                 {/* Header */}
                 <div className="upload-modal-header">
                     <h2 className="upload-modal-title">Thêm ảnh vào PhotoApp</h2>
-                    {/* <button className="upload-modal-help" onClick={() => window.open('#', '_blank')}>
-                        Need help?
-                    </button> */}
                     <button className="upload-modal-close" onClick={handleCancel}>
                         <X size={20} />
                     </button>
@@ -671,7 +395,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                         gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
                         gap: '24px',
                         marginBottom: '24px',
-                        alignItems: 'start' // Align items to start, not stretch
+                        alignItems: 'start'
                     }}>
                         {imagesData.map((imgData, index) => (
                             <div key={index} style={{
@@ -680,328 +404,31 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                 padding: '16px',
                                 backgroundColor: 'white',
                                 boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                                height: 'fit-content', // Only take space needed
+                                height: 'fit-content',
                                 display: 'flex',
                                 flexDirection: 'column'
                             }}>
                                 {/* Image Preview */}
-                                <div style={{ position: 'relative', marginBottom: '16px' }}>
-                                    <img
-                                        src={URL.createObjectURL(imgData.file)}
-                                        alt={`Preview ${index + 1}`}
-                                        style={{
-                                            width: '100%',
-                                            height: 'auto', // Preserve aspect ratio
-                                            maxHeight: '500px', // Limit max height for very tall images
-                                            objectFit: 'contain', // Show full image without cropping
-                                            borderRadius: '8px',
-                                            border: '1px solid #e5e5e5',
-                                            display: 'block'
-                                        }}
-                                    />
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            const newFiles = selectedFiles.filter((_, i) => i !== index);
-                                            setSelectedFiles(newFiles);
-                                            // Remove from imagesData
-                                            setImagesData(prev => prev.filter((_, i) => i !== index));
-                                        }}
-                                        style={{
-                                            position: 'absolute',
-                                            top: '8px',
-                                            right: '8px',
-                                            background: 'rgba(0, 0, 0, 0.7)',
-                                            border: 'none',
-                                            borderRadius: '50%',
-                                            width: '28px',
-                                            height: '28px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            cursor: 'pointer',
-                                            color: 'white'
-                                        }}
-                                    >
-                                        <X size={16} />
-                                    </button>
-                                    <div style={{
-                                        position: 'absolute',
-                                        bottom: '8px',
-                                        left: '8px',
-                                        background: 'rgba(0, 0, 0, 0.7)',
-                                        color: 'white',
-                                        padding: '4px 10px',
-                                        borderRadius: '4px',
-                                        fontSize: '12px',
-                                        fontWeight: '600'
-                                    }}>
-                                        {index + 1} / {imagesData.length}
-                                    </div>
-                                </div>
+                                <UploadPreview
+                                    imageData={imgData}
+                                    index={index}
+                                    totalImages={imagesData.length}
+                                    onRemove={() => {
+                                        const newFiles = selectedFiles.filter((_, i) => i !== index);
+                                        setSelectedFiles(newFiles);
+                                        setImagesData(prev => prev.filter((_, i) => i !== index));
+                                    }}
+                                />
 
                                 {/* Form Fields for this image */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                    {/* Title */}
-                                    <div>
-                                        <Label htmlFor={`title-${index}`} style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500' }}>
-                                            Tiêu đề <span style={{ color: 'red' }}>*</span>
-                                        </Label>
-                                        <Input
-                                            id={`title-${index}`}
-                                            type="text"
-                                            value={imgData.title}
-                                            onChange={(e) => updateImageData(index, 'title', e.target.value)}
-                                            placeholder="Thêm tiêu đề cho ảnh của bạn"
-                                            style={{
-                                                borderColor: imgData.errors.title ? '#ef4444' : undefined
-                                            }}
-                                        />
-                                        {imgData.errors.title && (
-                                            <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px' }}>
-                                                {imgData.errors.title}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    {/* Category */}
-                                    <div>
-                                        <Label htmlFor={`category-${index}`} style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500' }}>
-                                            Danh mục <span style={{ color: 'red' }}>*</span>
-                                        </Label>
-                                        {loadingCategories ? (
-                                            <div style={{ padding: '8px', color: '#666', fontSize: '14px' }}>Đang tải danh mục...</div>
-                                        ) : categories.length === 0 ? (
-                                            <div style={{ padding: '8px', color: '#999', fontSize: '14px' }}>Danh mục không tồn tại</div>
-                                        ) : (
-                                            <select
-                                                id={`category-${index}`}
-                                                value={imgData.category}
-                                                onChange={(e) => updateImageData(index, 'category', e.target.value)}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '8px 12px',
-                                                    border: `1px solid ${imgData.errors.category ? '#ef4444' : '#e5e5e5'}`,
-                                                    borderRadius: '6px',
-                                                    fontSize: '0.9375rem',
-                                                    backgroundColor: 'white',
-                                                }}
-                                            >
-                                                <option value="">Chọn một danh mục...</option>
-                                                {categories.map((cat) => (
-                                                    <option key={cat._id} value={cat._id}>
-                                                        {cat.name}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        )}
-                                        {imgData.errors.category && (
-                                            <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px' }}>
-                                                {imgData.errors.category}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    {/* Location */}
-                                    <div style={{ position: 'relative' }}>
-                                        <Label htmlFor={`location-${index}`} style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500' }}>
-                                            Địa điểm
-                                            {imgData.coordinates && (
-                                                <span style={{ marginLeft: '8px', fontSize: '12px', color: '#10b981', fontWeight: 'normal' }}>
-                                                    (GPS: {imgData.coordinates.latitude.toFixed(4)}, {imgData.coordinates.longitude.toFixed(4)})
-                                                </span>
-                                            )}
-                                        </Label>
-                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', position: 'relative' }}>
-                                            <div style={{ flex: 1, position: 'relative' }}>
-                                                <Input
-                                                    id={`location-${index}`}
-                                                    type="text"
-                                                    value={imgData.location}
-                                                    onChange={(e) => updateImageData(index, 'location', e.target.value)}
-                                                    onFocus={() => {
-                                                        // If there's existing text, search for suggestions
-                                                        if (imgData.location.trim().length >= 2) {
-                                                            updateImageData(index, 'location', imgData.location);
-                                                        }
-                                                    }}
-                                                    placeholder="Nhập địa điểm (ví dụ: Phú Quốc, Việt Nam)"
-                                                    ref={(el) => {
-                                                        locationInputRefs.current[index] = el;
-                                                    }}
-                                                    style={{
-                                                        width: '100%',
-                                                        backgroundColor: imgData.location && imgData.coordinates ? '#f0fdf4' : undefined,
-                                                    }}
-                                                />
-                                                {/* Location Suggestions Dropdown */}
-                                                {showLocationSuggestions[index] && (
-                                                    <div
-                                                        ref={(el) => {
-                                                            locationDropdownRefs.current[index] = el;
-                                                        }}
-                                                        style={{
-                                                            position: 'absolute',
-                                                            top: '100%',
-                                                            left: 0,
-                                                            right: 0,
-                                                            marginTop: '4px',
-                                                            backgroundColor: 'white',
-                                                            border: '1px solid #e5e5e5',
-                                                            borderRadius: '8px',
-                                                            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
-                                                            zIndex: 1000,
-                                                            maxHeight: '240px',
-                                                            overflowY: 'auto',
-                                                            overflowX: 'hidden',
-                                                        }}
-                                                    >
-                                                        {loadingLocationSuggestions[index] ? (
-                                                            <div style={{
-                                                                padding: '12px',
-                                                                textAlign: 'center',
-                                                                color: '#666',
-                                                                fontSize: '14px',
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                gap: '8px'
-                                                            }}>
-                                                                <div style={{
-                                                                    width: '14px',
-                                                                    height: '14px',
-                                                                    border: '2px solid #6366f1',
-                                                                    borderTop: '2px solid transparent',
-                                                                    borderRadius: '50%',
-                                                                    animation: 'spin 0.8s linear infinite',
-                                                                }} />
-                                                                <span>Đang tìm kiếm...</span>
-                                                            </div>
-                                                        ) : locationSuggestions[index] && locationSuggestions[index].length > 0 ? (
-                                                            locationSuggestions[index].map((suggestion, sugIndex) => {
-                                                                // Highlight matching text
-                                                                const query = imgData.location.toLowerCase();
-                                                                const displayName = suggestion.displayName;
-                                                                const lowerDisplayName = displayName.toLowerCase();
-                                                                const matchIndex = lowerDisplayName.indexOf(query);
-                                                                
-                                                                let highlightedName;
-                                                                if (matchIndex !== -1 && query.length >= 2) {
-                                                                    const before = displayName.substring(0, matchIndex);
-                                                                    const match = displayName.substring(matchIndex, matchIndex + query.length);
-                                                                    const after = displayName.substring(matchIndex + query.length);
-                                                                    highlightedName = (
-                                                                        <>
-                                                                            {before}
-                                                                            <strong style={{ color: '#6366f1', fontWeight: '600' }}>{match}</strong>
-                                                                            {after}
-                                                                        </>
-                                                                    );
-                                                                } else {
-                                                                    highlightedName = displayName;
-                                                                }
-
-                                                                return (
-                                                                    <button
-                                                                        key={`${suggestion.latitude}-${suggestion.longitude}-${sugIndex}`}
-                                                                        type="button"
-                                                                        onClick={() => selectLocation(index, suggestion)}
-                                                                        onMouseDown={(e) => e.preventDefault()} // Prevent input blur
-                                                                        style={{
-                                                                            width: '100%',
-                                                                            padding: '10px 14px',
-                                                                            textAlign: 'left',
-                                                                            border: 'none',
-                                                                            borderBottom: sugIndex < locationSuggestions[index].length - 1 ? '1px solid #f0f0f0' : 'none',
-                                                                            backgroundColor: 'transparent',
-                                                                            cursor: 'pointer',
-                                                                            fontSize: '14px',
-                                                                            color: '#333',
-                                                                            display: 'flex',
-                                                                            alignItems: 'flex-start',
-                                                                            gap: '10px',
-                                                                            transition: 'background-color 0.15s ease',
-                                                                        }}
-                                                                        onMouseEnter={(e) => {
-                                                                            e.currentTarget.style.backgroundColor = '#f8f9fa';
-                                                                        }}
-                                                                        onMouseLeave={(e) => {
-                                                                            e.currentTarget.style.backgroundColor = 'transparent';
-                                                                        }}
-                                                                    >
-                                                                        <MapPin size={14} style={{ color: '#666', flexShrink: 0 }} />
-                                                                        <span style={{ flex: 1, lineHeight: '1.4' }}>{highlightedName}</span>
-                                                                    </button>
-                                                                );
-                                                            })
-                                                        ) : imgData.location.trim().length >= 2 ? (
-                                                            <div style={{
-                                                                padding: '12px',
-                                                                textAlign: 'center',
-                                                                color: '#999',
-                                                                fontSize: '14px'
-                                                            }}>
-                                                                Không tìm thấy địa điểm
-                                                            </div>
-                                                        ) : null}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <Button
-                                                type="button"
-                                                onClick={() => handleDetectLocation(index)}
-                                                disabled={detectingLocationIndex === index}
-                                                variant="outline"
-                                                size="sm"
-                                                style={{
-                                                    flexShrink: 0,
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '6px',
-                                                    minWidth: '120px',
-                                                }}
-                                            >
-                                                {detectingLocationIndex === index ? (
-                                                    <>
-                                                        <div style={{
-                                                            width: '12px',
-                                                            height: '12px',
-                                                            border: '2px solid #6366f1',
-                                                            borderTop: '2px solid transparent',
-                                                            borderRadius: '50%',
-                                                            animation: 'spin 0.8s linear infinite',
-                                                        }} />
-                                                        <span>Đang tìm...</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <MapPin size={16} />
-                                                        <span>Vị trí hiện tại</span>
-                                                    </>
-                                                )}
-                                            </Button>
-                                        </div>
-                                        {imgData.location && imgData.coordinates && (
-                                            <p style={{ marginTop: '4px', fontSize: '12px', color: '#059669' }}>
-                                                ✓ Đã phát hiện tự động
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    {/* Camera Model */}
-                                    <div>
-                                        <Label htmlFor={`camera-${index}`} style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500' }}>
-                                            Camera Model
-                                        </Label>
-                                        <Input
-                                            id={`camera-${index}`}
-                                            type="text"
-                                            value={imgData.cameraModel}
-                                            onChange={(e) => updateImageData(index, 'cameraModel', e.target.value)}
-                                            placeholder="Sony A7 III,..."
-                                        />
-                                    </div>
-                                </div>
+                                <UploadForm
+                                    imageData={imgData}
+                                    index={index}
+                                    categories={categories}
+                                    loadingCategories={loadingCategories}
+                                    onUpdate={updateImageData}
+                                    onUpdateCoordinates={updateImageCoordinates}
+                                />
                             </div>
                         ))}
                     </div>
@@ -1029,7 +456,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                             >
                                 <Button
                                     type="button"
-                                    onClick={handleSubmitAll}
+                                    onClick={handleSubmit}
                                     disabled={loading || !isFormValid}
                                     style={{ minWidth: '120px' }}
                                 >
@@ -1073,4 +500,3 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
 }
 
 export default UploadModal;
-
