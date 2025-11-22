@@ -87,9 +87,29 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
       style={{
         top: `${headerHeight}px`
       }}
+      onTouchMove={(e) => {
+        // Prevent scrolling in category navigation on mobile
+        if (window.innerWidth <= 768) {
+          e.preventDefault();
+        }
+      }}
+      onTouchStart={(e) => {
+        // Prevent scrolling in category navigation on mobile
+        if (window.innerWidth <= 768) {
+          e.stopPropagation();
+        }
+      }}
     >
       <div className="category-navigation-wrapper">
-        <nav className="category-navigation">
+        <nav 
+          className="category-navigation"
+          onTouchMove={(e) => {
+            // Prevent scrolling in category navigation on mobile
+            if (window.innerWidth <= 768) {
+              e.preventDefault();
+            }
+          }}
+        >
           {categories.map((category) => (
             <button
               key={category}

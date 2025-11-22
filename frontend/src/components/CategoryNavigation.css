@@ -27,6 +27,13 @@
 	scrollbar-width: none;
 }
 
+/* Desktop: Allow scrolling if needed */
+@media (min-width: 769px) {
+	.category-navigation {
+		overflow-x: auto;
+	}
+}
+
 .category-navigation::-webkit-scrollbar {
 	display: none;
 }
@@ -91,19 +98,37 @@
 @media (max-width: 768px) {
 	.category-navigation-container {
 		margin-top: 0; /* No gap - slider fills to here */
+		overflow: hidden !important;
+		position: sticky !important; /* Keep sticky positioning */
+		top: var(--header-height, 60px) !important;
+		width: 100%;
+		z-index: 99;
 	}
 
 	.category-navigation-wrapper {
 		padding: 0 12px;
+		overflow: hidden !important;
+		width: 100%;
+		max-width: 100%;
 	}
 
 	.category-navigation {
 		gap: 20px;
 		padding: 10px 0;
+		overflow-x: hidden !important;
+		overflow-y: hidden !important;
+		-webkit-overflow-scrolling: none !important;
+		touch-action: none !important;
+		scroll-behavior: auto !important;
+		overscroll-behavior: none !important;
+		position: relative;
+		width: 100%;
+		max-width: 100%;
 	}
 
 	.category-nav-link {
 		font-size: 0.8125rem;
+		pointer-events: auto;
 	}
 }
 
@@ -111,15 +136,27 @@
 	.category-navigation-container {
 		margin-top: 0; /* No gap - slider fills to here */
 		margin-bottom: 20px;
+		overflow: hidden !important;
+		position: sticky !important; /* Keep sticky positioning */
+		top: var(--header-height, 60px) !important;
+		z-index: 99;
 	}
 
 	.category-navigation-wrapper {
 		padding: 0 8px;
+		overflow: hidden;
+		width: 100%;
 	}
 
 	.category-navigation {
 		gap: 16px;
 		padding: 8px 0;
+		overflow-x: hidden !important; /* Disable horizontal scrolling */
+		overflow-y: hidden !important; /* Disable vertical scrolling */
+		-webkit-overflow-scrolling: none !important; /* Disable momentum scrolling on iOS */
+		touch-action: none !important; /* Disable all touch scrolling */
+		scroll-behavior: auto;
+		overscroll-behavior: none;
 	}
 
 	.category-nav-link {
