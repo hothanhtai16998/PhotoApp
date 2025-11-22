@@ -43,6 +43,24 @@
   margin: 0;
 }
 
+/* Page mode - no overlay, full page */
+.image-modal.image-modal-page {
+  position: relative;
+  top: 0;
+  left: 0;
+  transform: none;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  min-height: calc(100vh - var(--header-height, 60px));
+  z-index: 1;
+  border-radius: 0;
+  box-shadow: none;
+  animation: none;
+  margin: 0;
+  padding: 0;
+}
+
 @keyframes modalFadeIn {
   from {
     opacity: 0;

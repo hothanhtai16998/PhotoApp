@@ -34,6 +34,7 @@ interface ImageModalProps {
   onImageLoad: (imageId: string, img: HTMLImageElement) => void;
   currentImageIds: Set<string>;
   processedImages: React.MutableRefObject<Set<string>>;
+  renderAsPage?: boolean; // When true, renders as page (no overlay)
 }
 
 const ImageModal = ({
@@ -46,6 +47,7 @@ const ImageModal = ({
   onImageLoad,
   currentImageIds,
   processedImages,
+  renderAsPage = false,
 }: ImageModalProps) => {
   const modalContentRef = useRef<HTMLDivElement>(null);
   const [relatedImagesLimit, setRelatedImagesLimit] = useState(12);
@@ -270,13 +272,15 @@ const ImageModal = ({
 
   return (
     <>
+      {!renderAsPage && (
+        <div
+          className="image-modal-overlay"
+          onClick={onClose}
+        />
+      )}
       <div
-        className="image-modal-overlay"
-        onClick={onClose}
-      />
-      <div
-        className="image-modal"
-        onClick={(e) => e.stopPropagation()}
+        className={`image-modal ${renderAsPage ? 'image-modal-page' : ''}`}
+        onClick={(e) => !renderAsPage && e.stopPropagation()}
       >
         {/* Modal Header */}
         <div className="image-modal-header">

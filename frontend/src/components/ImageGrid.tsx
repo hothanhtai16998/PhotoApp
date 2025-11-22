@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef, useCallback, memo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useImageStore } from '@/stores/useImageStore';
 import { Download, MapPin, Heart } from 'lucide-react';
 import type { Image } from '@/types/image';
@@ -258,25 +258,7 @@ ImageGridItem.displayName = 'ImageGridItem';
 
 const ImageGrid = memo(() => {
   const { images, loading, error, pagination, currentSearch, currentCategory, currentLocation, fetchImages } = useImageStore();
-  const [searchParams, setSearchParams] = useSearchParams();
-  
-  // Get selected image slug from URL
-  const imageSlugFromUrl = searchParams.get('image');
-  
-  // Find selected image from URL slug or use null
-  const selectedImage = useMemo(() => {
-    if (!imageSlugFromUrl) return null;
-    
-    // Extract short ID from slug and find matching image
-    const shortId = extractIdFromSlug(imageSlugFromUrl);
-    if (!shortId) return null;
-    
-    // Find image by matching the last 12 characters of ID
-    return images.find(img => {
-      const imgShortId = img._id.slice(-12);
-      return imgShortId === shortId;
-    }) || null;
-  }, [imageSlugFromUrl, images]);
+  const navigate = useNavigate();
 
   // Update image in the store when stats change
   const handleImageUpdate = useCallback((updatedImage: Image) => {
@@ -576,12 +558,16 @@ const ImageGrid = memo(() => {
                 image={image}
                 imageType={imageType}
                 onSelect={(img) => {
-                  // Update URL when image is selected with slug
+                  // Set flag in sessionStorage to indicate we're coming from grid
+                  sessionStorage.setItem('imagePage_fromGrid', 'true');
+                  
+                  // Navigate to /photos/:slug route with state to show as modal
                   const slug = generateImageSlug(img.imageTitle, img._id);
-                  setSearchParams(prev => {
-                    const newParams = new URLSearchParams(prev);
-                    newParams.set('image', slug);
-                    return newParams;
+                  navigate(`/photos/${slug}`, { 
+                    state: { 
+                      fromGrid: true,  // This tells ImagePage to render as modal
+                      images: images   // Pass images for faster loading
+                    } 
                   });
                 }}
                 onDownload={handleDownloadImage}
@@ -613,36 +599,7 @@ const ImageGrid = memo(() => {
         </div>
       )}
 
-      {/* Image Modal */}
-      {selectedImage && (
-        <ImageModal
-          image={selectedImage}
-          images={images}
-          onClose={() => {
-            // Remove image param from URL when closing
-            setSearchParams(prev => {
-              const newParams = new URLSearchParams(prev);
-              newParams.delete('image');
-              return newParams;
-            });
-          }}
-          onImageSelect={(updatedImage) => {
-            handleImageUpdate(updatedImage);
-            // Update URL to reflect the selected image with slug
-            const slug = generateImageSlug(updatedImage.imageTitle, updatedImage._id);
-            setSearchParams(prev => {
-              const newParams = new URLSearchParams(prev);
-              newParams.set('image', slug);
-              return newParams;
-            });
-          }}
-          onDownload={handleDownloadImage}
-          imageTypes={imageTypes}
-          onImageLoad={handleImageLoad}
-          currentImageIds={currentImageIds}
-          processedImages={processedImages}
-        />
-      )}
+      {/* Image Modal is handled by ImagePage route */}
     </div>
   );
 });

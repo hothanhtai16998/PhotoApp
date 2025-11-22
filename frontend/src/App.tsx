@@ -14,6 +14,7 @@ const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const UploadPage = lazy(() => import("./pages/UploadPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const FavoritesPage = lazy(() => import("./pages/FavoritesPage"));
+const ImagePage = lazy(() => import("./pages/ImagePage"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -32,6 +33,7 @@ function App() {
       <Routes>
         {/**public routes */}
         <Route path="/" element={<HomePage />} />
+        <Route path="/photos/:slug" element={<ImagePage />} />
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/signin" element={<SignInPage />} />
         <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
