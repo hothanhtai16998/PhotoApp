@@ -184,16 +184,22 @@
 }
 
 /* Modal Image Content */
-.image-modal-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 0;
-  min-height: 0;
-  padding-bottom: 40px;
-}
+  .image-modal-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0;
+    min-height: 0;
+    padding-bottom: 40px;
+  }
+
+  @media (max-width: 768px) {
+    .image-modal-content {
+      padding-bottom: 12px;
+    }
+  }
 
 .modal-main-image-container {
   display: flex;
@@ -560,7 +566,9 @@
   }
 
   .image-modal-header {
-    padding: 12px 16px;
+    padding: 4px 12px;
+    flex-shrink: 0;
+    min-height: 48px;
   }
 
   .modal-header-left {
@@ -604,8 +612,10 @@
 
   .image-modal-footer {
     flex-wrap: wrap;
-    padding: 12px 16px;
-    gap: 12px;
+    padding: 4px 12px;
+    gap: 8px;
+    flex-shrink: 0;
+    min-height: auto;
   }
 
   .modal-footer-left {
@@ -663,12 +673,42 @@
   }
 
   .modal-main-image-container {
-    min-height: 60vh;
-    padding: 10px;
+    min-height: auto !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block;
   }
 
   .modal-image {
-    max-height: 70vh;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: calc(100vh - 80px) !important;
+    object-fit: contain;
+    display: block;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Landscape images - fill width to make them larger */
+  .modal-image.landscape {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: calc(100vh - 60px) !important;
+    object-fit: contain;
+    display: block;
+  }
+
+  /* Portrait images - maintain aspect ratio */
+  .modal-image.portrait {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: calc(100vh - 80px) !important;
+    object-fit: contain;
+    display: block;
   }
 
   .modal-related-images {
@@ -699,20 +739,52 @@
 
 @media (max-width: 480px) {
   .image-modal-header {
-    padding: 10px 12px;
+    padding: 6px 12px;
+    flex-shrink: 0;
   }
 
   .modal-main-image-container {
-    min-height: 50vh;
-    padding: 8px;
+    min-height: auto !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block;
   }
 
   .modal-image {
-    max-height: 60vh;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: calc(100vh - 70px) !important;
+    object-fit: contain;
+    display: block;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Landscape images - fill width to make them larger */
+  .modal-image.landscape {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: calc(100vh - 50px) !important;
+    object-fit: contain;
+    display: block;
+  }
+
+  /* Portrait images - maintain aspect ratio */
+  .modal-image.portrait {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: calc(100vh - 70px) !important;
+    object-fit: contain;
+    display: block;
   }
 
   .image-modal-footer {
-    padding: 10px 12px;
+    padding: 6px 12px;
+    flex-shrink: 0;
   }
 
   .modal-footer-left-stats {

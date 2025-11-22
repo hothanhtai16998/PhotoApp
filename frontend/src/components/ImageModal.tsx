@@ -406,11 +406,22 @@ const ImageModal = ({
               }
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 98vw, 1920px"
               alt={image.imageTitle || 'Photo'}
-              className={`modal-image ${isModalImageLoaded ? 'loaded' : 'loading'}`}
+              className={`modal-image ${isModalImageLoaded ? 'loaded' : 'loading'} ${(imageTypes.get(image._id) || 'landscape') === 'landscape' ? 'landscape' : 'portrait'}`}
               loading="eager"
               decoding="async"
               fetchPriority="high"
-              onLoad={() => setIsModalImageLoaded(true)}
+              onLoad={(e) => {
+                setIsModalImageLoaded(true);
+                // Update class if orientation was misdetected
+                const img = e.currentTarget;
+                const isPortraitImg = img.naturalHeight > img.naturalWidth;
+                const currentType = imageTypes.get(image._id) || 'landscape';
+                const shouldBePortrait = isPortraitImg;
+                if (shouldBePortrait !== (currentType === 'portrait')) {
+                  img.classList.toggle('landscape', !shouldBePortrait);
+                  img.classList.toggle('portrait', shouldBePortrait);
+                }
+              }}
             />
           </div>
 
