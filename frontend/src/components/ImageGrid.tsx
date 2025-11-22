@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef, useCallback, memo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useImageStore } from '@/stores/useImageStore';
 import { Download, MapPin, Heart } from 'lucide-react';
 import type { Image } from '@/types/image';
@@ -259,6 +259,25 @@ ImageGridItem.displayName = 'ImageGridItem';
 const ImageGrid = memo(() => {
   const { images, loading, error, pagination, currentSearch, currentCategory, currentLocation, fetchImages } = useImageStore();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Get selected image slug from URL search params
+  const imageSlugFromUrl = searchParams.get('image');
+  
+  // Find selected image from URL slug
+  const selectedImage = useMemo(() => {
+    if (!imageSlugFromUrl) return null;
+    
+    // Extract short ID from slug and find matching image
+    const shortId = extractIdFromSlug(imageSlugFromUrl);
+    if (!shortId) return null;
+    
+    // Find image by matching the last 12 characters of ID
+    return images.find(img => {
+      const imgShortId = img._id.slice(-12);
+      return imgShortId === shortId;
+    }) || null;
+  }, [imageSlugFromUrl, images]);
 
   // Update image in the store when stats change
   const handleImageUpdate = useCallback((updatedImage: Image) => {
@@ -562,16 +581,16 @@ const ImageGrid = memo(() => {
                 image={image}
                 imageType={imageType}
                 onSelect={(img) => {
-                  // Set flag in sessionStorage to indicate we're coming from grid
+                  // Set flag to indicate we're opening from grid (not refresh)
                   sessionStorage.setItem('imagePage_fromGrid', 'true');
                   
-                  // Navigate to /photos/:slug route with state to show as modal
+                  // Update URL with search param instead of navigating
+                  // This keeps the grid mounted (like Unsplash)
                   const slug = generateImageSlug(img.imageTitle, img._id);
-                  navigate(`/photos/${slug}`, { 
-                    state: { 
-                      fromGrid: true,  // This tells ImagePage to render as modal
-                      images: images   // Pass images for faster loading
-                    } 
+                  setSearchParams(prev => {
+                    const newParams = new URLSearchParams(prev);
+                    newParams.set('image', slug);
+                    return newParams;
                   });
                 }}
                 onDownload={handleDownloadImage}
@@ -603,7 +622,38 @@ const ImageGrid = memo(() => {
         </div>
       )}
 
-      {/* Image Modal is handled by ImagePage route */}
+      {/* Image Modal - shown as overlay when image param exists */}
+      {/* Always render as modal (not page) when opened from grid */}
+      {selectedImage && (
+        <ImageModal
+          image={selectedImage}
+          images={images}
+          onClose={() => {
+            // Remove image param from URL when closing
+            setSearchParams(prev => {
+              const newParams = new URLSearchParams(prev);
+              newParams.delete('image');
+              return newParams;
+            });
+          }}
+          onImageSelect={(updatedImage) => {
+            handleImageUpdate(updatedImage);
+            // Update URL to reflect the selected image with slug
+            const slug = generateImageSlug(updatedImage.imageTitle, updatedImage._id);
+            setSearchParams(prev => {
+              const newParams = new URLSearchParams(prev);
+              newParams.set('image', slug);
+              return newParams;
+            });
+          }}
+          onDownload={handleDownloadImage}
+          imageTypes={imageTypes}
+          onImageLoad={handleImageLoad}
+          currentImageIds={currentImageIds}
+          processedImages={processedImages}
+          renderAsPage={false} // Always modal when opened from grid
+        />
+      )}
     </div>
   );
 });
