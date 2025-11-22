@@ -333,6 +333,46 @@ export const SearchBar = forwardRef<SearchBarRef>((props, ref) => {
             <X size={16} />
           </button>
         )}
+        
+        {/* Search Filters - Inside form for proper alignment */}
+        <div className="search-filters-wrapper">
+          <SearchFilters
+            filters={filters}
+            onFiltersChange={(newFilters) => {
+              setFilters(newFilters);
+              // Save to localStorage
+              try {
+                localStorage.setItem('photoApp_searchFilters', JSON.stringify(newFilters));
+                // Dispatch custom event to notify ImageGrid of filter change
+                window.dispatchEvent(new Event('filterChange'));
+              } catch (error) {
+                console.error('Failed to save filters:', error);
+              }
+              // Apply filters to current search
+              if (location.pathname === '/') {
+                fetchImages({
+                  search: searchQuery.trim() || undefined,
+                });
+              }
+            }}
+            onReset={() => {
+              const defaultFilters = {
+                orientation: 'all',
+                color: 'all',
+                dateFrom: '',
+                dateTo: '',
+              };
+              setFilters(defaultFilters);
+              try {
+                localStorage.removeItem('photoApp_searchFilters');
+                // Dispatch custom event to notify ImageGrid of filter change
+                window.dispatchEvent(new Event('filterChange'));
+              } catch (error) {
+                console.error('Failed to clear filters:', error);
+              }
+            }}
+          />
+        </div>
       </form>
 
       {/* Search Suggestions Dropdown */}
@@ -414,40 +454,6 @@ export const SearchBar = forwardRef<SearchBarRef>((props, ref) => {
           ) : null}
         </div>
       )}
-
-      {/* Search Filters */}
-      <SearchFilters
-        filters={filters}
-        onFiltersChange={(newFilters) => {
-          setFilters(newFilters);
-          // Save to localStorage
-          try {
-            localStorage.setItem('photoApp_searchFilters', JSON.stringify(newFilters));
-          } catch (error) {
-            console.error('Failed to save filters:', error);
-          }
-          // Apply filters to current search
-          if (location.pathname === '/') {
-            fetchImages({
-              search: searchQuery.trim() || undefined,
-            });
-          }
-        }}
-        onReset={() => {
-          const defaultFilters = {
-            orientation: 'all',
-            color: 'all',
-            dateFrom: '',
-            dateTo: '',
-          };
-          setFilters(defaultFilters);
-          try {
-            localStorage.removeItem('photoApp_searchFilters');
-          } catch (error) {
-            console.error('Failed to clear filters:', error);
-          }
-        }}
-      />
     </div>
   )
 });

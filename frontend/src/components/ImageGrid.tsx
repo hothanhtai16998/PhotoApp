@@ -356,9 +356,8 @@ const ImageGrid = memo(() => {
   const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
   const processedImages = useRef<Set<string>>(new Set());
 
-  // Get current image IDs for comparison
-  // Load filters from localStorage and apply them
-  const filters = useMemo(() => {
+  // Load filters from localStorage - make it reactive
+  const [filters, setFilters] = useState(() => {
     try {
       const stored = localStorage.getItem('photoApp_searchFilters');
       if (stored) {
@@ -373,6 +372,56 @@ const ImageGrid = memo(() => {
       dateFrom: '',
       dateTo: '',
     };
+  });
+
+  // Listen for storage changes (when filters are updated from SearchBar)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'photoApp_searchFilters') {
+        try {
+          if (e.newValue) {
+            setFilters(JSON.parse(e.newValue));
+          } else {
+            setFilters({
+              orientation: 'all',
+              color: 'all',
+              dateFrom: '',
+              dateTo: '',
+            });
+          }
+        } catch (error) {
+          console.error('Failed to parse filters from storage:', error);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Also listen for custom event from SearchBar (same window)
+    const handleFilterChange = () => {
+      try {
+        const stored = localStorage.getItem('photoApp_searchFilters');
+        if (stored) {
+          setFilters(JSON.parse(stored));
+        } else {
+          setFilters({
+            orientation: 'all',
+            color: 'all',
+            dateFrom: '',
+            dateTo: '',
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load filters:', error);
+      }
+    };
+
+    window.addEventListener('filterChange', handleFilterChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('filterChange', handleFilterChange);
+    };
   }, []);
 
   // Apply filters to images
@@ -381,6 +430,29 @@ const ImageGrid = memo(() => {
   }, [images, filters, imageTypes]);
 
   const currentImageIds = useMemo(() => new Set(filteredImages.map(img => img._id)), [filteredImages]);
+
+  // Preload images to determine their type quickly for filtering
+  useEffect(() => {
+    if (filters.orientation !== 'all' && images.length > 0) {
+      // Preload images that don't have types determined yet
+      images.forEach(img => {
+        if (!imageTypes.has(img._id) && img.imageUrl) {
+          const testImg = new Image();
+          testImg.onload = () => {
+            const isPortrait = testImg.naturalHeight > testImg.naturalWidth;
+            const imageType = isPortrait ? 'portrait' : 'landscape';
+            setImageTypes(prev => {
+              if (prev.has(img._id)) return prev;
+              const newMap = new Map(prev);
+              newMap.set(img._id, imageType);
+              return newMap;
+            });
+          };
+          testImg.src = img.imageUrl;
+        }
+      });
+    }
+  }, [images, filters.orientation, imageTypes]);
 
   // Determine image type when it loads - memoized to prevent recreation
   const handleImageLoad = useCallback((imageId: string, img: HTMLImageElement) => {

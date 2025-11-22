@@ -55,12 +55,19 @@ export const applyImageFilters = (
   // Filter by orientation (using imageTypes map)
   if (filters.orientation !== 'all') {
     filtered = filtered.filter(img => {
-      const imgType = imageTypes.get(img._id) || 'landscape';
-      const aspectRatio = imgType === 'portrait' ? 'portrait' : 
-                         imgType === 'landscape' ? 'landscape' : 'square';
+      const imgType = imageTypes.get(img._id);
       
-      // For square, we'd need to check if height === width
-      // For now, assume non-portrait/non-landscape is square
+      // If image type hasn't been determined yet, try to infer from image URL metadata
+      // or exclude it to prevent showing wrong results
+      if (!imgType) {
+        // Try to preload image to determine type quickly
+        // For now, we'll exclude undetermined images when filtering is active
+        // This prevents showing wrong results (e.g., showing portrait as landscape)
+        // In production, you'd want to store dimensions in backend metadata
+        return false;
+      }
+      
+      // Now filter based on determined type
       if (filters.orientation === 'portrait') {
         return imgType === 'portrait';
       } else if (filters.orientation === 'landscape') {

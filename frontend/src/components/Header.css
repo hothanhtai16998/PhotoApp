@@ -125,6 +125,16 @@
   color: #111;
 }
 
+/* Search Filters Wrapper - Inside form */
+.search-filters-wrapper {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  border-left: 1px solid #e5e5e5;
+  padding-left: 8px;
+  margin-left: 8px;
+}
+
 /* Header Actions */
 .header-actions {
   display: flex;
@@ -362,6 +372,11 @@
   }
   .search-bar-container {
     margin-top: 0;
+  }
+
+  .search-filters-wrapper {
+    padding-left: 4px;
+    margin-left: 4px;
   }
 }
 
