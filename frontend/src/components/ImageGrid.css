@@ -26,6 +26,14 @@
   }
 }
 
+/* Mobile: Clear margin-top and padding */
+@media (max-width: 768px) {
+  .image-grid-container {
+    margin-top: 0 !important;
+    padding: 0 !important;
+  }
+}
+
 /* Collections Section */
 .collections-section {
   margin: 40px 0 60px;

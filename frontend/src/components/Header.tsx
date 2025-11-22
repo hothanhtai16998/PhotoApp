@@ -39,9 +39,6 @@ export const Header = memo(function Header() {
             <span>PhotoApp</span>
           </Link>
 
-          {/* Search Bar */}
-          <SearchBar />
-
           {/* Mobile Menu Button */}
           <button 
             className="mobile-menu-button"
@@ -51,6 +48,9 @@ export const Header = memo(function Header() {
           >
             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
+
+          {/* Search Bar */}
+          <SearchBar />
 
           {/* Right Actions - Desktop */}
           <div className="header-actions desktop-only">
