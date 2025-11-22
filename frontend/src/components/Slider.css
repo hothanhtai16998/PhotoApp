@@ -71,6 +71,8 @@
 .slider-slide.portrait {
 	background-size: contain;
 	background-color: #000;
+	background-position: center center;
+	background-repeat: no-repeat;
 }
 
 .slider-slide.visible {
@@ -85,6 +87,20 @@
 	transform-origin: center center;
 }
 
+/* Ensure portrait images on desktop always use contain */
+.slider-slide.portrait {
+	background-size: contain !important;
+	background-position: center center !important;
+	background-repeat: no-repeat !important;
+}
+
+.slider-slide.active.portrait {
+	animation: none;
+	background-size: contain !important;
+	background-position: center center !important;
+	background-repeat: no-repeat !important;
+}
+
 /* Zoom animation only for landscape images - disabled on mobile to prevent shaking */
 .slider-slide.active.landscape {
 	/* Continuous zoom-out animation from center while slide is showing */
@@ -97,11 +113,6 @@
 		animation: none;
 		background-size: cover !important;
 	}
-}
-
-/* Portrait images don't need zoom animation */
-.slider-slide.active.portrait {
-	animation: none;
 }
 
 /* Smooth crossfade animation with zoom-out effect */
@@ -152,6 +163,11 @@
 	pointer-events: auto;
 }
 
+/* Ensure navigation buttons are always clickable */
+.slide-content-left .slide-nav-buttons {
+	pointer-events: auto;
+}
+
 .slide-title {
 	font-family: 'Urbanist', sans-serif;
 	font-size: 100px;
@@ -177,6 +193,9 @@
 	display: flex;
 	align-items: center;
 	gap: 8px;
+	pointer-events: auto;
+	position: relative;
+	z-index: 21;
 }
 
 .slide-nav-btn {
@@ -199,6 +218,9 @@
 	display: flex;
 	align-items: center;
 	gap: 6px;
+	pointer-events: auto;
+	position: relative;
+	z-index: 22;
 }
 
 .slide-nav-btn:hover {
@@ -287,7 +309,7 @@
 		display: none;
 		margin-top: 12px;
 		padding-top: 12px;
-		border-top: 1px solid rgba(255, 255, 255, 0.1);
+		border-top: none;
 	}
 
 .slide-image-info.active {
@@ -557,11 +579,11 @@
 		left: 16px;
 		right: 16px;
 		max-width: calc(100% - 32px);
-		background: rgba(0, 0, 0, 0.5);
-		backdrop-filter: blur(10px);
+		background: transparent;
+		backdrop-filter: none;
 		padding: 16px 20px;
-		border-radius: 12px;
-		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 0;
+		border: none;
 		z-index: 10;
 	}
 
@@ -576,7 +598,12 @@
 		margin-bottom: 12px;
 		word-wrap: break-word;
 		overflow-wrap: break-word;
-		text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+		color: #fff;
+		text-shadow: 
+			0 3px 6px rgba(0, 0, 0, 0.8),
+			0 2px 4px rgba(0, 0, 0, 0.9),
+			0 1px 2px rgba(0, 0, 0, 0.95),
+			0 0 12px rgba(0, 0, 0, 0.6);
 	}
 
 	.slide-nav-buttons {
@@ -636,15 +663,26 @@
 	.info-label {
 		min-width: auto;
 		font-size: 11px;
-		opacity: 0.8;
+		opacity: 0.9;
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
+		color: rgba(255, 255, 255, 0.95);
+		text-shadow: 
+			0 2px 4px rgba(0, 0, 0, 0.8),
+			0 1px 2px rgba(0, 0, 0, 0.9),
+			0 0 8px rgba(0, 0, 0, 0.6);
+		font-weight: 600;
 	}
 
 	.info-value {
 		font-size: 14px;
-		font-weight: 500;
+		font-weight: 600;
 		line-height: 1.4;
+		color: #fff;
+		text-shadow: 
+			0 2px 4px rgba(0, 0, 0, 0.8),
+			0 1px 2px rgba(0, 0, 0, 0.9),
+			0 0 8px rgba(0, 0, 0, 0.6);
 	}
 
 	.description-box {
@@ -708,11 +746,11 @@
 		left: 12px;
 		right: 12px;
 		max-width: calc(100% - 24px);
-		background: rgba(0, 0, 0, 0.55);
-		backdrop-filter: blur(10px);
+		background: transparent;
+		backdrop-filter: none;
 		padding: 14px 18px;
-		border-radius: 10px;
-		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 0;
+		border: none;
 	}
 
 	.slide-image-info-mobile {
@@ -726,7 +764,12 @@
 		margin-bottom: 10px;
 		word-wrap: break-word;
 		overflow-wrap: break-word;
-		text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+		color: #fff;
+		text-shadow: 
+			0 3px 6px rgba(0, 0, 0, 0.8),
+			0 2px 4px rgba(0, 0, 0, 0.9),
+			0 1px 2px rgba(0, 0, 0, 0.95),
+			0 0 12px rgba(0, 0, 0, 0.6);
 	}
 
 	.slide-nav-buttons {
@@ -804,15 +847,26 @@
 	.info-label {
 		min-width: auto;
 		font-size: 10px;
-		opacity: 0.8;
+		opacity: 0.95;
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
+		color: rgba(255, 255, 255, 0.95);
+		text-shadow: 
+			0 2px 4px rgba(0, 0, 0, 0.8),
+			0 1px 2px rgba(0, 0, 0, 0.9),
+			0 0 8px rgba(0, 0, 0, 0.6);
+		font-weight: 600;
 	}
 
 	.info-value {
 		font-size: 13px;
-		font-weight: 500;
+		font-weight: 600;
 		line-height: 1.4;
+		color: #fff;
+		text-shadow: 
+			0 2px 4px rgba(0, 0, 0, 0.8),
+			0 1px 2px rgba(0, 0, 0, 0.9),
+			0 0 8px rgba(0, 0, 0, 0.6);
 	}
 
 	.slide-description {
@@ -843,7 +897,12 @@
 		line-height: 26px;
 		word-wrap: break-word;
 		overflow-wrap: break-word;
-		text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+		color: #fff;
+		text-shadow: 
+			0 3px 6px rgba(0, 0, 0, 0.8),
+			0 2px 4px rgba(0, 0, 0, 0.9),
+			0 1px 2px rgba(0, 0, 0, 0.95),
+			0 0 12px rgba(0, 0, 0, 0.6);
 	}
 
 	.slide-content-left {
@@ -852,11 +911,11 @@
 		left: 8px;
 		right: 8px;
 		max-width: calc(100% - 16px);
-		background: rgba(0, 0, 0, 0.6);
-		backdrop-filter: blur(10px);
+		background: transparent;
+		backdrop-filter: none;
 		padding: 10px 14px;
-		border-radius: 8px;
-		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 0;
+		border: none;
 	}
 
 	.slide-image-info-mobile {
@@ -883,15 +942,26 @@
 	.info-label {
 		min-width: auto;
 		font-size: 9px;
-		opacity: 0.8;
+		opacity: 0.95;
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
+		color: rgba(255, 255, 255, 0.95);
+		text-shadow: 
+			0 2px 4px rgba(0, 0, 0, 0.8),
+			0 1px 2px rgba(0, 0, 0, 0.9),
+			0 0 8px rgba(0, 0, 0, 0.6);
+		font-weight: 600;
 	}
 
 	.info-value {
 		font-size: 12px;
-		font-weight: 500;
+		font-weight: 600;
 		line-height: 1.4;
+		color: #fff;
+		text-shadow: 
+			0 2px 4px rgba(0, 0, 0, 0.8),
+			0 1px 2px rgba(0, 0, 0, 0.9),
+			0 0 8px rgba(0, 0, 0, 0.6);
 	}
 }
 

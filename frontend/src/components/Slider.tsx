@@ -64,9 +64,12 @@ function Slider() {
                             ? img.regularUrl 
                             : (img.regularUrl || img.imageUrl);
 
-                        // Detect image orientation by loading the image with timeout
+                        // Detect image orientation by loading a smaller image for faster detection
                         let isPortrait = false;
                         try {
+                            // Use thumbnail or small URL for faster detection, fallback to regular URL
+                            const detectionUrl = img.thumbnailUrl || img.smallUrl || imageUrl;
+                            
                             await Promise.race([
                                 new Promise<void>((resolve) => {
                                     const testImg = new Image();
@@ -79,11 +82,11 @@ function Slider() {
                                         // Default to landscape if image fails to load
                                         resolve();
                                     };
-                                    testImg.src = imageUrl;
+                                    testImg.src = detectionUrl;
                                 }),
                                 new Promise<void>((resolve) => {
-                                    // Timeout after 2 seconds - default to landscape
-                                    setTimeout(() => resolve(), 2000);
+                                    // Increased timeout to 5 seconds for better detection
+                                    setTimeout(() => resolve(), 5000);
                                 })
                             ]);
                         } catch {
@@ -395,6 +398,14 @@ function Slider() {
                                                 slideElement.classList.add('landscape');
                                                 slideElement.classList.remove('portrait');
                                             }
+                                            // Update slide state to persist the correction
+                                            setSlides(prevSlides => 
+                                                prevSlides.map(s => 
+                                                    s.id === slide.id 
+                                                        ? { ...s, isPortrait: isPortraitImg }
+                                                        : s
+                                                )
+                                            );
                                         }
                                     }}
                                 />
@@ -419,6 +430,14 @@ function Slider() {
                                                 slideElement.classList.add('landscape');
                                                 slideElement.classList.remove('portrait');
                                             }
+                                            // Update slide state to persist the correction
+                                            setSlides(prevSlides => 
+                                                prevSlides.map(s => 
+                                                    s.id === slide.id 
+                                                        ? { ...s, isPortrait: isPortraitImg }
+                                                        : s
+                                                )
+                                            );
                                         }
                                     }}
                                 />
@@ -431,24 +450,10 @@ function Slider() {
                                 
                                 {/* Image Info - Mobile Only */}
                                 <div className="slide-image-info-mobile">
-                                    {slide.uploadedBy && (
-                                        <div className="info-item">
-                                            <span className="info-label">Người đăng:</span>
-                                            <span className="info-value">
-                                                {slide.uploadedBy.displayName || slide.uploadedBy.username || 'Unknown'}
-                                            </span>
-                                        </div>
-                                    )}
                                     {slide.location && (
                                         <div className="info-item">
                                             <span className="info-label">Địa điểm:</span>
                                             <span className="info-value">{slide.location}</span>
-                                        </div>
-                                    )}
-                                    {slide.cameraModel && (
-                                        <div className="info-item">
-                                            <span className="info-label">Camera:</span>
-                                            <span className="info-value">{slide.cameraModel}</span>
                                         </div>
                                     )}
                                     {slide.createdAt && (
