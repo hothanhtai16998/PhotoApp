@@ -301,6 +301,9 @@
 }
 
 @media (max-width: 480px) {
+  .header-top {
+    padding-top: 0;
+  }
   .header-container {
     padding: 0 12px;
     gap: 8px;
@@ -356,6 +359,9 @@
 
   .search-visual {
     padding: 8px;
+  }
+  .search-bar-container {
+    margin-top: 0;
   }
 }
 
