@@ -28,6 +28,7 @@ export const useImagePreload = (image: Image): UseImagePreloadReturn => {
     // If we have a full-size imageUrl and it's different from initial, preload it in background
     if (image.imageUrl && image.imageUrl !== initialSrc && (image.regularUrl || image.smallUrl)) {
       const fullSizeImg = new Image();
+      fullSizeImg.crossOrigin = 'anonymous';
       fullSizeImg.onload = () => {
         // Upgrade to full size after initial load completes
         if (currentImageIdRef.current === image._id) {

@@ -43,17 +43,47 @@ Replace `your-photo-app-bucket` with your actual bucket name.
 
 3. **CORS Configuration** → Edit and add:
 
+**Important**: AWS S3 does NOT support `OPTIONS` in `AllowedMethods`. S3 handles preflight requests automatically.
+
+For **reading images only** (recommended for production):
 ```json
 [
     {
         "AllowedHeaders": ["*"],
-        "AllowedMethods": ["GET", "PUT", "POST", "DELETE", "HEAD"],
-        "AllowedOrigins": ["*"],
-        "ExposeHeaders": ["ETag"],
+        "AllowedMethods": ["GET", "HEAD"],
+        "AllowedOrigins": [
+            "http://localhost:5173",
+            "http://localhost:3000",
+            "http://127.0.0.1:5173",
+            "http://127.0.0.1:3000",
+            "https://your-production-domain.com"
+        ],
+        "ExposeHeaders": ["ETag", "Content-Length"],
         "MaxAgeSeconds": 3000
     }
 ]
 ```
+
+For **uploading images** (if you need direct uploads from frontend):
+```json
+[
+    {
+        "AllowedHeaders": ["*"],
+        "AllowedMethods": ["GET", "PUT", "POST", "HEAD"],
+        "AllowedOrigins": [
+            "http://localhost:5173",
+            "http://localhost:3000",
+            "http://127.0.0.1:5173",
+            "http://127.0.0.1:3000",
+            "https://your-production-domain.com"
+        ],
+        "ExposeHeaders": ["ETag", "Content-Length"],
+        "MaxAgeSeconds": 3000
+    }
+]
+```
+
+**Note**: Replace `your-production-domain.com` with your actual production domain.
 
 ## Step 3: Create IAM User for S3 Access
 

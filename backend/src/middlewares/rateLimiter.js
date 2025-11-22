@@ -3,13 +3,18 @@ import { env } from '../libs/env.js';
 
 /**
  * General API rate limiter
+ * More lenient in development to allow for rapid development/testing
  */
 export const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
+    max: env.NODE_ENV === 'development' ? 1000 : 100, // Much higher limit in development
     message: 'Too many requests from this IP, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,
+    skip: (req) => {
+        // Skip rate limiting for health checks or specific paths in development
+        return env.NODE_ENV === 'development' && req.path === '/health';
+    },
 });
 
 /**

@@ -127,8 +127,19 @@ export const useKeyboardNavigation = ({
     };
 
     document.addEventListener('keydown', handleKeyboard);
+    
     // Prevent page/body scrolling when modal is open
+    // Calculate scrollbar width to prevent layout shift
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalBodyPaddingRight = document.body.style.paddingRight;
+    
     document.body.style.overflow = 'hidden';
+    // Compensate for scrollbar width to prevent layout shift
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+    
     // Prevent scrolling on the image grid container
     const gridContainer = document.querySelector('.image-grid-container');
     if (gridContainer) {
@@ -141,7 +152,9 @@ export const useKeyboardNavigation = ({
     return () => {
       document.removeEventListener('keydown', handleKeyboard);
       document.removeEventListener('wheel', handleWheel);
-      document.body.style.overflow = '';
+      // Restore original styles
+      document.body.style.overflow = originalBodyOverflow;
+      document.body.style.paddingRight = originalBodyPaddingRight;
       const gridContainer = document.querySelector('.image-grid-container');
       if (gridContainer) {
         (gridContainer as HTMLElement).style.overflow = '';

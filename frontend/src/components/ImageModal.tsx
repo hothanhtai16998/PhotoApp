@@ -414,6 +414,7 @@ const ImageModal = ({
               loading="eager"
               decoding="async"
               fetchPriority="high"
+              crossOrigin="anonymous"
               onLoad={(e) => {
                 setIsModalImageLoaded(true);
                 // Update class if orientation was misdetected

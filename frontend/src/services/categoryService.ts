@@ -8,12 +8,32 @@ export interface Category {
     imageCount?: number;
 }
 
+// Simple cache to prevent duplicate requests
+let categoriesCache: { data: Category[]; timestamp: number } | null = null;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 export const categoryService = {
-    fetchCategories: async (): Promise<Category[]> => {
+    fetchCategories: async (forceRefresh = false): Promise<Category[]> => {
+        // Return cached data if available and not expired
+        if (!forceRefresh && categoriesCache) {
+            const now = Date.now();
+            if (now - categoriesCache.timestamp < CACHE_DURATION) {
+                return categoriesCache.data;
+            }
+        }
+        
         const res = await api.get('/categories', {
             withCredentials: true,
         });
-        return res.data.categories || [];
+        const categories = res.data.categories || [];
+        
+        // Update cache
+        categoriesCache = {
+            data: categories,
+            timestamp: Date.now()
+        };
+        
+        return categories;
     },
 
     getAllCategoriesAdmin: async (): Promise<Category[]> => {

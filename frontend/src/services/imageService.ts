@@ -241,12 +241,37 @@ export const imageService = {
 		return res.data;
 	},
 
-	fetchLocations: async (): Promise<string[]> => {
+	fetchLocations: async (forceRefresh = false): Promise<string[]> => {
+		// Simple cache to prevent duplicate requests
+		const cacheKey = 'imageLocationsCache';
+		if (!forceRefresh) {
+			const cached = sessionStorage.getItem(cacheKey);
+			if (cached) {
+				try {
+					const { data, timestamp } = JSON.parse(cached);
+					const now = Date.now();
+					if (now - timestamp < 5 * 60 * 1000) { // 5 minutes cache
+						return data;
+					}
+				} catch (e) {
+					// Invalid cache, continue to fetch
+				}
+			}
+		}
+		
 		const res = await api.get('/images/locations', {
 			withCredentials: true,
 		});
 		
-		return res.data.locations || [];
+		const locations = res.data.locations || [];
+		
+		// Update cache
+		sessionStorage.setItem(cacheKey, JSON.stringify({
+			data: locations,
+			timestamp: Date.now()
+		}));
+		
+		return locations;
 	},
 
 	updateImage: async (

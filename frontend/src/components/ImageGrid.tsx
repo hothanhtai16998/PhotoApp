@@ -271,9 +271,12 @@ const ImageGrid = memo(() => {
     });
   }, []);
 
-  // Initial load
+  // Initial load - only fetch if images are not already loaded
   useEffect(() => {
-    fetchImages();
+    // If images are already in the store, don't refetch to prevent flash
+    if (images.length === 0 && !loading) {
+      fetchImages();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -519,7 +522,8 @@ const ImageGrid = memo(() => {
       )}
 
       {/* Main Image Grid */}
-      {loading && images.length === 0 ? (
+      {/* Only show loading skeleton if truly loading and no images exist */}
+      {loading && images.length === 0 && !pagination ? (
         <ImageGridSkeleton />
       ) : images.length === 0 ? (
         <div className="empty-state" role="status" aria-live="polite">
