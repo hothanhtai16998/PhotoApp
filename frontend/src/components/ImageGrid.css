@@ -870,14 +870,15 @@
   .masonry-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 8px; /* Increased gap */
+    grid-auto-rows: auto; /* Let rows size based on content */
   }
 
   .masonry-item.portrait {
-    grid-row: span 26; /* Reduced from 32 */
+    grid-row: auto; /* Let portrait images size naturally */
   }
 
   .masonry-item.landscape {
-    grid-row: span 12; /* Reduced from 16 to make landscape images shorter */
+    grid-row: auto; /* Let landscape images size naturally */
   }
 }
 
@@ -885,13 +886,170 @@
   .masonry-grid {
     grid-template-columns: 1fr;
     gap: 6px; /* Increased gap */
+    grid-auto-rows: auto; /* Let rows size based on content */
   }
 
   .masonry-item.portrait {
-    grid-row: span 24; /* Reduced from 28 */
+    grid-row: auto; /* Let portrait images size naturally */
   }
 
   .masonry-item.landscape {
-    grid-row: span 12; /* Reduced from 15 to make landscape images shorter */
+    grid-row: auto; /* Let landscape images size naturally */
+  }
+}
+
+/* Mobile: Three-block layout (Author, Image, Buttons) */
+@media (max-width: 768px) {
+  .masonry-item {
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: 0;
+    overflow: hidden;
+    min-height: 0; /* Allow flex items to shrink */
+    height: auto; /* Allow item to size based on content */
+  }
+
+  /* Author Block (Top) */
+  .masonry-item-author-mobile {
+    display: flex;
+    padding: 12px;
+    background: #fff;
+    border-bottom: 1px solid #e5e5e5;
+  }
+
+  .masonry-item-author-mobile .image-author-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .masonry-item-author-mobile .author-avatar,
+  .masonry-item-author-mobile .author-avatar-placeholder {
+    width: 32px !important;
+    height: 32px !important;
+    flex-shrink: 0;
+  }
+
+  .masonry-item-author-mobile .author-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .masonry-item-author-mobile .image-author-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #111;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-shadow: none;
+  }
+
+  .masonry-item-author-mobile .author-bio {
+    font-size: 0.75rem;
+    color: #767676;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-shadow: none;
+  }
+
+  /* Image Block (Middle) - Remove padding/margin */
+  .masonry-link {
+    flex: 1;
+    min-height: 0;
+    display: block;
+    position: relative;
+    width: 100%;
+  }
+
+  .masonry-item img,
+  .masonry-item .progressive-image-wrapper,
+  .masonry-item .progressive-image {
+    width: 100%;
+    height: auto !important; /* Maintain natural aspect ratio */
+    object-fit: contain; /* Show full image without cropping */
+    display: block;
+    min-height: 0;
+  }
+
+  .masonry-item .progressive-image-wrapper {
+    height: auto;
+  }
+
+  /* Hide desktop overlay elements on mobile */
+  .masonry-overlay .image-info {
+    display: none !important;
+  }
+
+  .masonry-overlay {
+    display: none !important;
+  }
+
+  /* Buttons Block (Bottom) */
+  .masonry-item-actions-mobile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background: #fff;
+    border-top: 1px solid #e5e5e5;
+  }
+
+  .mobile-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    border: 1px solid #e5e5e5;
+    background: #fff;
+    color: #111;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .mobile-action-btn:hover {
+    background: #f5f5f5;
+    border-color: #d1d1d1;
+  }
+
+  .mobile-action-btn:active {
+    transform: scale(0.95);
+  }
+
+  .mobile-action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .mobile-action-btn.favorite-btn.favorited {
+    background: #fff;
+    border-color: #ef4444;
+    color: #ef4444;
+  }
+
+  .mobile-action-btn.favorite-btn.favorited .favorite-icon-filled {
+    color: #ef4444;
+  }
+
+  .mobile-action-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* Desktop: Hide mobile blocks */
+@media (min-width: 769px) {
+  .masonry-item-author-mobile,
+  .masonry-item-actions-mobile {
+    display: none;
   }
 }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useRef, useCallback, memo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useImageStore } from '@/stores/useImageStore';
-import { Download, MapPin } from 'lucide-react';
+import { Download, MapPin, Heart } from 'lucide-react';
 import type { Image } from '@/types/image';
 import ProgressiveImage from './ProgressiveImage';
 import CategoryNavigation from './CategoryNavigation';
@@ -12,6 +12,8 @@ import api from '@/lib/axios';
 import { generateImageSlug, extractIdFromSlug } from '@/lib/utils';
 import { useInfiniteScroll } from './image/hooks/useInfiniteScroll';
 import { Avatar } from './Avatar';
+import { favoriteService } from '@/services/favoriteService';
+import { useAuthStore } from '@/stores/useAuthStore';
 import './ImageGrid.css';
 
 // Memoized image item component to prevent unnecessary re-renders
@@ -33,7 +35,40 @@ const ImageGridItem = memo(({
   processedImages: React.MutableRefObject<Set<string>>;
 }) => {
   const hasUserInfo = image.uploadedBy && (image.uploadedBy.displayName || image.uploadedBy.username);
+  const { accessToken } = useAuthStore();
+  const [isFavorited, setIsFavorited] = useState<boolean>(false);
+  const [isTogglingFavorite, setIsTogglingFavorite] = useState<boolean>(false);
   
+  // Check favorite status when image changes
+  useEffect(() => {
+    if (accessToken && image && image._id) {
+      const imageId = String(image._id).trim();
+      const isValidMongoId = /^[0-9a-fA-F]{24}$/.test(imageId);
+
+      if (!imageId || imageId === 'undefined' || imageId === 'null' || !isValidMongoId) {
+        setIsFavorited(false);
+        return;
+      }
+
+      favoriteService.checkFavorites([imageId])
+        .then((response) => {
+          if (response && response.favorites && typeof response.favorites === 'object') {
+            const isFavorited = response.favorites[imageId] === true ||
+              response.favorites[String(image._id)] === true ||
+              response.favorites[image._id] === true;
+            setIsFavorited(!!isFavorited);
+          } else {
+            setIsFavorited(false);
+          }
+        })
+        .catch((error) => {
+          console.error('Failed to check favorite status:', error);
+        });
+    } else {
+      setIsFavorited(false);
+    }
+  }, [image._id, accessToken]);
+
   const handleClick = useCallback(() => {
     onSelect(image);
   }, [image, onSelect]);
@@ -46,8 +81,31 @@ const ImageGridItem = memo(({
   }, [image, onSelect]);
 
   const handleDownload = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
     onDownload(image, e);
   }, [image, onDownload]);
+
+  const handleToggleFavorite = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!accessToken || !image._id || isTogglingFavorite) return;
+
+    setIsTogglingFavorite(true);
+    try {
+      const imageId = String(image._id);
+      const response = await favoriteService.toggleFavorite(imageId);
+      setIsFavorited(response.isFavorited);
+      if (response.isFavorited) {
+        toast.success('Đã thêm vào yêu thích');
+      } else {
+        toast.success('Đã xóa khỏi yêu thích');
+      }
+    } catch (error) {
+      console.error('Failed to toggle favorite:', error);
+      toast.error('Không thể cập nhật yêu thích. Vui lòng thử lại.');
+    } finally {
+      setIsTogglingFavorite(false);
+    }
+  }, [accessToken, image._id, isTogglingFavorite]);
 
   const handleImageLoad = useCallback((img: HTMLImageElement) => {
     if (!processedImages.current.has(image._id) && currentImageIds.has(image._id)) {
@@ -75,6 +133,29 @@ const ImageGridItem = memo(({
       role="listitem"
       aria-label={`Ảnh: ${image.imageTitle || 'Không có tiêu đề'}`}
     >
+      {/* Mobile: Author Block (Top) */}
+      {hasUserInfo && (
+        <div className="masonry-item-author-mobile">
+          <div className="image-author-info">
+            <Avatar
+              user={image.uploadedBy}
+              size={32}
+              className="author-avatar"
+              fallbackClassName="author-avatar-placeholder"
+            />
+            <div className="author-details">
+              <span className="image-author-name">
+                {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}
+              </span>
+              {image.uploadedBy.bio && (
+                <span className="author-bio">{image.uploadedBy.bio}</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Block (Middle) */}
       <div
         className="masonry-link"
         onClick={handleClick}
@@ -121,6 +202,7 @@ const ImageGridItem = memo(({
             </button>
           </div>
 
+          {/* Desktop: Author Info (Bottom Left) */}
           {hasUserInfo && (
             <div className="image-info">
               <div className="image-author-info">
@@ -142,6 +224,31 @@ const ImageGridItem = memo(({
             </div>
           )}
         </div>
+      </div>
+
+      {/* Mobile: Buttons Block (Bottom) */}
+      <div className="masonry-item-actions-mobile">
+        <button
+          className={`mobile-action-btn favorite-btn ${isFavorited ? 'favorited' : ''}`}
+          onClick={handleToggleFavorite}
+          disabled={isTogglingFavorite || !accessToken}
+          title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+          aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+        >
+          <Heart
+            size={20}
+            fill={isFavorited ? 'currentColor' : 'none'}
+            className={isFavorited ? 'favorite-icon-filled' : ''}
+          />
+        </button>
+        <button
+          className="mobile-action-btn download-btn"
+          onClick={handleDownload}
+          title="Download"
+          aria-label="Download image"
+        >
+          <Download size={20} />
+        </button>
       </div>
     </div>
   );
