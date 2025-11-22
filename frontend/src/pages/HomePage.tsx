@@ -1,15 +1,33 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import ImageGrid from "@/components/ImageGrid";
 import './HomePage.css';
 import Slider from "@/components/Slider";
 import { useImageStore } from "@/stores/useImageStore";
+import { useGlobalKeyboardShortcuts } from "@/hooks/useGlobalKeyboardShortcuts";
 
 function HomePage() {
     const { currentSearch } = useImageStore();
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
+    const searchBarRef = useRef<{ focus: () => void } | null>(null);
+    
+    // Check if modal is open (image param exists)
+    const isModalOpen = !!searchParams.get('image');
+    
+    // Global keyboard shortcuts
+    useGlobalKeyboardShortcuts({
+        onFocusSearch: () => {
+            // Find search input and focus it
+            const searchInput = document.querySelector('.search-input') as HTMLInputElement;
+            if (searchInput) {
+                searchInput.focus();
+                searchInput.select();
+            }
+        },
+        isModalOpen,
+    });
     
     // If page is refreshed with ?image=slug, redirect to /photos/:slug to show as full page
     // This handles the refresh case (like Unsplash)

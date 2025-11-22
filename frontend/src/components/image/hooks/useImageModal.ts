@@ -126,6 +126,7 @@ export const useImageModal = ({
     }
   }, [currentImageIndex, images, onImageSelect]);
 
+  // Note: Zoom controls are handled in ImageModal component
   // Use keyboard navigation hook
   useKeyboardNavigation({
     onClose,
@@ -147,6 +148,7 @@ export const useImageModal = ({
     images,
     currentImageIndex,
     isEnabled: true,
+    isModalOpen: true, // Modal is open when this hook is used
   });
 
   return {

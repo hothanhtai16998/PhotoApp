@@ -1,12 +1,17 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { Search, X, Clock, TrendingUp, MapPin } from "lucide-react"
 import { useImageStore } from "@/stores/useImageStore"
 import { categoryService, type Category } from "@/services/categoryService"
 import { imageService } from "@/services/imageService"
+import SearchFilters, { type SearchFilters as SearchFiltersType } from "./SearchFilters"
 import './SearchBar.css'
+
+export interface SearchBarRef {
+  focus: () => void;
+}
 
 interface SearchHistoryItem {
   query: string
@@ -16,7 +21,7 @@ interface SearchHistoryItem {
 const MAX_HISTORY_ITEMS = 5
 const SEARCH_DEBOUNCE_MS = 300
 
-export function SearchBar() {
+export const SearchBar = forwardRef<SearchBarRef>((props, ref) => {
   const { fetchImages, currentSearch } = useImageStore()
   const navigate = useNavigate()
   const location = useLocation()
@@ -27,9 +32,35 @@ export function SearchBar() {
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([])
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const [showSuggestions, setShowSuggestions] = useState(false)
+  // Load filters from localStorage
+  const loadFiltersFromStorage = (): SearchFiltersType => {
+    try {
+      const stored = localStorage.getItem('photoApp_searchFilters');
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (error) {
+      console.error('Failed to load filters:', error);
+    }
+    return {
+      orientation: 'all',
+      color: 'all',
+      dateFrom: '',
+      dateTo: '',
+    };
+  };
+
+  const [filters, setFilters] = useState<SearchFiltersType>(loadFiltersFromStorage());
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
+
+  // Expose focus method via ref
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      inputRef.current?.focus();
+    },
+  }));
 
   // Load search history from localStorage
   useEffect(() => {
@@ -383,7 +414,43 @@ export function SearchBar() {
           ) : null}
         </div>
       )}
+
+      {/* Search Filters */}
+      <SearchFilters
+        filters={filters}
+        onFiltersChange={(newFilters) => {
+          setFilters(newFilters);
+          // Save to localStorage
+          try {
+            localStorage.setItem('photoApp_searchFilters', JSON.stringify(newFilters));
+          } catch (error) {
+            console.error('Failed to save filters:', error);
+          }
+          // Apply filters to current search
+          if (location.pathname === '/') {
+            fetchImages({
+              search: searchQuery.trim() || undefined,
+            });
+          }
+        }}
+        onReset={() => {
+          const defaultFilters = {
+            orientation: 'all',
+            color: 'all',
+            dateFrom: '',
+            dateTo: '',
+          };
+          setFilters(defaultFilters);
+          try {
+            localStorage.removeItem('photoApp_searchFilters');
+          } catch (error) {
+            console.error('Failed to clear filters:', error);
+          }
+        }}
+      />
     </div>
   )
-}
+});
+
+SearchBar.displayName = 'SearchBar';
 

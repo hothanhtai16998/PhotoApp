@@ -8,9 +8,14 @@ interface UseKeyboardNavigationOptions {
   onDownload?: () => void;
   onShare?: () => void;
   onToggleFavorite?: () => void;
+  onFocusSearch?: () => void;
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
+  onResetZoom?: () => void;
   images?: Image[];
   currentImageIndex?: number;
   isEnabled?: boolean;
+  isModalOpen?: boolean; // Whether modal is currently open
 }
 
 /**
@@ -24,20 +29,27 @@ export const useKeyboardNavigation = ({
   onDownload,
   onShare,
   onToggleFavorite,
+  onFocusSearch,
+  onZoomIn,
+  onZoomOut,
+  onResetZoom,
   images = [],
   currentImageIndex = -1,
   isEnabled = true,
+  isModalOpen = false,
 }: UseKeyboardNavigationOptions) => {
   const isEnabledRef = useRef(isEnabled);
   const imagesRef = useRef(images);
   const currentImageIndexRef = useRef(currentImageIndex);
+  const isModalOpenRef = useRef(isModalOpen);
 
   // Update refs when values change
   useEffect(() => {
     isEnabledRef.current = isEnabled;
     imagesRef.current = images;
     currentImageIndexRef.current = currentImageIndex;
-  }, [isEnabled, images, currentImageIndex]);
+    isModalOpenRef.current = isModalOpen;
+  }, [isEnabled, images, currentImageIndex, isModalOpen]);
 
   useEffect(() => {
     if (!isEnabled) {
@@ -45,15 +57,24 @@ export const useKeyboardNavigation = ({
     }
 
     const handleKeyboard = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const isInputFocused = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+      
+      // Focus search with / key (only when modal is not open and not typing in inputs)
+      if (e.key === '/' && !isModalOpenRef.current && !isInputFocused && onFocusSearch) {
+        e.preventDefault();
+        onFocusSearch();
+        return;
+      }
+
       // Close modal on Escape
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && isModalOpenRef.current) {
         onClose();
         return;
       }
 
-      // Only handle shortcuts when modal is open (not typing in inputs)
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+      // Only handle modal shortcuts when modal is open (not typing in inputs)
+      if (!isModalOpenRef.current || isInputFocused) {
         return;
       }
 
@@ -102,6 +123,26 @@ export const useKeyboardNavigation = ({
       if ((e.key === 'f' || e.key === 'F') && onToggleFavorite) {
         e.preventDefault();
         onToggleFavorite();
+        return;
+      }
+
+      // Zoom controls with + and -
+      if ((e.key === '+' || e.key === '=') && onZoomIn) {
+        e.preventDefault();
+        onZoomIn();
+        return;
+      }
+
+      if (e.key === '-' && onZoomOut) {
+        e.preventDefault();
+        onZoomOut();
+        return;
+      }
+
+      // Reset zoom with 0
+      if (e.key === '0' && onResetZoom) {
+        e.preventDefault();
+        onResetZoom();
         return;
       }
     };
@@ -160,6 +201,6 @@ export const useKeyboardNavigation = ({
         (gridContainer as HTMLElement).style.overflow = '';
       }
     };
-  }, [isEnabled, onClose, onNavigateLeft, onNavigateRight, onDownload, onShare, onToggleFavorite]);
+  }, [isEnabled, onClose, onNavigateLeft, onNavigateRight, onDownload, onShare, onToggleFavorite, onFocusSearch, onZoomIn, onZoomOut, onResetZoom, isModalOpen]);
 };
 

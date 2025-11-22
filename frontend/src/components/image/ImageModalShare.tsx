@@ -122,11 +122,12 @@ export const ImageModalShare = memo(({ image }: ImageModalShareProps) => {
         ref={shareButtonRef}
         className={`modal-footer-btn modal-share-btn ${showShareMenu ? 'active' : ''}`}
         onClick={handleShare}
-        title="Share (Ctrl/Cmd + S)"
+        title="Chia sẻ (Ctrl/Cmd + S)"
         aria-label="Chia sẻ ảnh"
       >
         <Share2 size={18} />
         <span>Chia sẻ</span>
+        <kbd className="keyboard-hint">⌘S</kbd>
       </button>
       {/* Share Menu */}
       {showShareMenu && (

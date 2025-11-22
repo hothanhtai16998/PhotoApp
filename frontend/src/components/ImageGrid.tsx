@@ -14,6 +14,7 @@ import { useInfiniteScroll } from './image/hooks/useInfiniteScroll';
 import { Avatar } from './Avatar';
 import { favoriteService } from '@/services/favoriteService';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { applyImageFilters } from '@/utils/imageFilters';
 import './ImageGrid.css';
 
 // Memoized image item component to prevent unnecessary re-renders
@@ -356,7 +357,30 @@ const ImageGrid = memo(() => {
   const processedImages = useRef<Set<string>>(new Set());
 
   // Get current image IDs for comparison
-  const currentImageIds = useMemo(() => new Set(images.map(img => img._id)), [images]);
+  // Load filters from localStorage and apply them
+  const filters = useMemo(() => {
+    try {
+      const stored = localStorage.getItem('photoApp_searchFilters');
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (error) {
+      console.error('Failed to load filters:', error);
+    }
+    return {
+      orientation: 'all',
+      color: 'all',
+      dateFrom: '',
+      dateTo: '',
+    };
+  }, []);
+
+  // Apply filters to images
+  const filteredImages = useMemo(() => {
+    return applyImageFilters(images, filters, imageTypes);
+  }, [images, filters, imageTypes]);
+
+  const currentImageIds = useMemo(() => new Set(filteredImages.map(img => img._id)), [filteredImages]);
 
   // Determine image type when it loads - memoized to prevent recreation
   const handleImageLoad = useCallback((imageId: string, img: HTMLImageElement) => {
@@ -573,7 +597,7 @@ const ImageGrid = memo(() => {
         </div>
       ) : (
         <div className="masonry-grid" role="list" aria-label="Danh sách ảnh">
-          {images.map((image) => {
+          {filteredImages.map((image) => {
             const imageType = imageTypes.get(image._id) || 'landscape';
             return (
               <ImageGridItem

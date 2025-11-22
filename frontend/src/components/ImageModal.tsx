@@ -19,11 +19,13 @@ import { toast } from 'sonner';
 import EditImageModal from './EditImageModal';
 import { useImageModal } from './image/hooks/useImageModal';
 import { useInfiniteScroll } from './image/hooks/useInfiniteScroll';
+import { useImageZoom } from './image/hooks/useImageZoom';
 import { ImageModalInfo } from './image/ImageModalInfo';
 import { ImageModalShare } from './image/ImageModalShare';
 import { Avatar } from './Avatar';
 import { useFormattedDate } from '@/hooks/useFormattedDate';
 import CollectionModal from './CollectionModal';
+import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import './ImageModal.css';
 
 interface ImageModalProps {
@@ -61,9 +63,33 @@ const ImageModal = ({
   const [showCollectionModal, setShowCollectionModal] = useState(false);
   const userInfoRef = useRef<HTMLDivElement>(null);
   const userProfileCardRef = useRef<HTMLDivElement>(null);
-  const modalImageRef = useRef<HTMLImageElement>(null);
   const { user } = useAuthStore();
   const navigate = useNavigate();
+
+  // Image zoom functionality
+  const {
+    zoom,
+    pan,
+    isZoomed,
+    containerRef: zoomContainerRef,
+    imageRef: zoomImageRef,
+    zoomIn,
+    zoomOut,
+    resetZoom,
+    handleDoubleClick,
+    handleWheel,
+    handleMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+    handleTouchStart,
+    handleTouchMove,
+    handleTouchEnd,
+  } = useImageZoom({
+    minZoom: 1,
+    maxZoom: 5,
+    zoomStep: 0.25,
+    doubleClickZoom: 2,
+  });
 
   // Use the custom hook for modal state and logic
   const {
@@ -83,6 +109,32 @@ const ImageModal = ({
     onClose,
     onDownload,
   });
+
+  // Add zoom keyboard shortcuts
+  useEffect(() => {
+    if (!isZoomed && zoom === 1) return;
+
+    const handleKeyboard = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+
+      if (e.key === '+' || e.key === '=') {
+        e.preventDefault();
+        zoomIn();
+      } else if (e.key === '-') {
+        e.preventDefault();
+        zoomOut();
+      } else if (e.key === '0') {
+        e.preventDefault();
+        resetZoom();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyboard);
+    return () => document.removeEventListener('keydown', handleKeyboard);
+  }, [isZoomed, zoom, zoomIn, zoomOut, resetZoom]);
 
   // Use the custom hook for formatted date
   const formattedDate = useFormattedDate(image.createdAt, {
@@ -218,31 +270,84 @@ const ImageModal = ({
     };
   }, []);
 
-  // Get related images (same category, excluding current image) with infinite scroll
-  // Combined calculation to avoid duplicate filtering
+  // Get related images with improved algorithm (same photographer, location, category, title similarity)
   const { relatedImages, hasMoreRelatedImages } = useMemo(() => {
     if (!image || images.length === 0) {
       return { relatedImages: [], hasMoreRelatedImages: false };
     }
 
+    // Get current image properties
     const currentCategoryId = typeof image.imageCategory === 'string'
       ? image.imageCategory
       : image.imageCategory?._id;
+    const currentPhotographerId = image.uploadedBy?._id || image.uploadedBy;
+    const currentLocation = image.location?.toLowerCase().trim();
+    const currentTitle = image.imageTitle?.toLowerCase().trim() || '';
 
-    let filtered: Image[];
+    // Calculate relevance score for each image
+    const scoredImages = images
+      .filter(img => img._id !== image._id) // Exclude current image
+      .map(img => {
+        let score = 0;
+        let reasons: string[] = []; // Track why images are related (for debugging)
 
-    if (!currentCategoryId) {
-      // If no category, return other images from current view (excluding current)
-      filtered = images.filter(img => img._id !== image._id);
-    } else {
-      // Filter images by same category, excluding current image
-      filtered = images.filter(img => {
-        if (img._id === image._id) return false;
+        // Same photographer (highest priority - 100 points)
+        const imgPhotographerId = img.uploadedBy?._id || img.uploadedBy;
+        if (currentPhotographerId && imgPhotographerId &&
+          String(currentPhotographerId) === String(imgPhotographerId)) {
+          score += 100;
+          reasons.push('same photographer');
+        }
+
+        // Same location (high priority - 50 points)
+        const imgLocation = img.location?.toLowerCase().trim();
+        if (currentLocation && imgLocation && currentLocation === imgLocation) {
+          score += 50;
+          reasons.push('same location');
+        }
+
+        // Same category (medium priority - 30 points, but only if we have other matches)
         const imgCategoryId = typeof img.imageCategory === 'string'
           ? img.imageCategory
           : img.imageCategory?._id;
-        return imgCategoryId === currentCategoryId;
-      });
+        if (currentCategoryId && imgCategoryId &&
+          String(currentCategoryId) === String(imgCategoryId)) {
+          score += 30;
+          reasons.push('same category');
+        }
+
+        // Title similarity (low priority - up to 20 points)
+        const imgTitle = img.imageTitle?.toLowerCase().trim() || '';
+        if (currentTitle && imgTitle) {
+          // Check for common words
+          const currentWords = currentTitle.split(/\s+/).filter(w => w.length > 2);
+          const imgWords = imgTitle.split(/\s+/).filter(w => w.length > 2);
+          const commonWords = currentWords.filter(w => imgWords.includes(w));
+          if (commonWords.length > 0) {
+            score += Math.min(commonWords.length * 5, 20);
+            reasons.push(`title similarity (${commonWords.length} words)`);
+          }
+        }
+
+        return { image: img, score, reasons };
+      })
+      // Require minimum score threshold - only show images with meaningful relevance
+      // Minimum 30 points means: same category OR same location OR title similarity + category
+      // This prevents showing completely unrelated images while still showing category matches
+      .filter(item => item.score >= 30)
+      .sort((a, b) => b.score - a.score) // Sort by score descending
+      .map(item => item.image); // Extract just the images
+
+    // Use scored images if we have any matches
+    // Prioritize higher-scored images (same photographer, location) over category-only matches
+    let filtered: Image[];
+    if (scoredImages.length > 0) {
+      // If we have highly relevant images (score >= 50), prioritize those
+      // Otherwise, show category matches (score >= 30) which are still somewhat relevant
+      filtered = scoredImages;
+    } else {
+      // If no matches at all, don't show related images
+      filtered = [];
     }
 
     // Return limited images for infinite scroll and check if more available
@@ -380,15 +485,16 @@ const ImageModal = ({
             <button
               className="modal-download-btn"
               onClick={handleDownload}
-              title="Download"
+              title="Tải xuống (Ctrl/Cmd + D)"
             >
               <span>Tải xuống</span>
               <ChevronDown size={16} />
+              <kbd className="keyboard-hint">⌘D</kbd>
             </button>
             <button
               className="modal-close-btn-header"
               onClick={onClose}
-              title="Close"
+              title="Đóng (Esc)"
               aria-label="Close modal"
             >
               <X size={20} />
@@ -401,36 +507,95 @@ const ImageModal = ({
           className="image-modal-content"
           ref={modalContentRef}
         >
-          {/* Main Image */}
-          <div className="modal-main-image-container">
-            <img
-              ref={modalImageRef}
-              src={modalImageSrc || image.regularUrl || image.smallUrl || image.imageUrl}
-              srcSet={
-                image.thumbnailUrl && image.smallUrl && image.regularUrl && image.imageUrl
-                  ? `${image.thumbnailUrl} 200w, ${image.smallUrl} 800w, ${image.regularUrl} 1080w, ${image.imageUrl} 1920w`
-                  : undefined
-              }
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 98vw, 1920px"
-              alt={image.imageTitle || 'Photo'}
-              className={`modal-image ${isModalImageLoaded ? 'loaded' : 'loading'} ${(imageTypes.get(image._id) || 'landscape') === 'landscape' ? 'landscape' : 'portrait'}`}
-              loading="eager"
-              decoding="async"
-              fetchPriority="high"
-              crossOrigin="anonymous"
-              onLoad={(e) => {
-                setIsModalImageLoaded(true);
-                // Update class if orientation was misdetected
-                const img = e.currentTarget;
-                const isPortraitImg = img.naturalHeight > img.naturalWidth;
-                const currentType = imageTypes.get(image._id) || 'landscape';
-                const shouldBePortrait = isPortraitImg;
-                if (shouldBePortrait !== (currentType === 'portrait')) {
-                  img.classList.toggle('landscape', !shouldBePortrait);
-                  img.classList.toggle('portrait', shouldBePortrait);
-                }
+          {/* Main Image with Zoom */}
+          <div
+            className="modal-main-image-container"
+            ref={zoomContainerRef}
+            onWheel={handleWheel}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            style={{
+              cursor: isZoomed ? (zoom > 1 ? 'grab' : 'default') : 'zoom-in',
+              userSelect: 'none',
+              touchAction: 'none',
+            }}
+          >
+            <div
+              className="modal-image-wrapper"
+              style={{
+                transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                transformOrigin: 'center center',
+                transition: zoom === 1 ? 'transform 0.3s ease' : 'none',
               }}
-            />
+            >
+              <img
+                ref={zoomImageRef}
+                src={modalImageSrc || image.regularUrl || image.smallUrl || image.imageUrl}
+                srcSet={
+                  image.thumbnailUrl && image.smallUrl && image.regularUrl && image.imageUrl
+                    ? `${image.thumbnailUrl} 200w, ${image.smallUrl} 800w, ${image.regularUrl} 1080w, ${image.imageUrl} 1920w`
+                    : undefined
+                }
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 98vw, 1920px"
+                alt={image.imageTitle || 'Photo'}
+                className={`modal-image ${isModalImageLoaded ? 'loaded' : 'loading'} ${(imageTypes.get(image._id) || 'landscape') === 'landscape' ? 'landscape' : 'portrait'}`}
+                loading="eager"
+                decoding="async"
+                fetchPriority="high"
+                crossOrigin="anonymous"
+                onDoubleClick={handleDoubleClick}
+                draggable={false}
+                onLoad={(e) => {
+                  setIsModalImageLoaded(true);
+                  // Update class if orientation was misdetected
+                  const img = e.currentTarget;
+                  const isPortraitImg = img.naturalHeight > img.naturalWidth;
+                  const currentType = imageTypes.get(image._id) || 'landscape';
+                  const shouldBePortrait = isPortraitImg;
+                  if (shouldBePortrait !== (currentType === 'portrait')) {
+                    img.classList.toggle('landscape', !shouldBePortrait);
+                    img.classList.toggle('portrait', shouldBePortrait);
+                  }
+                }}
+              />
+            </div>
+
+            {/* Zoom Controls */}
+            {isZoomed && (
+              <div className="modal-zoom-controls">
+                <button
+                  className="modal-zoom-btn"
+                  onClick={zoomOut}
+                  title="Thu nhỏ"
+                  aria-label="Thu nhỏ"
+                >
+                  <ZoomOut size={18} />
+                </button>
+                <span className="modal-zoom-level">{Math.round(zoom * 100)}%</span>
+                <button
+                  className="modal-zoom-btn"
+                  onClick={zoomIn}
+                  disabled={zoom >= 5}
+                  title="Phóng to"
+                  aria-label="Phóng to"
+                >
+                  <ZoomIn size={18} />
+                </button>
+                <button
+                  className="modal-zoom-btn"
+                  onClick={resetZoom}
+                  title="Đặt lại (Esc)"
+                  aria-label="Đặt lại zoom"
+                >
+                  <RotateCcw size={18} />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Modal Footer */}
@@ -502,6 +667,7 @@ const ImageModal = ({
                   onClick={handleToggleFavorite}
                   disabled={isTogglingFavorite}
                   aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                  title={`${isFavorited ? 'Bỏ yêu thích' : 'Yêu thích'} (F)`}
                 >
                   <Heart
                     size={18}
@@ -509,6 +675,7 @@ const ImageModal = ({
                     className={isFavorited ? 'favorite-icon-filled' : ''}
                   />
                   <span>{isFavorited ? 'Đã lưu' : 'Lưu'}</span>
+                  <kbd className="keyboard-hint">F</kbd>
                 </button>
               )}
               {user && (

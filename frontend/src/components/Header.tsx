@@ -1,12 +1,12 @@
 "use client"
 
-import { memo, useState } from "react"
+import { memo, useState, useRef } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Shield, Heart, Menu, X } from "lucide-react"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { useImageStore } from "@/stores/useImageStore"
 import UploadModal from "./UploadModal"
-import { SearchBar } from "./SearchBar"
+import { SearchBar, type SearchBarRef } from "./SearchBar"
 import './Header.css'
 
 export const Header = memo(function Header() {
@@ -15,6 +15,7 @@ export const Header = memo(function Header() {
   const navigate = useNavigate()
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const searchBarRef = useRef<SearchBarRef>(null)
 
   const handleLogoClick = () => {
     if (window.location.pathname !== '/') {
@@ -50,7 +51,7 @@ export const Header = memo(function Header() {
           </button>
 
           {/* Search Bar */}
-          <SearchBar />
+          <SearchBar ref={searchBarRef} />
 
           {/* Right Actions - Desktop */}
           <div className="header-actions desktop-only">
