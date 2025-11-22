@@ -13,6 +13,9 @@ import ProgressiveImage from "@/components/ProgressiveImage";
 import { Avatar } from "@/components/Avatar";
 import api from "@/lib/axios";
 import { generateImageSlug, extractIdFromSlug } from "@/lib/utils";
+import { collectionService } from "@/services/collectionService";
+import type { Collection } from "@/types/collection";
+import { Folder, Edit2 as EditIcon, Trash2, Eye } from "lucide-react";
 import "./ProfilePage.css";
 
 type TabType = 'photos' | 'illustrations' | 'collections' | 'stats';
@@ -26,7 +29,9 @@ function ProfilePage() {
     const [loading, setLoading] = useState(true);
     const [photosCount, setPhotosCount] = useState(0);
     const [illustrationsCount, setIllustrationsCount] = useState(0);
-    const [collectionsCount] = useState(1); // Placeholder
+    const [collections, setCollections] = useState<Collection[]>([]);
+    const [collectionsLoading, setCollectionsLoading] = useState(false);
+    const [collectionsCount, setCollectionsCount] = useState(0);
     
     // Track image aspect ratios (portrait vs landscape)
     const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
@@ -68,6 +73,21 @@ function ProfilePage() {
         }
     }, [user]);
 
+    const fetchCollections = useCallback(async () => {
+        if (!user?._id) return;
+
+        try {
+            setCollectionsLoading(true);
+            const data = await collectionService.getUserCollections();
+            setCollections(data);
+            setCollectionsCount(data.length);
+        } catch (error) {
+            console.error('Failed to fetch collections:', error);
+        } finally {
+            setCollectionsLoading(false);
+        }
+    }, [user]);
+
     useEffect(() => {
         if (!user?._id) {
             navigate('/signin');
@@ -75,7 +95,8 @@ function ProfilePage() {
         }
 
         fetchUserImages();
-    }, [user, navigate, fetchUserImages]);
+        fetchCollections();
+    }, [user, navigate, fetchUserImages, fetchCollections]);
 
     // Listen for refresh event after image upload
     useEffect(() => {
@@ -84,6 +105,7 @@ function ProfilePage() {
             // Use a small delay to ensure backend has processed the new image
             setTimeout(() => {
                 fetchUserImages(true); // Pass true to enable cache-busting
+                fetchCollections(); // Also refresh collections
             }, 500);
         };
 
@@ -91,7 +113,7 @@ function ProfilePage() {
         return () => {
             window.removeEventListener('refreshProfile', handleRefresh);
         };
-    }, [fetchUserImages]);
+    }, [fetchUserImages, fetchCollections]);
 
     const handleEditProfile = () => {
         navigate('/profile/edit');
@@ -413,10 +435,86 @@ function ProfilePage() {
                                 </div>
                             )
                         ) : activeTab === 'collections' ? (
-                            <div className="coming-soon">
-                                <h2>Collections</h2>
-                                <p>This section is coming soon.</p>
-                            </div>
+                            collectionsLoading ? (
+                                <div className="profile-collections-grid" aria-label="Đang tải bộ sưu tập" aria-live="polite">
+                                    {Array.from({ length: 6 }).map((_, index) => (
+                                        <div key={`skeleton-${index}`} className="profile-collection-item">
+                                            <Skeleton className="w-full h-48 rounded-lg mb-3" />
+                                            <Skeleton className="w-3/4 h-4 rounded" />
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : collections.length === 0 ? (
+                                <div className="empty-state" role="status" aria-live="polite">
+                                    <p>Chưa có bộ sưu tập nào.</p>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => navigate('/')}
+                                        className="mt-4"
+                                    >
+                                        Khám phá ảnh để tạo bộ sưu tập
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="profile-collections-grid">
+                                    {collections.map((collection) => {
+                                        const coverImage =
+                                            collection.coverImage &&
+                                            typeof collection.coverImage === 'object'
+                                                ? collection.coverImage
+                                                : null;
+
+                                        return (
+                                            <div
+                                                key={collection._id}
+                                                className="profile-collection-item"
+                                                onClick={() => navigate(`/collections/${collection._id}`)}
+                                            >
+                                                <div className="profile-collection-cover">
+                                                    {coverImage ? (
+                                                        <ProgressiveImage
+                                                            src={coverImage.imageUrl}
+                                                            thumbnailUrl={coverImage.thumbnailUrl}
+                                                            smallUrl={coverImage.smallUrl}
+                                                            regularUrl={coverImage.regularUrl}
+                                                            alt={collection.name}
+                                                        />
+                                                    ) : (
+                                                        <div className="profile-collection-placeholder">
+                                                            <Folder size={48} />
+                                                        </div>
+                                                    )}
+                                                    <div className="profile-collection-overlay">
+                                                        <div className="profile-collection-actions">
+                                                            <button
+                                                                className="profile-collection-action-btn"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    navigate(`/collections/${collection._id}`);
+                                                                }}
+                                                                title="Xem bộ sưu tập"
+                                                            >
+                                                                <Eye size={18} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="profile-collection-info">
+                                                    <h3>{collection.name}</h3>
+                                                    {collection.description && (
+                                                        <p className="profile-collection-description">
+                                                            {collection.description}
+                                                        </p>
+                                                    )}
+                                                    <div className="profile-collection-meta">
+                                                        <span>{collection.imageCount || 0} ảnh</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )
                         ) : (
                             <div className="coming-soon">
                                 <h2>Stats</h2>

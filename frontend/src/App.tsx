@@ -15,6 +15,8 @@ const UploadPage = lazy(() => import("./pages/UploadPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const FavoritesPage = lazy(() => import("./pages/FavoritesPage"));
 const ImagePage = lazy(() => import("./pages/ImagePage"));
+const CollectionsPage = lazy(() => import("./pages/CollectionsPage"));
+const CollectionDetailPage = lazy(() => import("./pages/CollectionDetailPage"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -44,6 +46,8 @@ function App() {
           <Route path="/profile/edit" element={<EditProfilePage />} />
           <Route path="/upload" element={<UploadPage />} />
           <Route path="/favorites" element={<FavoritesPage />} />
+          <Route path="/collections" element={<CollectionsPage />} />
+          <Route path="/collections/:collectionId" element={<CollectionDetailPage />} />
         </Route>
 
         {/**admin routes */}

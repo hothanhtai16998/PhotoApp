@@ -13,6 +13,7 @@ import imageRoute from './routes/imageRoute.js';
 import adminRoute from './routes/adminRoute.js';
 import categoryRoute from './routes/categoryRoute.js';
 import favoriteRoute from './routes/favoriteRoute.js';
+import collectionRoute from './routes/collectionRoute.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { apiLimiter } from './middlewares/rateLimiter.js';
 import { csrfToken, validateCsrf, getCsrfToken } from './middlewares/csrfMiddleware.js';
@@ -113,6 +114,7 @@ app.use('/api/images', imageRoute);
 app.use('/api/admin', adminRoute);
 app.use('/api/categories', categoryRoute);
 app.use('/api/favorites', favoriteRoute);
+app.use('/api/collections', collectionRoute);
 
 // Serve static files in production
 if (env.NODE_ENV === 'production') {

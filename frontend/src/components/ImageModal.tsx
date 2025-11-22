@@ -9,6 +9,7 @@ import {
   Edit2,
   ChevronDown,
   X,
+  FolderPlus,
 } from 'lucide-react';
 import type { Image } from '@/types/image';
 import ProgressiveImage from './ProgressiveImage';
@@ -22,6 +23,7 @@ import { ImageModalInfo } from './image/ImageModalInfo';
 import { ImageModalShare } from './image/ImageModalShare';
 import { Avatar } from './Avatar';
 import { useFormattedDate } from '@/hooks/useFormattedDate';
+import CollectionModal from './CollectionModal';
 import './ImageModal.css';
 
 interface ImageModalProps {
@@ -56,6 +58,7 @@ const ImageModal = ({
   const [isClosingProfileCard, setIsClosingProfileCard] = useState(false);
   const [userImages, setUserImages] = useState<Image[]>([]);
   const [isLoadingUserImages, setIsLoadingUserImages] = useState(false);
+  const [showCollectionModal, setShowCollectionModal] = useState(false);
   const userInfoRef = useRef<HTMLDivElement>(null);
   const userProfileCardRef = useRef<HTMLDivElement>(null);
   const modalImageRef = useRef<HTMLImageElement>(null);
@@ -508,6 +511,17 @@ const ImageModal = ({
                   <span>{isFavorited ? 'Đã lưu' : 'Lưu'}</span>
                 </button>
               )}
+              {user && (
+                <button
+                  className="modal-footer-btn"
+                  onClick={() => setShowCollectionModal(true)}
+                  aria-label="Save to collection"
+                  title="Lưu vào bộ sưu tập"
+                >
+                  <FolderPlus size={18} />
+                  <span>Bộ sưu tập</span>
+                </button>
+              )}
               <ImageModalShare image={image} />
               <ImageModalInfo image={image} />
               {user && (user._id === image.uploadedBy._id || user.isAdmin || user.isSuperAdmin) && (
@@ -593,6 +607,16 @@ const ImageModal = ({
         onUpdate={(updatedImage) => {
           onImageSelect(updatedImage);
           setShowEditModal(false);
+        }}
+      />
+
+      {/* Collection Modal */}
+      <CollectionModal
+        isOpen={showCollectionModal}
+        onClose={() => setShowCollectionModal(false)}
+        imageId={image._id}
+        onCollectionUpdate={() => {
+          // Optionally refresh data if needed
         }}
       />
     </>
