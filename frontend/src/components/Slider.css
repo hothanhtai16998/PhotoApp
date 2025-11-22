@@ -579,6 +579,10 @@
 		text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 	}
 
+	.slide-nav-buttons {
+		display: none;
+	}
+
 	.slide-nav-btn {
 		font-size: 16px;
 		padding: 10px 14px;
@@ -726,8 +730,7 @@
 	}
 
 	.slide-nav-buttons {
-		flex-wrap: wrap;
-		gap: 6px;
+		display: none;
 	}
 
 	.slide-nav-btn {
