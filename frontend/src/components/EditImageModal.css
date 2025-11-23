@@ -35,6 +35,13 @@
   overflow: hidden;
 }
 
+.edit-image-modal-fullscreen {
+  max-width: 95vw;
+  width: 95vw;
+  max-height: 95vh;
+  height: 95vh;
+}
+
 @keyframes slideUp {
   from {
     opacity: 0;

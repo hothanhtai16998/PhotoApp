@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, MapPin, Camera } from 'lucide-react';
+import { X, MapPin, Camera, Image as ImageIcon } from 'lucide-react';
 import type { Image } from '@/types/image';
 import { imageService } from '@/services/imageService';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { toast } from 'sonner';
+import { ImageEditor } from './image/ImageEditor';
+import { TagInput } from './ui/TagInput';
 import './EditImageModal.css';
 
 interface EditImageModalProps {
@@ -15,8 +17,9 @@ interface EditImageModalProps {
 
 function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProps) {
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'details' | 'tags' | 'exif' | 'settings'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'tags' | 'exif' | 'edit'>('details');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
 
   // Form state
   const [imageTitle, setImageTitle] = useState(image.imageTitle || '');
@@ -74,7 +77,55 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
     }
   }, [image._id, imageTitle, location, cameraModel, tags, canEdit, onUpdate, onClose]);
 
+  // Handle saving edited image
+  const handleSaveEditedImage = useCallback(async (editedImageBlob: Blob) => {
+    if (!canEdit) {
+      toast.error('Bạn không có quyền chỉnh sửa ảnh này');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Convert blob to File
+      const editedFile = new File([editedImageBlob], `${image.imageTitle || 'image'}.jpg`, {
+        type: 'image/jpeg',
+      });
+
+      // Upload edited image
+      const updatedImage = await imageService.updateImageWithFile(image._id, editedFile);
+
+      toast.success('Cập nhật ảnh đã chỉnh sửa thành công');
+      onUpdate(updatedImage);
+      setShowEditor(false);
+      onClose();
+    } catch (error) {
+      console.error('Failed to save edited image:', error);
+      const errorMessage =
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        'Lưu ảnh đã chỉnh sửa thất bại';
+      toast.error(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [image._id, image.imageTitle, canEdit, onUpdate, onClose]);
+
   if (!isOpen) return null;
+
+  // Show image editor in full screen
+  if (showEditor) {
+    return (
+      <div className="edit-image-modal-overlay">
+        <div className="edit-image-modal edit-image-modal-fullscreen" onClick={(e) => e.stopPropagation()}>
+          <ImageEditor
+            imageUrl={image.imageUrl || image.regularUrl || image.smallUrl || ''}
+            imageTitle={image.imageTitle || ''}
+            onSave={handleSaveEditedImage}
+            onCancel={() => setShowEditor(false)}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="edit-image-modal-overlay" onClick={onClose}>
@@ -98,7 +149,6 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
           <button
             className={`edit-modal-tab ${activeTab === 'tags' ? 'active' : ''}`}
             onClick={() => setActiveTab('tags')}
-            disabled
           >
             Tags
           </button>
@@ -109,11 +159,11 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
             Exif
           </button>
           <button
-            className={`edit-modal-tab ${activeTab === 'settings' ? 'active' : ''}`}
-            onClick={() => setActiveTab('settings')}
-            disabled
+            className={`edit-modal-tab ${activeTab === 'edit' ? 'active' : ''}`}
+            onClick={() => setShowEditor(true)}
           >
-            Cài đặt
+            <ImageIcon size={16} />
+            Chỉnh sửa ảnh
           </button>
         </div>
 
@@ -209,11 +259,6 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
             </div>
           )}
 
-          {activeTab === 'settings' && (
-            <div className="edit-modal-tab-panel">
-              <p className="edit-modal-coming-soon">Settings feature coming soon</p>
-            </div>
-          )}
 
           {/* Form Actions */}
           <div className="edit-modal-actions">

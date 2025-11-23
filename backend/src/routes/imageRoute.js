@@ -5,6 +5,8 @@ import {
     downloadImage,
     getImageById,
     updateImage,
+    replaceImage,
+    batchReplaceImages,
 } from '../controllers/imageController.js';
 import {
     incrementView,
@@ -14,7 +16,7 @@ import {
     getAllImages,
     getLocations,
 } from '../controllers/imageSearchController.js';
-import { singleUpload } from '../middlewares/multerMiddleware.js';
+import { singleUpload, multipleUpload } from '../middlewares/multerMiddleware.js';
 import { protectedRoute } from '../middlewares/authMiddleware.js';
 import { uploadLimiter } from '../middlewares/rateLimiter.js';
 import { validateImageUpload, validateGetImages, validateUserId } from '../middlewares/validationMiddleware.js';
@@ -48,6 +50,8 @@ router.get('/:imageId/download', downloadImage);
 // Protected routes (with CSRF protection for state-changing operations)
 router.post('/upload', protectedRoute, validateCsrf, uploadLimiter, singleUpload, validateImageUpload, uploadImage);
 router.patch('/:imageId', protectedRoute, validateCsrf, updateImage);
+router.patch('/:imageId/replace', protectedRoute, validateCsrf, uploadLimiter, singleUpload, replaceImage);
+router.patch('/batch/replace', protectedRoute, validateCsrf, uploadLimiter, multipleUpload, batchReplaceImages);
 router.get('/user/:userId', protectedRoute, validateUserId, validateGetImages, getImagesByUserId);
 
 export default router;
