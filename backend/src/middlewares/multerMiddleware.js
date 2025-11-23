@@ -32,4 +32,5 @@ const upload = multer({
 });
 
 export const singleUpload = upload.single('image');
+export const multipleUpload = upload.array('images', 50); // Max 50 images
 export const avatarUpload = upload.single('avatar');
