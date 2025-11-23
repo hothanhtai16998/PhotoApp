@@ -385,6 +385,35 @@ const ImageGrid = memo(() => {
   const processedImages = useRef<Set<string>>(new Set());
   const preloadQueue = useRef<Set<string>>(new Set());
   
+  // Simple transition tracking - just prevent showing skeleton during quick category changes
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const previousCategoryRef = useRef<string | undefined>(currentCategory);
+  
+  // Handle category changes
+  useEffect(() => {
+    if (previousCategoryRef.current !== currentCategory) {
+      setIsTransitioning(true);
+      previousCategoryRef.current = currentCategory;
+      
+      // End transition when images load or after timeout
+      const timer = setTimeout(() => {
+        setIsTransitioning(false);
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [currentCategory]);
+  
+  // End transition when images are loaded
+  useEffect(() => {
+    if (isTransitioning && images.length > 0 && !loading) {
+      const timer = setTimeout(() => {
+        setIsTransitioning(false);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [isTransitioning, images.length, loading]);
+  
   // Clear processed images when image list changes significantly
   useEffect(() => {
     // Clear processed images for images that are no longer in the list
@@ -714,10 +743,10 @@ const ImageGrid = memo(() => {
       )}
 
       {/* Main Image Grid */}
-      {/* Only show loading skeleton if truly loading and no images exist */}
-      {loading && images.length === 0 && !pagination ? (
+      {/* Show loading skeleton only when truly loading with no images and not transitioning */}
+      {loading && images.length === 0 && !pagination && !isTransitioning ? (
         <ImageGridSkeleton />
-      ) : images.length === 0 ? (
+      ) : filteredImages.length === 0 && !isTransitioning ? (
         <div className="empty-state" role="status" aria-live="polite">
           {currentSearch ? (
             <>
@@ -745,8 +774,12 @@ const ImageGrid = memo(() => {
           )}
         </div>
       ) : (
-        <div className="masonry-grid" role="list" aria-label="Danh sách ảnh">
-          {filteredImages.map((image) => {
+        <div 
+          className={`masonry-grid ${isTransitioning ? 'transitioning' : ''}`}
+          role="list" 
+          aria-label="Danh sách ảnh"
+        >
+            {filteredImages.length > 0 ? filteredImages.map((image) => {
             // Get image type and aspect ratio
             const imageType = imageTypes.get(image._id);
             const aspectRatio = imageAspectRatios.get(image._id);
@@ -781,7 +814,7 @@ const ImageGrid = memo(() => {
                 processedImages={processedImages}
               />
             );
-          })}
+          }) : null}
         </div>
       )}
       {/* Infinite Scroll Trigger - invisible element at bottom */}

@@ -180,7 +180,7 @@ export const useImageStore = create(
 				state.loading = true;
 				state.error = null;
 				
-				// Clear images immediately when category/search/location changes to prevent showing old images
+				// Check if category/search/location changed
 				const currentCategory = state.currentCategory;
 				const currentSearch = state.currentSearch;
 				const currentLocation = state.currentLocation;
@@ -188,7 +188,8 @@ export const useImageStore = create(
 				const searchChanged = params?.search !== undefined && params.search !== currentSearch;
 				const locationChanged = params?.location !== undefined && params.location !== currentLocation;
 				
-				// If it's a new query (category/search/location changed or page 1), clear images immediately
+				// If it's a new query (category/search/location changed or page 1), clear images
+				// Note: Component should save images before this runs for smooth transitions
 				if (categoryChanged || searchChanged || locationChanged || params?.page === 1 || !params?.page) {
 					state.images = [];
 					state.pagination = null;

@@ -521,6 +521,43 @@
   width: 100%;
   padding: 0;
   background: #fff;
+  transition: opacity 0.2s ease;
+}
+
+.masonry-grid.transitioning {
+  opacity: 0.7;
+}
+
+/* Smooth transition when category changes */
+.masonry-grid.transitioning {
+  pointer-events: none; /* Prevent interaction during transition */
+  position: relative;
+}
+
+.masonry-grid.transitioning .masonry-item {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+/* Ensure smooth fade-in when new images appear */
+.masonry-item {
+  animation: fadeIn 0.4s ease-out;
+  will-change: opacity, transform;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Prevent flash during category change */
+.masonry-grid {
+  min-height: 200px; /* Prevent layout shift */
 }
 
 /* Masonry Items */
