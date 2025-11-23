@@ -12,7 +12,59 @@ interface ImageModalInfoProps {
 export const ImageModalInfo = memo(({ image, onTagClick }: ImageModalInfoProps) => {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'views' | 'downloads'>('views');
+  const [positionBelow, setPositionBelow] = useState(false);
   const infoButtonRef = useRef<HTMLButtonElement>(null);
+  const infoModalRef = useRef<HTMLDivElement>(null);
+
+  // Check available space and position modal accordingly
+  useEffect(() => {
+    if (!showInfoModal || !infoButtonRef.current) return;
+
+    const checkPosition = () => {
+      const buttonRect = infoButtonRef.current?.getBoundingClientRect();
+
+      if (buttonRect) {
+        const spaceAbove = buttonRect.top;
+        const spaceBelow = window.innerHeight - buttonRect.bottom;
+        // Estimate modal height (usually around 400-500px, but can be up to 60vh)
+        const estimatedModalHeight = Math.min(500, window.innerHeight * 0.6);
+        const requiredSpace = estimatedModalHeight + 20; // 20px for gap
+
+        // If not enough space above but enough below, position below
+        if (spaceAbove < requiredSpace && spaceBelow >= requiredSpace) {
+          setPositionBelow(true);
+        } else {
+          setPositionBelow(false);
+        }
+      }
+    };
+
+    // Check position immediately and after modal renders
+    checkPosition();
+    const timer = setTimeout(checkPosition, 50);
+    const timer2 = setTimeout(checkPosition, 200); // Check again after animation
+
+    // Also check on scroll/resize
+    window.addEventListener('scroll', checkPosition, true);
+    window.addEventListener('resize', checkPosition);
+
+    // Use ResizeObserver for more accurate detection
+    let resizeObserver: ResizeObserver | null = null;
+    if (infoModalRef.current) {
+      resizeObserver = new ResizeObserver(checkPosition);
+      resizeObserver.observe(infoModalRef.current);
+    }
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(timer2);
+      window.removeEventListener('scroll', checkPosition, true);
+      window.removeEventListener('resize', checkPosition);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+    };
+  }, [showInfoModal]);
 
   // Close info modal when clicking outside
   useEffect(() => {
@@ -47,7 +99,10 @@ export const ImageModalInfo = memo(({ image, onTagClick }: ImageModalInfoProps) 
       </button>
       {/* Info Modal */}
       {showInfoModal && (
-        <div className="info-modal-wrapper">
+        <div
+          ref={infoModalRef}
+          className={`info-modal-wrapper ${positionBelow ? 'position-below' : ''}`}
+        >
           <div className="info-modal">
             <div className="info-modal-header">
               <h2 className="info-modal-title">Thông tin</h2>

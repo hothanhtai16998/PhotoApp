@@ -10,7 +10,59 @@ interface ImageModalShareProps {
 
 export const ImageModalShare = memo(({ image }: ImageModalShareProps) => {
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [positionBelow, setPositionBelow] = useState(false);
   const shareButtonRef = useRef<HTMLButtonElement>(null);
+  const shareMenuRef = useRef<HTMLDivElement>(null);
+
+  // Check available space and position menu accordingly
+  useEffect(() => {
+    if (!showShareMenu || !shareButtonRef.current) return;
+
+    const checkPosition = () => {
+      const buttonRect = shareButtonRef.current?.getBoundingClientRect();
+
+      if (buttonRect) {
+        const spaceAbove = buttonRect.top;
+        const spaceBelow = window.innerHeight - buttonRect.bottom;
+        // Estimate menu height (usually around 300-350px)
+        const estimatedMenuHeight = 350;
+        const requiredSpace = estimatedMenuHeight + 20; // 20px for gap
+
+        // If not enough space above but enough below, position below
+        if (spaceAbove < requiredSpace && spaceBelow >= requiredSpace) {
+          setPositionBelow(true);
+        } else {
+          setPositionBelow(false);
+        }
+      }
+    };
+
+    // Check position immediately and after menu renders
+    checkPosition();
+    const timer = setTimeout(checkPosition, 50);
+    const timer2 = setTimeout(checkPosition, 200); // Check again after animation
+
+    // Also check on scroll/resize
+    window.addEventListener('scroll', checkPosition, true);
+    window.addEventListener('resize', checkPosition);
+
+    // Use ResizeObserver for more accurate detection
+    let resizeObserver: ResizeObserver | null = null;
+    if (shareMenuRef.current) {
+      resizeObserver = new ResizeObserver(checkPosition);
+      resizeObserver.observe(shareMenuRef.current);
+    }
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(timer2);
+      window.removeEventListener('scroll', checkPosition, true);
+      window.removeEventListener('resize', checkPosition);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+    };
+  }, [showShareMenu]);
 
   // Close share menu when clicking outside
   useEffect(() => {
@@ -131,7 +183,10 @@ export const ImageModalShare = memo(({ image }: ImageModalShareProps) => {
       </button>
       {/* Share Menu */}
       {showShareMenu && (
-        <div className="share-menu-wrapper">
+        <div
+          ref={shareMenuRef}
+          className={`share-menu-wrapper ${positionBelow ? 'position-below' : ''}`}
+        >
           <div className="share-menu">
             <button
               className="share-menu-item"
