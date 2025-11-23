@@ -178,6 +178,10 @@ const ImageGridItem = memo(({
           thumbnailUrl={image.thumbnailUrl}
           smallUrl={image.smallUrl}
           regularUrl={image.regularUrl}
+          thumbnailAvifUrl={image.thumbnailAvifUrl}
+          smallAvifUrl={image.smallAvifUrl}
+          regularAvifUrl={image.regularAvifUrl}
+          imageAvifUrl={image.imageAvifUrl}
           alt={image.imageTitle || 'Photo'}
           onLoad={handleImageLoad}
         />

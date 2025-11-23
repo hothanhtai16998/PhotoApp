@@ -6,6 +6,11 @@ interface ProgressiveImageProps {
   thumbnailUrl?: string;
   smallUrl?: string;
   regularUrl?: string;
+  // AVIF versions for better compression
+  thumbnailAvifUrl?: string;
+  smallAvifUrl?: string;
+  regularAvifUrl?: string;
+  imageAvifUrl?: string;
   alt: string;
   className?: string;
   onLoad?: (img: HTMLImageElement) => void;
@@ -40,17 +45,17 @@ const isImageCached = (url: string): Promise<boolean> => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     let resolved = false;
-    
+
     const resolveOnce = (value: boolean) => {
       if (!resolved) {
         resolved = true;
         resolve(value);
       }
     };
-    
+
     // Set a short timeout - if image loads quickly, it's likely cached
     const timeout = setTimeout(() => resolveOnce(false), 50);
-    
+
     img.onload = () => {
       clearTimeout(timeout);
       resolveOnce(true);
@@ -59,7 +64,7 @@ const isImageCached = (url: string): Promise<boolean> => {
       clearTimeout(timeout);
       resolveOnce(false);
     };
-    
+
     img.src = url;
   });
 };
@@ -74,23 +79,32 @@ const ProgressiveImage = memo(({
   src,
   thumbnailUrl,
   smallUrl,
-  regularUrl, // Reserved for future use (e.g., detail view)
+  regularUrl,
+  thumbnailAvifUrl,
+  smallAvifUrl,
+  regularAvifUrl,
+  imageAvifUrl,
   alt,
   className = '',
   onLoad,
   onError,
 }: ProgressiveImageProps) => {
-  // Suppress unused parameter warning
-  void regularUrl;
   // Generate URLs on-the-fly if not provided (for old images)
   const effectiveThumbnail = thumbnailUrl || generateThumbnailUrl(src);
   const effectiveSmall = smallUrl || generateSmallUrl(src);
+  const effectiveRegular = regularUrl || src;
+
+  // AVIF URLs (fallback to WebP if not available)
+  const effectiveThumbnailAvif = thumbnailAvifUrl || effectiveThumbnail;
+  const effectiveSmallAvif = smallAvifUrl || effectiveSmall;
+  const effectiveRegularAvif = regularAvifUrl || effectiveRegular;
+  const effectiveOriginalAvif = imageAvifUrl || src;
 
   // Check if image was already loaded (from global cache or browser cache)
   // Synchronously check cache to prevent any flash
   const isCached = globalLoadedImages.has(effectiveSmall) || globalLoadedImages.has(effectiveThumbnail);
   const cachedSrc = globalLoadedImages.has(effectiveSmall) ? effectiveSmall : effectiveThumbnail;
-  
+
   // Also check if image might be in browser cache by creating a test image
   // This helps catch images that were loaded but not added to global cache
   let browserCached = false;
@@ -112,10 +126,10 @@ const ProgressiveImage = memo(({
       // Ignore errors in cache check
     }
   }
-  
+
   const isActuallyCached = isCached || browserCached;
   const finalCachedSrc = isCached ? cachedSrc : (browserCached ? (effectiveSmall !== effectiveThumbnail ? effectiveSmall : effectiveThumbnail) : effectiveThumbnail);
-  
+
   const [currentSrc, setCurrentSrc] = useState<string>(finalCachedSrc);
   const [isLoaded, setIsLoaded] = useState(isActuallyCached);
   const [skipTransition, setSkipTransition] = useState(isActuallyCached); // Skip transition for cached images
@@ -125,7 +139,7 @@ const ProgressiveImage = memo(({
   const containerRef = useRef<HTMLDivElement>(null);
   const loadedSrcs = useRef<Set<string>>(new Set());
   const preloadedRef = useRef<boolean>(false);
-  
+
   // Callback ref to check if image is already loaded when element mounts
   // This runs synchronously when React attaches the ref, before paint
   const setImgRef = useCallback((node: HTMLImageElement | null) => {
@@ -164,7 +178,7 @@ const ProgressiveImage = memo(({
       // Check multiple sources for cached state
       const isInGlobalCache = globalLoadedImages.has(effectiveSmall) || globalLoadedImages.has(effectiveThumbnail);
       const isInLocalCache = loadedSrcs.current.has(effectiveSmall) || loadedSrcs.current.has(effectiveThumbnail);
-      
+
       if (isInGlobalCache || isInLocalCache) {
         // Image was already loaded, restore immediately without transition
         setCurrentSrc(effectiveSmall !== effectiveThumbnail && globalLoadedImages.has(effectiveSmall) ? effectiveSmall : currentSrcValue);
@@ -208,18 +222,18 @@ const ProgressiveImage = memo(({
         setSkipTransition(true);
       }
     }
-    
+
     // If image element exists, force immediate visibility if cached
     if (imgRef.current) {
       const img = imgRef.current;
       const imgSrc = img.src || currentSrc;
-      
+
       // Check if this image URL is in the global cache
       if (globalLoadedImages.has(imgSrc) || globalLoadedImages.has(effectiveSmall) || globalLoadedImages.has(effectiveThumbnail)) {
         // Force immediate visibility - set before browser paints
         img.style.setProperty('opacity', '1', 'important');
         img.style.setProperty('transition', 'none', 'important');
-        
+
         // If image is already complete, it's definitely loaded
         if (img.complete && img.naturalWidth > 0) {
           img.style.setProperty('opacity', '1', 'important');
@@ -231,7 +245,7 @@ const ProgressiveImage = memo(({
   // Preload images using Intersection Observer (like Unsplash)
   useEffect(() => {
     if (!containerRef.current || preloadedRef.current) return;
-    
+
     // If already loaded from cache, skip preloading
     if (isLoaded && skipTransition) {
       preloadedRef.current = true;
@@ -378,35 +392,102 @@ const ProgressiveImage = memo(({
   // Never show loading state if image is cached
   const shouldRenderAsLoaded = isLoaded || skipTransition || isActuallyCached;
   const finalClassName = `progressive-image ${shouldRenderAsLoaded ? 'loaded' : 'loading'} ${isError ? 'error' : ''} ${skipTransition ? 'no-transition' : ''}`;
-  
+
+  // Determine which URLs to use based on current state
+  const getCurrentUrls = () => {
+    if (currentSrc === effectiveSmall) {
+      return {
+        avif: effectiveSmallAvif,
+        webp: effectiveSmall,
+      };
+    } else if (currentSrc === effectiveThumbnail) {
+      return {
+        avif: effectiveThumbnailAvif,
+        webp: effectiveThumbnail,
+      };
+    } else {
+      return {
+        avif: effectiveOriginalAvif,
+        webp: currentSrc,
+      };
+    }
+  };
+
+  const { avif: currentAvifUrl, webp: currentWebpUrl } = getCurrentUrls();
+  const hasAvif = thumbnailAvifUrl || smallAvifUrl || regularAvifUrl || imageAvifUrl;
+
   return (
     <div ref={containerRef} className={`progressive-image-wrapper ${className}`}>
-      <img
-        ref={setImgRef}
-        src={currentSrc}
-        alt={alt}
-        className={finalClassName}
-        onLoad={handleLoad}
-        onError={handleError}
-        loading={shouldLoadEagerly || isActuallyCached ? 'eager' : 'lazy'}
-        decoding="async"
-        crossOrigin="anonymous"
-        style={
-          skipTransition || isActuallyCached
-            ? { 
-                opacity: 1, 
-                transition: 'none', 
+      {hasAvif ? (
+        // Use <picture> element for AVIF support with WebP fallback
+        <picture>
+          {/* AVIF source (modern browsers) */}
+          <source
+            srcSet={currentAvifUrl}
+            type="image/avif"
+          />
+          {/* WebP source (fallback) */}
+          <source
+            srcSet={currentWebpUrl}
+            type="image/webp"
+          />
+          {/* Fallback img element */}
+          <img
+            ref={setImgRef}
+            src={currentWebpUrl}
+            alt={alt}
+            className={finalClassName}
+            onLoad={handleLoad}
+            onError={handleError}
+            loading={shouldLoadEagerly || isActuallyCached ? 'eager' : 'lazy'}
+            decoding="async"
+            crossOrigin="anonymous"
+            style={
+              skipTransition || isActuallyCached
+                ? {
+                  opacity: 1,
+                  transition: 'none',
+                  visibility: 'visible',
+                  // Force GPU acceleration for smoother rendering
+                  transform: 'translateZ(0)',
+                  willChange: 'auto'
+                }
+                : isLoaded
+                  ? { opacity: 1 }
+                  : undefined
+            }
+            data-cached={(skipTransition || isActuallyCached) ? 'true' : undefined}
+          />
+        </picture>
+      ) : (
+        // Fallback to regular img for images without AVIF
+        <img
+          ref={setImgRef}
+          src={currentSrc}
+          alt={alt}
+          className={finalClassName}
+          onLoad={handleLoad}
+          onError={handleError}
+          loading={shouldLoadEagerly || isActuallyCached ? 'eager' : 'lazy'}
+          decoding="async"
+          crossOrigin="anonymous"
+          style={
+            skipTransition || isActuallyCached
+              ? {
+                opacity: 1,
+                transition: 'none',
                 visibility: 'visible',
                 // Force GPU acceleration for smoother rendering
                 transform: 'translateZ(0)',
                 willChange: 'auto'
               }
-            : isLoaded
-            ? { opacity: 1 }
-            : undefined
-        }
-        data-cached={(skipTransition || isActuallyCached) ? 'true' : undefined}
-      />
+              : isLoaded
+                ? { opacity: 1 }
+                : undefined
+          }
+          data-cached={(skipTransition || isActuallyCached) ? 'true' : undefined}
+        />
+      )}
       {/* Blur-up overlay effect while loading - don't show for cached images */}
       {!isLoaded && !skipTransition && effectiveThumbnail && (
         <div

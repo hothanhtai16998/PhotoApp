@@ -534,36 +534,86 @@ const ImageModal = ({
                 transition: zoom === 1 ? 'transform 0.3s ease' : 'none',
               }}
             >
-              <img
-                ref={zoomImageRef}
-                src={modalImageSrc || image.regularUrl || image.smallUrl || image.imageUrl}
-                srcSet={
-                  image.thumbnailUrl && image.smallUrl && image.regularUrl && image.imageUrl
-                    ? `${image.thumbnailUrl} 200w, ${image.smallUrl} 800w, ${image.regularUrl} 1080w, ${image.imageUrl} 1920w`
-                    : undefined
-                }
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 98vw, 1920px"
-                alt={image.imageTitle || 'Photo'}
-                className={`modal-image ${isModalImageLoaded ? 'loaded' : 'loading'} ${(imageTypes.get(image._id) || 'landscape') === 'landscape' ? 'landscape' : 'portrait'}`}
-                loading="eager"
-                decoding="async"
-                fetchPriority="high"
-                crossOrigin="anonymous"
-                onDoubleClick={handleDoubleClick}
-                draggable={false}
-                onLoad={(e) => {
-                  setIsModalImageLoaded(true);
-                  // Update class if orientation was misdetected
-                  const img = e.currentTarget;
-                  const isPortraitImg = img.naturalHeight > img.naturalWidth;
-                  const currentType = imageTypes.get(image._id) || 'landscape';
-                  const shouldBePortrait = isPortraitImg;
-                  if (shouldBePortrait !== (currentType === 'portrait')) {
-                    img.classList.toggle('landscape', !shouldBePortrait);
-                    img.classList.toggle('portrait', shouldBePortrait);
+              {image.imageAvifUrl || image.regularAvifUrl || image.smallAvifUrl || image.thumbnailAvifUrl ? (
+                <picture>
+                  {/* AVIF sources with responsive sizes */}
+                  <source
+                    srcSet={
+                      image.thumbnailAvifUrl && image.smallAvifUrl && image.regularAvifUrl && image.imageAvifUrl
+                        ? `${image.thumbnailAvifUrl} 200w, ${image.smallAvifUrl} 800w, ${image.regularAvifUrl} 1080w, ${image.imageAvifUrl} 1920w`
+                        : image.regularAvifUrl || image.imageAvifUrl || ''
+                    }
+                    type="image/avif"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 98vw, 1920px"
+                  />
+                  {/* WebP sources with responsive sizes (fallback) */}
+                  <source
+                    srcSet={
+                      image.thumbnailUrl && image.smallUrl && image.regularUrl && image.imageUrl
+                        ? `${image.thumbnailUrl} 200w, ${image.smallUrl} 800w, ${image.regularUrl} 1080w, ${image.imageUrl} 1920w`
+                        : undefined
+                    }
+                    type="image/webp"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 98vw, 1920px"
+                  />
+                  {/* Fallback img element */}
+                  <img
+                    ref={zoomImageRef}
+                    src={modalImageSrc || image.regularUrl || image.smallUrl || image.imageUrl}
+                    alt={image.imageTitle || 'Photo'}
+                    className={`modal-image ${isModalImageLoaded ? 'loaded' : 'loading'} ${(imageTypes.get(image._id) || 'landscape') === 'landscape' ? 'landscape' : 'portrait'}`}
+                    loading="eager"
+                    decoding="async"
+                    fetchPriority="high"
+                    crossOrigin="anonymous"
+                    onDoubleClick={handleDoubleClick}
+                    draggable={false}
+                    onLoad={(e) => {
+                      setIsModalImageLoaded(true);
+                      // Update class if orientation was misdetected
+                      const img = e.currentTarget;
+                      const isPortraitImg = img.naturalHeight > img.naturalWidth;
+                      const currentType = imageTypes.get(image._id) || 'landscape';
+                      const shouldBePortrait = isPortraitImg;
+                      if (shouldBePortrait !== (currentType === 'portrait')) {
+                        img.classList.toggle('landscape', !shouldBePortrait);
+                        img.classList.toggle('portrait', shouldBePortrait);
+                      }
+                    }}
+                  />
+                </picture>
+              ) : (
+                <img
+                  ref={zoomImageRef}
+                  src={modalImageSrc || image.regularUrl || image.smallUrl || image.imageUrl}
+                  srcSet={
+                    image.thumbnailUrl && image.smallUrl && image.regularUrl && image.imageUrl
+                      ? `${image.thumbnailUrl} 200w, ${image.smallUrl} 800w, ${image.regularUrl} 1080w, ${image.imageUrl} 1920w`
+                      : undefined
                   }
-                }}
-              />
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 98vw, 1920px"
+                  alt={image.imageTitle || 'Photo'}
+                  className={`modal-image ${isModalImageLoaded ? 'loaded' : 'loading'} ${(imageTypes.get(image._id) || 'landscape') === 'landscape' ? 'landscape' : 'portrait'}`}
+                  loading="eager"
+                  decoding="async"
+                  fetchPriority="high"
+                  crossOrigin="anonymous"
+                  onDoubleClick={handleDoubleClick}
+                  draggable={false}
+                  onLoad={(e) => {
+                    setIsModalImageLoaded(true);
+                    // Update class if orientation was misdetected
+                    const img = e.currentTarget;
+                    const isPortraitImg = img.naturalHeight > img.naturalWidth;
+                    const currentType = imageTypes.get(image._id) || 'landscape';
+                    const shouldBePortrait = isPortraitImg;
+                    if (shouldBePortrait !== (currentType === 'portrait')) {
+                      img.classList.toggle('landscape', !shouldBePortrait);
+                      img.classList.toggle('portrait', shouldBePortrait);
+                    }
+                  }}
+                />
+              )}
             </div>
 
             {/* Zoom Controls */}
