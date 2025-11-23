@@ -857,6 +857,8 @@ const ImageGrid = memo(() => {
           }}
           onImageSelect={(updatedImage) => {
             handleImageUpdate(updatedImage);
+            // Set fromGrid flag to prevent HomePage from redirecting when changing images in modal
+            sessionStorage.setItem('imagePage_fromGrid', 'true');
             // Update URL to reflect the selected image with slug
             const slug = generateImageSlug(updatedImage.imageTitle, updatedImage._id);
             setSearchParams(prev => {
