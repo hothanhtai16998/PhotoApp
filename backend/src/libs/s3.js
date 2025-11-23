@@ -23,51 +23,92 @@ export const uploadImageWithSizes = async (imageBuffer, folder = 'photo-app-imag
 		// Generate unique filename with timestamp
 		const timestamp = Date.now();
 		const baseFilename = filename || `image-${timestamp}`;
-		const extension = 'webp'; // Use WebP for better compression
 
-		// Process images with Sharp to create multiple sizes
+		// Process images with Sharp to create multiple sizes in both WebP and AVIF formats
 		// Use auto-rotate to respect EXIF orientation data (fixes portrait images)
 		// Sharp's rotate() without parameters auto-rotates based on EXIF orientation tag
-		const thumbnail = await sharp(imageBuffer, { failOnError: false })
-			.rotate() // Auto-rotate based on EXIF orientation (removes orientation tag)
-			.resize(200, null, { withoutEnlargement: true })
+		
+		// Create a shared sharp instance for each size to avoid reprocessing
+		const createThumbnail = (buffer) => sharp(buffer, { failOnError: false })
+			.rotate()
+			.resize(200, null, { withoutEnlargement: true });
+		
+		const createSmall = (buffer) => sharp(buffer, { failOnError: false })
+			.rotate()
+			.resize(800, null, { withoutEnlargement: true });
+		
+		const createRegular = (buffer) => sharp(buffer, { failOnError: false })
+			.rotate()
+			.resize(1080, null, { withoutEnlargement: true });
+		
+		const createOriginal = (buffer) => sharp(buffer, { failOnError: false })
+			.rotate();
+
+		// Generate WebP versions (for compatibility)
+		const thumbnailWebp = await createThumbnail(imageBuffer)
 			.webp({ quality: 60 })
 			.toBuffer();
-
-		const small = await sharp(imageBuffer, { failOnError: false })
-			.rotate() // Auto-rotate based on EXIF orientation
-			.resize(800, null, { withoutEnlargement: true })
+		
+		const smallWebp = await createSmall(imageBuffer)
 			.webp({ quality: 80 })
 			.toBuffer();
-
-		const regular = await sharp(imageBuffer, { failOnError: false })
-			.rotate() // Auto-rotate based on EXIF orientation
-			.resize(1080, null, { withoutEnlargement: true })
+		
+		const regularWebp = await createRegular(imageBuffer)
+			.webp({ quality: 85 })
+			.toBuffer();
+		
+		const originalWebp = await createOriginal(imageBuffer)
 			.webp({ quality: 85 })
 			.toBuffer();
 
-		// Original (optimized but full size)
-		const original = await sharp(imageBuffer, { failOnError: false })
-			.rotate() // Auto-rotate based on EXIF orientation
-			.webp({ quality: 85 })
+		// Generate AVIF versions (better compression, ~30% smaller)
+		const thumbnailAvif = await createThumbnail(imageBuffer)
+			.avif({ quality: 60 })
+			.toBuffer();
+		
+		const smallAvif = await createSmall(imageBuffer)
+			.avif({ quality: 80 })
+			.toBuffer();
+		
+		const regularAvif = await createRegular(imageBuffer)
+			.avif({ quality: 85 })
+			.toBuffer();
+		
+		const originalAvif = await createOriginal(imageBuffer)
+			.avif({ quality: 85 })
 			.toBuffer();
 
-		// Upload all sizes to S3 (use buffers directly)
+		// Upload all sizes and formats to S3
 		const uploadPromises = [
-			uploadToS3(thumbnail, `${folder}/${baseFilename}-thumbnail.${extension}`, 'image/webp'),
-			uploadToS3(small, `${folder}/${baseFilename}-small.${extension}`, 'image/webp'),
-			uploadToS3(regular, `${folder}/${baseFilename}-regular.${extension}`, 'image/webp'),
-			uploadToS3(original, `${folder}/${baseFilename}-original.${extension}`, 'image/webp'),
+			// WebP versions (fallback for older browsers)
+			uploadToS3(thumbnailWebp, `${folder}/${baseFilename}-thumbnail.webp`, 'image/webp'),
+			uploadToS3(smallWebp, `${folder}/${baseFilename}-small.webp`, 'image/webp'),
+			uploadToS3(regularWebp, `${folder}/${baseFilename}-regular.webp`, 'image/webp'),
+			uploadToS3(originalWebp, `${folder}/${baseFilename}-original.webp`, 'image/webp'),
+			// AVIF versions (better compression for modern browsers)
+			uploadToS3(thumbnailAvif, `${folder}/${baseFilename}-thumbnail.avif`, 'image/avif'),
+			uploadToS3(smallAvif, `${folder}/${baseFilename}-small.avif`, 'image/avif'),
+			uploadToS3(regularAvif, `${folder}/${baseFilename}-regular.avif`, 'image/avif'),
+			uploadToS3(originalAvif, `${folder}/${baseFilename}-original.avif`, 'image/avif'),
 		];
 
-		const [thumbnailUrl, smallUrl, regularUrl, originalUrl] = await Promise.all(uploadPromises);
+		const [
+			thumbnailUrl, smallUrl, regularUrl, originalUrl,
+			thumbnailAvifUrl, smallAvifUrl, regularAvifUrl, originalAvifUrl
+		] = await Promise.all(uploadPromises);
 
 		return {
 			publicId: baseFilename, // Store only filename, not full path
+			// WebP URLs (for backward compatibility and fallback)
 			imageUrl: originalUrl,
 			thumbnailUrl,
 			smallUrl,
 			regularUrl,
+			// AVIF URLs (for modern browsers)
+			imageAvifUrl: originalAvifUrl,
+			thumbnailAvifUrl,
+			smallAvifUrl,
+			regularAvifUrl,
 		};
 	} catch (error) {
 		throw new Error(`Failed to process and upload image: ${error.message}`);
@@ -162,16 +203,18 @@ export const uploadAvatar = async (imageBuffer, folder = 'photo-app-avatars', fi
 export const deleteImageFromS3 = async (publicId, folder = 'photo-app-images') => {
 	try {
 		const sizes = ['thumbnail', 'small', 'regular', 'original'];
-		const extension = 'webp';
+		const formats = ['webp', 'avif']; // Delete both WebP and AVIF versions
 
-		const deletePromises = sizes.map((size) => {
-			const key = `${folder}/${publicId}-${size}.${extension}`;
-			const command = new DeleteObjectCommand({
-				Bucket: env.AWS_S3_BUCKET_NAME,
-				Key: key,
-			});
-			return s3Client.send(command);
-		});
+		const deletePromises = sizes.flatMap((size) => 
+			formats.map((format) => {
+				const key = `${folder}/${publicId}-${size}.${format}`;
+				const command = new DeleteObjectCommand({
+					Bucket: env.AWS_S3_BUCKET_NAME,
+					Key: key,
+				});
+				return s3Client.send(command);
+			})
+		);
 
 		await Promise.all(deletePromises);
 	} catch (error) {

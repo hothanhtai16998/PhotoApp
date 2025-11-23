@@ -227,8 +227,31 @@ If you need to update existing images immediately:
 
 ### CORS errors
 
-1. Update CloudFront **Response Headers Policy** to include CORS headers
-2. Or update S3 bucket CORS configuration
+**Solution: Configure CloudFront Response Headers Policy**
+
+1. **Go to CloudFront Console → Policies → Response headers**
+2. **Click "Create response headers policy"**
+3. **Configure CORS:**
+   - **Name:** `photo-app-cors-policy`
+   - **CORS configuration:**
+     - **Access-Control-Allow-Origin:** 
+       - For development: `http://localhost:5173`
+       - For production: Your domain (e.g., `https://yourdomain.com`)
+       - Or use `*` to allow all origins (less secure)
+     - **Access-Control-Allow-Methods:** `GET, HEAD, OPTIONS`
+     - **Access-Control-Allow-Headers:** `*` (or specific: `Content-Type, Authorization`)
+     - **Access-Control-Max-Age:** `86400` (24 hours)
+     - **Access-Control-Allow-Credentials:** `false` (set to `true` only if needed)
+4. **Save the policy**
+5. **Attach to your distribution:**
+   - Go to your distribution → **Behaviors** tab
+   - Click **Edit** on the default behavior
+   - Under **Response headers policy**, select `photo-app-cors-policy`
+   - Click **Save changes**
+6. **Wait for deployment** (5-15 minutes)
+7. **Test again** - CORS errors should be resolved
+
+**Alternative:** Update S3 bucket CORS configuration (if CloudFront passes through headers)
 
 ### Images still using S3 URLs
 

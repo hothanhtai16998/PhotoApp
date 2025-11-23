@@ -120,12 +120,17 @@ export const uploadImage = asyncHandler(async (req, res) => {
             }
         }
 
-        // Save to database with multiple image sizes
+        // Save to database with multiple image sizes and formats
         const newImage = await Image.create({
-            imageUrl: uploadResult.imageUrl, // Original (optimized)
-            thumbnailUrl: uploadResult.thumbnailUrl, // Small thumbnail for blur-up
-            smallUrl: uploadResult.smallUrl, // Small size for grid
-            regularUrl: uploadResult.regularUrl, // Regular size for detail
+            imageUrl: uploadResult.imageUrl, // Original (optimized) - WebP
+            thumbnailUrl: uploadResult.thumbnailUrl, // Small thumbnail for blur-up - WebP
+            smallUrl: uploadResult.smallUrl, // Small size for grid - WebP
+            regularUrl: uploadResult.regularUrl, // Regular size for detail - WebP
+            // AVIF versions for better compression (modern browsers)
+            imageAvifUrl: uploadResult.imageAvifUrl, // Original - AVIF
+            thumbnailAvifUrl: uploadResult.thumbnailAvifUrl, // Thumbnail - AVIF
+            smallAvifUrl: uploadResult.smallAvifUrl, // Small - AVIF
+            regularAvifUrl: uploadResult.regularAvifUrl, // Regular - AVIF
             publicId: uploadResult.publicId,
             imageTitle: imageTitle.trim(),
             imageCategory: categoryDoc._id, // Use category ObjectId directly
@@ -216,7 +221,7 @@ export const getImagesByUserId = asyncHandler(async (req, res) => {
                 dailyViewsObj = img.dailyViews;
             }
         }
-        
+
         let dailyDownloadsObj = {};
         if (img.dailyDownloads) {
             if (img.dailyDownloads instanceof Map) {

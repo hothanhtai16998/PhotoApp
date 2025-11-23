@@ -31,6 +31,23 @@ const imageSchema = new mongoose.Schema(
             type: String,
             // Optional - will fallback to imageUrl if not set
         },
+        // AVIF versions for better compression (modern browsers)
+        thumbnailAvifUrl: {
+            type: String,
+            // Optional - AVIF version of thumbnail
+        },
+        smallAvifUrl: {
+            type: String,
+            // Optional - AVIF version of small
+        },
+        regularAvifUrl: {
+            type: String,
+            // Optional - AVIF version of regular
+        },
+        imageAvifUrl: {
+            type: String,
+            // Optional - AVIF version of original
+        },
         imageCategory: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Category',
