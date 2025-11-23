@@ -92,8 +92,7 @@ export function useErrorHandler(options: ErrorHandlerOptions = {}) {
         const result = await asyncFn();
         return [result, null];
       } catch (error) {
-        const mergedOptions = { ...options, ...options };
-        handleError(error, mergedOptions.fallbackMessage);
+        handleError(error, options?.fallbackMessage);
         return [null, error as Error];
       }
     },

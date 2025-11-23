@@ -520,10 +520,8 @@ export const replaceImage = asyncHandler(async (req, res) => {
         const oldPublicId = image.publicId;
         if (oldPublicId) {
             try {
-                await deleteImageFromS3('photo-app-images', `${oldPublicId}-thumbnail.webp`);
-                await deleteImageFromS3('photo-app-images', `${oldPublicId}-small.webp`);
-                await deleteImageFromS3('photo-app-images', `${oldPublicId}-regular.webp`);
-                await deleteImageFromS3('photo-app-images', `${oldPublicId}-original.webp`);
+                // deleteImageFromS3 automatically deletes all sizes and formats (webp, avif)
+                await deleteImageFromS3(oldPublicId, 'photo-app-images');
             } catch (deleteError) {
                 logger.warn('Failed to delete old images from S3:', deleteError);
                 // Continue even if deletion fails
@@ -634,10 +632,8 @@ export const batchReplaceImages = asyncHandler(async (req, res) => {
             const oldPublicId = image.publicId;
             if (oldPublicId) {
                 try {
-                    await deleteImageFromS3('photo-app-images', `${oldPublicId}-thumbnail.webp`);
-                    await deleteImageFromS3('photo-app-images', `${oldPublicId}-small.webp`);
-                    await deleteImageFromS3('photo-app-images', `${oldPublicId}-regular.webp`);
-                    await deleteImageFromS3('photo-app-images', `${oldPublicId}-original.webp`);
+                    // deleteImageFromS3 automatically deletes all sizes and formats (webp, avif)
+                    await deleteImageFromS3(oldPublicId, 'photo-app-images');
                 } catch (deleteError) {
                     logger.warn('Failed to delete old images from S3:', deleteError);
                 }

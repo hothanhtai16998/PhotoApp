@@ -78,7 +78,7 @@ export const useImageModal = ({
     } finally {
       setIsTogglingFavorite(false);
     }
-  }, [accessToken, image._id, isTogglingFavorite]);
+  }, [accessToken, image, isTogglingFavorite]);
 
   // Wrapper for download that combines stats increment with actual download
   const handleDownload = useCallback(

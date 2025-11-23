@@ -115,7 +115,8 @@ export const useImageUpload = ({ onSuccess }: UseImageUploadProps = {}) => {
 
       onSuccess?.();
       return true;
-    } catch {
+    } catch (error) {
+      console.error('Failed to upload images:', error);
       setShowProgress(false);
       setShowSuccess(false);
       return false;

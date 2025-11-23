@@ -25,7 +25,8 @@ export const errorHandler = (err, req, res, next) => {
 
     // Mongoose duplicate key error
     if (err.code === 11000) {
-        const field = Object.keys(err.keyPattern)[0];
+        const keys = Object.keys(err.keyPattern || {});
+        const field = keys.length > 0 ? keys[0] : 'field';
         const fieldName = field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1');
         return res.status(409).json({
             success: false,
