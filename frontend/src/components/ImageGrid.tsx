@@ -15,13 +15,14 @@ import { Avatar } from './Avatar';
 import { favoriteService } from '@/services/favoriteService';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { applyImageFilters } from '@/utils/imageFilters';
+import { useBatchedFavoriteCheck } from '@/hooks/useBatchedFavoriteCheck';
 import './ImageGrid.css';
 
 // Memoized image item component to prevent unnecessary re-renders
-const ImageGridItem = memo(({ 
-  image, 
-  imageType, 
-  onSelect, 
+const ImageGridItem = memo(({
+  image,
+  imageType,
+  onSelect,
   onDownload,
   onImageLoad,
   currentImageIds,
@@ -37,38 +38,10 @@ const ImageGridItem = memo(({
 }) => {
   const hasUserInfo = image.uploadedBy && (image.uploadedBy.displayName || image.uploadedBy.username);
   const { accessToken } = useAuthStore();
-  const [isFavorited, setIsFavorited] = useState<boolean>(false);
   const [isTogglingFavorite, setIsTogglingFavorite] = useState<boolean>(false);
-  
-  // Check favorite status when image changes
-  useEffect(() => {
-    if (accessToken && image && image._id) {
-      const imageId = String(image._id).trim();
-      const isValidMongoId = /^[0-9a-fA-F]{24}$/.test(imageId);
 
-      if (!imageId || imageId === 'undefined' || imageId === 'null' || !isValidMongoId) {
-        setIsFavorited(false);
-        return;
-      }
-
-      favoriteService.checkFavorites([imageId])
-        .then((response) => {
-          if (response && response.favorites && typeof response.favorites === 'object') {
-            const isFavorited = response.favorites[imageId] === true ||
-              response.favorites[String(image._id)] === true ||
-              response.favorites[image._id] === true;
-            setIsFavorited(!!isFavorited);
-          } else {
-            setIsFavorited(false);
-          }
-        })
-        .catch((error) => {
-          console.error('Failed to check favorite status:', error);
-        });
-    } else {
-      setIsFavorited(false);
-    }
-  }, [image._id, accessToken]);
+  // Use batched favorite check hook (reduces API calls)
+  const isFavorited = useBatchedFavoriteCheck(image._id);
 
   const handleClick = useCallback(() => {
     onSelect(image);
@@ -260,7 +233,7 @@ ImageGridItem.displayName = 'ImageGridItem';
 const ImageGrid = memo(() => {
   const { images, loading, error, pagination, currentSearch, currentCategory, currentLocation, fetchImages } = useImageStore();
   const [searchParams, setSearchParams] = useSearchParams();
-  
+
   // Load filters from localStorage - make it reactive (declare early to avoid TDZ issues)
   const [filters, setFilters] = useState(() => {
     try {
@@ -278,18 +251,18 @@ const ImageGrid = memo(() => {
       dateTo: '',
     };
   });
-  
+
   // Get selected image slug from URL search params
   const imageSlugFromUrl = searchParams.get('image');
-  
+
   // Find selected image from URL slug
   const selectedImage = useMemo(() => {
     if (!imageSlugFromUrl) return null;
-    
+
     // Extract short ID from slug and find matching image
     const shortId = extractIdFromSlug(imageSlugFromUrl);
     if (!shortId) return null;
-    
+
     // Find image by matching the last 12 characters of ID
     return images.find(img => {
       const imgShortId = img._id.slice(-12);
@@ -326,7 +299,7 @@ const ImageGrid = memo(() => {
   // Infinite scroll: Load more when reaching bottom
   const handleLoadMore = useCallback(async () => {
     if (!pagination || loading) return;
-    
+
     await fetchImages({
       page: pagination.page + 1,
       search: currentSearch,
@@ -398,7 +371,7 @@ const ImageGrid = memo(() => {
     };
 
     window.addEventListener('storage', handleStorageChange);
-    
+
     // Also listen for custom event from SearchBar (same window)
     const handleFilterChange = () => {
       try {
@@ -591,7 +564,7 @@ const ImageGrid = memo(() => {
     <div className="image-grid-container">
       {/* Category Navigation */}
       <CategoryNavigation />
-      
+
       {/* Search Results Header */}
       {currentSearch && (
         <div className="search-results-header">
@@ -681,7 +654,7 @@ const ImageGrid = memo(() => {
                 onSelect={(img) => {
                   // Set flag to indicate we're opening from grid (not refresh)
                   sessionStorage.setItem('imagePage_fromGrid', 'true');
-                  
+
                   // Update URL with search param instead of navigating
                   // This keeps the grid mounted (like Unsplash)
                   const slug = generateImageSlug(img.imageTitle, img._id);

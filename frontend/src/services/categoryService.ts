@@ -1,4 +1,4 @@
-import api from '@/lib/axios';
+import api, { get } from '@/lib/api';
 
 export interface Category {
     _id: string;
@@ -22,7 +22,7 @@ export const categoryService = {
             }
         }
         
-        const res = await api.get('/categories', {
+        const res = await get('/categories', {
             withCredentials: true,
         });
         const categories = res.data.categories || [];
@@ -37,7 +37,7 @@ export const categoryService = {
     },
 
     getAllCategoriesAdmin: async (): Promise<Category[]> => {
-        const res = await api.get('/categories/admin', {
+        const res = await get('/categories/admin', {
             withCredentials: true,
         });
         return res.data.categories || [];

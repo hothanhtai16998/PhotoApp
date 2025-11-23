@@ -16,6 +16,8 @@ import favoriteRoute from './routes/favoriteRoute.js';
 import collectionRoute from './routes/collectionRoute.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { apiLimiter } from './middlewares/rateLimiter.js';
+import { requestDeduplication } from './middlewares/requestDeduplication.js';
+import { requestQueue } from './middlewares/requestQueue.js';
 import { csrfToken, validateCsrf, getCsrfToken } from './middlewares/csrfMiddleware.js';
 import { logger } from './utils/logger.js';
 import { startSessionCleanup } from './utils/sessionCleanup.js';
@@ -90,8 +92,14 @@ app.use(
     })
 );
 
+// Apply request deduplication (before rate limiting)
+app.use('/api', requestDeduplication);
+
 // Apply rate limiting to all API routes
 app.use('/api', apiLimiter);
+
+// Apply request queuing (after rate limiting, for GET requests that hit limits)
+app.use('/api', requestQueue);
 
 // CSRF protection - generate token for all routes
 app.use('/api', csrfToken);
@@ -120,7 +128,7 @@ app.use('/api/collections', collectionRoute);
 if (env.NODE_ENV === 'production') {
     // __dirname is backend/src, so go up two levels to root, then into frontend/dist
     const frontendDistPath = path.join(__dirname, '../../frontend/dist');
-    
+
     // Configure static file serving with proper MIME types for JavaScript modules
     app.use(express.static(frontendDistPath, {
         setHeaders: (res, filePath) => {
