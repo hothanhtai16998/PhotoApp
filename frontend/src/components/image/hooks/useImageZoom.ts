@@ -148,7 +148,7 @@ export const useImageZoom = ({
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 1) {
       // Single touch - start panning
-      if (zoom > 1) {
+      if (zoom > 1 && e.touches[0]) {
         setIsDragging(true);
         setTouchStart({
           x: e.touches[0].clientX - pan.x,
@@ -160,22 +160,24 @@ export const useImageZoom = ({
       // Two touches - pinch to zoom
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
-      const distance = Math.hypot(
-        touch2.clientX - touch1.clientX,
-        touch2.clientY - touch1.clientY
-      );
-      setTouchStart({
-        x: (touch1.clientX + touch2.clientX) / 2,
-        y: (touch1.clientY + touch2.clientY) / 2,
-        distance,
-      });
+      if (touch1 && touch2) {
+        const distance = Math.hypot(
+          touch2.clientX - touch1.clientX,
+          touch2.clientY - touch1.clientY
+        );
+        setTouchStart({
+          x: (touch1.clientX + touch2.clientX) / 2,
+          y: (touch1.clientY + touch2.clientY) / 2,
+          distance,
+        });
+      }
     }
   }, [zoom, pan]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!touchStart) return;
     
-    if (e.touches.length === 1 && isDragging) {
+    if (e.touches.length === 1 && isDragging && e.touches[0]) {
       // Single touch - panning
       setPan({
         x: e.touches[0].clientX - touchStart.x,
@@ -185,18 +187,20 @@ export const useImageZoom = ({
       // Two touches - pinch to zoom
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
-      const distance = Math.hypot(
-        touch2.clientX - touch1.clientX,
-        touch2.clientY - touch1.clientY
-      );
-      
-      const scale = distance / touchStart.distance;
-      const newZoom = Math.max(minZoom, Math.min(zoom * scale, maxZoom));
-      setZoom(newZoom);
-      setIsZoomed(newZoom > minZoom);
-      
-      if (newZoom === minZoom) {
-        resetZoom();
+      if (touch1 && touch2 && touchStart.distance > 0) {
+        const distance = Math.hypot(
+          touch2.clientX - touch1.clientX,
+          touch2.clientY - touch1.clientY
+        );
+        
+        const scale = distance / touchStart.distance;
+        const newZoom = Math.max(minZoom, Math.min(zoom * scale, maxZoom));
+        setZoom(newZoom);
+        setIsZoomed(newZoom > minZoom);
+        
+        if (newZoom === minZoom) {
+          resetZoom();
+        }
       }
     }
   }, [touchStart, isDragging, zoom, minZoom, maxZoom, resetZoom]);

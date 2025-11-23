@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { useKeyboardNavigation } from '@/components/image/hooks/useKeyboardNavigation';
 
 interface UseGlobalKeyboardShortcutsOptions {
   onFocusSearch?: () => void;

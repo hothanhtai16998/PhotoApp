@@ -6,10 +6,11 @@ import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { logger } from '../utils/logger.js';
 import { PAGINATION } from '../utils/constants.js';
 import { clearCache } from '../middlewares/cacheMiddleware.js';
+import { extractDominantColors } from '../utils/colorExtractor.js';
 
 export const uploadImage = asyncHandler(async (req, res) => {
     const userId = req.user._id;
-    const { imageTitle, imageCategory, location, cameraModel, coordinates } = req.body;
+    const { imageTitle, imageCategory, location, cameraModel, coordinates, tags } = req.body;
 
     // Parse coordinates if provided as JSON string
     let parsedCoordinates;
@@ -90,6 +91,35 @@ export const uploadImage = asyncHandler(async (req, res) => {
         // Clear cache for images endpoint when new image is uploaded
         clearCache('/api/images');
 
+        // Extract dominant colors from image
+        let dominantColors = [];
+        try {
+            dominantColors = await extractDominantColors(req.file.buffer, 3);
+            logger.info(`Extracted ${dominantColors.length} dominant colors for image`);
+        } catch (colorError) {
+            logger.warn('Failed to extract colors, continuing without colors:', colorError);
+            // Don't fail upload if color extraction fails
+        }
+
+        // Parse and validate tags
+        let parsedTags = [];
+        if (tags) {
+            try {
+                // Handle both JSON string and array
+                const tagsArray = typeof tags === 'string' ? JSON.parse(tags) : tags;
+                if (Array.isArray(tagsArray)) {
+                    // Clean and validate tags (trim, lowercase, remove duplicates, max 20 tags)
+                    parsedTags = tagsArray
+                        .map(tag => typeof tag === 'string' ? tag.trim().toLowerCase() : String(tag).trim().toLowerCase())
+                        .filter(tag => tag.length > 0 && tag.length <= 50) // Max 50 chars per tag
+                        .filter((tag, index, self) => self.indexOf(tag) === index) // Remove duplicates
+                        .slice(0, 20); // Max 20 tags per image
+                }
+            } catch (error) {
+                logger.warn('Invalid tags format, ignoring tags:', error);
+            }
+        }
+
         // Save to database with multiple image sizes
         const newImage = await Image.create({
             imageUrl: uploadResult.imageUrl, // Original (optimized)
@@ -103,6 +133,8 @@ export const uploadImage = asyncHandler(async (req, res) => {
             location: location?.trim() || undefined,
             coordinates: parsedCoordinates || undefined,
             cameraModel: cameraModel?.trim() || undefined,
+            dominantColors: dominantColors.length > 0 ? dominantColors : undefined,
+            tags: parsedTags.length > 0 ? parsedTags : undefined,
         });
 
         // Populate user and category info
@@ -379,7 +411,7 @@ export const downloadImage = asyncHandler(async (req, res) => {
 // Update image information
 export const updateImage = asyncHandler(async (req, res) => {
     const imageId = req.params.imageId;
-    const { imageTitle, location, coordinates, cameraModel } = req.body;
+    const { imageTitle, location, coordinates, cameraModel, tags } = req.body;
     const userId = req.user?._id;
 
     // Find the image

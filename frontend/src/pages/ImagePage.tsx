@@ -119,20 +119,13 @@ function ImagePage() {
     });
   }, []);
 
-  const handleImageUpdate = useCallback((updatedImage: Image) => {
-    setImage(updatedImage);
-    setImages(prev => prev.map(img => 
-      img._id === updatedImage._id ? updatedImage : img
-    ));
-  }, []);
-
   const handleImageSelect = useCallback((selectedImage: Image) => {
     const newSlug = generateImageSlug(selectedImage.imageTitle, selectedImage._id);
     // When navigating between images, keep as page mode (no fromGrid state)
     navigate(`/photos/${newSlug}`, { replace: true, state: { images } });
   }, [navigate, images]);
 
-  const handleDownload = useCallback((image: Image, e: React.MouseEvent) => {
+  const handleDownload = useCallback((_image: Image, e: React.MouseEvent) => {
     e.preventDefault();
   }, []);
 

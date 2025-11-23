@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Plus, Folder, Check, Edit2, Save } from 'lucide-react';
+import { X, Plus, Folder, Check } from 'lucide-react';
 import { collectionService } from '@/services/collectionService';
 import type { Collection } from '@/types/collection';
 import { toast } from 'sonner';
@@ -84,6 +84,10 @@ export default function CollectionModal({
 
 	const handleToggleCollection = useCallback(
 		async (collectionId: string, isInCollection: boolean) => {
+			if (!imageId) {
+				toast.error('Không tìm thấy ID ảnh');
+				return;
+			}
 			try {
 				if (isInCollection) {
 					await collectionService.removeImageFromCollection(collectionId, imageId);

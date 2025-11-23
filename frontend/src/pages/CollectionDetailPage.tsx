@@ -16,7 +16,7 @@ export default function CollectionDetailPage() {
 	const { collectionId } = useParams<{ collectionId: string }>();
 	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
-	const { user, accessToken } = useAuthStore();
+	const { accessToken } = useAuthStore();
 	const [collection, setCollection] = useState<Collection | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
@@ -71,13 +71,18 @@ export default function CollectionDetailPage() {
 	const handleImageUpdate = useCallback((updatedImage: Image) => {
 		setCollection(prev => {
 			if (!prev) return prev;
+			// Type guard: ensure images is Image[] before mapping
+			const imageArray = Array.isArray(prev.images) 
+				? prev.images.filter((img): img is Image => typeof img === 'object' && img !== null && '_id' in img)
+				: [];
+			
+			const updatedImages = imageArray.map(img => 
+				img._id === updatedImage._id ? updatedImage : img
+			);
+			
 			return {
 				...prev,
-				images: prev.images.map(img => 
-					typeof img === 'object' && img !== null && '_id' in img && img._id === updatedImage._id
-						? updatedImage
-						: img
-				),
+				images: updatedImages,
 			};
 		});
 	}, []);

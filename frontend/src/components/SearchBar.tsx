@@ -21,7 +21,7 @@ interface SearchHistoryItem {
 const MAX_HISTORY_ITEMS = 5
 const SEARCH_DEBOUNCE_MS = 300
 
-export const SearchBar = forwardRef<SearchBarRef>((props, ref) => {
+export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
   const { fetchImages, currentSearch } = useImageStore()
   const navigate = useNavigate()
   const location = useLocation()
@@ -348,15 +348,19 @@ export const SearchBar = forwardRef<SearchBarRef>((props, ref) => {
               } catch (error) {
                 console.error('Failed to save filters:', error);
               }
-              // Apply filters to current search
+              // Apply filters to current search - refetch images with new filters
               if (location.pathname === '/') {
+                // Clear current images and refetch with new filters
                 fetchImages({
                   search: searchQuery.trim() || undefined,
+                  color: newFilters.color !== 'all' ? newFilters.color : undefined,
+                  page: 1, // Reset to first page
+                  _refresh: true, // Force refresh
                 });
               }
             }}
             onReset={() => {
-              const defaultFilters = {
+              const defaultFilters: SearchFiltersType = {
                 orientation: 'all',
                 color: 'all',
                 dateFrom: '',

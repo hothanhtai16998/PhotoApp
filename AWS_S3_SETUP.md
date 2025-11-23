@@ -17,12 +17,14 @@ High-priority recommendations
    Pinch-to-zoom on mobile
    Double-click to zoom
    Smooth transitions
+
 4. Related images algorithm
    Improve "Các ảnh cùng chủ đề" with:
    Similar colors
    Same photographer
    Similar tags/keywords
    Same location
+
 5. Advanced search filters
    Color palette filter
    Orientation (portrait/landscape/square)
@@ -30,18 +32,22 @@ High-priority recommendations
    Camera model
    Image size/dimensions
    Performance & UX
+
 6. Virtual scrolling
    Use react-window or react-virtualized for large grids
    Render only visible images
    Improves performance with 1000+ images
+
 7. Image preloading strategy
    Preload next/previous images in modal
    Preload images above/below viewport in grid
    Use Intersection Observer more aggressively
+
 8. Service worker & offline support
    Cache images for offline viewing
    Show cached images when offline
    Progressive Web App (PWA) features
+
 9. Image compression optimization
    WebP with fallback
    AVIF for modern browsers

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import ImageGrid from "@/components/ImageGrid";
@@ -11,7 +11,6 @@ function HomePage() {
     const { currentSearch } = useImageStore();
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const searchBarRef = useRef<{ focus: () => void } | null>(null);
     
     // Check if modal is open (image param exists)
     const isModalOpen = !!searchParams.get('image');

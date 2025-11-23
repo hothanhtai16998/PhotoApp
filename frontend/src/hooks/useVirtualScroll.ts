@@ -16,8 +16,6 @@ export const useVirtualScroll = <T>(
 ) => {
   const { itemHeight = 300, overscan = 3 } = options;
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: Math.min(items.length, 20) });
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const itemRefs = useRef<Map<number, HTMLElement>>(new Map());
 
   // Update visible range based on scroll
   const updateVisibleRange = useCallback(() => {

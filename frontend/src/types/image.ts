@@ -20,6 +20,8 @@ export interface Image {
 		longitude: number;
 	};
 	cameraModel?: string;
+	dominantColors?: string[]; // Array of color names: 'red', 'orange', 'yellow', etc.
+	tags?: string[]; // Array of tag strings for searchability
 	views?: number;
 	downloads?: number;
 	// Daily views and downloads tracking (date string as key: "YYYY-MM-DD")

@@ -26,6 +26,7 @@ import { Avatar } from './Avatar';
 import { useFormattedDate } from '@/hooks/useFormattedDate';
 import CollectionModal from './CollectionModal';
 import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { useImageStore } from '@/stores/useImageStore';
 import './ImageModal.css';
 
 interface ImageModalProps {
@@ -690,7 +691,17 @@ const ImageModal = ({
                 </button>
               )}
               <ImageModalShare image={image} />
-              <ImageModalInfo image={image} />
+              <ImageModalInfo
+                image={image}
+                onTagClick={(tag: string) => {
+                  // Navigate to homepage and search by tag
+                  onClose();
+                  navigate('/');
+                  setTimeout(() => {
+                    useImageStore.getState().fetchImages({ tag });
+                  }, 100);
+                }}
+              />
               {user && (user._id === image.uploadedBy._id || user.isAdmin || user.isSuperAdmin) && (
                 <button
                   className="modal-footer-btn"

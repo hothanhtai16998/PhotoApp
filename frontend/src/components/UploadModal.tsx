@@ -72,6 +72,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                         location: '',
                         coordinates: undefined,
                         cameraModel: '',
+                        tags: [],
                         errors: {}
                     };
                 });

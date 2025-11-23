@@ -1,13 +1,15 @@
 import { useState, useRef, useEffect, memo } from 'react';
-import { Info } from 'lucide-react';
+import { Info, Tag } from 'lucide-react';
 import { ImageModalChart } from './ImageModalChart';
 import type { Image } from '@/types/image';
+import './ImageModalInfo.css';
 
 interface ImageModalInfoProps {
   image: Image;
+  onTagClick?: (tag: string) => void;
 }
 
-export const ImageModalInfo = memo(({ image }: ImageModalInfoProps) => {
+export const ImageModalInfo = memo(({ image, onTagClick }: ImageModalInfoProps) => {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'views' | 'downloads'>('views');
   const infoButtonRef = useRef<HTMLButtonElement>(null);
@@ -69,6 +71,29 @@ export const ImageModalInfo = memo(({ image }: ImageModalInfoProps) => {
 
               {/* Chart Container */}
               <ImageModalChart image={image} activeTab={activeTab} />
+
+              {/* Tags */}
+              {image.tags && image.tags.length > 0 && (
+                <div className="info-tags-section">
+                  <div className="info-tags-label">
+                    <Tag size={16} />
+                    <span>Tags</span>
+                  </div>
+                  <div className="info-tags-list">
+                    {image.tags.map((tag, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        className="info-tag"
+                        onClick={() => onTagClick?.(tag)}
+                        title={`Search for ${tag}`}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Tabs */}
               <div className="info-tabs">

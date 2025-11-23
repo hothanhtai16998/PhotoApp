@@ -7,6 +7,8 @@ interface FetchImagesParams {
 	search?: string;
 	category?: string;
 	location?: string;
+	color?: string;
+	tag?: string;
 }
 
 import type { Image } from '@/types/image';
@@ -139,6 +141,18 @@ export const imageService = {
 			queryParams.append(
 				'location',
 				params.location
+			);
+		}
+		if (params?.color) {
+			queryParams.append(
+				'color',
+				params.color
+			);
+		}
+		if (params?.tag) {
+			queryParams.append(
+				'tag',
+				params.tag
 			);
 		}
 

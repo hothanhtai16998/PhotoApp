@@ -12,6 +12,7 @@ export interface ImageData {
     longitude: number;
   };
   cameraModel: string;
+  tags: string[];
   errors: {
     title?: string;
     category?: string;
@@ -82,6 +83,7 @@ export const useImageUpload = ({ onSuccess }: UseImageUploadProps = {}) => {
           location: imgData.location.trim() || undefined,
           coordinates: imgData.coordinates,
           cameraModel: imgData.cameraModel.trim() || undefined,
+          tags: imgData.tags && imgData.tags.length > 0 ? imgData.tags : undefined,
         });
 
         // Small delay between uploads

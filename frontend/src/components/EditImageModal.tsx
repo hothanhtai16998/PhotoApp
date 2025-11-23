@@ -22,6 +22,7 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
   const [imageTitle, setImageTitle] = useState(image.imageTitle || '');
   const [location, setLocation] = useState(image.location || '');
   const [cameraModel, setCameraModel] = useState(image.cameraModel || '');
+  const [tags, setTags] = useState<string[]>(image.tags || []);
   const [description, setDescription] = useState(''); // Placeholder for future description field
 
   // Reset form when image changes or modal opens
@@ -30,6 +31,7 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
       setImageTitle(image.imageTitle || '');
       setLocation(image.location || '');
       setCameraModel(image.cameraModel || '');
+      setTags(image.tags || []);
       setDescription('');
     }
   }, [isOpen, image]);
@@ -55,6 +57,7 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
         imageTitle: imageTitle.trim(),
         location: location.trim() || undefined,
         cameraModel: cameraModel.trim() || undefined,
+        tags: tags.length > 0 ? tags : undefined,
       });
 
       toast.success('Cập nhật thông tin ảnh thành công');
@@ -69,7 +72,7 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
     } finally {
       setIsSubmitting(false);
     }
-  }, [image._id, imageTitle, location, cameraModel, canEdit, onUpdate, onClose]);
+  }, [image._id, imageTitle, location, cameraModel, tags, canEdit, onUpdate, onClose]);
 
   if (!isOpen) return null;
 
@@ -196,7 +199,13 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
 
           {activeTab === 'tags' && (
             <div className="edit-modal-tab-panel">
-              <p className="edit-modal-coming-soon">Tags feature coming soon</p>
+              <TagInput
+                tags={tags}
+                onChange={setTags}
+                placeholder="Nhập tag và nhấn Enter (ví dụ: nature, landscape, sunset)..."
+                maxTags={20}
+                maxTagLength={50}
+              />
             </div>
           )}
 

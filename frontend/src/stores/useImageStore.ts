@@ -162,6 +162,8 @@ export const useImageStore = create(
 			search?: string;
 			category?: string;
 			location?: string;
+			color?: string;
+			tag?: string;
 			_refresh?: boolean;
 		}) => {
 			// Prevent concurrent requests - if already loading and not a refresh, skip
@@ -204,6 +206,7 @@ export const useImageStore = create(
 					? { ...params, _refresh: true }
 					: params;
 				
+				// Color filter is already included in params if provided
 				const response =
 					await imageService.fetchImages(
 						fetchParams

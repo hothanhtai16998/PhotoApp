@@ -4,20 +4,10 @@ import type { SearchFilters } from '@/components/SearchFilters';
 /**
  * Filter images by orientation (portrait/landscape/square)
  */
-export const filterByOrientation = (images: Image[], orientation: SearchFilters['orientation']): Image[] => {
-  if (orientation === 'all') return images;
-
-  return images.filter(img => {
-    // We need to check the actual image dimensions
-    // For now, we'll use a placeholder - in real implementation, 
-    // we'd need to check imageTypes or load image dimensions
-    // This is a simplified version - in production, you'd want to
-    // store aspect ratio in the image metadata or check it client-side
-    
-    // For now, return all images and let client-side filtering handle it
-    // The actual filtering will be done in ImageGrid using imageTypes
-    return true;
-  });
+export const filterByOrientation = (_images: Image[], _orientation: SearchFilters['orientation']): Image[] => {
+  // This function is kept for API compatibility but actual filtering
+  // is done in applyImageFilters using imageTypes map
+  return _images;
 };
 
 /**
@@ -84,9 +74,20 @@ export const applyImageFilters = (
   // Filter by date range
   filtered = filterByDateRange(filtered, filters.dateFrom, filters.dateTo);
 
-  // Color filtering would require image analysis
-  // For now, we'll skip it or implement a basic version
-  // In production, you'd want to extract dominant colors on upload
+  // Note: Color filtering is now done on the backend for better performance
+  // This frontend filter is kept as a fallback for client-side filtering
+  // when backend filtering is not available
+  if (filters.color !== 'all') {
+    filtered = filtered.filter(img => {
+      // If image doesn't have dominantColors, exclude it when filtering
+      if (!img.dominantColors || img.dominantColors.length === 0) {
+        return false;
+      }
+      
+      // Check if the selected color is in the image's dominant colors
+      return img.dominantColors.includes(filters.color);
+    });
+  }
 
   return filtered;
 };

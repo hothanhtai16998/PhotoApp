@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef, useCallback, memo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useImageStore } from '@/stores/useImageStore';
 import { Download, MapPin, Heart } from 'lucide-react';
 import type { Image } from '@/types/image';
@@ -259,8 +259,25 @@ ImageGridItem.displayName = 'ImageGridItem';
 
 const ImageGrid = memo(() => {
   const { images, loading, error, pagination, currentSearch, currentCategory, currentLocation, fetchImages } = useImageStore();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Load filters from localStorage - make it reactive (declare early to avoid TDZ issues)
+  const [filters, setFilters] = useState(() => {
+    try {
+      const stored = localStorage.getItem('photoApp_searchFilters');
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (error) {
+      console.error('Failed to load filters:', error);
+    }
+    return {
+      orientation: 'all',
+      color: 'all',
+      dateFrom: '',
+      dateTo: '',
+    };
+  });
   
   // Get selected image slug from URL search params
   const imageSlugFromUrl = searchParams.get('image');
@@ -295,7 +312,9 @@ const ImageGrid = memo(() => {
   useEffect(() => {
     // If images are already in the store, don't refetch to prevent flash
     if (images.length === 0 && !loading) {
-      fetchImages();
+      fetchImages({
+        color: filters.color !== 'all' ? filters.color : undefined,
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -313,8 +332,9 @@ const ImageGrid = memo(() => {
       search: currentSearch,
       category: currentCategory,
       location: currentLocation,
+      color: filters.color !== 'all' ? filters.color : undefined,
     });
-  }, [pagination, loading, currentSearch, currentCategory, currentLocation, fetchImages]);
+  }, [pagination, loading, currentSearch, currentCategory, currentLocation, filters.color, fetchImages]);
 
   const { loadMoreRef } = useInfiniteScroll({
     hasMore: pagination ? pagination.page < pagination.pages : false,
@@ -355,24 +375,6 @@ const ImageGrid = memo(() => {
   // Track image aspect ratios (portrait vs landscape)
   const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
   const processedImages = useRef<Set<string>>(new Set());
-
-  // Load filters from localStorage - make it reactive
-  const [filters, setFilters] = useState(() => {
-    try {
-      const stored = localStorage.getItem('photoApp_searchFilters');
-      if (stored) {
-        return JSON.parse(stored);
-      }
-    } catch (error) {
-      console.error('Failed to load filters:', error);
-    }
-    return {
-      orientation: 'all',
-      color: 'all',
-      dateFrom: '',
-      dateTo: '',
-    };
-  });
 
   // Listen for storage changes (when filters are updated from SearchBar)
   useEffect(() => {

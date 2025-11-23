@@ -65,6 +65,18 @@ const imageSchema = new mongoose.Schema(
             type: String,
             trim: true,
         },
+        // Dominant colors extracted from image (for color filtering)
+        dominantColors: {
+            type: [String],
+            default: [],
+            enum: ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'brown', 'black', 'white', 'gray'],
+        },
+        // Tags/keywords for better searchability
+        tags: {
+            type: [String],
+            default: [],
+            index: true, // Index for fast tag-based searches
+        },
         views: {
             type: Number,
             default: 0,

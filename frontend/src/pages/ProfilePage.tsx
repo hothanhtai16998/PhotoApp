@@ -15,7 +15,8 @@ import api from "@/lib/axios";
 import { generateImageSlug, extractIdFromSlug } from "@/lib/utils";
 import { collectionService } from "@/services/collectionService";
 import type { Collection } from "@/types/collection";
-import { Folder, Edit2 as EditIcon, Trash2, Eye } from "lucide-react";
+import { Folder, Eye } from "lucide-react";
+import { UserAnalyticsDashboard } from "@/components/UserAnalyticsDashboard";
 import "./ProfilePage.css";
 
 type TabType = 'photos' | 'illustrations' | 'collections' | 'stats';
@@ -516,10 +517,7 @@ function ProfilePage() {
                                 </div>
                             )
                         ) : (
-                            <div className="coming-soon">
-                                <h2>Stats</h2>
-                                <p>This section is coming soon.</p>
-                            </div>
+                            <UserAnalyticsDashboard />
                         )}
                     </div>
                 </div>

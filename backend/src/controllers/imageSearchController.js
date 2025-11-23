@@ -14,6 +14,8 @@ export const getAllImages = asyncHandler(async (req, res) => {
     const search = req.query.search?.trim();
     const category = req.query.category?.trim();
     const location = req.query.location?.trim();
+    const color = req.query.color?.trim(); // Color filter
+    const tag = req.query.tag?.trim(); // Tag filter
 
     // Build query
     const query = {};
@@ -56,6 +58,15 @@ export const getAllImages = asyncHandler(async (req, res) => {
     if (location) {
         // Filter by location (case-insensitive partial match)
         query.location = { $regex: new RegExp(location, 'i') };
+    }
+    if (color && color !== 'all') {
+        // Filter by dominant color
+        // Check if the color exists in the dominantColors array
+        query.dominantColors = color;
+    }
+    if (tag) {
+        // Filter by tag (case-insensitive)
+        query.tags = { $regex: new RegExp(`^${tag.trim()}$`, 'i') };
     }
 
     // Get images with pagination

@@ -6,13 +6,12 @@ import type { Collection } from '@/types/collection';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { Folder, Plus, Trash2, Edit2, Eye } from 'lucide-react';
-import { generateImageSlug } from '@/lib/utils';
 import ProgressiveImage from '@/components/ProgressiveImage';
 import CollectionModal from '@/components/CollectionModal';
 import './CollectionsPage.css';
 
 export default function CollectionsPage() {
-	const { user, accessToken } = useAuthStore();
+	const { accessToken } = useAuthStore();
 	const navigate = useNavigate();
 	const [collections, setCollections] = useState<Collection[]>([]);
 	const [loading, setLoading] = useState(true);

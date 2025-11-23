@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { TagInput } from '@/components/ui/TagInput';
 import { MapPin } from 'lucide-react';
 import { reverseGeocode, delay, searchLocations, type LocationSuggestion } from '@/utils/geocoding';
 import type { ImageData } from './hooks/useImageUpload';
@@ -12,7 +13,7 @@ interface UploadFormProps {
   index: number;
   categories: Category[];
   loadingCategories: boolean;
-  onUpdate: (index: number, field: 'title' | 'category' | 'location' | 'cameraModel', value: string) => void;
+  onUpdate: (index: number, field: 'title' | 'category' | 'location' | 'cameraModel' | 'tags', value: string | string[]) => void;
   onUpdateCoordinates: (index: number, coordinates: { latitude: number; longitude: number } | undefined) => void;
 }
 
@@ -412,6 +413,20 @@ export const UploadForm = ({
           value={imageData.cameraModel}
           onChange={(e) => onUpdate(index, 'cameraModel', e.target.value)}
           placeholder="Sony A7 III,..."
+        />
+      </div>
+
+      {/* Tags */}
+      <div>
+        <Label htmlFor={`tags-${index}`} style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500' }}>
+          Tags
+        </Label>
+        <TagInput
+          tags={imageData.tags || []}
+          onChange={(tags) => onUpdate(index, 'tags', tags)}
+          placeholder="Nhập tag và nhấn Enter (ví dụ: nature, landscape, sunset)..."
+          maxTags={20}
+          maxTagLength={50}
         />
       </div>
     </div>

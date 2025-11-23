@@ -11,6 +11,7 @@ export type UploadImageData = {
 		longitude: number;
 	};
 	cameraModel?: string;
+	tags?: string[];
 };
 
 export interface AuthState {
@@ -66,6 +67,8 @@ export interface ImageState {
 		search?: string;
 		category?: string;
 		location?: string;
+		color?: string;
+		tag?: string;
 		_refresh?: boolean;
 	}) => Promise<void>;
 	removeImage: (imageId: string) => void;
