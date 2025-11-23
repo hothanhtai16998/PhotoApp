@@ -45,6 +45,7 @@ export const useImageModal = ({
   });
 
   const {
+    placeholderSrc: modalPlaceholderSrc,
     imageSrc: modalImageSrc,
     isLoaded: isModalImageLoaded,
     setIsLoaded: setIsModalImageLoaded,
@@ -141,6 +142,7 @@ export const useImageModal = ({
     downloads,
     isFavorited,
     isTogglingFavorite,
+    modalPlaceholderSrc,
     modalImageSrc,
     isModalImageLoaded,
     setIsModalImageLoaded,

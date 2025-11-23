@@ -257,6 +257,13 @@
   opacity: 1;
 }
 
+/* Blur-up technique: background-image shows placeholder immediately */
+/* The src image loads on top, preventing any flash */
+.modal-image {
+  /* Background image is set inline via style prop */
+  /* This ensures the placeholder is always visible until src loads */
+}
+
 /* Zoom Controls */
 .modal-zoom-controls {
   position: absolute;

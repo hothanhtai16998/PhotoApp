@@ -98,6 +98,7 @@ const ImageModal = ({
     downloads,
     isFavorited,
     isTogglingFavorite,
+    modalPlaceholderSrc,
     modalImageSrc,
     isModalImageLoaded,
     setIsModalImageLoaded,
@@ -557,11 +558,19 @@ const ImageModal = ({
                     type="image/webp"
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 98vw, 1920px"
                   />
-                  {/* Fallback img element */}
+                  {/* Fallback img element with blur-up technique */}
                   <img
                     ref={zoomImageRef}
                     src={modalImageSrc || image.regularUrl || image.smallUrl || image.imageUrl}
                     alt={image.imageTitle || 'Photo'}
+                    style={{
+                      backgroundImage: modalPlaceholderSrc
+                        ? `url("${modalPlaceholderSrc}")`
+                        : undefined,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      backgroundColor: '#f0f0f0', // Fallback color while placeholder loads
+                    }}
                     className={`modal-image ${isModalImageLoaded ? 'loaded' : 'loading'} ${(imageTypes.get(image._id) || 'landscape') === 'landscape' ? 'landscape' : 'portrait'}`}
                     loading="eager"
                     decoding="async"
@@ -594,6 +603,14 @@ const ImageModal = ({
                   }
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 98vw, 1920px"
                   alt={image.imageTitle || 'Photo'}
+                  style={{
+                    backgroundImage: modalPlaceholderSrc
+                      ? `url("${modalPlaceholderSrc}")`
+                      : undefined,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundColor: '#f0f0f0', // Fallback color while placeholder loads
+                  }}
                   className={`modal-image ${isModalImageLoaded ? 'loaded' : 'loading'} ${(imageTypes.get(image._id) || 'landscape') === 'landscape' ? 'landscape' : 'portrait'}`}
                   loading="eager"
                   decoding="async"
