@@ -6,7 +6,10 @@ import { toast } from 'sonner';
 import { useImageStats } from './useImageStats';
 import { useImagePreload } from './useImagePreload';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
-import { useBatchedFavoriteCheck } from '@/hooks/useBatchedFavoriteCheck';
+import {
+  useBatchedFavoriteCheck,
+  updateFavoriteCache,
+} from '@/hooks/useBatchedFavoriteCheck';
 
 interface UseImageModalProps {
   image: Image;
@@ -60,9 +63,8 @@ export const useImageModal = ({
       const imageId = String(image._id);
       const response = await favoriteService.toggleFavorite(imageId);
 
-      // Note: useBatchedFavoriteCheck hook manages its own state
-      // The favorite status will update automatically on next check
-      // For immediate feedback, we could trigger a re-check, but the hook handles this
+      // Immediately update the cache so UI reflects the change instantly
+      updateFavoriteCache(imageId, response.isFavorited);
 
       if (response.isFavorited) {
         toast.success('Đã thêm vào yêu thích');
