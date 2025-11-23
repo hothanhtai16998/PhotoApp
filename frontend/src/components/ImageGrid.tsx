@@ -22,6 +22,7 @@ import './ImageGrid.css';
 const ImageGridItem = memo(({
   image,
   imageType,
+  aspectRatio,
   onSelect,
   onDownload,
   onImageLoad,
@@ -30,6 +31,7 @@ const ImageGridItem = memo(({
 }: {
   image: Image;
   imageType: 'portrait' | 'landscape';
+  aspectRatio?: number;
   onSelect: (image: Image) => void;
   onDownload: (image: Image, e: React.MouseEvent) => void;
   onImageLoad: (imageId: string, img: HTMLImageElement) => void;
@@ -67,7 +69,9 @@ const ImageGridItem = memo(({
     try {
       const imageId = String(image._id);
       const response = await favoriteService.toggleFavorite(imageId);
-      setIsFavorited(response.isFavorited);
+      // Note: useBatchedFavoriteCheck hook manages its own state
+      // The favorite status will update automatically on next check
+      // For immediate feedback, we could trigger a re-check, but the hook handles this
       if (response.isFavorited) {
         toast.success('Đã thêm vào yêu thích');
       } else {
@@ -100,12 +104,42 @@ const ImageGridItem = memo(({
     overlay.style.setProperty('--mouse-y', `${adjustedY}px`);
   }, []);
 
+  // Calculate grid-row span based on aspect ratio for more accurate sizing
+  // This ensures portrait images get the right height even if type detection is delayed
+  const getGridRowSpan = () => {
+    if (aspectRatio) {
+      // Calculate row span based on actual aspect ratio
+      // Base: 16 rows for landscape (aspect ratio ~1.5), 32 rows for portrait (aspect ratio ~0.67)
+      // Formula: rows = baseRows * (targetAspectRatio / actualAspectRatio)
+      if (imageType === 'portrait') {
+        // Portrait: taller images need more rows
+        // Use aspect ratio to calculate: if aspect ratio is 0.67 (3:4.5), use 32 rows
+        // If aspect ratio is smaller (taller), use more rows
+        const basePortraitAspect = 0.67; // 3:4.5 ratio
+        return Math.max(24, Math.min(40, Math.round(32 * (basePortraitAspect / aspectRatio))));
+      } else {
+        // Landscape: wider images need fewer rows
+        // Use aspect ratio to calculate: if aspect ratio is 1.5 (3:2), use 16 rows
+        // If aspect ratio is larger (wider), use fewer rows
+        const baseLandscapeAspect = 1.5; // 3:2 ratio
+        return Math.max(12, Math.min(20, Math.round(16 * (baseLandscapeAspect / aspectRatio))));
+      }
+    }
+    // Fallback to default spans if aspect ratio not available
+    return imageType === 'portrait' ? 32 : 16;
+  };
+
+  const gridRowSpan = getGridRowSpan();
+
   return (
     <div
       key={image._id}
       className={`masonry-item ${imageType}`}
       role="listitem"
       aria-label={`Ảnh: ${image.imageTitle || 'Không có tiêu đề'}`}
+      style={{
+        gridRow: `span ${gridRowSpan}`,
+      }}
     >
       {/* Mobile: Author Block (Top) */}
       {hasUserInfo && (
@@ -347,7 +381,25 @@ const ImageGrid = memo(() => {
 
   // Track image aspect ratios (portrait vs landscape)
   const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
+  const [imageAspectRatios, setImageAspectRatios] = useState<Map<string, number>>(new Map());
   const processedImages = useRef<Set<string>>(new Set());
+  const preloadQueue = useRef<Set<string>>(new Set());
+  
+  // Clear processed images when image list changes significantly
+  useEffect(() => {
+    // Clear processed images for images that are no longer in the list
+    const currentIds = new Set(images.map(img => img._id));
+    processedImages.current.forEach(id => {
+      if (!currentIds.has(id)) {
+        processedImages.current.delete(id);
+      }
+    });
+    preloadQueue.current.forEach(id => {
+      if (!currentIds.has(id)) {
+        preloadQueue.current.delete(id);
+      }
+    });
+  }, [images]);
 
   // Listen for storage changes (when filters are updated from SearchBar)
   useEffect(() => {
@@ -406,43 +458,93 @@ const ImageGrid = memo(() => {
 
   const currentImageIds = useMemo(() => new Set(filteredImages.map(img => img._id)), [filteredImages]);
 
-  // Preload images to determine their type quickly for filtering
+  // Preload images to determine their type quickly - improved version with aspect ratio
   useEffect(() => {
-    if (filters.orientation !== 'all' && images.length > 0) {
-      // Preload images that don't have types determined yet
-      images.forEach(img => {
-        if (!imageTypes.has(img._id) && img.imageUrl) {
-          const testImg = new Image();
-          testImg.onload = () => {
-            const isPortrait = testImg.naturalHeight > testImg.naturalWidth;
-            const imageType = isPortrait ? 'portrait' : 'landscape';
-            setImageTypes(prev => {
-              if (prev.has(img._id)) return prev;
-              const newMap = new Map(prev);
-              newMap.set(img._id, imageType);
-              return newMap;
-            });
-          };
-          testImg.src = img.imageUrl;
-        }
-      });
-    }
-  }, [images, filters.orientation, imageTypes]);
+    if (images.length === 0) return;
+
+    // Process images in batches to avoid overwhelming the browser
+    const batchSize = 10;
+    const imagesToProcess = images.filter(img => 
+      !imageTypes.has(img._id) && 
+      !preloadQueue.current.has(img._id) && 
+      (img.thumbnailUrl || img.smallUrl || img.imageUrl)
+    );
+
+    imagesToProcess.slice(0, batchSize).forEach(img => {
+      preloadQueue.current.add(img._id);
+      
+      const testImg = new Image();
+      testImg.crossOrigin = 'anonymous';
+      
+      testImg.onload = () => {
+        const aspectRatio = testImg.naturalWidth / testImg.naturalHeight;
+        const isPortrait = testImg.naturalHeight > testImg.naturalWidth;
+        const imageType = isPortrait ? 'portrait' : 'landscape';
+        
+        setImageTypes(prev => {
+          if (prev.has(img._id)) return prev;
+          const newMap = new Map(prev);
+          newMap.set(img._id, imageType);
+          return newMap;
+        });
+        
+        setImageAspectRatios(prev => {
+          if (prev.has(img._id)) return prev;
+          const newMap = new Map(prev);
+          newMap.set(img._id, aspectRatio);
+          return newMap;
+        });
+        
+        preloadQueue.current.delete(img._id);
+      };
+      
+      testImg.onerror = () => {
+        // If image fails to load, default to landscape
+        setImageTypes(prev => {
+          if (prev.has(img._id)) return prev;
+          const newMap = new Map(prev);
+          newMap.set(img._id, 'landscape');
+          return newMap;
+        });
+        
+        setImageAspectRatios(prev => {
+          if (prev.has(img._id)) return prev;
+          const newMap = new Map(prev);
+          newMap.set(img._id, 1.5); // Default landscape aspect ratio
+          return newMap;
+        });
+        
+        preloadQueue.current.delete(img._id);
+      };
+      
+      // Use thumbnail or small URL for faster detection
+      testImg.src = img.thumbnailUrl || img.smallUrl || img.imageUrl;
+    });
+  }, [images, imageTypes]);
 
   // Determine image type when it loads - memoized to prevent recreation
+  // This is a fallback in case preload didn't work
   const handleImageLoad = useCallback((imageId: string, img: HTMLImageElement) => {
     // Only process once per image and only if image still exists
     if (!currentImageIds.has(imageId) || processedImages.current.has(imageId)) return;
 
     processedImages.current.add(imageId);
+    const aspectRatio = img.naturalWidth / img.naturalHeight;
     const isPortrait = img.naturalHeight > img.naturalWidth;
     const imageType = isPortrait ? 'portrait' : 'landscape';
-
-    // Update state only if not already set (prevent unnecessary re-renders)
+    
+    // Only update if type is not already determined (preload should have done this)
     setImageTypes(prev => {
       if (prev.has(imageId)) return prev;
       const newMap = new Map(prev);
       newMap.set(imageId, imageType);
+      return newMap;
+    });
+    
+    setImageAspectRatios(prev => {
+      if (prev.has(imageId)) return prev;
+      const newMap = new Map(prev);
+      newMap.set(imageId, aspectRatio);
       return newMap;
     });
   }, [currentImageIds]);
@@ -645,12 +747,21 @@ const ImageGrid = memo(() => {
       ) : (
         <div className="masonry-grid" role="list" aria-label="Danh sách ảnh">
           {filteredImages.map((image) => {
-            const imageType = imageTypes.get(image._id) || 'landscape';
+            // Get image type and aspect ratio
+            const imageType = imageTypes.get(image._id);
+            const aspectRatio = imageAspectRatios.get(image._id);
+            
+            // If type is not determined yet, we still render but with a stable default
+            // The preload will determine the type quickly, and handleImageLoad will update it
+            // Use 'landscape' as default but ensure consistent sizing
+            const displayType = imageType || 'landscape';
+            
             return (
               <ImageGridItem
                 key={image._id}
                 image={image}
-                imageType={imageType}
+                imageType={displayType}
+                aspectRatio={aspectRatio}
                 onSelect={(img) => {
                   // Set flag to indicate we're opening from grid (not refresh)
                   sessionStorage.setItem('imagePage_fromGrid', 'true');
