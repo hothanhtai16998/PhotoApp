@@ -456,8 +456,9 @@ const ImageModal = ({
                         onClick={() => {
                           setShowUserProfileCard(false);
                           onImageSelect(userImage);
+                          // Scroll to top instantly to show the new image (like Unsplash)
                           if (modalContentRef.current) {
-                            modalContentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+                            modalContentRef.current.scrollTo({ top: 0, behavior: 'auto' });
                           }
                         }}
                       >
@@ -779,9 +780,9 @@ const ImageModal = ({
                         className={`related-image-item ${imageType}`}
                         onClick={() => {
                           onImageSelect(relatedImage);
-                          // Scroll to top of modal content
+                          // Scroll to top instantly to show the new image (like Unsplash)
                           if (modalContentRef.current) {
-                            modalContentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+                            modalContentRef.current.scrollTo({ top: 0, behavior: 'auto' });
                           }
                         }}
                       >
