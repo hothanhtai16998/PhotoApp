@@ -12,7 +12,9 @@ import {
     Images,
     Shield,
     UserCog,
-    Tag
+    Tag,
+    BarChart2,
+    FolderDot
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,9 +22,11 @@ import './AdminPage.css';
 
 // Lazy load admin tab components to reduce initial bundle size
 const AdminDashboard = lazy(() => import('@/components/admin/tabs/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const AdminAnalytics = lazy(() => import('@/components/admin/tabs/AdminAnalytics').then(m => ({ default: m.AdminAnalytics })));
 const AdminUsers = lazy(() => import('@/components/admin/tabs/AdminUsers').then(m => ({ default: m.AdminUsers })));
 const AdminImages = lazy(() => import('@/components/admin/tabs/AdminImages').then(m => ({ default: m.AdminImages })));
 const AdminCategories = lazy(() => import('@/components/admin/tabs/AdminCategories').then(m => ({ default: m.AdminCategories })));
+const AdminCollections = lazy(() => import('@/components/admin/tabs/AdminCollections').then(m => ({ default: m.AdminCollections })));
 const AdminRoles = lazy(() => import('@/components/admin/tabs/AdminRoles').then(m => ({ default: m.AdminRoles })));
 
 // Loading fallback for admin tabs
@@ -35,7 +39,7 @@ const AdminTabLoader = () => (
     </div>
 );
 
-type TabType = 'dashboard' | 'users' | 'images' | 'categories' | 'roles';
+type TabType = 'dashboard' | 'analytics' | 'users' | 'images' | 'categories' | 'collections' | 'roles';
 
 function AdminPage() {
     const { user, fetchMe } = useAuthStore();
@@ -349,6 +353,13 @@ function AdminPage() {
                                 Dashboard
                             </button>
                             <button
+                                className={`admin-nav-item ${activeTab === 'analytics' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('analytics')}
+                            >
+                                <BarChart2 size={20} />
+                                Phân tích
+                            </button>
+                            <button
                                 className={`admin-nav-item ${activeTab === 'users' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('users')}
                             >
@@ -369,6 +380,13 @@ function AdminPage() {
                                 <Tag size={20} />
                                 Danh mục ảnh
                             </button>
+                            <button
+                                className={`admin-nav-item ${activeTab === 'collections' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('collections')}
+                            >
+                                <FolderDot size={20} />
+                                Bộ sưu tập
+                            </button>
                             {user?.isSuperAdmin && (
                                 <button
                                     className={`admin-nav-item ${activeTab === 'roles' ? 'active' : ''}`}
@@ -386,6 +404,9 @@ function AdminPage() {
                         <Suspense fallback={<AdminTabLoader />}>
                             {activeTab === 'dashboard' && (
                                 <AdminDashboard stats={stats} loading={loading} />
+                            )}
+                            {activeTab === 'analytics' && (
+                                <AdminAnalytics />
                             )}
                             {activeTab === 'users' && (
                                 <AdminUsers
@@ -428,6 +449,9 @@ function AdminPage() {
                                     onSaveCreate={handleCreateCategory}
                                     onSaveEdit={handleUpdateCategory}
                                 />
+                            )}
+                            {activeTab === 'collections' && (
+                                <AdminCollections />
                             )}
                             {activeTab === 'roles' && user?.isSuperAdmin && (
                                 <AdminRoles
