@@ -71,15 +71,22 @@ export function AdminAnalytics() {
 
     return (
         <div className="admin-analytics">
-            <div className="admin-analytics-header">
-                <h1 className="admin-title">Phân tích</h1>
+            <div className="admin-analytics-hero">
+                <div className="admin-analytics-hero-content">
+                    <h1 className="admin-analytics-title">
+                        <BarChart2 size={32} />
+                        Phân tích & Thống kê
+                    </h1>
+                    <p className="admin-analytics-subtitle">Theo dõi hiệu suất và xu hướng của nền tảng</p>
+                </div>
                 <div className="admin-analytics-controls">
-                    <label>
-                        Khoảng thời gian:
+                    <label className="admin-analytics-control-label">
+                        <Calendar size={18} />
+                        <span>Khoảng thời gian:</span>
                         <select
                             value={days}
                             onChange={(e) => setDays(Number(e.target.value))}
-                            className="admin-select"
+                            className="admin-select-modern"
                         >
                             <option value={7}>7 ngày</option>
                             <option value={30}>30 ngày</option>
