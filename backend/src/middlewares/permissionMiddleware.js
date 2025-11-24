@@ -3,30 +3,64 @@ import User from '../models/User.js';
 import { asyncHandler } from './asyncHandler.js';
 
 /**
- * Permission definitions
+ * Permission definitions - Granular permissions for fine-grained access control
  */
 export const PERMISSIONS = {
-    MANAGE_USERS: 'manageUsers',
+    // User Management
+    VIEW_USERS: 'viewUsers',
+    EDIT_USERS: 'editUsers',
     DELETE_USERS: 'deleteUsers',
-    MANAGE_IMAGES: 'manageImages',
+    BAN_USERS: 'banUsers',
+    UNBAN_USERS: 'unbanUsers',
+    
+    // Image Management
+    VIEW_IMAGES: 'viewImages',
+    EDIT_IMAGES: 'editImages',
     DELETE_IMAGES: 'deleteImages',
-    MANAGE_CATEGORIES: 'manageCategories',
-    MANAGE_ADMINS: 'manageAdmins',
+    MODERATE_IMAGES: 'moderateImages',
+    
+    // Category Management
+    VIEW_CATEGORIES: 'viewCategories',
+    CREATE_CATEGORIES: 'createCategories',
+    EDIT_CATEGORIES: 'editCategories',
+    DELETE_CATEGORIES: 'deleteCategories',
+    
+    // Admin Management
+    VIEW_ADMINS: 'viewAdmins',
+    CREATE_ADMINS: 'createAdmins',
+    EDIT_ADMINS: 'editAdmins',
+    DELETE_ADMINS: 'deleteAdmins',
+    
+    // Dashboard & Analytics
     VIEW_DASHBOARD: 'viewDashboard',
+    VIEW_ANALYTICS: 'viewAnalytics',
+    
+    // Collections (if applicable)
+    VIEW_COLLECTIONS: 'viewCollections',
+    MANAGE_COLLECTIONS: 'manageCollections',
+    
+    // Legacy permissions (for backward compatibility - map to new permissions)
+    MANAGE_USERS: 'manageUsers', // Maps to: viewUsers, editUsers
+    MANAGE_IMAGES: 'manageImages', // Maps to: viewImages, editImages
+    MANAGE_CATEGORIES: 'manageCategories', // Maps to: viewCategories, createCategories, editCategories
+    MANAGE_ADMINS: 'manageAdmins', // Maps to: viewAdmins, createAdmins, editAdmins
 };
 
 /**
  * Check if user has a specific permission
+ * Uses AdminRole as single source of truth
  */
 export const hasPermission = async (userId, permission) => {
-    // Check if user is super admin (has all permissions)
-    const user = await User.findById(userId).select('isSuperAdmin').lean();
-    if (user?.isSuperAdmin) {
+    // Compute admin status from AdminRole
+    const { computeAdminStatus } = await import('../utils/adminUtils.js');
+    const { isSuperAdmin, adminRole } = await computeAdminStatus(userId);
+    
+    // Super admin has all permissions
+    if (isSuperAdmin) {
         return true;
     }
 
-    // Check admin role permissions
-    const adminRole = await AdminRole.findOne({ userId }).lean();
+    // No admin role means no permissions
     if (!adminRole) {
         return false;
     }
@@ -37,12 +71,38 @@ export const hasPermission = async (userId, permission) => {
     }
 
     // Check specific permission
-    return adminRole.permissions[permission] === true;
+    // Also check legacy permission mappings for backward compatibility
+    if (adminRole.permissions[permission] === true) {
+        return true;
+    }
+    
+    // Legacy permission mappings
+    const legacyMappings = {
+        'manageUsers': ['viewUsers', 'editUsers'],
+        'manageImages': ['viewImages', 'editImages'],
+        'manageCategories': ['viewCategories', 'createCategories', 'editCategories'],
+        'manageAdmins': ['viewAdmins', 'createAdmins', 'editAdmins'],
+    };
+    
+    // If checking a new permission, check if legacy permission grants it
+    if (legacyMappings[permission]) {
+        return legacyMappings[permission].some(p => adminRole.permissions[p] === true);
+    }
+    
+    // If checking a new permission, check if any legacy permission that maps to it is granted
+    for (const [legacyPerm, newPerms] of Object.entries(legacyMappings)) {
+        if (newPerms.includes(permission) && adminRole.permissions[legacyPerm] === true) {
+            return true;
+        }
+    }
+    
+    return false;
 };
 
 /**
  * Middleware to check if user has a specific permission
  * Must be used after protectedRoute middleware
+ * Uses AdminRole as single source of truth
  */
 export const requirePermission = (permission) => {
     return asyncHandler(async (req, res, next) => {
@@ -52,14 +112,27 @@ export const requirePermission = (permission) => {
             });
         }
 
-        // Check if user is super admin
+        // Use computed admin status from authMiddleware (based on AdminRole)
+        // If not computed yet, compute it now
+        if (req.user.isSuperAdmin === undefined || req.user.isAdmin === undefined) {
+            const { computeAdminStatus } = await import('../utils/adminUtils.js');
+            const { isAdmin, isSuperAdmin, adminRole } = await computeAdminStatus(req.user._id);
+            req.user.isAdmin = isAdmin;
+            req.user.isSuperAdmin = isSuperAdmin;
+            if (adminRole) {
+                req.adminRole = adminRole;
+                req.user._adminRole = adminRole;
+            }
+        }
+
+        // Super admin has all permissions
         if (req.user.isSuperAdmin) {
             return next();
         }
 
         // Check admin role
-        const adminRole = await AdminRole.findOne({ userId: req.user._id }).lean();
-
+        const adminRole = req.adminRole || req.user._adminRole;
+        
         if (!adminRole) {
             return res.status(403).json({
                 message: 'Admin access required',
@@ -71,8 +144,34 @@ export const requirePermission = (permission) => {
             return next();
         }
 
-        // Check specific permission
-        if (!adminRole.permissions[permission]) {
+        // Check specific permission (with legacy mapping support)
+        const hasPerm = adminRole.permissions[permission] === true;
+        
+        // Check legacy permission mappings for backward compatibility
+        let hasLegacyPerm = false;
+        const legacyMappings = {
+            'manageUsers': ['viewUsers', 'editUsers'],
+            'manageImages': ['viewImages', 'editImages'],
+            'manageCategories': ['viewCategories', 'createCategories', 'editCategories'],
+            'manageAdmins': ['viewAdmins', 'createAdmins', 'editAdmins'],
+        };
+        
+        // If checking a new permission, check if legacy permission grants it
+        if (legacyMappings[permission]) {
+            hasLegacyPerm = legacyMappings[permission].some(p => adminRole.permissions[p] === true);
+        }
+        
+        // If checking a new permission, check if any legacy permission that maps to it is granted
+        if (!hasPerm && !hasLegacyPerm) {
+            for (const [legacyPerm, newPerms] of Object.entries(legacyMappings)) {
+                if (newPerms.includes(permission) && adminRole.permissions[legacyPerm] === true) {
+                    hasLegacyPerm = true;
+                    break;
+                }
+            }
+        }
+        
+        if (!hasPerm && !hasLegacyPerm) {
             return res.status(403).json({
                 message: `Permission denied: ${permission} required`,
             });
@@ -86,6 +185,7 @@ export const requirePermission = (permission) => {
 
 /**
  * Middleware to check if user is super admin
+ * Uses AdminRole as single source of truth
  */
 export const requireSuperAdmin = asyncHandler(async (req, res, next) => {
     if (!req.user) {
@@ -94,19 +194,29 @@ export const requireSuperAdmin = asyncHandler(async (req, res, next) => {
         });
     }
 
-    if (req.user.isSuperAdmin) {
-        return next();
+    // Use computed admin status from authMiddleware (based on AdminRole)
+    // If not computed yet, compute it now
+    if (req.user.isSuperAdmin === undefined) {
+        const { computeAdminStatus } = await import('../utils/adminUtils.js');
+        const { isSuperAdmin, adminRole } = await computeAdminStatus(req.user._id);
+        req.user.isSuperAdmin = isSuperAdmin;
+        if (adminRole) {
+            req.adminRole = adminRole;
+            req.user._adminRole = adminRole;
+        }
     }
 
-    const adminRole = await AdminRole.findOne({ userId: req.user._id }).lean();
-
-    if (!adminRole || adminRole.role !== 'super_admin') {
+    if (!req.user.isSuperAdmin) {
         return res.status(403).json({
             message: 'Super admin access required',
         });
     }
 
-    req.adminRole = adminRole;
+    // Ensure adminRole is attached
+    if (!req.adminRole && req.user._adminRole) {
+        req.adminRole = req.user._adminRole;
+    }
+
     next();
 });
 

@@ -16,8 +16,12 @@ const adminRoleSchema = new mongoose.Schema(
             required: true,
         },
         permissions: {
-            // User management
-            manageUsers: {
+            // User Management - Granular permissions
+            viewUsers: {
+                type: Boolean,
+                default: false,
+            },
+            editUsers: {
                 type: Boolean,
                 default: false,
             },
@@ -25,8 +29,21 @@ const adminRoleSchema = new mongoose.Schema(
                 type: Boolean,
                 default: false,
             },
-            // Image management
-            manageImages: {
+            banUsers: {
+                type: Boolean,
+                default: false,
+            },
+            unbanUsers: {
+                type: Boolean,
+                default: false,
+            },
+            
+            // Image Management - Granular permissions
+            viewImages: {
+                type: Boolean,
+                default: false,
+            },
+            editImages: {
                 type: Boolean,
                 default: false,
             },
@@ -34,20 +51,83 @@ const adminRoleSchema = new mongoose.Schema(
                 type: Boolean,
                 default: false,
             },
-            // Category management
+            moderateImages: {
+                type: Boolean,
+                default: false,
+            },
+            
+            // Category Management - Granular permissions
+            viewCategories: {
+                type: Boolean,
+                default: false,
+            },
+            createCategories: {
+                type: Boolean,
+                default: false,
+            },
+            editCategories: {
+                type: Boolean,
+                default: false,
+            },
+            deleteCategories: {
+                type: Boolean,
+                default: false,
+            },
+            
+            // Admin Management - Granular permissions (only super_admin can delegate)
+            viewAdmins: {
+                type: Boolean,
+                default: false,
+            },
+            createAdmins: {
+                type: Boolean,
+                default: false,
+            },
+            editAdmins: {
+                type: Boolean,
+                default: false,
+            },
+            deleteAdmins: {
+                type: Boolean,
+                default: false,
+            },
+            
+            // Dashboard & Analytics
+            viewDashboard: {
+                type: Boolean,
+                default: true,
+            },
+            viewAnalytics: {
+                type: Boolean,
+                default: false,
+            },
+            
+            // Collections
+            viewCollections: {
+                type: Boolean,
+                default: false,
+            },
+            manageCollections: {
+                type: Boolean,
+                default: false,
+            },
+            
+            // Legacy permissions (for backward compatibility)
+            manageUsers: {
+                type: Boolean,
+                default: false,
+            },
+            manageImages: {
+                type: Boolean,
+                default: false,
+            },
             manageCategories: {
                 type: Boolean,
                 default: false,
             },
-            // Admin management (only super_admin can delegate)
             manageAdmins: {
                 type: Boolean,
                 default: false,
-            },
-            // View dashboard
-            viewDashboard: {
-                type: Boolean,
-                default: true,
             },
         },
         grantedBy: {

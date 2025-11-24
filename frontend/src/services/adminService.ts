@@ -37,13 +37,44 @@ export interface AdminImage {
 }
 
 export interface AdminRolePermissions {
-    manageUsers?: boolean;
+    // User Management - Granular permissions
+    viewUsers?: boolean;
+    editUsers?: boolean;
     deleteUsers?: boolean;
-    manageImages?: boolean;
+    banUsers?: boolean;
+    unbanUsers?: boolean;
+    
+    // Image Management - Granular permissions
+    viewImages?: boolean;
+    editImages?: boolean;
     deleteImages?: boolean;
+    moderateImages?: boolean;
+    
+    // Category Management - Granular permissions
+    viewCategories?: boolean;
+    createCategories?: boolean;
+    editCategories?: boolean;
+    deleteCategories?: boolean;
+    
+    // Admin Management - Granular permissions
+    viewAdmins?: boolean;
+    createAdmins?: boolean;
+    editAdmins?: boolean;
+    deleteAdmins?: boolean;
+    
+    // Dashboard & Analytics
+    viewDashboard?: boolean;
+    viewAnalytics?: boolean;
+    
+    // Collections
+    viewCollections?: boolean;
+    manageCollections?: boolean;
+    
+    // Legacy permissions (for backward compatibility)
+    manageUsers?: boolean;
+    manageImages?: boolean;
     manageCategories?: boolean;
     manageAdmins?: boolean;
-    viewDashboard?: boolean;
 }
 
 export interface AdminRole {

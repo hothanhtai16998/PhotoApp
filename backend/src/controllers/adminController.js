@@ -53,10 +53,13 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
 
 // User Management
 export const getAllUsers = asyncHandler(async (req, res) => {
-    // Check permission (super admin or admin with manageUsers permission)
-    if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.manageUsers) {
+    // Check permission (super admin or admin with viewUsers permission)
+    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
+    const canView = req.user.isSuperAdmin || await hasPermission(req.user._id, 'viewUsers');
+    
+    if (!canView) {
         return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền admin',
+            message: 'Quyền truy cập bị từ chối: cần quyền xem người dùng',
         });
     }
 
@@ -121,10 +124,13 @@ export const updateUser = asyncHandler(async (req, res) => {
     const { userId } = req.params;
     const { displayName, email, bio } = req.body;
 
-    // Check permission (super admin or admin with manageUsers permission)
-    if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.manageUsers) {
+    // Check permission (super admin or admin with editUsers permission)
+    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
+    const canEdit = req.user.isSuperAdmin || await hasPermission(req.user._id, 'editUsers');
+    
+    if (!canEdit) {
         return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền admin',
+            message: 'Quyền truy cập bị từ chối: cần quyền chỉnh sửa người dùng',
         });
     }
 
@@ -136,8 +142,11 @@ export const updateUser = asyncHandler(async (req, res) => {
         });
     }
 
-    // Prevent non-super admins from updating super admin users
-    if (user.isSuperAdmin && !req.user.isSuperAdmin) {
+    // Prevent non-super admins from updating super admin users (compute from AdminRole)
+    const { computeAdminStatus } = await import('../utils/adminUtils.js');
+    const targetUserStatus = await computeAdminStatus(userId);
+    
+    if (targetUserStatus.isSuperAdmin && !req.user.isSuperAdmin) {
         return res.status(403).json({
             message: 'Quyền truy cập bị từ chối: cần quyền Super admin',
         });
@@ -185,10 +194,13 @@ export const updateUser = asyncHandler(async (req, res) => {
 export const deleteUser = asyncHandler(async (req, res) => {
     const { userId } = req.params;
 
-    // Check permission (only super admin or admin with deleteUsers permission)
-    if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.deleteUsers) {
+    // Check permission (super admin or admin with deleteUsers permission)
+    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
+    const canDelete = req.user.isSuperAdmin || await hasPermission(req.user._id, 'deleteUsers');
+    
+    if (!canDelete) {
         return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền admin',
+            message: 'Quyền truy cập bị từ chối: cần quyền xóa người dùng',
         });
     }
 
@@ -207,8 +219,11 @@ export const deleteUser = asyncHandler(async (req, res) => {
         });
     }
 
-    // Prevent non-super admins from deleting super admin users
-    if (user.isSuperAdmin && !req.user.isSuperAdmin) {
+    // Prevent non-super admins from deleting super admin users (compute from AdminRole)
+    const { computeAdminStatus: computeTargetStatus } = await import('../utils/adminUtils.js');
+    const targetUserStatus = await computeTargetStatus(userId);
+    
+    if (targetUserStatus.isSuperAdmin && !req.user.isSuperAdmin) {
         return res.status(403).json({
             message: 'Quyền truy cập bị từ chối: cần quyền Super admin',
         });
@@ -239,10 +254,13 @@ export const deleteUser = asyncHandler(async (req, res) => {
 
 // Image Management
 export const getAllImagesAdmin = asyncHandler(async (req, res) => {
-    // Check permission (super admin or admin with manageImages permission)
-    if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.manageImages) {
+    // Check permission (super admin or admin with viewImages permission)
+    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
+    const canView = req.user.isSuperAdmin || await hasPermission(req.user._id, 'viewImages');
+    
+    if (!canView) {
         return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền admin',
+            message: 'Quyền truy cập bị từ chối: cần quyền xem ảnh',
         });
     }
 
@@ -341,10 +359,13 @@ export const getAllImagesAdmin = asyncHandler(async (req, res) => {
 export const deleteImage = asyncHandler(async (req, res) => {
     const { imageId } = req.params;
 
-    // Check permission (only super admin or admin with deleteImages permission)
-    if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.deleteImages) {
+    // Check permission (super admin or admin with deleteImages permission)
+    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
+    const canDelete = req.user.isSuperAdmin || await hasPermission(req.user._id, 'deleteImages');
+    
+    if (!canDelete) {
         return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền admin',
+            message: 'Quyền truy cập bị từ chối: cần quyền xóa ảnh',
         });
     }
 
@@ -386,10 +407,13 @@ export const updateImage = asyncHandler(async (req, res) => {
     const { imageId } = req.params;
     const { location, coordinates, imageTitle, cameraModel } = req.body;
 
-    // Check permission (only super admin or admin with manageImages permission)
-    if (!req.user.isSuperAdmin && req.adminRole && !req.adminRole.permissions.manageImages) {
+    // Check permission (super admin or admin with editImages permission)
+    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
+    const canEdit = req.user.isSuperAdmin || await hasPermission(req.user._id, 'editImages');
+    
+    if (!canEdit) {
         return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền admin',
+            message: 'Quyền truy cập bị từ chối: cần quyền chỉnh sửa ảnh',
         });
     }
 
@@ -458,26 +482,24 @@ export const updateImage = asyncHandler(async (req, res) => {
 
 // Admin Role Management (Only Super Admin)
 export const getAllAdminRoles = asyncHandler(async (req, res) => {
-    // Only super admin can view all admin roles
-    if (!req.user.isSuperAdmin && (!req.adminRole || req.adminRole.role !== 'super_admin')) {
+    // Only super admin can view all admin roles (computed from AdminRole)
+    if (!req.user.isSuperAdmin) {
         return res.status(403).json({
             message: 'Quyền truy cập bị từ chối: cần quyền Super admin',
         });
     }
 
     const adminRoles = await AdminRole.find()
-        .populate('userId', 'username email displayName isSuperAdmin')
+        .populate('userId', 'username email displayName')
         .populate('grantedBy', 'username displayName')
         .sort({ createdAt: -1 })
         .lean();
 
-    // Filter out any admin roles for super admin users (they shouldn't have AdminRole entries)
+    // Filter out any admin roles for super admin users (check via AdminRole)
+    // Super admins should have role === 'super_admin' in AdminRole
     const filteredRoles = adminRoles.filter(role => {
-        const userId = role.userId;
-        // Handle both populated and non-populated userId
-        if (userId && typeof userId === 'object' && 'isSuperAdmin' in userId) {
-            return !userId.isSuperAdmin;
-        }
+        // Super admin role is valid, but legacy isSuperAdmin users shouldn't have AdminRole entries
+        // Since we're unifying, we keep all AdminRole entries
         return true;
     });
 
@@ -489,8 +511,8 @@ export const getAllAdminRoles = asyncHandler(async (req, res) => {
 export const getAdminRole = asyncHandler(async (req, res) => {
     const { userId } = req.params;
 
-    // Users can view their own role, super admin can view any
-    if (userId !== req.user._id.toString() && !req.user.isSuperAdmin && (!req.adminRole || req.adminRole.role !== 'super_admin')) {
+    // Users can view their own role, super admin can view any (computed from AdminRole)
+    if (userId !== req.user._id.toString() && !req.user.isSuperAdmin) {
         return res.status(403).json({
             message: 'Quyền truy cập bị từ chối: cần quyền Super admin',
         });
@@ -513,8 +535,8 @@ export const getAdminRole = asyncHandler(async (req, res) => {
 });
 
 export const createAdminRole = asyncHandler(async (req, res) => {
-    // Only super admin can create admin roles
-    if (!req.user.isSuperAdmin && (!req.adminRole || req.adminRole.role !== 'super_admin')) {
+    // Only super admin can create admin roles (computed from AdminRole)
+    if (!req.user.isSuperAdmin) {
         return res.status(403).json({
             message: 'Quyền truy cập bị từ chối: cần quyền Super admin',
         });
@@ -536,12 +558,7 @@ export const createAdminRole = asyncHandler(async (req, res) => {
         });
     }
 
-    // Prevent creating admin role for super admin users
-    if (user.isSuperAdmin) {
-        return res.status(400).json({
-            message: 'Tài khoản hiện tại là Super admin, không thể tạo quyền admin cho Super admin',
-        });
-    }
+    // Super admins can create admin roles for anyone, including other super admins
 
     // Check if admin role already exists
     const existingRole = await AdminRole.findOne({ userId });
@@ -582,8 +599,8 @@ export const createAdminRole = asyncHandler(async (req, res) => {
 });
 
 export const updateAdminRole = asyncHandler(async (req, res) => {
-    // Only super admin can update admin roles
-    if (!req.user.isSuperAdmin && (!req.adminRole || req.adminRole.role !== 'super_admin')) {
+    // Only super admin can update admin roles (computed from AdminRole)
+    if (!req.user.isSuperAdmin) {
         return res.status(403).json({
             message: 'Quyền truy cập bị từ chối: cần quyền admin',
         });
@@ -600,20 +617,7 @@ export const updateAdminRole = asyncHandler(async (req, res) => {
         });
     }
 
-    // Check if user is super admin
-    const user = await User.findById(userId);
-    if (user && user.isSuperAdmin) {
-        return res.status(400).json({
-            message: 'Tại khoản hiện tại là Super admin, không thể thay đổi quyền admin cho Super admin',
-        });
-    }
-
-    // Prevent changing your own role
-    if (userId === req.user._id.toString()) {
-        return res.status(400).json({
-            message: 'Không thể thay đổi quyền admin của tài khoản hiện tại',
-        });
-    }
+    // Super admins can edit any admin role, including their own and other super admins
 
     const updateData = {};
 
@@ -643,21 +647,14 @@ export const updateAdminRole = asyncHandler(async (req, res) => {
 });
 
 export const deleteAdminRole = asyncHandler(async (req, res) => {
-    // Only super admin can delete admin roles
-    if (!req.user.isSuperAdmin && (!req.adminRole || req.adminRole.role !== 'super_admin')) {
+    // Only super admin can delete admin roles (computed from AdminRole)
+    if (!req.user.isSuperAdmin) {
         return res.status(403).json({
             message: 'Quyền truy cập bị từ chối: cần quyền admin',
         });
     }
 
     const { userId } = req.params;
-
-    // Prevent removing your own role
-    if (userId === req.user._id.toString()) {
-        return res.status(400).json({
-            message: 'Không thể tự xóa quyền admin của tài khoản hiện tại',
-        });
-    }
 
     const adminRole = await AdminRole.findOne({ userId });
 
@@ -667,18 +664,13 @@ export const deleteAdminRole = asyncHandler(async (req, res) => {
         });
     }
 
-    // Check if user is super admin
-    const user = await User.findById(userId);
-    if (user && user.isSuperAdmin) {
-        return res.status(400).json({
-            message: 'Không thể xóa quyền admin cho Super admin',
-        });
-    }
+    // Super admins can delete any admin role, including their own and other super admins
 
     // Remove admin role
     await AdminRole.findOneAndDelete({ userId });
 
-    // Update user's isAdmin status (reuse the user variable from above)
+    // Update user's isAdmin status
+    const user = await User.findById(userId);
     if (user) {
         user.isAdmin = false;
         await user.save();

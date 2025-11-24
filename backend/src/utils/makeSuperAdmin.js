@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { env } from '../libs/env.js';
 import User from '../models/User.js';
+import AdminRole from '../models/AdminRole.js';
 import { CONNECT_DB } from '../configs/db.js';
 import { logger } from './logger.js';
 import 'dotenv/config';
@@ -32,14 +33,49 @@ const makeSuperAdmin = async (username) => {
             process.exit(1);
         }
 
-        if (user.isSuperAdmin) {
+        // Check if user already has a super admin role
+        const existingRole = await AdminRole.findOne({ userId: user._id });
+        
+        if (existingRole && existingRole.role === 'super_admin') {
             logger.info(`✅ User "${username}" is already a super admin`);
             await mongoose.connection.close();
             process.exit(0);
         }
 
+        // If user has a regular admin role, update it to super_admin
+        if (existingRole) {
+            existingRole.role = 'super_admin';
+            // Super admin has all permissions
+            existingRole.permissions = {
+                manageUsers: true,
+                deleteUsers: true,
+                manageImages: true,
+                deleteImages: true,
+                manageCategories: true,
+                manageAdmins: true,
+                viewDashboard: true,
+            };
+            await existingRole.save();
+        } else {
+            // Create new AdminRole entry with super_admin role
+            await AdminRole.create({
+                userId: user._id,
+                role: 'super_admin',
+                permissions: {
+                    manageUsers: true,
+                    deleteUsers: true,
+                    manageImages: true,
+                    deleteImages: true,
+                    manageCategories: true,
+                    manageAdmins: true,
+                    viewDashboard: true,
+                },
+            });
+        }
+
+        // Also set isSuperAdmin and isAdmin for backward compatibility
         user.isSuperAdmin = true;
-        user.isAdmin = true; // Also set as admin for backward compatibility
+        user.isAdmin = true;
         await user.save();
 
         logger.info(`✅ User "${username}" is now a super admin!`);

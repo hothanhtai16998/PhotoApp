@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import { env } from "../libs/env.js";
 import { asyncHandler } from "./asyncHandler.js";
+import { enrichUserWithAdminStatus } from "../utils/adminUtils.js";
 
 /**
  * Middleware to protect routes requiring authentication
@@ -31,8 +32,17 @@ export const protectedRoute = asyncHandler(async (req, res, next) => {
             });
         }
 
-        // Attach user to request
-        req.user = user;
+        // Enrich user with computed admin status from AdminRole (single source of truth)
+        const enrichedUser = await enrichUserWithAdminStatus(user);
+        
+        // Attach user to request with computed admin status
+        req.user = enrichedUser;
+        
+        // Also attach adminRole if it exists for convenience
+        if (enrichedUser._adminRole) {
+            req.adminRole = enrichedUser._adminRole;
+        }
+        
         next();
     } catch (error) {
         if (error.name === "TokenExpiredError") {

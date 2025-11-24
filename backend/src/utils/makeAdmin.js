@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { env } from '../libs/env.js';
 import User from '../models/User.js';
+import AdminRole from '../models/AdminRole.js';
 import { CONNECT_DB } from '../configs/db.js';
 import { logger } from './logger.js';
 import 'dotenv/config';
@@ -32,18 +33,39 @@ const makeAdmin = async (username) => {
             process.exit(1);
         }
 
-        if (user.isAdmin) {
-            logger.info(`✅ User "${username}" is already an admin`);
+        // Check if user already has an admin role
+        const existingRole = await AdminRole.findOne({ userId: user._id });
+        
+        if (existingRole) {
+            logger.info(`✅ User "${username}" already has an admin role`);
+            logger.info(`   Role: ${existingRole.role}`);
             await mongoose.connection.close();
             process.exit(0);
         }
 
+        // Create AdminRole entry (single source of truth)
+        const adminRole = await AdminRole.create({
+            userId: user._id,
+            role: 'admin',
+            permissions: {
+                manageUsers: true,
+                deleteUsers: true,
+                manageImages: true,
+                deleteImages: true,
+                manageCategories: true,
+                manageAdmins: false, // Only super admin can manage admins
+                viewDashboard: true,
+            },
+        });
+
+        // Also set isAdmin for backward compatibility
         user.isAdmin = true;
         await user.save();
 
         logger.info(`✅ User "${username}" is now an admin!`);
         logger.info(`   Email: ${user.email}`);
         logger.info(`   Display Name: ${user.displayName}`);
+        logger.info(`   Admin Role created with full permissions (except manageAdmins)`);
 
         await mongoose.connection.close();
         process.exit(0);

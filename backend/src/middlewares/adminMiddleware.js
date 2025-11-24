@@ -5,6 +5,7 @@ import { asyncHandler } from './asyncHandler.js';
  * Middleware to protect admin routes
  * Must be used after protectedRoute middleware
  * Checks if user is super admin or has an admin role
+ * Uses AdminRole as single source of truth (computed in authMiddleware)
  */
 export const adminRoute = asyncHandler(async (req, res, next) => {
     if (!req.user) {
@@ -13,23 +14,28 @@ export const adminRoute = asyncHandler(async (req, res, next) => {
         });
     }
 
-    // Check if user is super admin
-    if (req.user.isSuperAdmin) {
-        return next();
+    // Use computed admin status from authMiddleware (based on AdminRole)
+    // If not computed yet, compute it now
+    if (req.user.isSuperAdmin === undefined || req.user.isAdmin === undefined) {
+        const { computeAdminStatus } = await import('../utils/adminUtils.js');
+        const { isAdmin, isSuperAdmin, adminRole } = await computeAdminStatus(req.user._id);
+        req.user.isAdmin = isAdmin;
+        req.user.isSuperAdmin = isSuperAdmin;
+        if (adminRole) {
+            req.adminRole = adminRole;
+        }
     }
 
-    // Check if user has admin role
-    const adminRole = await AdminRole.findOne({ userId: req.user._id }).lean();
-
-    if (!adminRole && !req.user.isAdmin) {
+    // Check if user is admin (computed from AdminRole)
+    if (!req.user.isAdmin && !req.user.isSuperAdmin) {
         return res.status(403).json({
             message: 'Admin access required',
         });
     }
 
-    // Attach admin role to request for use in controllers
-    if (adminRole) {
-        req.adminRole = adminRole;
+    // Attach admin role to request if not already attached
+    if (!req.adminRole && req.user._adminRole) {
+        req.adminRole = req.user._adminRole;
     }
 
     next();

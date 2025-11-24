@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { AdminRole, AdminRolePermissions } from '@/services/adminService';
+import { PERMISSION_GROUPS, getAllPermissionKeys } from '@/utils/permissionGroups';
 
 interface EditRoleModalProps {
     role: AdminRole;
@@ -10,20 +11,12 @@ interface EditRoleModalProps {
 }
 
 export function EditRoleModal({ role, onClose, onSave }: EditRoleModalProps) {
-    // Define all available permissions
-    const allPermissions = {
-        manageUsers: false,
-        deleteUsers: false,
-        manageImages: false,
-        deleteImages: false,
-        manageCategories: false,
-        manageAdmins: false,
-        viewDashboard: true,
-    };
+    // Get all available permissions
+    const allPermissions = getAllPermissionKeys();
 
     const [selectedRole, setSelectedRole] = useState<'super_admin' | 'admin' | 'moderator'>(role.role);
     // Merge existing permissions with all available permissions to show all checkboxes
-    const [permissions, setPermissions] = useState({
+    const [permissions, setPermissions] = useState<AdminRolePermissions>({
         ...allPermissions,
         ...(role.permissions || {}),
     });
@@ -75,21 +68,28 @@ export function EditRoleModal({ role, onClose, onSave }: EditRoleModalProps) {
 
                     <div className="admin-form-group">
                         <label>Quyền hạn</label>
-                        <div className="admin-permissions-checkboxes">
-                            {Object.entries(allPermissions).map(([key]) => {
-                                const permissionKey = key as keyof AdminRolePermissions;
-                                return (
-                                    <label key={key} className="admin-checkbox-label">
-                                        <input
-                                            type="checkbox"
-                                            checked={permissions[permissionKey] || false}
-                                            onChange={(e) => setPermissions({ ...permissions, [permissionKey]: e.target.checked })}
-                                            disabled={key === 'viewDashboard'}
-                                        />
-                                        <span>{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                                    </label>
-                                );
-                            })}
+                        <div className="admin-permissions-container">
+                            {PERMISSION_GROUPS.map((group, groupIndex) => (
+                                <div key={groupIndex} className="admin-permission-group">
+                                    <h4 className="admin-permission-group-title">{group.label}</h4>
+                                    <div className="admin-permissions-checkboxes">
+                                        {group.permissions.map((perm) => {
+                                            const permissionKey = perm.key as keyof AdminRolePermissions;
+                                            return (
+                                                <label key={perm.key} className="admin-checkbox-label">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={permissions[permissionKey] || false}
+                                                        onChange={(e) => setPermissions({ ...permissions, [permissionKey]: e.target.checked })}
+                                                        disabled={perm.key === 'viewDashboard'}
+                                                    />
+                                                    <span>{perm.label}</span>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
 

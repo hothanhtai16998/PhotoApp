@@ -127,6 +127,10 @@ export const signIn = asyncHandler(async (req, res) => {
         maxAge: TOKEN.REFRESH_TOKEN_TTL,
     });
 
+    // Compute admin status from AdminRole (single source of truth)
+    const { enrichUserWithAdminStatus } = await import("../utils/adminUtils.js");
+    const enrichedUser = await enrichUserWithAdminStatus(user.toObject ? user.toObject() : user);
+
     return res.status(200).json({
         message: "Đăng nhập thành công",
         accessToken,
@@ -136,8 +140,8 @@ export const signIn = asyncHandler(async (req, res) => {
             email: user.email,
             displayName: user.displayName,
             avatarUrl: user.avatarUrl,
-            isAdmin: user.isAdmin || false,
-            isSuperAdmin: user.isSuperAdmin || false,
+            isAdmin: enrichedUser.isAdmin || false,
+            isSuperAdmin: enrichedUser.isSuperAdmin || false,
         },
     });
 });
