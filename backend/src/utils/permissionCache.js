@@ -9,6 +9,8 @@
  * - Cache statistics
  */
 
+import { logger } from './logger.js';
+
 const permissionCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes default TTL
 const MAX_CACHE_SIZE = 1000; // Maximum number of cached entries
@@ -63,7 +65,7 @@ const cleanExpiredEntries = () => {
     }
     
     if (cleaned > 0) {
-        console.log(`[PermissionCache] Cleaned ${cleaned} expired entries`);
+        logger.debug(`[PermissionCache] Cleaned ${cleaned} expired entries`);
     }
     
     return cleaned;
@@ -88,7 +90,7 @@ const enforceCacheSize = () => {
         permissionCache.delete(entries[i].key);
     }
     
-    console.log(`[PermissionCache] Removed ${toRemove} oldest entries to enforce size limit`);
+    logger.debug(`[PermissionCache] Removed ${toRemove} oldest entries to enforce size limit`);
 };
 
 /**
@@ -163,7 +165,7 @@ export const invalidateUserCache = (userId, clientIP = null) => {
 export const clearAllCache = () => {
     const size = permissionCache.size;
     permissionCache.clear();
-    console.log(`[PermissionCache] Cleared all ${size} cache entries`);
+    logger.info(`[PermissionCache] Cleared all ${size} cache entries`);
 };
 
 /**
@@ -208,14 +210,14 @@ export const startCacheCleanup = () => {
         cleanExpiredEntries();
     }, 5 * 60 * 1000);
     
-    console.log('[PermissionCache] Cache cleanup started');
+    logger.info('[PermissionCache] Cache cleanup started');
 };
 
 export const stopCacheCleanup = () => {
     if (cleanupInterval) {
         clearInterval(cleanupInterval);
         cleanupInterval = null;
-        console.log('[PermissionCache] Cache cleanup stopped');
+        logger.info('[PermissionCache] Cache cleanup stopped');
     }
 };
 
