@@ -48,16 +48,21 @@
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.3);
-  z-index: 1500;
+  z-index: 1499;
   animation: fadeIn 0.2s ease;
+  /* Prevent body scrollbar when overlay is open */
+  overflow: hidden;
 }
+
+/* Note: Body scroll prevention should be handled via JavaScript
+   when the filter opens/closes to ensure cross-browser compatibility */
 
 .search-filters-panel {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
   width: 320px;
-  max-width: calc(100vw - 32px);
+  max-width: min(320px, calc(100vw - 32px));
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
@@ -66,6 +71,8 @@
   max-height: calc(100vh - 100px);
   display: flex;
   flex-direction: column;
+  /* Prevent horizontal overflow but allow vertical scrolling in content */
+  overflow: visible;
 }
 
 @keyframes slideDown {
@@ -115,10 +122,35 @@
 .search-filters-content {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 24px;
+  /* Ensure scrollbar is always visible when content overflows */
+  scrollbar-width: thin;
+  scrollbar-color: #d1d1d1 #f5f5f5;
+  /* Force scrollbar to show on webkit browsers */
+  -webkit-overflow-scrolling: touch;
+}
+
+.search-filters-content::-webkit-scrollbar {
+  width: 8px;
+  display: block !important;
+}
+
+.search-filters-content::-webkit-scrollbar-track {
+  background: #f5f5f5;
+  border-radius: 4px;
+}
+
+.search-filters-content::-webkit-scrollbar-thumb {
+  background: #d1d1d1;
+  border-radius: 4px;
+}
+
+.search-filters-content::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
 }
 
 .filter-group {

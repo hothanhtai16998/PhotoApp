@@ -2,11 +2,19 @@
 
 import { memo, useState, useRef } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Shield, Heart, Menu, X } from "lucide-react"
+import { Shield, Heart, Menu, X, User, LogOut, Info } from "lucide-react"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { useImageStore } from "@/stores/useImageStore"
 import UploadModal from "./UploadModal"
 import { SearchBar, type SearchBarRef } from "./SearchBar"
+import { Avatar } from "./Avatar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu"
 import './Header.css'
 
 export const Header = memo(function Header() {
@@ -55,22 +63,63 @@ export const Header = memo(function Header() {
 
           {/* Right Actions - Desktop */}
           <div className="header-actions desktop-only">
-            <Link to="/about" className="header-link">Về chúng tôi</Link>
             {accessToken ? (
               <>
-                <button onClick={() => setUploadModalOpen(true)} className="header-link">Thêm ảnh</button>
-                <Link to="/favorites" className="header-link" title="Ảnh yêu thích" aria-label="Xem ảnh yêu thích">
-                  <Heart size={18} />
-                  Yêu thích
-                </Link>
-                {user?.isAdmin && (
-                  <Link to="/admin" className="header-link" title="Admin Panel">
-                    <Shield size={18} />
-                    Admin
-                  </Link>
-                )}
-                <Link to="/profile" className="header-link">Tài khoản</Link>
-                <button onClick={handleSignOut} className="header-link">Đăng xuất</button>
+                <button onClick={() => setUploadModalOpen(true)} className="header-link header-upload-button">Thêm ảnh</button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="header-link user-menu-trigger" aria-label="User menu">
+                      {user ? (
+                        <Avatar 
+                          user={user} 
+                          size={32}
+                          className="header-user-avatar"
+                          fallbackClassName="header-user-avatar-placeholder"
+                        />
+                      ) : (
+                        <User size={18} />
+                      )}
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="user-menu-content">
+                    <DropdownMenuItem asChild>
+                      <Link to="/favorites" className="user-menu-item">
+                        <Heart size={16} />
+                        Yêu thích
+                      </Link>
+                    </DropdownMenuItem>
+                    {user?.isAdmin && (
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin" className="user-menu-item">
+                          <Shield size={16} />
+                          Admin
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/about" className="user-menu-item">
+                        <Info size={16} />
+                        Về chúng tôi
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/profile" className="user-menu-item">
+                        <User size={16} />
+                        Tài khoản
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={handleSignOut}
+                      className="user-menu-item"
+                      variant="destructive"
+                    >
+                      <LogOut size={16} />
+                      Đăng xuất
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             ) : (
               <>
