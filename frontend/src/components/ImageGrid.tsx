@@ -207,8 +207,8 @@ const ImageGridItem = memo(({
             <button
               className="image-action-btn download-btn"
               onClick={handleDownload}
-              title="Download"
-              aria-label="Download image"
+              title="Tải xuống"
+              aria-label="Tải xuống ảnh"
             >
               <Download size={20} />
             </button>
@@ -256,8 +256,8 @@ const ImageGridItem = memo(({
         <button
           className="mobile-action-btn download-btn"
           onClick={handleDownload}
-          title="Download"
-          aria-label="Download image"
+          title="Tải xuống"
+          aria-label="Tải xuống ảnh"
         >
           <Download size={20} />
         </button>

@@ -72,7 +72,7 @@ export function SigninForm({
             window.location.href = `${apiUrl}/api/auth/google`;
         } else {
             // For other providers, show coming soon message
-            alert(`${provider.charAt(0).toUpperCase() + provider.slice(1)} login is coming soon!`);
+            alert(`Đăng nhập ${provider.charAt(0).toUpperCase() + provider.slice(1)} sẽ sớm ra mắt!`);
         }
     };
 

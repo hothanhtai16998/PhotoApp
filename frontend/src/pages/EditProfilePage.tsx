@@ -331,7 +331,7 @@ function EditProfilePage() {
                                 {/* Badge Section */}
                                 <div className="form-section">
                                     <h3 className="section-title">Badge</h3>
-                                    <p className="empty-badge-message">You don't have any badges yet :(</p>
+                                    <p className="empty-badge-message">Bạn chưa có huy hiệu nào :(</p>
                                 </div>
 
                                 {/* About Section */}
@@ -490,7 +490,7 @@ function EditProfilePage() {
                         {activeSection !== 'edit-profile' && activeSection !== 'change-password' && (
                             <div className="coming-soon">
                                 <h2>{menuItems.find(item => item.id === activeSection)?.label}</h2>
-                                <p>This section is coming soon.</p>
+                                <p>Phần này sẽ sớm ra mắt.</p>
                             </div>
                         )}
                     </div>

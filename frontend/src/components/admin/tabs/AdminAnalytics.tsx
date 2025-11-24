@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { adminService } from '@/services/adminService';
 import { toast } from 'sonner';
 import { BarChart2, Users, Images, TrendingUp, Calendar, UserPlus, Ban, ImagePlus, CheckCircle, XCircle, Flag, Clock, ArrowUp, ArrowDown, MoreVertical, Activity } from 'lucide-react';
-import { AreaChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { AreaChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, BarChart, Bar, Cell, LineChart } from 'recharts';
 
 interface AnalyticsData {
     period: {
@@ -289,29 +289,31 @@ export function AdminAnalytics() {
                 </div>
             </div>
 
-            {/* Main Trend Chart */}
-            <div className="falcon-card falcon-main-chart">
-                <div className="falcon-card-header">
-                    <div className="falcon-chart-header-left">
-                        <select
-                            value={days}
-                            onChange={(e) => setDays(Number(e.target.value))}
-                            className="falcon-select-small"
-                        >
-                            <option value={7}>Last 7 days</option>
-                            <option value={30}>Last Month</option>
-                            <option value={90}>Last 90 days</option>
-                            <option value={365}>Last Year</option>
-                        </select>
+            {/* Chart and Realtime Widget Side by Side */}
+            <div className="falcon-chart-realtime-container">
+                {/* Main Trend Chart - 2/3 width */}
+                <div className="falcon-card falcon-main-chart">
+                    <div className="falcon-card-header">
+                        <div className="falcon-chart-header-left">
+                            <select
+                                value={days}
+                                onChange={(e) => setDays(Number(e.target.value))}
+                                className="falcon-select-small"
+                            >
+                            <option value={7}>7 ngày qua</option>
+                            <option value={30}>Tháng trước</option>
+                            <option value={90}>90 ngày qua</option>
+                            <option value={365}>Năm trước</option>
+                            </select>
+                        </div>
+                        <div className="falcon-chart-header-right">
+                            <a href="#" className="falcon-link-button" onClick={(e) => e.preventDefault()}>
+                                Tổng quan lượt truy cập →
+                            </a>
+                        </div>
                     </div>
-                    <div className="falcon-chart-header-right">
-                        <a href="#" className="falcon-link-button" onClick={(e) => e.preventDefault()}>
-                            Visitors overview →
-                        </a>
-                    </div>
-                </div>
-                <div className="falcon-card-body">
-                    <ResponsiveContainer width="100%" height={400}>
+                    <div className="falcon-card-body">
+                        <ResponsiveContainer width="100%" height={400}>
                         <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                             <defs>
                                 <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
@@ -522,7 +524,7 @@ export function AdminAnalytics() {
                                 strokeDasharray="5 5"
                                 dot={false}
                                 activeDot={{ r: 4 }}
-                                name="Previous Period"
+                                name="Kỳ trước"
                             />
                             {/* Current period - solid with area fill */}
                             <Area
@@ -532,25 +534,25 @@ export function AdminAnalytics() {
                                 strokeWidth={2}
                                 fillOpacity={1}
                                 fill="url(#colorValue)"
-                                name="Current Period"
+                                name="Kỳ hiện tại"
                                 activeDot={{ r: 5, fill: '#667eea' }}
                             />
                         </AreaChart>
                     </ResponsiveContainer>
+                    </div>
                 </div>
-            </div>
 
-            {/* Users Online Right Now Widget */}
-            {realtimeData && (
-                <div className="falcon-card falcon-realtime-widget">
+                {/* Users Online Right Now Widget - 1/3 width */}
+                {realtimeData && (
+                    <div className="falcon-card falcon-realtime-widget">
                     <div className="falcon-card-header">
-                        <h3 className="falcon-card-title">Users Online Right Now</h3>
+                        <h3 className="falcon-card-title">Người dùng đang trực tuyến</h3>
                     </div>
                     <div className="falcon-card-body">
                         <div className="falcon-users-online-value">{realtimeData.usersOnline}</div>
                         
                         <div className="falcon-views-per-second">
-                            <div className="falcon-views-label">Pages views / second</div>
+                            <div className="falcon-views-label">Lượt xem trang / giây</div>
                             <div className="falcon-views-chart">
                                 {realtimeData.viewsPerSecond.map((item, index) => {
                                     const maxCount = Math.max(...realtimeData.viewsPerSecond.map(v => v.count), 1);
@@ -564,8 +566,8 @@ export function AdminAnalytics() {
 
                         <div className="falcon-most-active-pages">
                             <div className="falcon-pages-header">
-                                <span>Most Active Pages</span>
-                                <span>User Count</span>
+                                <span>Trang hoạt động nhiều nhất</span>
+                                <span>Số người dùng</span>
                             </div>
                             <div className="falcon-pages-list">
                                 {realtimeData.mostActivePages.map((page, index) => (
@@ -579,12 +581,13 @@ export function AdminAnalytics() {
 
                         <div className="falcon-realtime-link">
                             <a href="#" onClick={(e) => { e.preventDefault(); loadRealtimeData(); }}>
-                                Real-time Data →
+                                Dữ liệu thời gian thực →
                             </a>
                         </div>
                     </div>
                 </div>
-            )}
+                )}
+            </div>
 
             {/* Main Content Grid */}
             <div className="falcon-analytics-grid">
@@ -651,9 +654,9 @@ export function AdminAnalytics() {
                         <div className="falcon-card-header">
                             <h3 className="falcon-card-title">Lượt tải lên hàng ngày</h3>
                             <select className="falcon-select-small">
-                                <option>Last 7 days</option>
-                                <option>Last Month</option>
-                                <option>Last Year</option>
+                                <option>7 ngày qua</option>
+                                <option>Tháng trước</option>
+                                <option>Năm trước</option>
                             </select>
                         </div>
                         <div className="falcon-card-body">
@@ -677,7 +680,7 @@ export function AdminAnalytics() {
 
                 {/* Right Column */}
                 <div className="falcon-analytics-right">
-                    {/* Category Distribution */}
+                    {/* Category Distribution - Line Chart */}
                     <div className="falcon-card">
                         <div className="falcon-card-header">
                             <h3 className="falcon-card-title">Phân bố theo danh mục</h3>
@@ -686,24 +689,62 @@ export function AdminAnalytics() {
                             </button>
                         </div>
                         <div className="falcon-card-body">
-                            <div className="falcon-table-container">
-                                <table className="falcon-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Danh mục</th>
-                                            <th>Số lượng</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {analytics.categories.map((cat) => (
-                                            <tr key={cat._id}>
-                                                <td>{cat.name || 'Unknown'}</td>
-                                                <td>{cat.count.toLocaleString()}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                            <ResponsiveContainer width="100%" height={300}>
+                                <LineChart
+                                    data={analytics.categories.map(cat => ({
+                                        name: cat.name || 'Không xác định',
+                                        count: cat.count,
+                                        _id: cat._id
+                                    }))}
+                                    margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e9ecef" strokeOpacity={0.5} />
+                                    <XAxis 
+                                        dataKey="name" 
+                                        stroke="#6c757d"
+                                        tick={{ fill: '#6c757d', fontSize: 11 }}
+                                        angle={-45}
+                                        textAnchor="end"
+                                        height={80}
+                                    />
+                                    <YAxis 
+                                        stroke="#6c757d"
+                                        tick={{ fill: '#6c757d', fontSize: 11 }}
+                                    />
+                                    <Tooltip
+                                        content={({ active, payload }) => {
+                                            if (active && payload && payload.length) {
+                                                const data = payload[0].payload;
+                                                return (
+                                                    <div style={{
+                                                        backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                                                        border: '1px solid #e9ecef',
+                                                        borderRadius: '8px',
+                                                        padding: '10px',
+                                                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+                                                    }}>
+                                                        <div style={{ fontWeight: 600, marginBottom: '6px', color: '#212529' }}>
+                                                            {data.name}
+                                                        </div>
+                                                        <div style={{ color: '#667eea', fontWeight: 700, fontSize: '16px' }}>
+                                                            {data.count.toLocaleString()} ảnh
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        }}
+                                    />
+                                    <Line 
+                                        type="monotone" 
+                                        dataKey="count" 
+                                        stroke="#667eea" 
+                                        strokeWidth={3}
+                                        dot={{ fill: '#667eea', r: 5, strokeWidth: 2, stroke: '#fff' }}
+                                        activeDot={{ r: 7, fill: '#667eea', stroke: '#fff', strokeWidth: 2 }}
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
                         </div>
                     </div>
 
@@ -741,45 +782,6 @@ export function AdminAnalytics() {
                 </div>
             </div>
 
-            {/* Category Distribution */}
-            <div className="admin-section">
-                <h2 className="admin-section-title">
-                    <TrendingUp size={20} />
-                    Phân bố theo danh mục
-                </h2>
-                <div className="admin-category-chart">
-                    {analytics.categories.map((cat, index) => {
-                        const maxCount = analytics.categories[0]?.count || 1;
-                        const percentage = (cat.count / maxCount) * 100;
-                        const colors = [
-                            'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                            'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                            'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-                            'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-                            'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-                            'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
-                        ];
-                        const color = colors[index % colors.length];
-                        return (
-                            <div key={cat._id} className="admin-category-bar-item">
-                                <div className="admin-category-bar-header">
-                                    <span className="admin-category-bar-name">{cat.name || 'Unknown'}</span>
-                                    <span className="admin-category-bar-count">{cat.count} ảnh</span>
-                                </div>
-                                <div className="admin-category-bar-container">
-                                    <div
-                                        className="admin-category-bar-fill"
-                                        style={{
-                                            width: `${percentage}%`,
-                                            background: color,
-                                        }}
-                                    />
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
 
             {/* Daily Uploads */}
             <div className="admin-section">

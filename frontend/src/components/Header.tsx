@@ -52,7 +52,7 @@ export const Header = memo(function Header() {
           <button 
             className="mobile-menu-button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Toggle menu"
+            aria-label="Chuyển đổi menu"
             aria-expanded={mobileMenuOpen}
           >
             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -68,7 +68,7 @@ export const Header = memo(function Header() {
                 <button onClick={() => setUploadModalOpen(true)} className="header-link header-upload-button">Thêm ảnh</button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="header-link user-menu-trigger" aria-label="User menu">
+                    <button className="header-link user-menu-trigger" aria-label="Menu người dùng">
                       {user ? (
                         <Avatar 
                           user={user} 

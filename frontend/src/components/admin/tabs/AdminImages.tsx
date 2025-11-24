@@ -66,7 +66,7 @@ export function AdminImages({
                             <h3>{img.imageTitle}</h3>
                             <p>Danh mục: {typeof img.imageCategory === 'string'
                                 ? img.imageCategory
-                                : img.imageCategory?.name || 'Unknown'}</p>
+                                : img.imageCategory?.name || 'Không xác định'}</p>
                             <p>Người đăng: {img.uploadedBy.displayName || img.uploadedBy.username}</p>
                             <p>Ngày đăng: {img.createdAt}</p>
                             {img.moderationStatus && (

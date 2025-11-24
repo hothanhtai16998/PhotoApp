@@ -131,7 +131,7 @@ export function AdminDashboard({ stats, loading }: AdminDashboardProps) {
                                     <td>
                                         {typeof img.imageCategory === 'string'
                                             ? img.imageCategory
-                                            : img.imageCategory?.name || 'Unknown'}
+                                            : img.imageCategory?.name || 'Không xác định'}
                                     </td>
                                     <td>{img.uploadedBy?.displayName || img.uploadedBy?.username}</td>
                                     <DateCell date={img.createdAt} />

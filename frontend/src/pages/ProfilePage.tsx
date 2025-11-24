@@ -122,12 +122,12 @@ function ProfilePage() {
 
     const handleEditPins = () => {
         // Feature coming soon - allows users to pin favorite images to their profile
-        toast.info('Edit pins feature is coming soon! This will allow you to showcase your favorite images on your profile.');
+        toast.info('Tính năng chỉnh sửa ghim sẽ sớm ra mắt! Tính năng này sẽ cho phép bạn giới thiệu những hình ảnh yêu thích trên hồ sơ của mình.');
     };
 
     const handleUpdateAvailability = () => {
         // Feature coming soon - allows users to indicate if they're available for hire
-        toast.info('Availability update feature is coming soon! You\'ll be able to indicate if you\'re available for photography work.');
+        toast.info('Tính năng cập nhật tình trạng sẵn sàng sẽ sớm ra mắt! Bạn sẽ có thể cho biết mình có sẵn sàng nhận công việc chụp ảnh hay không.');
     };
 
     // Calculate display images based on active tab

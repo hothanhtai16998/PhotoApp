@@ -312,7 +312,7 @@ const ImageModal = ({
         navigate('/profile');
       } else {
         // For other users, show a message (feature coming soon)
-        toast.info('Viewing other users\' profiles is coming soon!');
+        toast.info('Xem hồ sơ người dùng khác sẽ sớm ra mắt!');
       }
     }, 50);
   }, [navigate, image.uploadedBy._id, user]);

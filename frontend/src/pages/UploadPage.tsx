@@ -117,12 +117,12 @@ function UploadPage() {
                         <div className="upload-icon">
                             <Upload size={32} />
                         </div>
-                        <h1 className="upload-title">Start uploading</h1>
+                        <h1 className="upload-title">Bắt đầu tải lên</h1>
                         <p className="upload-description">
-                            Share your photos with millions of people and get discovered by creators everywhere.
+                            Chia sẻ ảnh của bạn với hàng triệu người và được các nhà sáng tạo khắp nơi khám phá.
                         </p>
                         <p className="upload-subdescription">
-                            Upload high-quality images to help others create beautiful content. Your work will be seen by designers, marketers, and creators around the world.
+                            Tải lên hình ảnh chất lượng cao để giúp người khác tạo nội dung đẹp. Tác phẩm của bạn sẽ được các nhà thiết kế, nhà tiếp thị và nhà sáng tạo trên toàn thế giới xem.
                         </p>
                         
                         <form onSubmit={handleSubmit(onSubmit)} className="upload-form">
@@ -151,7 +151,7 @@ function UploadPage() {
                                 <Input id="cameraModel" {...register('cameraModel')} placeholder="e.g., Sony A7 III" />
                             </div>
                             <Button type="submit" disabled={loading} className="upload-submit-btn">
-                                {loading ? 'Uploading...' : 'Start uploading'}
+                                {loading ? 'Đang tải lên...' : 'Bắt đầu tải lên'}
                             </Button>
                         </form>
                     </div>

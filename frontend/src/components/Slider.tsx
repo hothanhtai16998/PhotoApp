@@ -501,7 +501,7 @@ function Slider() {
                                             <div className="info-item">
                                                 <span className="info-label">Người đăng:</span>
                                                 <span className="info-value">
-                                                    {slide.uploadedBy.displayName || slide.uploadedBy.username || 'Unknown'}
+                                                    {slide.uploadedBy.displayName || slide.uploadedBy.username || 'Không xác định'}
                                                 </span>
                                             </div>
                                         )}
