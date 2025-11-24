@@ -4,6 +4,7 @@ import { Search, Trash2, CheckCircle, XCircle, Flag } from 'lucide-react';
 import { adminService } from '@/services/adminService';
 import { toast } from 'sonner';
 import type { AdminImage } from '@/services/adminService';
+import { PermissionButton } from '../PermissionButton';
 
 interface AdminImagesProps {
     images: AdminImage[];
@@ -79,37 +80,42 @@ export function AdminImages({
                                 </p>
                             )}
                             <div className="admin-image-actions">
-                                <Button
+                                <PermissionButton
+                                    permission="moderateImages"
+                                    action="Phê duyệt hình ảnh"
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleModerate(img._id, 'approved')}
-                                    title="Phê duyệt"
                                 >
                                     <CheckCircle size={16} /> Phê duyệt
-                                </Button>
-                                <Button
+                                </PermissionButton>
+                                <PermissionButton
+                                    permission="moderateImages"
+                                    action="Từ chối hình ảnh"
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleModerate(img._id, 'rejected')}
-                                    title="Từ chối"
                                 >
                                     <XCircle size={16} /> Từ chối
-                                </Button>
-                                <Button
+                                </PermissionButton>
+                                <PermissionButton
+                                    permission="moderateImages"
+                                    action="Đánh dấu hình ảnh"
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleModerate(img._id, 'flagged')}
-                                    title="Đánh dấu"
                                 >
                                     <Flag size={16} /> Đánh dấu
-                                </Button>
-                                <Button
+                                </PermissionButton>
+                                <PermissionButton
+                                    permission="deleteImages"
+                                    action="Xóa hình ảnh"
                                     variant="outline"
                                     size="sm"
                                     onClick={() => onDelete(img._id, img.imageTitle)}
                                 >
                                     <Trash2 size={16} /> Xoá
-                                </Button>
+                                </PermissionButton>
                             </div>
                         </div>
                     </div>

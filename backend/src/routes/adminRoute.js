@@ -50,30 +50,30 @@ router.get('/analytics/realtime', requirePermission('viewAnalytics'), getRealtim
 // Note: trackPageView is handled as a public route in server.js (before adminRoute middleware)
 
 // User Management
-router.get('/users', getAllUsers);
-router.get('/users/:userId', getUserById);
-router.put('/users/:userId', validateCsrf, updateUser);
-router.delete('/users/:userId', validateCsrf, deleteUser);
-router.post('/users/:userId/ban', validateCsrf, banUser);
-router.post('/users/:userId/unban', validateCsrf, unbanUser);
+router.get('/users', requirePermission('viewUsers'), getAllUsers);
+router.get('/users/:userId', requirePermission('viewUsers'), getUserById);
+router.put('/users/:userId', requirePermission('editUsers'), validateCsrf, updateUser);
+router.delete('/users/:userId', requirePermission('deleteUsers'), validateCsrf, deleteUser);
+router.post('/users/:userId/ban', requirePermission('banUsers'), validateCsrf, banUser);
+router.post('/users/:userId/unban', requirePermission('unbanUsers'), validateCsrf, unbanUser);
 
 // Image Management
-router.get('/images', getAllImagesAdmin);
-router.put('/images/:imageId', validateCsrf, updateImage);
-router.delete('/images/:imageId', validateCsrf, deleteImage);
-router.post('/images/:imageId/moderate', validateCsrf, moderateImage);
+router.get('/images', requirePermission('viewImages'), getAllImagesAdmin);
+router.put('/images/:imageId', requirePermission('editImages'), validateCsrf, updateImage);
+router.delete('/images/:imageId', requirePermission('deleteImages'), validateCsrf, deleteImage);
+router.post('/images/:imageId/moderate', requirePermission('moderateImages'), validateCsrf, moderateImage);
 
 // Admin Role Management
-router.get('/roles', getAllAdminRoles);
-router.get('/roles/:userId', getAdminRole);
+router.get('/roles', requirePermission('viewAdmins'), getAllAdminRoles);
+router.get('/roles/:userId', requirePermission('viewAdmins'), getAdminRole);
 router.post('/roles', requireSuperAdmin, validateCsrf, createAdminRole);
 router.put('/roles/:userId', requireSuperAdmin, validateCsrf, updateAdminRole);
 router.delete('/roles/:userId', requireSuperAdmin, validateCsrf, deleteAdminRole);
 
 // Collection Management
-router.get('/collections', getAllCollectionsAdmin);
-router.put('/collections/:collectionId', validateCsrf, updateCollectionAdmin);
-router.delete('/collections/:collectionId', validateCsrf, deleteCollectionAdmin);
+router.get('/collections', requirePermission('viewCollections'), getAllCollectionsAdmin);
+router.put('/collections/:collectionId', requirePermission('manageCollections'), validateCsrf, updateCollectionAdmin);
+router.delete('/collections/:collectionId', requirePermission('manageCollections'), validateCsrf, deleteCollectionAdmin);
 
 // Export Data
 router.get('/export', requirePermission('exportData'), exportData);

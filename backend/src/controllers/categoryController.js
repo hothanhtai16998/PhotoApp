@@ -15,16 +15,8 @@ export const getAllCategories = asyncHandler(async (req, res) => {
 });
 
 export const getAllCategoriesAdmin = asyncHandler(async (req, res) => {
-    // Check permission (super admin or admin with viewCategories permission)
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canView = req.user.isSuperAdmin || await hasPermission(req.user._id, 'viewCategories');
+    // Permission check is handled by requirePermission('viewCategories') middleware
     
-    if (!canView) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền xem danh mục',
-        });
-    }
-
     const categories = await Category.find()
         .sort({ name: 1 })
         .lean();
@@ -46,16 +38,8 @@ export const getAllCategoriesAdmin = asyncHandler(async (req, res) => {
 });
 
 export const createCategory = asyncHandler(async (req, res) => {
-    // Check permission (super admin or admin with createCategories permission)
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canCreate = req.user.isSuperAdmin || await hasPermission(req.user._id, 'createCategories');
+    // Permission check is handled by requirePermission('createCategories') middleware
     
-    if (!canCreate) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền tạo danh mục',
-        });
-    }
-
     const { name, description } = req.body;
 
     if (!name || !name.trim()) {
@@ -91,16 +75,8 @@ export const createCategory = asyncHandler(async (req, res) => {
 });
 
 export const updateCategory = asyncHandler(async (req, res) => {
-    // Check permission (super admin or admin with editCategories permission)
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canEdit = req.user.isSuperAdmin || await hasPermission(req.user._id, 'editCategories');
+    // Permission check is handled by requirePermission('editCategories') middleware
     
-    if (!canEdit) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền chỉnh sửa danh mục',
-        });
-    }
-
     const { categoryId } = req.params;
     const { name, description, isActive } = req.body;
 
@@ -162,16 +138,8 @@ export const updateCategory = asyncHandler(async (req, res) => {
 });
 
 export const deleteCategory = asyncHandler(async (req, res) => {
-    // Check permission (super admin or admin with deleteCategories permission)
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canDelete = req.user.isSuperAdmin || await hasPermission(req.user._id, 'deleteCategories');
+    // Permission check is handled by requirePermission('deleteCategories') middleware
     
-    if (!canDelete) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền xóa danh mục',
-        });
-    }
-
     const { categoryId } = req.params;
 
     const category = await Category.findById(categoryId);

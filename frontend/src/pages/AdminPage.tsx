@@ -37,6 +37,7 @@ const AdminFavorites = lazy(() => import('@/components/admin/tabs/AdminFavorites
 const AdminModeration = lazy(() => import('@/components/admin/tabs/AdminModeration').then(m => ({ default: m.AdminModeration })));
 const AdminLogs = lazy(() => import('@/components/admin/tabs/AdminLogs').then(m => ({ default: m.AdminLogs })));
 const AdminSettings = lazy(() => import('@/components/admin/tabs/AdminSettings').then(m => ({ default: m.AdminSettings })));
+const PermissionMatrix = lazy(() => import('@/components/admin/PermissionMatrix').then(m => ({ default: m.PermissionMatrix })));
 
 // Loading fallback for admin tabs
 const AdminTabLoader = () => (
@@ -48,7 +49,7 @@ const AdminTabLoader = () => (
     </div>
 );
 
-type TabType = 'dashboard' | 'analytics' | 'users' | 'images' | 'categories' | 'collections' | 'roles' | 'favorites' | 'moderation' | 'logs' | 'settings';
+type TabType = 'dashboard' | 'analytics' | 'users' | 'images' | 'categories' | 'collections' | 'roles' | 'permissions' | 'favorites' | 'moderation' | 'logs' | 'settings';
 
 function AdminPage() {
     const { user, fetchMe } = useAuthStore();
@@ -505,6 +506,15 @@ function AdminPage() {
                                     Quyền quản trị
                                 </button>
                             )}
+                            {(isSuperAdmin() || hasPermission('viewAdmins')) && (
+                                <button
+                                    className={`admin-nav-item ${activeTab === 'permissions' ? 'active' : ''}`}
+                                    onClick={() => setActiveTab('permissions')}
+                                >
+                                    <ShieldCheck size={20} />
+                                    Ma trận quyền hạn
+                                </button>
+                            )}
                             {(isSuperAdmin() || hasPermission('manageFavorites')) && (
                                 <button
                                     className={`admin-nav-item ${activeTab === 'favorites' ? 'active' : ''}`}
@@ -613,6 +623,9 @@ function AdminPage() {
                                     onSaveCreate={handleCreateRole}
                                     onSaveEdit={handleUpdateRole}
                                 />
+                            )}
+                            {activeTab === 'permissions' && (isSuperAdmin() || hasPermission('viewAdmins')) && (
+                                <PermissionMatrix />
                             )}
                             {activeTab === 'favorites' && (isSuperAdmin() || hasPermission('manageFavorites')) && (
                                 <AdminFavorites />

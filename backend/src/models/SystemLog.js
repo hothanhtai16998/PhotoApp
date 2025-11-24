@@ -35,6 +35,7 @@ const systemLogSchema = new mongoose.Schema(
 systemLogSchema.index({ createdAt: -1 });
 systemLogSchema.index({ level: 1 });
 systemLogSchema.index({ userId: 1 });
+systemLogSchema.index({ action: 1 }); // For filtering permission audit logs
 
 const SystemLog = mongoose.model('SystemLog', systemLogSchema);
 

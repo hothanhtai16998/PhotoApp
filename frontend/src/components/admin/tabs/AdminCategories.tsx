@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Edit2, Trash2 } from 'lucide-react';
 import { CreateCategoryModal, EditCategoryModal } from '../modals';
 import type { Category } from '@/services/categoryService';
+import { PermissionButton } from '../PermissionButton';
 
 interface AdminCategoriesProps {
     categories: Category[];
@@ -32,9 +33,13 @@ export function AdminCategories({
         <div className="admin-categories">
             <div className="admin-header">
                 <h1 className="admin-title">Quản lý danh mục</h1>
-                <Button onClick={onCreateClick}>
+                <PermissionButton
+                    permission="createCategories"
+                    action="Tạo danh mục mới"
+                    onClick={onCreateClick}
+                >
                     + Thêm danh mục
-                </Button>
+                </PermissionButton>
             </div>
 
             <div className="admin-table">
@@ -61,20 +66,24 @@ export function AdminCategories({
                                 </td>
                                 <td>
                                     <div className="admin-actions">
-                                        <Button
+                                        <PermissionButton
+                                            permission="editCategories"
+                                            action="Chỉnh sửa danh mục"
                                             variant="outline"
                                             size="sm"
                                             onClick={() => onEdit(cat)}
                                         >
                                             <Edit2 size={16} />
-                                        </Button>
-                                        <Button
+                                        </PermissionButton>
+                                        <PermissionButton
+                                            permission="deleteCategories"
+                                            action="Xóa danh mục"
                                             variant="outline"
                                             size="sm"
                                             onClick={() => onDelete(cat._id, cat.name)}
                                         >
                                             <Trash2 size={16} />
-                                        </Button>
+                                        </PermissionButton>
                                     </div>
                                 </td>
                             </tr>

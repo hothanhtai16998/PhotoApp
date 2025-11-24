@@ -12,19 +12,12 @@ import { logger } from '../utils/logger.js';
 import { deleteImageFromS3 } from '../libs/s3.js';
 import { PERMISSIONS } from '../middlewares/permissionMiddleware.js';
 import { clearCache } from '../middlewares/cacheMiddleware.js';
+import { logPermissionChange, getClientIp } from '../utils/auditLogger.js';
+import { validatePermissionsForRole } from '../utils/permissionValidator.js';
 
 // Statistics
 export const getDashboardStats = asyncHandler(async (req, res) => {
-    // Check permission (super admin or admin with viewDashboard permission)
-    // Note: viewDashboard is default true, but we check it for consistency
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canView = req.user.isSuperAdmin || await hasPermission(req.user._id, 'viewDashboard');
-    
-    if (!canView) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền xem bảng điều khiển',
-        });
-    }
+    // Permission check is handled by requirePermission('viewDashboard') middleware
     const [totalUsers, totalImages, recentUsers, recentImages] = await Promise.all([
         User.countDocuments(),
         Image.countDocuments(),
@@ -68,16 +61,7 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
 
 // User Management
 export const getAllUsers = asyncHandler(async (req, res) => {
-    // Check permission (super admin or admin with viewUsers permission)
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canView = req.user.isSuperAdmin || await hasPermission(req.user._id, 'viewUsers');
-    
-    if (!canView) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền xem người dùng',
-        });
-    }
-
+    // Permission check is handled by requirePermission('viewUsers') middleware
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 20), 100);
     const skip = (page - 1) * limit;
@@ -139,16 +123,8 @@ export const updateUser = asyncHandler(async (req, res) => {
     const { userId } = req.params;
     const { displayName, email, bio } = req.body;
 
-    // Check permission (super admin or admin with editUsers permission)
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canEdit = req.user.isSuperAdmin || await hasPermission(req.user._id, 'editUsers');
+    // Permission check is handled by requirePermission('editUsers') middleware
     
-    if (!canEdit) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền chỉnh sửa người dùng',
-        });
-    }
-
     const user = await User.findById(userId);
 
     if (!user) {
@@ -209,16 +185,8 @@ export const updateUser = asyncHandler(async (req, res) => {
 export const deleteUser = asyncHandler(async (req, res) => {
     const { userId } = req.params;
 
-    // Check permission (super admin or admin with deleteUsers permission)
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canDelete = req.user.isSuperAdmin || await hasPermission(req.user._id, 'deleteUsers');
+    // Permission check is handled by requirePermission('deleteUsers') middleware
     
-    if (!canDelete) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền xóa người dùng',
-        });
-    }
-
     const user = await User.findById(userId);
 
     if (!user) {
@@ -272,15 +240,7 @@ export const banUser = asyncHandler(async (req, res) => {
     const { userId } = req.params;
     const { reason } = req.body;
 
-    // Check permission (super admin or admin with banUsers permission)
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canBan = req.user.isSuperAdmin || await hasPermission(req.user._id, 'banUsers');
-    
-    if (!canBan) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền cấm người dùng',
-        });
-    }
+    // Permission check is handled by requirePermission('banUsers') middleware
 
     const user = await User.findById(userId);
 
@@ -330,15 +290,7 @@ export const banUser = asyncHandler(async (req, res) => {
 export const unbanUser = asyncHandler(async (req, res) => {
     const { userId } = req.params;
 
-    // Check permission (super admin or admin with unbanUsers permission)
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canUnban = req.user.isSuperAdmin || await hasPermission(req.user._id, 'unbanUsers');
-    
-    if (!canUnban) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền bỏ cấm người dùng',
-        });
-    }
+    // Permission check is handled by requirePermission('unbanUsers') middleware
 
     const user = await User.findById(userId);
 
@@ -374,15 +326,7 @@ export const unbanUser = asyncHandler(async (req, res) => {
 
 // Image Management
 export const getAllImagesAdmin = asyncHandler(async (req, res) => {
-    // Check permission (super admin or admin with viewImages permission)
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canView = req.user.isSuperAdmin || await hasPermission(req.user._id, 'viewImages');
-    
-    if (!canView) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền xem ảnh',
-        });
-    }
+    // Permission check is handled by requirePermission('viewImages') middleware
 
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 20), 100);
@@ -479,15 +423,7 @@ export const getAllImagesAdmin = asyncHandler(async (req, res) => {
 export const deleteImage = asyncHandler(async (req, res) => {
     const { imageId } = req.params;
 
-    // Check permission (super admin or admin with deleteImages permission)
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canDelete = req.user.isSuperAdmin || await hasPermission(req.user._id, 'deleteImages');
-    
-    if (!canDelete) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền xóa ảnh',
-        });
-    }
+    // Permission check is handled by requirePermission('deleteImages') middleware
 
     const image = await Image.findById(imageId);
 
@@ -527,15 +463,7 @@ export const updateImage = asyncHandler(async (req, res) => {
     const { imageId } = req.params;
     const { location, coordinates, imageTitle, cameraModel } = req.body;
 
-    // Check permission (super admin or admin with editImages permission)
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canEdit = req.user.isSuperAdmin || await hasPermission(req.user._id, 'editImages');
-    
-    if (!canEdit) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền chỉnh sửa ảnh',
-        });
-    }
+    // Permission check is handled by requirePermission('editImages') middleware
 
     const image = await Image.findById(imageId);
 
@@ -605,15 +533,7 @@ export const moderateImage = asyncHandler(async (req, res) => {
     const { imageId } = req.params;
     const { status, notes } = req.body; // status: 'approved', 'rejected', 'flagged'
 
-    // Check permission (super admin or admin with moderateImages permission)
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canModerate = req.user.isSuperAdmin || await hasPermission(req.user._id, 'moderateImages');
-    
-    if (!canModerate) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền kiểm duyệt ảnh',
-        });
-    }
+    // Permission check is handled by requirePermission('moderateImages') middleware
 
     if (!['approved', 'rejected', 'flagged'].includes(status)) {
         return res.status(400).json({
@@ -651,15 +571,7 @@ export const moderateImage = asyncHandler(async (req, res) => {
 
 // Analytics
 export const getAnalytics = asyncHandler(async (req, res) => {
-    // Check permission (super admin or admin with viewAnalytics permission)
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canView = req.user.isSuperAdmin || await hasPermission(req.user._id, 'viewAnalytics');
-    
-    if (!canView) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền xem phân tích',
-        });
-    }
+    // Permission check is handled by requirePermission('viewAnalytics') middleware
 
     // Get date range from query (default to last 30 days)
     const days = parseInt(req.query.days) || 30;
@@ -899,15 +811,7 @@ export const getAnalytics = asyncHandler(async (req, res) => {
 
 // Real-time Analytics
 export const getRealtimeAnalytics = asyncHandler(async (req, res) => {
-    // Check permission (super admin or admin with viewAnalytics permission)
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canView = req.user.isSuperAdmin || await hasPermission(req.user._id, 'viewAnalytics');
-    
-    if (!canView) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền xem phân tích',
-        });
-    }
+    // Permission check is handled by requirePermission('viewAnalytics') middleware
 
     // Get users online (users who have viewed a page in the last 5 minutes)
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
@@ -1001,15 +905,7 @@ export const trackPageView = asyncHandler(async (req, res) => {
 
 // Admin Role Management (Only Super Admin)
 export const getAllAdminRoles = asyncHandler(async (req, res) => {
-    // Check permission (super admin or admin with viewAdmins permission)
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canView = req.user.isSuperAdmin || await hasPermission(req.user._id, 'viewAdmins');
-    
-    if (!canView) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền xem admin',
-        });
-    }
+    // Permission check is handled by requirePermission('viewAdmins') middleware
 
     const adminRoles = await AdminRole.find()
         .populate('userId', 'username email displayName')
@@ -1072,6 +968,26 @@ export const createAdminRole = asyncHandler(async (req, res) => {
         });
     }
 
+    // Validate role
+    const validRoles = ['super_admin', 'admin', 'moderator'];
+    const selectedRole = role || 'admin';
+    if (!validRoles.includes(selectedRole)) {
+        return res.status(400).json({
+            message: `Vai trò không hợp lệ. Phải là một trong: ${validRoles.join(', ')}`,
+        });
+    }
+
+    // Validate permissions against role constraints
+    if (permissions) {
+        const validation = validatePermissionsForRole(selectedRole, permissions);
+        if (!validation.valid) {
+            return res.status(400).json({
+                message: 'Quyền hạn không hợp lệ cho vai trò này',
+                errors: validation.errors,
+            });
+        }
+    }
+
     const user = await User.findById(userId);
 
     if (!user) {
@@ -1095,24 +1011,38 @@ export const createAdminRole = asyncHandler(async (req, res) => {
     user.isAdmin = true;
     await user.save();
 
-    // Create admin role
+    // Create admin role with validated permissions
+    const defaultPermissions = {
+        viewDashboard: true, // Default permission for all roles
+    };
+    
+    const finalPermissions = permissions 
+        ? { ...defaultPermissions, ...permissions }
+        : defaultPermissions;
+    
     const adminRole = await AdminRole.create({
         userId,
-        role: role || 'admin',
-        permissions: permissions || {
-            manageUsers: false,
-            deleteUsers: false,
-            manageImages: false,
-            deleteImages: false,
-            manageCategories: false,
-            manageAdmins: false,
-            viewDashboard: true,
-        },
+        role: selectedRole,
+        permissions: finalPermissions,
         grantedBy: req.user._id,
     });
 
     await adminRole.populate('userId', 'username email displayName');
     await adminRole.populate('grantedBy', 'username displayName');
+
+    // Log permission change
+    await logPermissionChange({
+        action: 'create',
+        performedBy: req.user,
+        targetUser: user,
+        newRole: {
+            role: adminRole.role,
+            permissions: adminRole.permissions,
+            grantedBy: adminRole.grantedBy,
+        },
+        reason: req.body.reason || null,
+        ipAddress: getClientIp(req),
+    });
 
     res.status(201).json({
         message: 'Thêm quyền admin thành công',
@@ -1129,7 +1059,7 @@ export const updateAdminRole = asyncHandler(async (req, res) => {
     }
 
     const { userId } = req.params;
-    const { role, permissions } = req.body;
+    const { role, permissions, reason } = req.body;
 
     const adminRole = await AdminRole.findOne({ userId });
 
@@ -1140,6 +1070,44 @@ export const updateAdminRole = asyncHandler(async (req, res) => {
     }
 
     // Super admins can edit any admin role, including their own and other super admins
+
+    // Store old role data for audit logging
+    const oldRole = {
+        role: adminRole.role,
+        permissions: { ...adminRole.permissions.toObject() },
+    };
+
+    // Determine the role to validate against (use new role if provided, otherwise current role)
+    const roleToValidate = role !== undefined ? role : adminRole.role;
+
+    // Validate role if it's being changed
+    if (role !== undefined) {
+        const validRoles = ['super_admin', 'admin', 'moderator'];
+        if (!validRoles.includes(role)) {
+            return res.status(400).json({
+                message: `Vai trò không hợp lệ. Phải là một trong: ${validRoles.join(', ')}`,
+            });
+        }
+    }
+
+    // Validate permissions against role constraints
+    // If permissions are being updated, validate the merged result
+    if (permissions !== undefined) {
+        // Merge current permissions with new permissions
+        const mergedPermissions = {
+            ...adminRole.permissions.toObject(),
+            ...permissions,
+        };
+        
+        // Validate merged permissions against the role (new role if changed, otherwise current role)
+        const validation = validatePermissionsForRole(roleToValidate, mergedPermissions);
+        if (!validation.valid) {
+            return res.status(400).json({
+                message: 'Quyền hạn không hợp lệ cho vai trò này',
+                errors: validation.errors,
+            });
+        }
+    }
 
     const updateData = {};
 
@@ -1162,6 +1130,23 @@ export const updateAdminRole = asyncHandler(async (req, res) => {
         .populate('userId', 'username email displayName')
         .populate('grantedBy', 'username displayName');
 
+    // Get target user for audit logging
+    const targetUser = await User.findById(userId).select('username email displayName').lean();
+
+    // Log permission change
+    await logPermissionChange({
+        action: 'update',
+        performedBy: req.user,
+        targetUser: targetUser || { _id: userId },
+        oldRole,
+        newRole: {
+            role: updatedRole.role,
+            permissions: updatedRole.permissions.toObject(),
+        },
+        reason: reason || null,
+        ipAddress: getClientIp(req),
+    });
+
     res.status(200).json({
         message: 'Cập nhật quyền admin thành công',
         adminRole: updatedRole,
@@ -1177,6 +1162,7 @@ export const deleteAdminRole = asyncHandler(async (req, res) => {
     }
 
     const { userId } = req.params;
+    const { reason } = req.body;
 
     const adminRole = await AdminRole.findOne({ userId });
 
@@ -1188,6 +1174,15 @@ export const deleteAdminRole = asyncHandler(async (req, res) => {
 
     // Super admins can delete any admin role, including their own and other super admins
 
+    // Store old role data for audit logging
+    const oldRole = {
+        role: adminRole.role,
+        permissions: { ...adminRole.permissions.toObject() },
+    };
+
+    // Get target user for audit logging
+    const targetUser = await User.findById(userId).select('username email displayName').lean();
+
     // Remove admin role
     await AdminRole.findOneAndDelete({ userId });
 
@@ -1198,6 +1193,16 @@ export const deleteAdminRole = asyncHandler(async (req, res) => {
         await user.save();
     }
 
+    // Log permission change
+    await logPermissionChange({
+        action: 'delete',
+        performedBy: req.user,
+        targetUser: targetUser || { _id: userId },
+        oldRole,
+        reason: reason || null,
+        ipAddress: getClientIp(req),
+    });
+
     res.status(200).json({
         message: 'Xoá quyền admin thành công',
     });
@@ -1205,15 +1210,7 @@ export const deleteAdminRole = asyncHandler(async (req, res) => {
 
 // Collection Management
 export const getAllCollectionsAdmin = asyncHandler(async (req, res) => {
-    // Check permission (super admin or admin with viewCollections permission)
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canView = req.user.isSuperAdmin || await hasPermission(req.user._id, 'viewCollections');
-    
-    if (!canView) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền xem bộ sưu tập',
-        });
-    }
+    // Permission check is handled by requirePermission('viewCollections') middleware
 
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 20), 100);
@@ -1257,15 +1254,7 @@ export const getAllCollectionsAdmin = asyncHandler(async (req, res) => {
 });
 
 export const updateCollectionAdmin = asyncHandler(async (req, res) => {
-    // Check permission (super admin or admin with manageCollections permission)
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canManage = req.user.isSuperAdmin || await hasPermission(req.user._id, 'manageCollections');
-    
-    if (!canManage) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền quản lý bộ sưu tập',
-        });
-    }
+    // Permission check is handled by requirePermission('manageCollections') middleware
 
     const { collectionId } = req.params;
     const { name, description, isPublic } = req.body;
@@ -1308,15 +1297,7 @@ export const updateCollectionAdmin = asyncHandler(async (req, res) => {
 
 // Export Data
 export const exportData = asyncHandler(async (req, res) => {
-    // Check permission
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canExport = req.user.isSuperAdmin || await hasPermission(req.user._id, 'exportData');
-    
-    if (!canExport) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền xuất dữ liệu',
-        });
-    }
+    // Permission check is handled by requirePermission('exportData') middleware
 
     try {
         // Get all data
@@ -1367,15 +1348,7 @@ export const exportData = asyncHandler(async (req, res) => {
 });
 
 export const deleteCollectionAdmin = asyncHandler(async (req, res) => {
-    // Check permission (super admin or admin with manageCollections permission)
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canManage = req.user.isSuperAdmin || await hasPermission(req.user._id, 'manageCollections');
-    
-    if (!canManage) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền quản lý bộ sưu tập',
-        });
-    }
+    // Permission check is handled by requirePermission('manageCollections') middleware
 
     const { collectionId } = req.params;
 
@@ -1396,15 +1369,7 @@ export const deleteCollectionAdmin = asyncHandler(async (req, res) => {
 
 // Favorites Management
 export const getAllFavorites = asyncHandler(async (req, res) => {
-    // Check permission
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canManage = req.user.isSuperAdmin || await hasPermission(req.user._id, 'manageFavorites');
-    
-    if (!canManage) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền quản lý yêu thích',
-        });
-    }
+    // Permission check is handled by requirePermission('manageFavorites') middleware
 
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 20), 100);
@@ -1470,15 +1435,7 @@ export const getAllFavorites = asyncHandler(async (req, res) => {
 });
 
 export const deleteFavorite = asyncHandler(async (req, res) => {
-    // Check permission
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canManage = req.user.isSuperAdmin || await hasPermission(req.user._id, 'manageFavorites');
-    
-    if (!canManage) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền quản lý yêu thích',
-        });
-    }
+    // Permission check is handled by requirePermission('manageFavorites') middleware
 
     const { userId, imageId } = req.params;
 
@@ -1510,15 +1467,7 @@ export const deleteFavorite = asyncHandler(async (req, res) => {
 
 // Content Moderation
 export const getPendingContent = asyncHandler(async (req, res) => {
-    // Check permission
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canModerate = req.user.isSuperAdmin || await hasPermission(req.user._id, 'moderateContent');
-    
-    if (!canModerate) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền kiểm duyệt nội dung',
-        });
-    }
+    // Permission check is handled by requirePermission('moderateContent') middleware
 
     // Get images with moderationStatus 'pending' or without moderationStatus
     const images = await Image.find({
@@ -1547,15 +1496,7 @@ export const getPendingContent = asyncHandler(async (req, res) => {
 });
 
 export const approveContent = asyncHandler(async (req, res) => {
-    // Check permission
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canModerate = req.user.isSuperAdmin || await hasPermission(req.user._id, 'moderateContent');
-    
-    if (!canModerate) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền kiểm duyệt nội dung',
-        });
-    }
+    // Permission check is handled by requirePermission('moderateContent') middleware
 
     const { contentId } = req.params;
 
@@ -1588,15 +1529,7 @@ export const approveContent = asyncHandler(async (req, res) => {
 });
 
 export const rejectContent = asyncHandler(async (req, res) => {
-    // Check permission
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canModerate = req.user.isSuperAdmin || await hasPermission(req.user._id, 'moderateContent');
-    
-    if (!canModerate) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền kiểm duyệt nội dung',
-        });
-    }
+    // Permission check is handled by requirePermission('moderateContent') middleware
 
     const { contentId } = req.params;
     const { reason } = req.body;
@@ -1634,26 +1567,22 @@ export const rejectContent = asyncHandler(async (req, res) => {
 
 // System Logs
 export const getSystemLogs = asyncHandler(async (req, res) => {
-    // Check permission
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canView = req.user.isSuperAdmin || await hasPermission(req.user._id, 'viewLogs');
-    
-    if (!canView) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền xem nhật ký',
-        });
-    }
+    // Permission check is handled by requirePermission('viewLogs') middleware
 
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 50), 200);
     const skip = (page - 1) * limit;
     const level = req.query.level; // Filter by level
+    const action = req.query.action; // Filter by action (e.g., 'permission_create', 'permission_update', 'permission_delete')
     const search = req.query.search || '';
 
     // Build query
     let query = {};
     if (level) {
         query.level = level;
+    }
+    if (action) {
+        query.action = action;
     }
     if (search) {
         query.message = { $regex: search, $options: 'i' };
@@ -1690,15 +1619,7 @@ export const getSystemLogs = asyncHandler(async (req, res) => {
 
 // Settings Management
 export const getSettings = asyncHandler(async (req, res) => {
-    // Check permission
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canManage = req.user.isSuperAdmin || await hasPermission(req.user._id, 'manageSettings');
-    
-    if (!canManage) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền quản lý cài đặt',
-        });
-    }
+    // Permission check is handled by requirePermission('manageSettings') middleware
 
     const settings = await Settings.findOne({ key: 'system' });
     
@@ -1722,15 +1643,7 @@ export const getSettings = asyncHandler(async (req, res) => {
 });
 
 export const updateSettings = asyncHandler(async (req, res) => {
-    // Check permission
-    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
-    const canManage = req.user.isSuperAdmin || await hasPermission(req.user._id, 'manageSettings');
-    
-    if (!canManage) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền quản lý cài đặt',
-        });
-    }
+    // Permission check is handled by requirePermission('manageSettings') middleware
 
     const { settings } = req.body;
 

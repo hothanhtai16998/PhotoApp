@@ -6,6 +6,7 @@ import { adminService } from '@/services/adminService';
 import { toast } from 'sonner';
 import type { User } from '@/services/adminService';
 import type { User as AuthUser } from '@/types/user';
+import { PermissionButton } from '../PermissionButton';
 
 interface AdminUsersProps {
     users: User[];
@@ -130,45 +131,49 @@ export function AdminUsers({
                                 <td>{u.imageCount || 0}</td>
                                 <td>
                                     <div className="admin-actions">
-                                        <Button
+                                        <PermissionButton
+                                            permission="editUsers"
+                                            action="Chỉnh sửa người dùng"
                                             variant="outline"
                                             size="sm"
                                             onClick={() => onEdit(u)}
                                             disabled={u.isSuperAdmin && !currentUser?.isSuperAdmin}
-                                            title={u.isSuperAdmin && !currentUser?.isSuperAdmin ? 'Cannot edit super admin' : ''}
                                         >
                                             <Edit2 size={16} />
-                                        </Button>
+                                        </PermissionButton>
                                         {u.isBanned ? (
-                                            <Button
+                                            <PermissionButton
+                                                permission="unbanUsers"
+                                                action="Bỏ cấm người dùng"
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => handleUnban(u)}
                                                 disabled={u._id === currentUser?._id || (u.isSuperAdmin && !currentUser?.isSuperAdmin)}
-                                                title="Bỏ cấm"
                                             >
                                                 <Unlock size={16} />
-                                            </Button>
+                                            </PermissionButton>
                                         ) : (
-                                            <Button
+                                            <PermissionButton
+                                                permission="banUsers"
+                                                action="Cấm người dùng"
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => handleBan(u)}
                                                 disabled={u._id === currentUser?._id || (u.isSuperAdmin && !currentUser?.isSuperAdmin)}
-                                                title="Cấm người dùng"
                                             >
                                                 <Ban size={16} />
-                                            </Button>
+                                            </PermissionButton>
                                         )}
-                                        <Button
+                                        <PermissionButton
+                                            permission="deleteUsers"
+                                            action="Xóa người dùng"
                                             variant="outline"
                                             size="sm"
                                             onClick={() => onDelete(u._id, u.username)}
                                             disabled={u._id === currentUser?._id || (u.isSuperAdmin && !currentUser?.isSuperAdmin)}
-                                            title={u.isSuperAdmin && !currentUser?.isSuperAdmin ? 'Cannot delete super admin' : u._id === currentUser?._id ? 'Cannot delete yourself' : ''}
                                         >
                                             <Trash2 size={16} />
-                                        </Button>
+                                        </PermissionButton>
                                     </div>
                                 </td>
                             </tr>

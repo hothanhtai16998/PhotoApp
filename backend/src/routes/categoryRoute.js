@@ -8,6 +8,7 @@ import {
 } from '../controllers/categoryController.js';
 import { protectedRoute } from '../middlewares/authMiddleware.js';
 import { adminRoute } from '../middlewares/adminMiddleware.js';
+import { requirePermission } from '../middlewares/permissionMiddleware.js';
 import { cacheMiddleware } from '../middlewares/cacheMiddleware.js';
 
 const router = express.Router();
@@ -21,11 +22,11 @@ router.use(protectedRoute);
 router.use(adminRoute);
 
 // Admin category management
-router.get('/admin', getAllCategoriesAdmin);
-router.post('/admin', createCategory);
-router.put('/admin/:categoryId', updateCategory);
-router.patch('/admin/:categoryId', updateCategory);
-router.delete('/admin/:categoryId', deleteCategory);
+router.get('/admin', requirePermission('viewCategories'), getAllCategoriesAdmin);
+router.post('/admin', requirePermission('createCategories'), createCategory);
+router.put('/admin/:categoryId', requirePermission('editCategories'), updateCategory);
+router.patch('/admin/:categoryId', requirePermission('editCategories'), updateCategory);
+router.delete('/admin/:categoryId', requirePermission('deleteCategories'), deleteCategory);
 
 export default router;
 
