@@ -58,9 +58,9 @@ const makeAdmin = async (username) => {
             },
         });
 
-        // Also set isAdmin for backward compatibility
-        user.isAdmin = true;
-        await user.save();
+        // Note: isAdmin is computed from AdminRole
+        // No need to write to User model - it is a computed field
+        // The AdminRole is the single source of truth
 
         logger.info(`✅ User "${username}" is now an admin!`);
         logger.info(`   Email: ${user.email}`);

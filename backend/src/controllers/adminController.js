@@ -1003,9 +1003,8 @@ export const createAdminRole = asyncHandler(async (req, res) => {
         });
     }
 
-    // Set user as admin
-    user.isAdmin = true;
-    await user.save();
+    // Note: isAdmin is computed from AdminRole (single source of truth)
+    // No need to write to User.isAdmin - it is computed automatically
 
     // Create admin role with validated permissions
     // Apply role inheritance: admin automatically gets all moderator permissions
@@ -1193,12 +1192,8 @@ export const deleteAdminRole = asyncHandler(async (req, res) => {
     // Invalidate permission cache for this user (all IPs)
     invalidateUserCache(userId);
 
-    // Update user's isAdmin status
-    const user = await User.findById(userId);
-    if (user) {
-        user.isAdmin = false;
-        await user.save();
-    }
+    // Note: isAdmin is computed from AdminRole (single source of truth)
+    // No need to write to User.isAdmin - it will be computed as false automatically
 
     // Log permission change
     await logPermissionChange({

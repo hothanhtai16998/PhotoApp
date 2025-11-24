@@ -73,10 +73,9 @@ const makeSuperAdmin = async (username) => {
             });
         }
 
-        // Also set isSuperAdmin and isAdmin for backward compatibility
-        user.isSuperAdmin = true;
-        user.isAdmin = true;
-        await user.save();
+        // Note: isSuperAdmin and isAdmin are computed from AdminRole
+        // No need to write to User model - they are computed fields
+        // The AdminRole is the single source of truth
 
         logger.info(`✅ User "${username}" is now a super admin!`);
         logger.info(`   Email: ${user.email}`);

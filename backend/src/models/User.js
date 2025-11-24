@@ -45,16 +45,22 @@ const userSchema = new mongoose.Schema(
             type: String,
             sparse: true,
         },
+        // COMPUTED FIELDS - Do not write to these fields directly!
+        // These are computed from AdminRole model (single source of truth)
+        // Use computeAdminStatus() or enrichUserWithAdminStatus() to get computed values
         isAdmin: {
             type: Boolean,
             default: false,
             index: true,
+            // NOTE: This field is computed from AdminRole, not written directly
+            // The AdminRole model is the single source of truth for admin status
         },
-        // For backward compatibility - will be determined by AdminRole
         isSuperAdmin: {
             type: Boolean,
             default: false,
             index: true,
+            // NOTE: This field is computed from AdminRole, not written directly
+            // The AdminRole model is the single source of truth for super admin status
         },
         // Favorites - array of image IDs that user has favorited
         favorites: [{
