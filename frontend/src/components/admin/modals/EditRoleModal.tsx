@@ -118,47 +118,58 @@ export function EditRoleModal({ role, onClose, onSave }: EditRoleModalProps) {
                     </div>
 
                     <div className="admin-form-group">
-                        <label>Thiết lập bảo mật</label>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            <div>
-                                <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.875rem' }}>
-                                    Ngày hết hạn
-                                </label>
-                                <Input
-                                    type="datetime-local"
-                                    value={expiresAt}
-                                    onChange={(e) => setExpiresAt(e.target.value)}
-                                    placeholder="Không có hạn"
-                                />
-                                <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '4px' }}>
-                                    Để trống nếu không muốn đặt hạn
-                                </p>
+                        <div className="admin-security-settings">
+                            <div className="admin-security-header">
+                                <span className="admin-security-icon">🔒</span>
+                                <label style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Thiết lập bảo mật</label>
                             </div>
                             
-                            <div>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                                    <input
-                                        type="checkbox"
-                                        checked={active}
-                                        onChange={(e) => setActive(e.target.checked)}
+                            <div className="admin-security-content">
+                                <div className="admin-security-field">
+                                    <label className="admin-security-field-label">
+                                        <span>📅 Ngày hết hạn</span>
+                                    </label>
+                                    <Input
+                                        type="datetime-local"
+                                        value={expiresAt}
+                                        onChange={(e) => setExpiresAt(e.target.value)}
+                                        className="admin-security-input"
                                     />
-                                    <span>Kích hoạt quyền (Bỏ chọn để tạm tắt)</span>
-                                </label>
-                            </div>
-                            
-                            <div>
-                                <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.875rem' }}>
-                                    Giới hạn IP
-                                </label>
-                                <Input
-                                    type="text"
-                                    value={allowedIPs}
-                                    onChange={(e) => setAllowedIPs(e.target.value)}
-                                    placeholder="192.168.1.100, 10.0.0.0/24 (phân cách bằng dấu phẩy)"
-                                />
-                                <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '4px' }}>
-                                    Để trống để cho phép tất cả IP. Hỗ trợ IPv4, IPv6 và CIDR (ví dụ: 192.168.1.100, 10.0.0.0/24)
-                                </p>
+                                    <p className="admin-security-help">
+                                        Để trống nếu không muốn đặt hạn
+                                    </p>
+                                </div>
+                                
+                                <div className="admin-security-field">
+                                    <label className="admin-security-checkbox-label">
+                                        <input
+                                            type="checkbox"
+                                            checked={active}
+                                            onChange={(e) => setActive(e.target.checked)}
+                                            className="admin-security-checkbox"
+                                        />
+                                        <span className="admin-security-checkbox-text">
+                                            <strong>Kích hoạt quyền</strong>
+                                            <small>Bỏ chọn để tạm tắt quyền</small>
+                                        </span>
+                                    </label>
+                                </div>
+                                
+                                <div className="admin-security-field">
+                                    <label className="admin-security-field-label">
+                                        <span>🌐 Giới hạn IP</span>
+                                    </label>
+                                    <Input
+                                        type="text"
+                                        value={allowedIPs}
+                                        onChange={(e) => setAllowedIPs(e.target.value)}
+                                        placeholder="192.168.1.100, 10.0.0.0/24"
+                                        className="admin-security-input"
+                                    />
+                                    <p className="admin-security-help">
+                                        Để trống để cho phép tất cả IP. Hỗ trợ IPv4, IPv6 và CIDR
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
