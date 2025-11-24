@@ -160,6 +160,23 @@ const adminRoleSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
         },
+        // Time-based permissions
+        expiresAt: {
+            type: Date,
+            default: null, // Null means no expiration
+            index: true, // Index for efficient expiration queries
+        },
+        // Conditional permissions
+        active: {
+            type: Boolean,
+            default: true, // Role is active by default
+            index: true,
+        },
+        // IP restrictions (array of allowed IP addresses or CIDR ranges)
+        allowedIPs: {
+            type: [String], // Array of IP addresses or CIDR ranges (e.g., "192.168.1.1", "10.0.0.0/24")
+            default: [], // Empty array means no IP restrictions
+        },
     },
     {
         timestamps: true,

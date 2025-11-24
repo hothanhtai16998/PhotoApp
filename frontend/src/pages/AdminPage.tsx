@@ -386,7 +386,14 @@ function AdminPage() {
         }
     };
 
-    const handleCreateRole = async (data: { userId: string; role: 'super_admin' | 'admin' | 'moderator'; permissions: AdminRolePermissions }) => {
+    const handleCreateRole = async (data: { 
+        userId: string; 
+        role: 'super_admin' | 'admin' | 'moderator'; 
+        permissions: AdminRolePermissions;
+        expiresAt?: string | null;
+        active?: boolean;
+        allowedIPs?: string[];
+    }) => {
         try {
             await adminService.createAdminRole(data);
             toast.success('Quyền admin đã được tạo thành công');
@@ -399,7 +406,13 @@ function AdminPage() {
         }
     };
 
-    const handleUpdateRole = async (userId: string, updates: { role?: 'super_admin' | 'admin' | 'moderator'; permissions?: AdminRolePermissions }) => {
+    const handleUpdateRole = async (userId: string, updates: { 
+        role?: 'super_admin' | 'admin' | 'moderator'; 
+        permissions?: AdminRolePermissions;
+        expiresAt?: string | null;
+        active?: boolean;
+        allowedIPs?: string[];
+    }) => {
         try {
             await adminService.updateAdminRole(userId, updates);
             toast.success('Quyền admin đã được cập nhật thành công');

@@ -101,6 +101,9 @@ export interface AdminRole {
     role: 'super_admin' | 'admin' | 'moderator';
     permissions: AdminRolePermissions;
     grantedBy?: User;
+    expiresAt?: string | null; // ISO date string, null means no expiration
+    active?: boolean; // Default: true
+    allowedIPs?: string[]; // Array of IP addresses or CIDR ranges
     createdAt?: string;
     updatedAt?: string;
 }
@@ -240,6 +243,9 @@ export const adminService = {
         userId: string;
         role?: 'super_admin' | 'admin' | 'moderator';
         permissions?: AdminRolePermissions;
+        expiresAt?: string | null; // ISO date string
+        active?: boolean;
+        allowedIPs?: string[];
     }): Promise<{ adminRole: AdminRole }> => {
         const res = await api.post('/admin/roles', data, {
             withCredentials: true,
@@ -252,6 +258,9 @@ export const adminService = {
         data: {
             role?: 'super_admin' | 'admin' | 'moderator';
             permissions?: AdminRolePermissions;
+            expiresAt?: string | null; // ISO date string, null to clear
+            active?: boolean;
+            allowedIPs?: string[]; // Empty array to clear
         }
     ): Promise<{ adminRole: AdminRole }> => {
         const res = await api.put(`/admin/roles/${userId}`, data, {

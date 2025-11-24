@@ -15,8 +15,21 @@ interface AdminRolesProps {
     onDelete: (userId: string, username: string) => void;
     onCloseCreate: () => void;
     onCloseEdit: () => void;
-    onSaveCreate: (data: { userId: string; role: 'super_admin' | 'admin' | 'moderator'; permissions: AdminRolePermissions }) => Promise<void>;
-    onSaveEdit: (userId: string, updates: { role?: 'super_admin' | 'admin' | 'moderator'; permissions?: AdminRolePermissions }) => Promise<void>;
+    onSaveCreate: (data: { 
+        userId: string; 
+        role: 'super_admin' | 'admin' | 'moderator'; 
+        permissions: AdminRolePermissions;
+        expiresAt?: string | null;
+        active?: boolean;
+        allowedIPs?: string[];
+    }) => Promise<void>;
+    onSaveEdit: (userId: string, updates: { 
+        role?: 'super_admin' | 'admin' | 'moderator'; 
+        permissions?: AdminRolePermissions;
+        expiresAt?: string | null;
+        active?: boolean;
+        allowedIPs?: string[];
+    }) => Promise<void>;
 }
 
 export function AdminRoles({
@@ -48,6 +61,7 @@ export function AdminRoles({
                         <tr>
                             <th>Tên tài khoản</th>
                             <th>Vai trò</th>
+                            <th>Trạng thái</th>
                             <th>Quyền hạn</th>
                             <th>Người cấp</th>
                             <th>Actions</th>
@@ -70,6 +84,35 @@ export function AdminRoles({
                                         <span className={`admin-role-badge ${role.role}`}>
                                             {role.role === 'super_admin' ? 'Super Admin' : role.role === 'admin' ? 'Admin' : 'Moderator'}
                                         </span>
+                                    </td>
+                                    <td>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                            {role.active === false && (
+                                                <span className="admin-status-badge" style={{ background: '#fee2e2', color: '#991b1b' }}>
+                                                    Tạm tắt
+                                                </span>
+                                            )}
+                                            {role.expiresAt && new Date(role.expiresAt) < new Date() && (
+                                                <span className="admin-status-badge" style={{ background: '#fef3c7', color: '#92400e' }}>
+                                                    Đã hết hạn
+                                                </span>
+                                            )}
+                                            {role.expiresAt && new Date(role.expiresAt) >= new Date() && (
+                                                <span className="admin-status-badge" style={{ background: '#dbeafe', color: '#1e40af' }}>
+                                                    Hết hạn: {new Date(role.expiresAt).toLocaleDateString('vi-VN')}
+                                                </span>
+                                            )}
+                                            {role.allowedIPs && role.allowedIPs.length > 0 && (
+                                                <span className="admin-status-badge" style={{ background: '#e0e7ff', color: '#3730a3' }}>
+                                                    IP: {role.allowedIPs.length} giới hạn
+                                                </span>
+                                            )}
+                                            {(!role.expiresAt && role.active !== false && (!role.allowedIPs || role.allowedIPs.length === 0)) && (
+                                                <span className="admin-status-badge" style={{ background: '#d1fae5', color: '#065f46' }}>
+                                                    Hoạt động
+                                                </span>
+                                            )}
+                                        </div>
                                     </td>
                                     <td>
                                         <div className="admin-permissions-list">

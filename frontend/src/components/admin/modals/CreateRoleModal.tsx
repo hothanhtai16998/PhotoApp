@@ -9,13 +9,23 @@ import { getInheritedPermissions, isPermissionInherited, getInheritedFromRole } 
 interface CreateRoleModalProps {
     users: User[];
     onClose: () => void;
-    onSave: (data: { userId: string; role: 'super_admin' | 'admin' | 'moderator'; permissions: AdminRolePermissions }) => Promise<void>;
+    onSave: (data: { 
+        userId: string; 
+        role: 'super_admin' | 'admin' | 'moderator'; 
+        permissions: AdminRolePermissions;
+        expiresAt?: string | null;
+        active?: boolean;
+        allowedIPs?: string[];
+    }) => Promise<void>;
 }
 
 export function CreateRoleModal({ users, onClose, onSave }: CreateRoleModalProps) {
     const [selectedUserId, setSelectedUserId] = useState('');
     const [role, setRole] = useState<'super_admin' | 'admin' | 'moderator'>('admin');
     const [permissions, setPermissions] = useState<AdminRolePermissions>(getAllPermissionKeys());
+    const [expiresAt, setExpiresAt] = useState<string>('');
+    const [active, setActive] = useState<boolean>(true);
+    const [allowedIPs, setAllowedIPs] = useState<string>('');
 
     // Apply inheritance when role changes
     useEffect(() => {
@@ -36,7 +46,21 @@ export function CreateRoleModal({ users, onClose, onSave }: CreateRoleModalProps
             toast.error('Vui lòng chọn tài khoản để tạo quyền admin.');
             return;
         }
-        await onSave({ userId: selectedUserId, role, permissions });
+        
+        // Parse allowedIPs from comma-separated string
+        const parsedIPs = allowedIPs
+            .split(',')
+            .map(ip => ip.trim())
+            .filter(ip => ip.length > 0);
+        
+        await onSave({ 
+            userId: selectedUserId, 
+            role, 
+            permissions,
+            expiresAt: expiresAt || null,
+            active,
+            allowedIPs: parsedIPs.length > 0 ? parsedIPs : undefined,
+        });
     };
 
     return (
@@ -80,6 +104,52 @@ export function CreateRoleModal({ users, onClose, onSave }: CreateRoleModalProps
                             <option value="moderator">Mod</option>
                             <option value="super_admin">Super Admin</option>
                         </select>
+                    </div>
+
+                    <div className="admin-form-group">
+                        <label>Thiết lập bảo mật (Tùy chọn)</label>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.875rem' }}>
+                                    Ngày hết hạn
+                                </label>
+                                <Input
+                                    type="datetime-local"
+                                    value={expiresAt}
+                                    onChange={(e) => setExpiresAt(e.target.value)}
+                                    placeholder="Không có hạn"
+                                />
+                                <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '4px' }}>
+                                    Để trống nếu không muốn đặt hạn
+                                </p>
+                            </div>
+                            
+                            <div>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={active}
+                                        onChange={(e) => setActive(e.target.checked)}
+                                    />
+                                    <span>Kích hoạt quyền (Bỏ chọn để tạm tắt)</span>
+                                </label>
+                            </div>
+                            
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.875rem' }}>
+                                    Giới hạn IP (Tùy chọn)
+                                </label>
+                                <Input
+                                    type="text"
+                                    value={allowedIPs}
+                                    onChange={(e) => setAllowedIPs(e.target.value)}
+                                    placeholder="192.168.1.100, 10.0.0.0/24 (phân cách bằng dấu phẩy)"
+                                />
+                                <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '4px' }}>
+                                    Để trống để cho phép tất cả IP. Hỗ trợ IPv4, IPv6 và CIDR (ví dụ: 192.168.1.100, 10.0.0.0/24)
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="admin-form-group">

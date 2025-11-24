@@ -956,7 +956,7 @@ export const getAdminRole = asyncHandler(async (req, res) => {
 export const createAdminRole = asyncHandler(async (req, res) => {
     // Permission check is handled by requireSuperAdmin middleware in routes
 
-    const { userId, role, permissions } = req.body;
+    const { userId, role, permissions, expiresAt, active, allowedIPs } = req.body;
 
     if (!userId) {
         return res.status(400).json({
@@ -1021,11 +1021,47 @@ export const createAdminRole = asyncHandler(async (req, res) => {
     // Admin inherits all moderator permissions, super_admin inherits all admin permissions
     const finalPermissions = applyRoleInheritance(selectedRole, userPermissions);
 
+    // Validate and process expiresAt
+    let expiresAtDate = null;
+    if (expiresAt) {
+        expiresAtDate = new Date(expiresAt);
+        if (isNaN(expiresAtDate.getTime())) {
+            return res.status(400).json({ message: 'Ngày hết hạn không hợp lệ' });
+        }
+        if (expiresAtDate < new Date()) {
+            return res.status(400).json({ message: 'Ngày hết hạn không thể là quá khứ' });
+        }
+    }
+
+    // Validate active flag
+    const isActive = active !== undefined ? active : true;
+
+    // Validate and process allowedIPs
+    let validatedIPs = [];
+    if (allowedIPs && Array.isArray(allowedIPs) && allowedIPs.length > 0) {
+        // Basic IP validation (IPv4, IPv6, CIDR)
+        const ipv4Regex = /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?:\/([0-3]?[0-9]))?$/;
+        const ipv6Regex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}(?:\/\d{1,3})?$/;
+        const ipv6CompressedRegex = /^::1$|^::$|^([0-9a-fA-F]{1,4}:)+::([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}(\/\d{1,3})?$/;
+
+        validatedIPs = allowedIPs.filter(ip => {
+            const trimmed = ip.trim();
+            return ipv4Regex.test(trimmed) || ipv6Regex.test(trimmed) || ipv6CompressedRegex.test(trimmed);
+        });
+
+        if (validatedIPs.length !== allowedIPs.length) {
+            return res.status(400).json({ message: 'Một hoặc nhiều địa chỉ IP không hợp lệ' });
+        }
+    }
+
     const adminRole = await AdminRole.create({
         userId,
         role: selectedRole,
         permissions: finalPermissions,
         grantedBy: req.user._id,
+        expiresAt: expiresAtDate,
+        active: isActive,
+        allowedIPs: validatedIPs,
     });
 
     await adminRole.populate('userId', 'username email displayName');
@@ -1058,7 +1094,7 @@ export const updateAdminRole = asyncHandler(async (req, res) => {
     // Permission check is handled by requireSuperAdmin middleware in routes
 
     const { userId } = req.params;
-    const { role, permissions, reason } = req.body;
+    const { role, permissions, reason, expiresAt, active, allowedIPs } = req.body;
 
     const adminRole = await AdminRole.findOne({ userId });
 
@@ -1112,6 +1148,54 @@ export const updateAdminRole = asyncHandler(async (req, res) => {
     }
 
     const updateData = {};
+
+    // Handle expiresAt
+    if (expiresAt !== undefined) {
+        if (expiresAt === null) {
+            updateData.expiresAt = null; // Clear expiration
+        } else {
+            const expiresAtDate = new Date(expiresAt);
+            if (isNaN(expiresAtDate.getTime())) {
+                return res.status(400).json({ message: 'Ngày hết hạn không hợp lệ' });
+            }
+            if (expiresAtDate < new Date()) {
+                return res.status(400).json({ message: 'Ngày hết hạn không thể là quá khứ' });
+            }
+            updateData.expiresAt = expiresAtDate;
+        }
+    }
+
+    // Handle active flag
+    if (active !== undefined) {
+        updateData.active = active;
+    }
+
+    // Handle allowedIPs
+    if (allowedIPs !== undefined) {
+        if (!Array.isArray(allowedIPs)) {
+            return res.status(400).json({ message: 'allowedIPs phải là một mảng' });
+        }
+
+        if (allowedIPs.length === 0) {
+            updateData.allowedIPs = []; // Clear IP restrictions
+        } else {
+            // Validate IP addresses
+            const ipv4Regex = /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?:\/([0-3]?[0-9]))?$/;
+            const ipv6Regex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}(?:\/\d{1,3})?$/;
+            const ipv6CompressedRegex = /^::1$|^::$|^([0-9a-fA-F]{1,4}:)+::([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}(\/\d{1,3})?$/;
+
+            const validatedIPs = allowedIPs.filter(ip => {
+                const trimmed = ip.trim();
+                return ipv4Regex.test(trimmed) || ipv6Regex.test(trimmed) || ipv6CompressedRegex.test(trimmed);
+            });
+
+            if (validatedIPs.length !== allowedIPs.length) {
+                return res.status(400).json({ message: 'Một hoặc nhiều địa chỉ IP không hợp lệ' });
+            }
+
+            updateData.allowedIPs = validatedIPs;
+        }
+    }
 
     if (role !== undefined) {
         updateData.role = role;
