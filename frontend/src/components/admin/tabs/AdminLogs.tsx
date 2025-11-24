@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useFormattedDate } from '@/hooks/useFormattedDate';
 import { adminService } from '@/services/adminService';
 import { toast } from 'sonner';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -11,7 +10,6 @@ export function AdminLogs() {
     const [logs, setLogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
-    const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
 
     useEffect(() => {
         if (!isSuperAdmin() && !hasPermission('viewLogs')) {
@@ -26,7 +24,6 @@ export function AdminLogs() {
             setLoading(true);
             const data = await adminService.getSystemLogs({ page, limit: 50, search });
             setLogs(data.logs);
-            setPagination(data.pagination);
         } catch (error: unknown) {
             const axiosError = error as { response?: { data?: { message?: string } } };
             toast.error(axiosError.response?.data?.message || 'Lỗi khi tải nhật ký');

@@ -1,9 +1,9 @@
-import { Info } from 'lucide-react';
 import { usePermissions } from '@/hooks/usePermissions';
 import type { ReactNode } from 'react';
+import type { AdminRolePermissions } from '@/services/adminService';
 
 interface PermissionTooltipProps {
-    permission: keyof ReturnType<typeof usePermissions>['permissions'];
+    permission: keyof AdminRolePermissions;
     children: ReactNode;
     action?: string; // Description of what action requires this permission
 }

@@ -3,7 +3,7 @@ import { adminService } from '@/services/adminService';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Edit2, Trash2, FolderDot } from 'lucide-react';
+import { Search, Trash2, FolderDot } from 'lucide-react';
 
 interface Collection {
     _id: string;

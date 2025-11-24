@@ -3,7 +3,7 @@
  * Reduces API calls by checking all images in one request
  */
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { favoriteService } from '@/services/favoriteService';
 import { useAuthStore } from '@/stores/useAuthStore';
 
@@ -59,7 +59,7 @@ export function useBatchedFavoriteCheck(imageId: string | undefined): boolean {
   };
   
   const [isFavorited, setIsFavorited] = useState<boolean>(getInitialState);
-  const callbackRef = useRef<(result: boolean) => void>();
+  const callbackRef = useRef<((result: boolean) => void) | null>(null);
 
   useEffect(() => {
     if (!accessToken || !imageId) {

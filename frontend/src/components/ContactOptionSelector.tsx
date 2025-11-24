@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Settings, Star, Smartphone, Monitor, Eye, Zap } from "lucide-react";
+import { Settings, Star, Smartphone, Eye, Zap } from "lucide-react";
 import "./ContactOptionSelector.css";
 
 type ContactOption = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N";
@@ -13,7 +13,6 @@ interface ContactOptionSelectorProps {
 function ContactOptionSelector({ currentOption, onOptionChange }: ContactOptionSelectorProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [category, setCategory] = useState<Category>("all");
-    const [viewMode, setViewMode] = useState<"list" | "compare">("list");
 
     // Load saved option from localStorage
     useEffect(() => {
@@ -147,8 +146,6 @@ function ContactOptionSelector({ currentOption, onOptionChange }: ContactOptionS
     const filteredOptions = category === "all" 
         ? options 
         : options.filter(opt => opt.category.includes(category));
-
-    const recommendedOptions = options.filter(opt => opt.category.includes("recommended"));
 
     return (
         <div className="contact-option-selector">

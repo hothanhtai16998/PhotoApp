@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, KeyboardEvent } from 'react';
+import { useState, useRef } from 'react';
+import type { KeyboardEvent } from 'react';
 import { X } from 'lucide-react';
 import './TagInput.css';
 
@@ -55,7 +56,10 @@ export const TagInput = ({
       }
     } else if (e.key === 'Backspace' && !inputValue && tags.length > 0) {
       // Remove last tag when backspace is pressed on empty input
-      removeTag(tags[tags.length - 1]);
+      const lastTag = tags[tags.length - 1];
+      if (lastTag) {
+        removeTag(lastTag);
+      }
     }
   };
 

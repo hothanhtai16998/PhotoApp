@@ -1,5 +1,4 @@
 import api, { get } from '@/lib/api';
-import type { AxiosResponse } from 'axios';
 import type { UploadImageData } from '@/types/store';
 
 interface FetchImagesParams {

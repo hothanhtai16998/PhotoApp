@@ -79,7 +79,6 @@ const ProgressiveImage = memo(({
   src,
   thumbnailUrl,
   smallUrl,
-  regularUrl,
   thumbnailAvifUrl,
   smallAvifUrl,
   regularAvifUrl,
@@ -92,12 +91,10 @@ const ProgressiveImage = memo(({
   // Generate URLs on-the-fly if not provided (for old images)
   const effectiveThumbnail = thumbnailUrl || generateThumbnailUrl(src);
   const effectiveSmall = smallUrl || generateSmallUrl(src);
-  const effectiveRegular = regularUrl || src;
 
   // AVIF URLs (fallback to WebP if not available)
   const effectiveThumbnailAvif = thumbnailAvifUrl || effectiveThumbnail;
   const effectiveSmallAvif = smallAvifUrl || effectiveSmall;
-  const effectiveRegularAvif = regularAvifUrl || effectiveRegular;
   const effectiveOriginalAvif = imageAvifUrl || src;
 
   // Check if image was already loaded (from global cache or browser cache)

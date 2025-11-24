@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { RotateCcw, Download, Save, Crop, Type, Sliders, RotateCw, FlipHorizontal, FlipVertical, Maximize2, Move, Undo2, Redo2, History, Palette, Eye, EyeOff, PenTool, Square, Circle, Minus } from 'lucide-react';
+import { RotateCcw, Download, Save, Crop, Type, Sliders, RotateCw, FlipHorizontal, FlipVertical, Maximize2, Undo2, Redo2, Palette, Eye, EyeOff, PenTool, Square, Circle, Minus } from 'lucide-react';
 import './ImageEditor.css';
 
 interface ImageEditorProps {
@@ -535,11 +535,14 @@ export const ImageEditor = ({ imageUrl, imageTitle, onSave, onCancel }: ImageEdi
         ctx.lineJoin = 'round';
 
         if (drawing.type === 'pen') {
-          if (drawing.points.length > 1) {
+          if (drawing.points.length > 1 && drawing.points[0]) {
             ctx.beginPath();
             ctx.moveTo(drawing.points[0].x, drawing.points[0].y);
             for (let i = 1; i < drawing.points.length; i++) {
-              ctx.lineTo(drawing.points[i].x, drawing.points[i].y);
+              const point = drawing.points[i];
+              if (point) {
+                ctx.lineTo(point.x, point.y);
+              }
             }
             ctx.stroke();
           }
@@ -602,7 +605,7 @@ export const ImageEditor = ({ imageUrl, imageTitle, onSave, onCancel }: ImageEdi
   }, [filters, crop, watermark, transform, historyIndex]);
 
   // Debounced history save (save after user stops editing for 500ms)
-  const saveToHistoryRef = useRef<NodeJS.Timeout | null>(null);
+  const saveToHistoryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (originalImageLoaded && historyIndex >= 0) {
       if (saveToHistoryRef.current) {
@@ -630,11 +633,13 @@ export const ImageEditor = ({ imageUrl, imageTitle, onSave, onCancel }: ImageEdi
   const handleUndo = useCallback(() => {
     if (historyIndex > 0) {
       const prevState = editHistory[historyIndex - 1];
-      setFilters(prevState.filters);
-      setCrop(prevState.crop);
-      setWatermark(prevState.watermark);
-      setTransform(prevState.transform);
-      setHistoryIndex(historyIndex - 1);
+      if (prevState) {
+        setFilters(prevState.filters);
+        setCrop(prevState.crop);
+        setWatermark(prevState.watermark);
+        setTransform(prevState.transform);
+        setHistoryIndex(historyIndex - 1);
+      }
     }
   }, [historyIndex, editHistory]);
 
@@ -642,11 +647,13 @@ export const ImageEditor = ({ imageUrl, imageTitle, onSave, onCancel }: ImageEdi
   const handleRedo = useCallback(() => {
     if (historyIndex < editHistory.length - 1) {
       const nextState = editHistory[historyIndex + 1];
-      setFilters(nextState.filters);
-      setCrop(nextState.crop);
-      setWatermark(nextState.watermark);
-      setTransform(nextState.transform);
-      setHistoryIndex(historyIndex + 1);
+      if (nextState) {
+        setFilters(nextState.filters);
+        setCrop(nextState.crop);
+        setWatermark(nextState.watermark);
+        setTransform(nextState.transform);
+        setHistoryIndex(historyIndex + 1);
+      }
     }
   }, [historyIndex, editHistory]);
 
@@ -715,9 +722,17 @@ export const ImageEditor = ({ imageUrl, imageTitle, onSave, onCancel }: ImageEdi
         const blurredData = tempCtx.getImageData(0, 0, canvas.width, canvas.height).data;
         
         for (let i = 0; i < data.length; i += 4) {
-          data[i] = Math.min(255, Math.max(0, data[i] + (data[i] - blurredData[i]) * sharpenAmount));
-          data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + (data[i + 1] - blurredData[i + 1]) * sharpenAmount));
-          data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + (data[i + 2] - blurredData[i + 2]) * sharpenAmount));
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const br = blurredData[i];
+          const bg = blurredData[i + 1];
+          const bb = blurredData[i + 2];
+          if (r !== undefined && g !== undefined && b !== undefined && br !== undefined && bg !== undefined && bb !== undefined) {
+            data[i] = Math.min(255, Math.max(0, r + (r - br) * sharpenAmount));
+            data[i + 1] = Math.min(255, Math.max(0, g + (g - bg) * sharpenAmount));
+            data[i + 2] = Math.min(255, Math.max(0, b + (b - bb) * sharpenAmount));
+          }
         }
       }
     }
@@ -726,14 +741,18 @@ export const ImageEditor = ({ imageUrl, imageTitle, onSave, onCancel }: ImageEdi
     if (filters.colorTemperature !== 0) {
       const temp = filters.colorTemperature / 100;
       for (let i = 0; i < data.length; i += 4) {
-        if (temp > 0) {
-          // Warm (increase red, decrease blue)
-          data[i] = Math.min(255, data[i] + temp * 20);
-          data[i + 2] = Math.max(0, data[i + 2] - temp * 20);
-        } else {
-          // Cool (decrease red, increase blue)
-          data[i] = Math.max(0, data[i] + temp * 20);
-          data[i + 2] = Math.min(255, data[i + 2] - temp * 20);
+        const r = data[i];
+        const b = data[i + 2];
+        if (r !== undefined && b !== undefined) {
+          if (temp > 0) {
+            // Warm (increase red, decrease blue)
+            data[i] = Math.min(255, r + temp * 20);
+            data[i + 2] = Math.max(0, b - temp * 20);
+          } else {
+            // Cool (decrease red, increase blue)
+            data[i] = Math.max(0, r + temp * 20);
+            data[i + 2] = Math.min(255, b - temp * 20);
+          }
         }
       }
     }
@@ -746,16 +765,18 @@ export const ImageEditor = ({ imageUrl, imageTitle, onSave, onCancel }: ImageEdi
         const g = data[i + 1];
         const b = data[i + 2];
         
-        // Vintage sepia formula
-        const tr = (r * 0.393 + g * 0.769 + b * 0.189) * vintageAmount + r * (1 - vintageAmount);
-        const tg = (r * 0.349 + g * 0.686 + b * 0.168) * vintageAmount + g * (1 - vintageAmount);
-        const tb = (r * 0.272 + g * 0.534 + b * 0.131) * vintageAmount + b * (1 - vintageAmount);
+        if (r !== undefined && g !== undefined && b !== undefined) {
+          // Vintage sepia formula
+          const tr = (r * 0.393 + g * 0.769 + b * 0.189) * vintageAmount + r * (1 - vintageAmount);
+          const tg = (r * 0.349 + g * 0.686 + b * 0.168) * vintageAmount + g * (1 - vintageAmount);
+          const tb = (r * 0.272 + g * 0.534 + b * 0.131) * vintageAmount + b * (1 - vintageAmount);
         
-        // Slight desaturation
-        const gray = tr * 0.299 + tg * 0.587 + tb * 0.114;
-        data[i] = tr * (1 - vintageAmount * 0.3) + gray * (vintageAmount * 0.3);
-        data[i + 1] = tg * (1 - vintageAmount * 0.3) + gray * (vintageAmount * 0.3);
-        data[i + 2] = tb * (1 - vintageAmount * 0.3) + gray * (vintageAmount * 0.3);
+          // Slight desaturation
+          const gray = tr * 0.299 + tg * 0.587 + tb * 0.114;
+          data[i] = tr * (1 - vintageAmount * 0.3) + gray * (vintageAmount * 0.3);
+          data[i + 1] = tg * (1 - vintageAmount * 0.3) + gray * (vintageAmount * 0.3);
+          data[i + 2] = tb * (1 - vintageAmount * 0.3) + gray * (vintageAmount * 0.3);
+        }
       }
     }
 
@@ -772,9 +793,14 @@ export const ImageEditor = ({ imageUrl, imageTitle, onSave, onCancel }: ImageEdi
           const darkness = (distance / maxDistance) * vignetteAmount;
           const i = (y * canvas.width + x) * 4;
           
-          data[i] = Math.max(0, data[i] * (1 - darkness));
-          data[i + 1] = Math.max(0, data[i + 1] * (1 - darkness));
-          data[i + 2] = Math.max(0, data[i + 2] * (1 - darkness));
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          if (r !== undefined && g !== undefined && b !== undefined) {
+            data[i] = Math.max(0, r * (1 - darkness));
+            data[i + 1] = Math.max(0, g * (1 - darkness));
+            data[i + 2] = Math.max(0, b * (1 - darkness));
+          }
         }
       }
     }
@@ -1005,13 +1031,15 @@ export const ImageEditor = ({ imageUrl, imageTitle, onSave, onCancel }: ImageEdi
         } else {
           const [width, height] = exportSettings.sizePreset.split('x').map(Number);
           // Maintain aspect ratio
-          const aspectRatio = canvas.width / canvas.height;
-          if (width / height > aspectRatio) {
-            outputWidth = height * aspectRatio;
-            outputHeight = height;
-          } else {
-            outputWidth = width;
-            outputHeight = width / aspectRatio;
+          if (width && height && !isNaN(width) && !isNaN(height)) {
+            const aspectRatio = canvas.width / canvas.height;
+            if (width / height > aspectRatio) {
+              outputWidth = height * aspectRatio;
+              outputHeight = height;
+            } else {
+              outputWidth = width;
+              outputHeight = width / aspectRatio;
+            }
           }
         }
       }

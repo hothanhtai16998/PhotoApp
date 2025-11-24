@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Mail, Phone, MapPin, Globe, Linkedin, Github, Facebook, Twitter, X, Info, ChevronDown, ChevronUp, MessageCircle, Plus, Minus } from "lucide-react";
+import { Mail, Phone, MapPin, Globe, Linkedin, Github, Facebook, Twitter, X, Info, ChevronUp, MessageCircle, Plus } from "lucide-react";
 import "./FloatingContactButton.css";
 
 // Author information - same as AboutPage

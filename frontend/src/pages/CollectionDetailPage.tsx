@@ -5,7 +5,6 @@ import { collectionService } from '@/services/collectionService';
 import type { Collection } from '@/types/collection';
 import type { Image } from '@/types/image';
 import { toast } from 'sonner';
-import { useAuthStore } from '@/stores/useAuthStore';
 import { generateImageSlug, extractIdFromSlug } from '@/lib/utils';
 import ImageModal from '@/components/ImageModal';
 import ProgressiveImage from '@/components/ProgressiveImage';
@@ -16,7 +15,6 @@ export default function CollectionDetailPage() {
 	const { collectionId } = useParams<{ collectionId: string }>();
 	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
-	const { accessToken } = useAuthStore();
 	const [collection, setCollection] = useState<Collection | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());

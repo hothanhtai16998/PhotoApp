@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { adminService } from '@/services/adminService';
-import { useAuthStore } from '@/stores/useAuthStore';
 
 /**
  * Component to track page views for analytics
@@ -9,7 +8,6 @@ import { useAuthStore } from '@/stores/useAuthStore';
  */
 export function PageViewTracker() {
     const location = useLocation();
-    const { accessToken } = useAuthStore();
 
     useEffect(() => {
         // Track all page views (both authenticated and anonymous)
@@ -23,7 +21,7 @@ export function PageViewTracker() {
             } catch (error) {
                 // Silently fail - don't interrupt user experience
                 // Only log in development
-                if (process.env.NODE_ENV === 'development') {
+                if (import.meta.env.DEV) {
                     console.debug('Failed to track page view:', error);
                 }
             }

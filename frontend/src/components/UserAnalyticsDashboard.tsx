@@ -9,7 +9,7 @@ interface UserAnalyticsDashboardProps {
   userId?: string;
 }
 
-export const UserAnalyticsDashboard = ({ userId }: UserAnalyticsDashboardProps) => {
+export const UserAnalyticsDashboard = ({}: UserAnalyticsDashboardProps) => {
   const [analytics, setAnalytics] = useState<UserAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(30);

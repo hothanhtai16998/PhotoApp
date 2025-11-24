@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { RotateCcw, Save, X, CheckCircle2 } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { Save, CheckCircle2 } from 'lucide-react';
 import type { Image } from '@/types/image';
 import { ImageEditor } from './ImageEditor';
 import './BatchImageEditor.css';
@@ -169,10 +169,13 @@ export const BatchImageEditor = ({ images, onSave, onCancel }: BatchImageEditorP
 
     setIsProcessing(true);
     try {
-      const editedImages = Array.from(processedImages.entries()).map(([imageId, blob]) => ({
-        imageId,
-        blob,
-      }));
+      const editedImages = Array.from(processedImages.entries()).map(([imageId, blob]) => {
+        const file = new File([blob], `image-${imageId}.jpg`, { type: 'image/jpeg' });
+        return {
+          imageId,
+          file,
+        };
+      });
       await onSave(editedImages);
     } catch (error) {
       console.error('Failed to save images:', error);

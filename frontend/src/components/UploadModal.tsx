@@ -112,7 +112,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
     };
 
     // Update image data when form fields change
-    const updateImageData = (index: number, field: 'title' | 'category' | 'location' | 'cameraModel', value: string) => {
+    const updateImageData = (index: number, field: 'title' | 'category' | 'location' | 'cameraModel' | 'tags', value: string | string[]) => {
         setImagesData(prev => {
             const updated = [...prev];
             const current = updated[index];

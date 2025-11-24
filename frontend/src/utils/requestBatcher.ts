@@ -39,6 +39,9 @@ export async function batchRequest<T>(
 	return new Promise((resolve, reject) => {
 		// Get or create batch for this endpoint pattern
 		const batchKey = url.split('?')[0]; // Use path without query params as key
+		if (!batchKey) {
+			return requestFn();
+		}
 		let batch = pendingBatches.get(batchKey);
 
 		if (!batch) {
@@ -81,7 +84,7 @@ function processBatch(batchKey: string) {
 
 	// For now, just execute requests individually
 	// In the future, could implement actual batching endpoint
-	batch.forEach(({ url, resolve, reject }) => {
+	batch.forEach(({ resolve }) => {
 		// This would need to be replaced with actual batched API call
 		// For now, just resolve immediately (placeholder)
 		resolve(null);

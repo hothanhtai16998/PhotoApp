@@ -7,10 +7,9 @@ import {
   ChevronRight, 
   Grid3x3, 
   FolderOpen, 
-  Upload, 
   Image as ImageIcon, 
   PenTool, 
-  FolderStack, 
+  FileStack, 
   Heart, 
   Bell, 
   Menu,
@@ -30,7 +29,6 @@ export const Sidebar = memo(function Sidebar() {
   const isHomePage = location.pathname === '/'
   const isCollectionsPage = location.pathname.startsWith('/collections')
   const isFavoritesPage = location.pathname === '/favorites'
-  const isProfilePage = location.pathname.startsWith('/profile')
 
   const handleNavigateBack = () => {
     window.history.back()
@@ -73,7 +71,7 @@ export const Sidebar = memo(function Sidebar() {
   }
 
   // Get user avatar or default
-  const userAvatar = user?.avatar || (user?.username ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=111&color=fff` : null)
+  const userAvatar = (user?.username ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=111&color=fff` : null)
 
   return (
     <>
@@ -176,7 +174,7 @@ export const Sidebar = memo(function Sidebar() {
             title="Collections"
             disabled={!accessToken}
           >
-            <FolderStack size={20} />
+            <FileStack size={20} />
           </button>
 
           {/* Favorites Icon */}

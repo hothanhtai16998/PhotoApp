@@ -1,8 +1,9 @@
-import { Shield, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { ShieldCheck, ShieldAlert } from 'lucide-react';
 import { usePermissions } from '@/hooks/usePermissions';
+import type { AdminRolePermissions } from '@/services/adminService';
 
 interface PermissionBadgeProps {
-    permission: keyof ReturnType<typeof usePermissions>['permissions'];
+    permission: keyof AdminRolePermissions;
     showIcon?: boolean;
     className?: string;
 }

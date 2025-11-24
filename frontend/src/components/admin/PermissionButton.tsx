@@ -3,9 +3,10 @@ import type { ButtonProps } from '@/components/ui/button';
 import { usePermissions } from '@/hooks/usePermissions';
 import { PermissionTooltip } from './PermissionTooltip';
 import type { ReactNode } from 'react';
+import type { AdminRolePermissions } from '@/services/adminService';
 
 interface PermissionButtonProps extends ButtonProps {
-    permission: keyof ReturnType<typeof usePermissions>['permissions'];
+    permission: keyof AdminRolePermissions;
     action?: string; // Description of what action requires this permission
     showTooltip?: boolean;
     children: ReactNode;

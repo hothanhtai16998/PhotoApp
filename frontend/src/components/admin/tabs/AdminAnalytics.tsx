@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { adminService } from '@/services/adminService';
 import { toast } from 'sonner';
-import { BarChart2, Users, Images, TrendingUp, Calendar, UserPlus, Ban, ImagePlus, CheckCircle, XCircle, Flag, Clock, ArrowUp, ArrowDown, MoreVertical, Activity } from 'lucide-react';
-import { AreaChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, BarChart, Bar, Cell, LineChart } from 'recharts';
+import { BarChart2, Calendar, ArrowUp, ArrowDown, MoreVertical } from 'lucide-react';
+import { AreaChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart } from 'recharts';
 
 interface AnalyticsData {
     period: {
@@ -359,9 +359,10 @@ export function AdminAnalytics() {
                                         const isToday = label === todayLabel;
                                         
                                         // Get the comparison date (same day, previous month - month-over-month comparison)
-                                        const labelParts = label.split(' ');
-                                        const day = parseInt(labelParts[0]);
-                                        const monthName = labelParts[1];
+                                        const labelStr = typeof label === 'string' ? label : String(label);
+                                        const labelParts = labelStr.split(' ');
+                                        const day = parseInt(labelParts[0] || '1');
+                                        const monthName = labelParts[1] || '';
                                         const months: Record<string, number> = {
                                             'thg 1': 0, 'thg 2': 1, 'thg 3': 2, 'thg 4': 3,
                                             'thg 5': 4, 'thg 6': 5, 'thg 7': 6, 'thg 8': 7,
@@ -795,7 +796,6 @@ export function AdminAnalytics() {
                         return analytics.dailyUploads.map((day) => {
                             const height = (day.count / maxCount) * 100;
                             const date = new Date(day._id);
-                            const dayName = date.toLocaleDateString('vi-VN', { weekday: 'short' });
                             const dayNumber = date.getDate();
                             return (
                                 <div key={day._id} className="admin-daily-upload-bar">
