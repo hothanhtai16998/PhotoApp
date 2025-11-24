@@ -43,3 +43,4 @@ router.delete('/:collectionId/images/:imageId', validateCsrf, removeImageFromCol
 
 export default router;
 
+

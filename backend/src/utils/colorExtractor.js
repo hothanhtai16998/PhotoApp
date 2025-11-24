@@ -104,3 +104,4 @@ export async function extractDominantColors(imageBuffer, maxColors = 3) {
     }
 }
 
+

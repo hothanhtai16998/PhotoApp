@@ -35,3 +35,4 @@ export interface CollectionResponse {
 	message?: string;
 }
 
+
