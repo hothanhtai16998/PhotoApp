@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { toast } from 'sonner';
 import { useImageStore } from '@/stores/useImageStore';
 import { categoryService, type Category } from '@/services/categoryService';
 
@@ -45,7 +46,7 @@ export const useImageUpload = ({ onSuccess }: UseImageUploadProps = {}) => {
   }, []);
 
   const validateAllImages = useCallback((imagesData: ImageData[]): boolean => {
-    const updated = imagesData.map(img => {
+    const updated = imagesData.map((img) => {
       const errors: { title?: string; category?: string } = {};
       if (!img.title.trim()) {
         errors.title = 'Title is required';
@@ -55,73 +56,120 @@ export const useImageUpload = ({ onSuccess }: UseImageUploadProps = {}) => {
       }
       return { ...img, errors };
     });
-    return updated.every(img => Object.keys(img.errors).length === 0);
+    return updated.every((img) => Object.keys(img.errors).length === 0);
   }, []);
 
-  const handleSubmitAll = useCallback(async (imagesData: ImageData[]) => {
-    // Validate all images
-    if (!validateAllImages(imagesData)) {
-      return false;
-    }
-
-    // Show progress screen
-    setShowProgress(true);
-    setTotalUploads(imagesData.length);
-    setUploadingIndex(0);
-
-    try {
-      // Upload all images sequentially with their own metadata
-      for (let i = 0; i < imagesData.length; i++) {
-        setUploadingIndex(i);
-        const imgData = imagesData[i];
-        if (!imgData) continue;
-
-        await uploadImage({
-          image: imgData.file,
-          imageTitle: imgData.title.trim(),
-          imageCategory: imgData.category.trim(),
-          location: imgData.location.trim() || undefined,
-          coordinates: imgData.coordinates,
-          cameraModel: imgData.cameraModel.trim() || undefined,
-          tags: imgData.tags && imgData.tags.length > 0 ? imgData.tags : undefined,
-        });
-
-        // Small delay between uploads
-        if (i < imagesData.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
+  const handleSubmitAll = useCallback(
+    async (imagesData: ImageData[]) => {
+      // Validate all images
+      if (!validateAllImages(imagesData)) {
+        return false;
       }
 
-      // Wait a moment before showing success
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // Show progress screen
+      setShowProgress(true);
+      setTotalUploads(imagesData.length);
+      setUploadingIndex(0);
 
-      setShowProgress(false);
-      setShowSuccess(true);
+      const failedUploads: { index: number; title: string; error: unknown }[] =
+        [];
+      const successfulUploads: number[] = [];
 
-      // Dispatch refresh events
-      window.dispatchEvent(new CustomEvent('refreshProfile'));
+      try {
+        // Upload all images sequentially with their own metadata
+        for (let i = 0; i < imagesData.length; i++) {
+          setUploadingIndex(i);
+          const imgData = imagesData[i];
+          if (!imgData) continue;
 
-      // Get category names (use first image's category for refresh)
-      const firstCategoryId = imagesData[0]?.category;
-      const firstCategory = categories.find(cat => cat._id === firstCategoryId);
-      const categoryName = firstCategory?.name || null;
+          try {
+            await uploadImage({
+              image: imgData.file,
+              imageTitle: imgData.title.trim(),
+              imageCategory: imgData.category.trim(),
+              location: imgData.location.trim() || undefined,
+              coordinates: imgData.coordinates,
+              cameraModel: imgData.cameraModel.trim() || undefined,
+              tags:
+                imgData.tags && imgData.tags.length > 0
+                  ? imgData.tags
+                  : undefined,
+            });
+            successfulUploads.push(i);
+          } catch (error) {
+            // Track failed upload but continue with others
+            failedUploads.push({
+              index: i,
+              title: imgData.title || `Image ${i + 1}`,
+              error,
+            });
+            console.error(
+              `Failed to upload image ${i + 1} (${imgData.title}):`,
+              error
+            );
+          }
 
-      setTimeout(() => {
-        const refreshEvent = new CustomEvent('refreshImages', {
-          detail: { categoryName }
-        });
-        window.dispatchEvent(refreshEvent);
-      }, 300);
+          // Small delay between uploads
+          if (i < imagesData.length - 1) {
+            await new Promise((resolve) => setTimeout(resolve, 500));
+          }
+        }
 
-      onSuccess?.();
-      return true;
-    } catch (error) {
-      console.error('Failed to upload images:', error);
-      setShowProgress(false);
-      setShowSuccess(false);
-      return false;
-    }
-  }, [uploadImage, categories, validateAllImages, onSuccess]);
+        // Wait a moment before showing success
+        await new Promise((resolve) => setTimeout(resolve, 800));
+
+        setShowProgress(false);
+
+        // Show appropriate message based on results
+        if (failedUploads.length === 0) {
+          // All successful
+          setShowSuccess(true);
+        } else if (successfulUploads.length > 0) {
+          // Partial success
+          setShowSuccess(true);
+          const failedTitles = failedUploads.map((f) => f.title).join(', ');
+          toast.warning(
+            `${successfulUploads.length} ảnh đã tải lên thành công. ${failedUploads.length} ảnh thất bại: ${failedTitles}`
+          );
+        } else {
+          // All failed
+          setShowSuccess(false);
+          toast.error(
+            `Tất cả ${failedUploads.length} ảnh đều thất bại khi tải lên.`
+          );
+          return false;
+        }
+
+        // Dispatch refresh events
+        window.dispatchEvent(new CustomEvent('refreshProfile'));
+
+        // Get category names (use first successful image's category for refresh)
+        const firstSuccessfulIndex = successfulUploads[0] ?? 0;
+        const firstCategoryId = imagesData[firstSuccessfulIndex]?.category;
+        const firstCategory = categories.find(
+          (cat) => cat._id === firstCategoryId
+        );
+        const categoryName = firstCategory?.name || null;
+
+        setTimeout(() => {
+          const refreshEvent = new CustomEvent('refreshImages', {
+            detail: { categoryName },
+          });
+          window.dispatchEvent(refreshEvent);
+        }, 300);
+
+        onSuccess?.();
+        return failedUploads.length === 0; // Return true only if all succeeded
+      } catch (error) {
+        console.error('Failed to upload images:', error);
+        setShowProgress(false);
+        setShowSuccess(false);
+        toast.error('Đã xảy ra lỗi khi tải lên ảnh. Vui lòng thử lại.');
+        return false;
+      }
+    },
+    [uploadImage, categories, validateAllImages, onSuccess]
+  );
 
   const resetUploadState = useCallback(() => {
     setShowProgress(false);
@@ -144,4 +192,3 @@ export const useImageUpload = ({ onSuccess }: UseImageUploadProps = {}) => {
     resetUploadState,
   };
 };
-

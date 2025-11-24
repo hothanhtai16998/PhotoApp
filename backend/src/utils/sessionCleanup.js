@@ -20,6 +20,9 @@ export const cleanupExpiredSessions = async () => {
     }
 };
 
+// Store interval ID so it can be cleared on shutdown
+let cleanupIntervalId = null;
+
 /**
  * Start periodic session cleanup
  * Runs every hour
@@ -29,10 +32,22 @@ export const startSessionCleanup = () => {
     cleanupExpiredSessions();
 
     // Then run every hour
-    setInterval(() => {
+    cleanupIntervalId = setInterval(() => {
         cleanupExpiredSessions();
     }, 60 * 60 * 1000); // 1 hour
 
     logger.info('Session cleanup scheduler started');
+};
+
+/**
+ * Stop periodic session cleanup
+ * Should be called on graceful shutdown
+ */
+export const stopSessionCleanup = () => {
+    if (cleanupIntervalId) {
+        clearInterval(cleanupIntervalId);
+        cleanupIntervalId = null;
+        logger.info('Session cleanup scheduler stopped');
+    }
 };
 

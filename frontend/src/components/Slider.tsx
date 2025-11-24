@@ -60,8 +60,8 @@ function Slider() {
 
                         // Use regularUrl if available (1080px), otherwise fallback to imageUrl
                         // For first slide, prefer smaller size for faster LCP
-                        const imageUrl = isFirstSlide && img.regularUrl 
-                            ? img.regularUrl 
+                        const imageUrl = isFirstSlide && img.regularUrl
+                            ? img.regularUrl
                             : (img.regularUrl || img.imageUrl);
 
                         // Detect image orientation by loading a smaller image for faster detection
@@ -69,7 +69,7 @@ function Slider() {
                         try {
                             // Use thumbnail or small URL for faster detection, fallback to regular URL
                             const detectionUrl = img.thumbnailUrl || img.smallUrl || imageUrl;
-                            
+
                             await Promise.race([
                                 new Promise<void>((resolve) => {
                                     const testImg = new Image();
@@ -111,12 +111,12 @@ function Slider() {
                     });
 
                     const slidesData = await Promise.all(slidesDataPromises);
-                    
+
                     // Filter out any slides that were deleted during async processing
                     const finalSlides = slidesData.filter(
                         (slide) => !deletedImageIds.includes(slide.id)
                     );
-                    
+
                     setSlides(finalSlides);
                     // Reset to first slide when new images are loaded, but ensure valid index
                     if (finalSlides.length > 0 && currentSlide >= finalSlides.length) {
@@ -199,7 +199,7 @@ function Slider() {
 
         // Only start progress if slide actually changed
         const slideChanged = currentSlide !== lastSlideIndexRef.current;
-        
+
         if (!slideChanged) {
             // Slide hasn't changed, don't restart
             return;
@@ -214,6 +214,7 @@ function Slider() {
 
         let animationFrameId: number | null = null;
         let slideTimeout: ReturnType<typeof setTimeout> | null = null;
+        let transitionTimeout: ReturnType<typeof setTimeout> | null = null;
 
         const animate = () => {
             // Check if we should still be running (slide hasn't changed)
@@ -242,7 +243,7 @@ function Slider() {
                 // Inline goToNext logic to avoid dependency on isTransitioning
                 setIsTransitioning(true);
                 setCurrentSlide((prev) => (prev + 1) % slides.length);
-                setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
+                transitionTimeout = setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
             }
         }, AUTO_PLAY_INTERVAL);
 
@@ -251,6 +252,7 @@ function Slider() {
                 cancelAnimationFrame(animationFrameId);
             }
             if (slideTimeout) clearTimeout(slideTimeout);
+            if (transitionTimeout) clearTimeout(transitionTimeout);
         };
     }, [currentSlide, slides.length]);
 
@@ -271,13 +273,13 @@ function Slider() {
     // Touch/swipe handlers
     const handleTouchStart = (e: React.TouchEvent) => {
         if (e.touches[0]) {
-          touchStartX.current = e.touches[0].clientX;
+            touchStartX.current = e.touches[0].clientX;
         }
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
         if (e.touches[0]) {
-          touchEndX.current = e.touches[0].clientX;
+            touchEndX.current = e.touches[0].clientX;
         }
     };
 
@@ -399,9 +401,9 @@ function Slider() {
                                                 slideElement.classList.remove('portrait');
                                             }
                                             // Update slide state to persist the correction
-                                            setSlides(prevSlides => 
-                                                prevSlides.map(s => 
-                                                    s.id === slide.id 
+                                            setSlides(prevSlides =>
+                                                prevSlides.map(s =>
+                                                    s.id === slide.id
                                                         ? { ...s, isPortrait: isPortraitImg }
                                                         : s
                                                 )
@@ -431,9 +433,9 @@ function Slider() {
                                                 slideElement.classList.remove('portrait');
                                             }
                                             // Update slide state to persist the correction
-                                            setSlides(prevSlides => 
-                                                prevSlides.map(s => 
-                                                    s.id === slide.id 
+                                            setSlides(prevSlides =>
+                                                prevSlides.map(s =>
+                                                    s.id === slide.id
                                                         ? { ...s, isPortrait: isPortraitImg }
                                                         : s
                                                 )
@@ -447,7 +449,7 @@ function Slider() {
                             {/* Title and Navigation in Bottom Left */}
                             <div className={`slide-content-left ${isActive && !isTransitioning && animatingSlide === index ? 'active' : ''}`}>
                                 <h1 className={`slide-title ${isActive && !isTransitioning && animatingSlide === index ? 'active' : ''}`}>{slide.title}</h1>
-                                
+
                                 {/* Image Info - Mobile Only */}
                                 <div className="slide-image-info-mobile">
                                     {slide.location && (

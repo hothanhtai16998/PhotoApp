@@ -20,7 +20,7 @@ import { requestDeduplication } from './middlewares/requestDeduplication.js';
 import { requestQueue } from './middlewares/requestQueue.js';
 import { csrfToken, validateCsrf, getCsrfToken } from './middlewares/csrfMiddleware.js';
 import { logger } from './utils/logger.js';
-import { startSessionCleanup } from './utils/sessionCleanup.js';
+import { startSessionCleanup, stopSessionCleanup } from './utils/sessionCleanup.js';
 import 'dotenv/config';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -167,6 +167,19 @@ const startServer = async () => {
         app.listen(PORT, '0.0.0.0', () => {
             logger.info(`🚀 Server is running on port ${PORT}`);
             logger.info(`📦 Environment: ${env.NODE_ENV}`);
+        });
+
+        // Graceful shutdown handlers
+        process.on('SIGTERM', () => {
+            logger.info('SIGTERM received, shutting down gracefully...');
+            stopSessionCleanup();
+            process.exit(0);
+        });
+
+        process.on('SIGINT', () => {
+            logger.info('SIGINT received, shutting down gracefully...');
+            stopSessionCleanup();
+            process.exit(0);
         });
     } catch (error) {
         logger.error('❌ Failed to start server', error);
