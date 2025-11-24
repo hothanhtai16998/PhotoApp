@@ -138,6 +138,60 @@ const ImageModal = ({
     return () => document.removeEventListener('keydown', handleKeyboard);
   }, [isZoomed, zoom, zoomIn, zoomOut, resetZoom]);
 
+  // Lock body scroll when modal is open (only when rendered as modal, not page)
+  useEffect(() => {
+    if (!renderAsPage) {
+      // Save current scroll position
+      const scrollY = window.scrollY;
+      // Lock body scroll
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+      
+      // Prevent scroll events on overlay from affecting body
+      const handleOverlayWheel = (e: WheelEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // Redirect scroll to modal content if it exists
+        const modalContent = document.querySelector('.image-modal-content') as HTMLElement;
+        if (modalContent) {
+          const delta = e.deltaY;
+          modalContent.scrollTop += delta;
+        }
+      };
+
+      // Wait for overlay to be rendered
+      const timer = setTimeout(() => {
+        const overlay = document.querySelector('.image-modal-overlay') as HTMLElement;
+        if (overlay) {
+          overlay.addEventListener('wheel', handleOverlayWheel, { passive: false });
+          overlay.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+          }, { passive: false });
+        }
+      }, 0);
+
+      // Cleanup
+      return () => {
+        clearTimeout(timer);
+        const overlay = document.querySelector('.image-modal-overlay') as HTMLElement;
+        if (overlay) {
+          overlay.removeEventListener('wheel', handleOverlayWheel);
+        }
+        // Restore body scroll
+        const scrollY = document.body.style.top;
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        document.body.style.overflow = '';
+        if (scrollY) {
+          window.scrollTo(0, parseInt(scrollY || '0') * -1);
+        }
+      };
+    }
+  }, [renderAsPage]);
+
   // Use the custom hook for formatted date
   const formattedDate = useFormattedDate(image.createdAt, {
     locale: 'vi-VN',
@@ -391,6 +445,12 @@ const ImageModal = ({
       <div
         className={`image-modal ${renderAsPage ? 'image-modal-page' : ''}`}
         onClick={(e) => !renderAsPage && e.stopPropagation()}
+        onWheel={(e) => {
+          // Prevent scroll events from bubbling to body
+          if (!renderAsPage) {
+            e.stopPropagation();
+          }
+        }}
       >
         {/* Modal Header */}
         <div className="image-modal-header">

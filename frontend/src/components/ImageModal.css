@@ -10,7 +10,10 @@
   cursor: pointer;
   animation: fadeIn 0.2s ease;
   -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
+  touch-action: none;
+  overflow: hidden;
+  /* Prevent scrolling on overlay */
+  overscroll-behavior: none;
 }
 
 @keyframes fadeIn {
