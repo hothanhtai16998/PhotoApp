@@ -116,6 +116,29 @@ const imageSchema = new mongoose.Schema(
             of: Number,
             default: {},
         },
+        // Moderation status
+        isModerated: {
+            type: Boolean,
+            default: false,
+            index: true,
+        },
+        moderationStatus: {
+            type: String,
+            enum: ['pending', 'approved', 'rejected', 'flagged'],
+            default: 'pending',
+            index: true,
+        },
+        moderatedAt: {
+            type: Date,
+        },
+        moderatedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+        },
+        moderationNotes: {
+            type: String,
+            maxlength: 500,
+        },
     },
     {
         timestamps: true,

@@ -2,6 +2,7 @@ import User from '../models/User.js';
 import Image from '../models/Image.js';
 import AdminRole from '../models/AdminRole.js';
 import Category from '../models/Category.js';
+import Collection from '../models/Collection.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { logger } from '../utils/logger.js';
 import { deleteImageFromS3 } from '../libs/s3.js';
@@ -10,6 +11,16 @@ import { clearCache } from '../middlewares/cacheMiddleware.js';
 
 // Statistics
 export const getDashboardStats = asyncHandler(async (req, res) => {
+    // Check permission (super admin or admin with viewDashboard permission)
+    // Note: viewDashboard is default true, but we check it for consistency
+    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
+    const canView = req.user.isSuperAdmin || await hasPermission(req.user._id, 'viewDashboard');
+    
+    if (!canView) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền xem bảng điều khiển',
+        });
+    }
     const [totalUsers, totalImages, recentUsers, recentImages] = await Promise.all([
         User.countDocuments(),
         Image.countDocuments(),
@@ -252,6 +263,111 @@ export const deleteUser = asyncHandler(async (req, res) => {
     });
 });
 
+// Ban/Unban Users
+export const banUser = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+    const { reason } = req.body;
+
+    // Check permission (super admin or admin with banUsers permission)
+    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
+    const canBan = req.user.isSuperAdmin || await hasPermission(req.user._id, 'banUsers');
+    
+    if (!canBan) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền cấm người dùng',
+        });
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+        return res.status(404).json({
+            message: 'Không tìm thấy tên tài khoản',
+        });
+    }
+
+    // Prevent banning yourself
+    if (userId === req.user._id.toString()) {
+        return res.status(400).json({
+            message: 'Không thể cấm tài khoản của bạn',
+        });
+    }
+
+    // Prevent non-super admins from banning super admin users
+    const { computeAdminStatus } = await import('../utils/adminUtils.js');
+    const targetUserStatus = await computeAdminStatus(userId);
+    
+    if (targetUserStatus.isSuperAdmin && !req.user.isSuperAdmin) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền Super admin',
+        });
+    }
+
+    // Ban user
+    user.isBanned = true;
+    user.bannedAt = new Date();
+    user.bannedBy = req.user._id;
+    user.banReason = reason?.trim() || 'Không có lý do';
+    await user.save();
+
+    res.status(200).json({
+        message: 'Cấm người dùng thành công',
+        user: {
+            _id: user._id,
+            username: user.username,
+            displayName: user.displayName,
+            isBanned: user.isBanned,
+            bannedAt: user.bannedAt,
+            banReason: user.banReason,
+        },
+    });
+});
+
+export const unbanUser = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+
+    // Check permission (super admin or admin with unbanUsers permission)
+    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
+    const canUnban = req.user.isSuperAdmin || await hasPermission(req.user._id, 'unbanUsers');
+    
+    if (!canUnban) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền bỏ cấm người dùng',
+        });
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+        return res.status(404).json({
+            message: 'Không tìm thấy tên tài khoản',
+        });
+    }
+
+    if (!user.isBanned) {
+        return res.status(400).json({
+            message: 'Người dùng này không bị cấm',
+        });
+    }
+
+    // Unban user
+    user.isBanned = false;
+    user.bannedAt = undefined;
+    user.bannedBy = undefined;
+    user.banReason = undefined;
+    await user.save();
+
+    res.status(200).json({
+        message: 'Bỏ cấm người dùng thành công',
+        user: {
+            _id: user._id,
+            username: user.username,
+            displayName: user.displayName,
+            isBanned: user.isBanned,
+        },
+    });
+});
+
 // Image Management
 export const getAllImagesAdmin = asyncHandler(async (req, res) => {
     // Check permission (super admin or admin with viewImages permission)
@@ -480,12 +596,180 @@ export const updateImage = asyncHandler(async (req, res) => {
     });
 });
 
+// Moderate Image
+export const moderateImage = asyncHandler(async (req, res) => {
+    const { imageId } = req.params;
+    const { status, notes } = req.body; // status: 'approved', 'rejected', 'flagged'
+
+    // Check permission (super admin or admin with moderateImages permission)
+    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
+    const canModerate = req.user.isSuperAdmin || await hasPermission(req.user._id, 'moderateImages');
+    
+    if (!canModerate) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền kiểm duyệt ảnh',
+        });
+    }
+
+    if (!['approved', 'rejected', 'flagged'].includes(status)) {
+        return res.status(400).json({
+            message: 'Trạng thái kiểm duyệt không hợp lệ. Phải là: approved, rejected, hoặc flagged',
+        });
+    }
+
+    const image = await Image.findById(imageId);
+
+    if (!image) {
+        return res.status(404).json({
+            message: 'Không tìm thấy ảnh',
+        });
+    }
+
+    // Update moderation status
+    image.isModerated = true;
+    image.moderationStatus = status;
+    image.moderatedAt = new Date();
+    image.moderatedBy = req.user._id;
+    image.moderationNotes = notes?.trim() || undefined;
+    await image.save();
+
+    res.status(200).json({
+        message: 'Kiểm duyệt ảnh thành công',
+        image: {
+            _id: image._id,
+            imageTitle: image.imageTitle,
+            moderationStatus: image.moderationStatus,
+            moderatedAt: image.moderatedAt,
+            moderationNotes: image.moderationNotes,
+        },
+    });
+});
+
+// Analytics
+export const getAnalytics = asyncHandler(async (req, res) => {
+    // Check permission (super admin or admin with viewAnalytics permission)
+    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
+    const canView = req.user.isSuperAdmin || await hasPermission(req.user._id, 'viewAnalytics');
+    
+    if (!canView) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền xem phân tích',
+        });
+    }
+
+    // Get date range from query (default to last 30 days)
+    const days = parseInt(req.query.days) || 30;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    // User analytics
+    const totalUsers = await User.countDocuments();
+    const newUsers = await User.countDocuments({ createdAt: { $gte: startDate } });
+    const bannedUsers = await User.countDocuments({ isBanned: true });
+
+    // Image analytics
+    const totalImages = await Image.countDocuments();
+    const newImages = await Image.countDocuments({ createdAt: { $gte: startDate } });
+    const moderatedImages = await Image.countDocuments({ isModerated: true });
+    const pendingModeration = await Image.countDocuments({ moderationStatus: 'pending' });
+    const approvedImages = await Image.countDocuments({ moderationStatus: 'approved' });
+    const rejectedImages = await Image.countDocuments({ moderationStatus: 'rejected' });
+    const flaggedImages = await Image.countDocuments({ moderationStatus: 'flagged' });
+
+    // Category analytics
+    const categoryStats = await Image.aggregate([
+        { $group: { _id: '$imageCategory', count: { $sum: 1 } } },
+        {
+            $lookup: {
+                from: 'categories',
+                localField: '_id',
+                foreignField: '_id',
+                as: 'category'
+            }
+        },
+        { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
+        {
+            $project: {
+                _id: 1,
+                count: 1,
+                name: { $ifNull: ['$category.name', 'Unknown'] }
+            }
+        },
+        { $sort: { count: -1 } },
+    ]);
+
+    // Daily uploads for the last 30 days
+    const dailyUploads = await Image.aggregate([
+        { $match: { createdAt: { $gte: startDate } } },
+        {
+            $group: {
+                _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+                count: { $sum: 1 }
+            }
+        },
+        { $sort: { _id: 1 } },
+    ]);
+
+    // Top uploaders
+    const topUploaders = await Image.aggregate([
+        { $match: { createdAt: { $gte: startDate } } },
+        { $group: { _id: '$uploadedBy', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 10 },
+        {
+            $lookup: {
+                from: 'users',
+                localField: '_id',
+                foreignField: '_id',
+                as: 'user'
+            }
+        },
+        { $unwind: '$user' },
+        {
+            $project: {
+                userId: '$_id',
+                username: '$user.username',
+                displayName: '$user.displayName',
+                uploadCount: '$count'
+            }
+        },
+    ]);
+
+    res.status(200).json({
+        period: {
+            days,
+            startDate,
+            endDate: new Date(),
+        },
+        users: {
+            total: totalUsers,
+            new: newUsers,
+            banned: bannedUsers,
+        },
+        images: {
+            total: totalImages,
+            new: newImages,
+            moderated: moderatedImages,
+            pendingModeration,
+            approved: approvedImages,
+            rejected: rejectedImages,
+            flagged: flaggedImages,
+        },
+        categories: categoryStats,
+        dailyUploads,
+        topUploaders,
+    });
+});
+
 // Admin Role Management (Only Super Admin)
 export const getAllAdminRoles = asyncHandler(async (req, res) => {
-    // Only super admin can view all admin roles (computed from AdminRole)
-    if (!req.user.isSuperAdmin) {
+    // Check permission (super admin or admin with viewAdmins permission)
+    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
+    const canView = req.user.isSuperAdmin || await hasPermission(req.user._id, 'viewAdmins');
+    
+    if (!canView) {
         return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền Super admin',
+            message: 'Quyền truy cập bị từ chối: cần quyền xem admin',
         });
     }
 
@@ -678,6 +962,137 @@ export const deleteAdminRole = asyncHandler(async (req, res) => {
 
     res.status(200).json({
         message: 'Xoá quyền admin thành công',
+    });
+});
+
+// Collection Management
+export const getAllCollectionsAdmin = asyncHandler(async (req, res) => {
+    // Check permission (super admin or admin with viewCollections permission)
+    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
+    const canView = req.user.isSuperAdmin || await hasPermission(req.user._id, 'viewCollections');
+    
+    if (!canView) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền xem bộ sưu tập',
+        });
+    }
+
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 20), 100);
+    const skip = (page - 1) * limit;
+    const search = req.query.search?.trim();
+
+    const query = {};
+    if (search) {
+        query.$or = [
+            { name: { $regex: search, $options: 'i' } },
+            { description: { $regex: search, $options: 'i' } },
+        ];
+    }
+
+    const [collections, total] = await Promise.all([
+        Collection.find(query)
+            .populate('createdBy', 'username displayName email')
+            .populate('coverImage', 'imageUrl thumbnailUrl')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean(),
+        Collection.countDocuments(query),
+    ]);
+
+    // Add image count to each collection
+    const collectionsWithCounts = collections.map(collection => ({
+        ...collection,
+        imageCount: collection.images?.length || 0,
+    }));
+
+    res.status(200).json({
+        collections: collectionsWithCounts,
+        pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit),
+        },
+    });
+});
+
+export const updateCollectionAdmin = asyncHandler(async (req, res) => {
+    // Check permission (super admin or admin with manageCollections permission)
+    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
+    const canManage = req.user.isSuperAdmin || await hasPermission(req.user._id, 'manageCollections');
+    
+    if (!canManage) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền quản lý bộ sưu tập',
+        });
+    }
+
+    const { collectionId } = req.params;
+    const { name, description, isPublic } = req.body;
+
+    const collection = await Collection.findById(collectionId);
+
+    if (!collection) {
+        return res.status(404).json({
+            message: 'Không tìm thấy bộ sưu tập',
+        });
+    }
+
+    const updateData = {};
+
+    if (name !== undefined) {
+        updateData.name = name.trim();
+    }
+
+    if (description !== undefined) {
+        updateData.description = description?.trim() || undefined;
+    }
+
+    if (isPublic !== undefined) {
+        updateData.isPublic = isPublic;
+    }
+
+    const updatedCollection = await Collection.findByIdAndUpdate(
+        collectionId,
+        updateData,
+        { new: true, runValidators: true }
+    )
+        .populate('createdBy', 'username displayName')
+        .populate('coverImage', 'imageUrl thumbnailUrl');
+
+    res.status(200).json({
+        message: 'Cập nhật bộ sưu tập thành công',
+        collection: updatedCollection,
+    });
+});
+
+export const deleteCollectionAdmin = asyncHandler(async (req, res) => {
+    // Check permission (super admin or admin with manageCollections permission)
+    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
+    const canManage = req.user.isSuperAdmin || await hasPermission(req.user._id, 'manageCollections');
+    
+    if (!canManage) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền quản lý bộ sưu tập',
+        });
+    }
+
+    const { collectionId } = req.params;
+
+    const collection = await Collection.findById(collectionId);
+
+    if (!collection) {
+        return res.status(404).json({
+            message: 'Không tìm thấy bộ sưu tập',
+        });
+    }
+
+    await Collection.findByIdAndDelete(collectionId);
+
+    res.status(200).json({
+        message: 'Xoá bộ sưu tập thành công',
     });
 });
 

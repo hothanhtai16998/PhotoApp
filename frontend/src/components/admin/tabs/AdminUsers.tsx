@@ -1,7 +1,9 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Edit2, Trash2 } from 'lucide-react';
+import { Search, Edit2, Trash2, Ban, Unlock } from 'lucide-react';
 import { UserEditModal } from '../modals';
+import { adminService } from '@/services/adminService';
+import { toast } from 'sonner';
 import type { User } from '@/services/adminService';
 import type { User as AuthUser } from '@/types/user';
 
@@ -18,6 +20,7 @@ interface AdminUsersProps {
     editingUser: User | null;
     onCloseEdit: () => void;
     onSaveEdit: (userId: string, updates: Partial<User>) => Promise<void>;
+    onUserUpdated?: () => void;
 }
 
 export function AdminUsers({
@@ -33,7 +36,32 @@ export function AdminUsers({
     editingUser,
     onCloseEdit,
     onSaveEdit,
+    onUserUpdated,
 }: AdminUsersProps) {
+    const handleBan = async (user: User) => {
+        const reason = prompt('Nhập lý do cấm (tùy chọn):');
+        if (reason === null) return; // User cancelled
+        
+        try {
+            await adminService.banUser(user._id, reason || undefined);
+            toast.success(`Đã cấm người dùng ${user.username}`);
+            onUserUpdated?.();
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Lỗi khi cấm người dùng');
+        }
+    };
+
+    const handleUnban = async (user: User) => {
+        if (!confirm(`Bạn có chắc chắn muốn bỏ cấm người dùng ${user.username}?`)) return;
+        
+        try {
+            await adminService.unbanUser(user._id);
+            toast.success(`Đã bỏ cấm người dùng ${user.username}`);
+            onUserUpdated?.();
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Lỗi khi bỏ cấm người dùng');
+        }
+    };
     return (
         <div className="admin-users">
             <div className="admin-header">
@@ -62,6 +90,7 @@ export function AdminUsers({
                             <th>Email</th>
                             <th>Họ và tên</th>
                             <th>Quyền Admin</th>
+                            <th>Trạng thái</th>
                             <th>Ảnh</th>
                             <th>Actions</th>
                         </tr>
@@ -89,6 +118,15 @@ export function AdminUsers({
                                         )}
                                     </div>
                                 </td>
+                                <td>
+                                    {u.isBanned ? (
+                                        <span className="admin-status-badge banned" title={u.banReason || 'Bị cấm'}>
+                                            Bị cấm
+                                        </span>
+                                    ) : (
+                                        <span className="admin-status-badge active">Hoạt động</span>
+                                    )}
+                                </td>
                                 <td>{u.imageCount || 0}</td>
                                 <td>
                                     <div className="admin-actions">
@@ -101,6 +139,27 @@ export function AdminUsers({
                                         >
                                             <Edit2 size={16} />
                                         </Button>
+                                        {u.isBanned ? (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleUnban(u)}
+                                                disabled={u._id === currentUser?._id || (u.isSuperAdmin && !currentUser?.isSuperAdmin)}
+                                                title="Bỏ cấm"
+                                            >
+                                                <Unlock size={16} />
+                                            </Button>
+                                        ) : (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleBan(u)}
+                                                disabled={u._id === currentUser?._id || (u.isSuperAdmin && !currentUser?.isSuperAdmin)}
+                                                title="Cấm người dùng"
+                                            >
+                                                <Ban size={16} />
+                                            </Button>
+                                        )}
                                         <Button
                                             variant="outline"
                                             size="sm"

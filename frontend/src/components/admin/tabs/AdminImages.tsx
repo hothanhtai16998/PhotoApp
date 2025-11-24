@@ -1,6 +1,8 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Trash2 } from 'lucide-react';
+import { Search, Trash2, CheckCircle, XCircle, Flag } from 'lucide-react';
+import { adminService } from '@/services/adminService';
+import { toast } from 'sonner';
 import type { AdminImage } from '@/services/adminService';
 
 interface AdminImagesProps {
@@ -11,6 +13,7 @@ interface AdminImagesProps {
     onSearch: () => void;
     onPageChange: (page: number) => void;
     onDelete: (imageId: string, imageTitle: string) => void;
+    onImageUpdated?: () => void;
 }
 
 export function AdminImages({
@@ -21,7 +24,20 @@ export function AdminImages({
     onSearch,
     onPageChange,
     onDelete,
+    onImageUpdated,
 }: AdminImagesProps) {
+    const handleModerate = async (imageId: string, status: 'approved' | 'rejected' | 'flagged') => {
+        const notes = prompt('Nhập ghi chú kiểm duyệt (tùy chọn):');
+        if (notes === null && status !== 'approved') return; // User cancelled (except for approve which doesn't need notes)
+        
+        try {
+            await adminService.moderateImage(imageId, status, notes || undefined);
+            toast.success(`Đã ${status === 'approved' ? 'phê duyệt' : status === 'rejected' ? 'từ chối' : 'đánh dấu'} ảnh`);
+            onImageUpdated?.();
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Lỗi khi kiểm duyệt ảnh');
+        }
+    };
     return (
         <div className="admin-images">
             <div className="admin-header">
@@ -53,13 +69,48 @@ export function AdminImages({
                                 : img.imageCategory?.name || 'Unknown'}</p>
                             <p>Người đăng: {img.uploadedBy.displayName || img.uploadedBy.username}</p>
                             <p>Ngày đăng: {img.createdAt}</p>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => onDelete(img._id, img.imageTitle)}
-                            >
-                                <Trash2 size={16} /> Xoá
-                            </Button>
+                            {img.moderationStatus && (
+                                <p className="moderation-status">
+                                    Trạng thái: <span className={`moderation-badge ${img.moderationStatus}`}>
+                                        {img.moderationStatus === 'approved' ? 'Đã phê duyệt' : 
+                                         img.moderationStatus === 'rejected' ? 'Đã từ chối' : 
+                                         img.moderationStatus === 'flagged' ? 'Đã đánh dấu' : 'Chờ duyệt'}
+                                    </span>
+                                </p>
+                            )}
+                            <div className="admin-image-actions">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleModerate(img._id, 'approved')}
+                                    title="Phê duyệt"
+                                >
+                                    <CheckCircle size={16} /> Phê duyệt
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleModerate(img._id, 'rejected')}
+                                    title="Từ chối"
+                                >
+                                    <XCircle size={16} /> Từ chối
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleModerate(img._id, 'flagged')}
+                                    title="Đánh dấu"
+                                >
+                                    <Flag size={16} /> Đánh dấu
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => onDelete(img._id, img.imageTitle)}
+                                >
+                                    <Trash2 size={16} /> Xoá
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 ))}

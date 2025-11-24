@@ -79,6 +79,13 @@ export const signIn = asyncHandler(async (req, res) => {
         });
     }
 
+    // Check if user is banned
+    if (user.isBanned) {
+        return res.status(403).json({
+            message: `Tài khoản của bạn đã bị cấm. Lý do: ${user.banReason || 'Không có lý do'}`,
+        });
+    }
+
     // Check if user is OAuth user (no password)
     if (user.isOAuthUser) {
         return res.status(401).json({
@@ -318,6 +325,15 @@ export const googleCallback = asyncHandler(async (req, res) => {
 
         // Find or create user
         let user = await User.findOne({ email: googleUser.email });
+
+        // Check if user is banned (before creating new user)
+        if (user && user.isBanned) {
+            if (!env.CLIENT_URL) {
+                logger.error('CLIENT_URL not configured');
+                return res.status(500).json({ message: 'Server configuration error' });
+            }
+            return res.redirect(`${env.CLIENT_URL}/signin?error=${encodeURIComponent(`Tài khoản của bạn đã bị cấm. Lý do: ${user.banReason || 'Không có lý do'}`)}`);
+        }
 
         if (!user) {
             // Create new user from Google data

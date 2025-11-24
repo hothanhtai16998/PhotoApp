@@ -120,6 +120,12 @@ export const uploadImage = asyncHandler(async (req, res) => {
             }
         }
 
+        // Determine moderation status based on user role
+        // Admins' images are auto-approved, regular users need moderation
+        const isAdmin = req.user?.isAdmin || req.user?.isSuperAdmin;
+        const moderationStatus = isAdmin ? 'approved' : 'pending';
+        const isModerated = isAdmin; // Admin images are considered pre-moderated
+
         // Save to database with multiple image sizes and formats
         const newImage = await Image.create({
             imageUrl: uploadResult.imageUrl, // Original (optimized) - WebP
@@ -140,6 +146,13 @@ export const uploadImage = asyncHandler(async (req, res) => {
             cameraModel: cameraModel?.trim() || undefined,
             dominantColors: dominantColors.length > 0 ? dominantColors : undefined,
             tags: parsedTags.length > 0 ? parsedTags : undefined,
+            // Moderation status
+            moderationStatus,
+            isModerated,
+            ...(isAdmin ? {
+                moderatedAt: new Date(),
+                moderatedBy: userId,
+            } : {}),
         });
 
         // Populate user and category info

@@ -69,6 +69,37 @@ export const getAllImages = asyncHandler(async (req, res) => {
         query.tags = { $regex: new RegExp(`^${tag.trim()}$`, 'i') };
     }
 
+    // Only show approved images on homepage (or images with no moderation status for backward compatibility)
+    // This ensures unapproved images don't appear until admin approves them
+    // Use $or for moderation status check, but combine with existing query properly
+    const moderationFilter = {
+        $or: [
+            { moderationStatus: 'approved' },
+            { moderationStatus: { $exists: false } }, // Backward compatibility - show old images without moderation status
+            { moderationStatus: null }, // Also handle null values
+        ]
+    };
+    
+    // Combine all conditions - if query has other conditions, use $and
+    const hasOtherConditions = Object.keys(query).length > 0 && !query.$text;
+    if (hasOtherConditions) {
+        // Wrap existing conditions and moderation filter in $and
+        const existingConditions = { ...query };
+        query.$and = [
+            existingConditions,
+            moderationFilter
+        ];
+        // Remove original conditions (they're now in $and)
+        Object.keys(existingConditions).forEach(key => {
+            if (key !== '$and' && key !== '$text') {
+                delete query[key];
+            }
+        });
+    } else {
+        // No other conditions, just use moderation filter
+        Object.assign(query, moderationFilter);
+    }
+
     // Get images with pagination
     // Use estimatedDocumentCount for better performance on large collections
     // Only use countDocuments if we need exact count (e.g., with filters)

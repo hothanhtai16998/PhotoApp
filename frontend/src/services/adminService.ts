@@ -18,6 +18,9 @@ export interface User {
     bio?: string;
     isAdmin: boolean;
     isSuperAdmin?: boolean;
+    isBanned?: boolean;
+    bannedAt?: string;
+    banReason?: string;
     createdAt: string;
     imageCount?: number;
 }
@@ -33,6 +36,10 @@ export interface AdminImage {
         displayName: string;
         email: string;
     };
+    isModerated?: boolean;
+    moderationStatus?: 'pending' | 'approved' | 'rejected' | 'flagged';
+    moderatedAt?: string;
+    moderationNotes?: string;
     createdAt: string;
 }
 
@@ -141,6 +148,20 @@ export const adminService = {
         });
     },
 
+    banUser: async (userId: string, reason?: string): Promise<{ user: User }> => {
+        const res = await api.post(`/admin/users/${userId}/ban`, { reason }, {
+            withCredentials: true,
+        });
+        return res.data;
+    },
+
+    unbanUser: async (userId: string): Promise<{ user: User }> => {
+        const res = await api.post(`/admin/users/${userId}/unban`, {}, {
+            withCredentials: true,
+        });
+        return res.data;
+    },
+
     getAllImages: async (params?: {
         page?: number;
         limit?: number;
@@ -180,6 +201,13 @@ export const adminService = {
         await api.delete(`/admin/images/${imageId}`, {
             withCredentials: true,
         });
+    },
+
+    moderateImage: async (imageId: string, status: 'approved' | 'rejected' | 'flagged', notes?: string): Promise<{ image: AdminImage }> => {
+        const res = await api.post(`/admin/images/${imageId}/moderate`, { status, notes }, {
+            withCredentials: true,
+        });
+        return res.data;
     },
 
     // Admin Role Management
@@ -223,6 +251,53 @@ export const adminService = {
 
     deleteAdminRole: async (userId: string): Promise<void> => {
         await api.delete(`/admin/roles/${userId}`, {
+            withCredentials: true,
+        });
+    },
+
+    // Analytics
+    getAnalytics: async (days?: number): Promise<any> => {
+        const queryParams = new URLSearchParams();
+        if (days) queryParams.append('days', days.toString());
+        const queryString = queryParams.toString();
+        const url = queryString ? `/admin/analytics?${queryString}` : '/admin/analytics';
+        const res = await api.get(url, {
+            withCredentials: true,
+        });
+        return res.data;
+    },
+
+    // Collections
+    getAllCollections: async (params?: {
+        page?: number;
+        limit?: number;
+        search?: string;
+    }): Promise<{ collections: any[]; pagination: { page: number; pages: number; total: number; limit: number } }> => {
+        const queryParams = new URLSearchParams();
+        if (params?.page) queryParams.append('page', params.page.toString());
+        if (params?.limit) queryParams.append('limit', params.limit.toString());
+        if (params?.search) queryParams.append('search', params.search);
+        const queryString = queryParams.toString();
+        const url = queryString ? `/admin/collections?${queryString}` : '/admin/collections';
+        const res = await api.get(url, {
+            withCredentials: true,
+        });
+        return res.data;
+    },
+
+    updateCollection: async (collectionId: string, data: {
+        name?: string;
+        description?: string;
+        isPublic?: boolean;
+    }): Promise<{ collection: any }> => {
+        const res = await api.put(`/admin/collections/${collectionId}`, data, {
+            withCredentials: true,
+        });
+        return res.data;
+    },
+
+    deleteCollection: async (collectionId: string): Promise<void> => {
+        await api.delete(`/admin/collections/${collectionId}`, {
             withCredentials: true,
         });
     },

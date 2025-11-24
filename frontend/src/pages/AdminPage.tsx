@@ -404,15 +404,16 @@ function AdminPage() {
                                 />
                             )}
                             {activeTab === 'images' && (
-                                <AdminImages
-                                    images={images}
-                                    pagination={imagesPagination}
-                                    search={imagesSearch}
-                                    onSearchChange={setImagesSearch}
-                                    onSearch={() => loadImages(1)}
-                                    onPageChange={loadImages}
-                                    onDelete={handleDeleteImage}
-                                />
+                        <AdminImages
+                            images={images}
+                            pagination={imagesPagination}
+                            search={imagesSearch}
+                            onSearchChange={setImagesSearch}
+                            onSearch={() => loadImages(1)}
+                            onPageChange={loadImages}
+                            onDelete={handleDeleteImage}
+                            onImageUpdated={() => loadImages(imagesPagination.page)}
+                        />
                             )}
                             {activeTab === 'categories' && (
                                 <AdminCategories

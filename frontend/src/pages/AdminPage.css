@@ -245,6 +245,53 @@
     border: 1px solid #e5e7eb;
 }
 
+.admin-status-badge.banned {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.admin-status-badge.active {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.moderation-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.moderation-badge.approved {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.moderation-badge.rejected {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.moderation-badge.flagged {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.moderation-badge.pending {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+.admin-image-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
 /* Images Grid */
 .admin-images-grid {
     display: grid;

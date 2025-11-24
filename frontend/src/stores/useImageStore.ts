@@ -56,18 +56,36 @@ export const useImageStore = create(
           clearInterval(progressInterval);
           progressInterval = null;
         }
+        
         set((state) => {
           // Ensure uploaded image has createdAt timestamp if missing
           const uploadedImage = {
             ...response.image,
             createdAt: response.image.createdAt || new Date().toISOString(),
           };
-          state.images.unshift(uploadedImage);
+          
+          // Only add to state if image is approved
+          // Regular users' pending images won't appear until admin approves them
+          // Admin images are auto-approved on backend, so they'll have moderationStatus: 'approved'
+          const isApproved = uploadedImage.moderationStatus === 'approved' || 
+                           !uploadedImage.moderationStatus; // Backward compatibility - old images without moderation status
+          
+          if (isApproved) {
+            state.images.unshift(uploadedImage);
+          }
+          
           // Now set to 100% - everything is complete
           state.uploadProgress = 100;
           state.loading = false;
         });
-        toast.success('Image uploaded successfully!');
+        
+        // Show appropriate message based on moderation status
+        const uploadedImage = response.image;
+        if (uploadedImage.moderationStatus === 'pending') {
+          toast.success('Image uploaded successfully! It will appear after admin approval.');
+        } else {
+          toast.success('Image uploaded successfully!');
+        }
       } catch (error: unknown) {
         // Clear progress interval if it's still running
         if (progressInterval) {

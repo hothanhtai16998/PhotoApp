@@ -5,14 +5,21 @@ import {
     getUserById,
     updateUser,
     deleteUser,
+    banUser,
+    unbanUser,
     getAllImagesAdmin,
     deleteImage,
     updateImage,
+    moderateImage,
+    getAnalytics,
     getAllAdminRoles,
     getAdminRole,
     createAdminRole,
     updateAdminRole,
     deleteAdminRole,
+    getAllCollectionsAdmin,
+    updateCollectionAdmin,
+    deleteCollectionAdmin,
 } from '../controllers/adminController.js';
 import { protectedRoute } from '../middlewares/authMiddleware.js';
 import { adminRoute } from '../middlewares/adminMiddleware.js';
@@ -25,26 +32,35 @@ const router = express.Router();
 router.use(protectedRoute);
 router.use(adminRoute);
 
-// Dashboard
+// Dashboard & Analytics
 router.get('/dashboard/stats', getDashboardStats);
+router.get('/analytics', getAnalytics);
 
 // User Management
 router.get('/users', getAllUsers);
 router.get('/users/:userId', getUserById);
 router.put('/users/:userId', validateCsrf, updateUser);
 router.delete('/users/:userId', validateCsrf, deleteUser);
+router.post('/users/:userId/ban', validateCsrf, banUser);
+router.post('/users/:userId/unban', validateCsrf, unbanUser);
 
 // Image Management
 router.get('/images', getAllImagesAdmin);
 router.put('/images/:imageId', validateCsrf, updateImage);
 router.delete('/images/:imageId', validateCsrf, deleteImage);
+router.post('/images/:imageId/moderate', validateCsrf, moderateImage);
 
-// Admin Role Management (Super Admin Only)
-router.get('/roles', requireSuperAdmin, getAllAdminRoles);
+// Admin Role Management
+router.get('/roles', getAllAdminRoles);
 router.get('/roles/:userId', getAdminRole);
 router.post('/roles', requireSuperAdmin, validateCsrf, createAdminRole);
 router.put('/roles/:userId', requireSuperAdmin, validateCsrf, updateAdminRole);
 router.delete('/roles/:userId', requireSuperAdmin, validateCsrf, deleteAdminRole);
+
+// Collection Management
+router.get('/collections', getAllCollectionsAdmin);
+router.put('/collections/:collectionId', validateCsrf, updateCollectionAdmin);
+router.delete('/collections/:collectionId', validateCsrf, deleteCollectionAdmin);
 
 export default router;
 

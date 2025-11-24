@@ -32,6 +32,11 @@ export interface Image {
   // Daily views and downloads tracking (date string as key: "YYYY-MM-DD")
   dailyViews?: Record<string, number>;
   dailyDownloads?: Record<string, number>;
+  // Moderation status
+  isModerated?: boolean;
+  moderationStatus?: 'pending' | 'approved' | 'rejected' | 'flagged';
+  moderatedAt?: string;
+  moderationNotes?: string;
   createdAt: string;
   updatedAt: string;
 }
