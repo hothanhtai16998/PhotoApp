@@ -22,6 +22,15 @@ import {
     getAllCollectionsAdmin,
     updateCollectionAdmin,
     deleteCollectionAdmin,
+    exportData,
+    getAllFavorites,
+    deleteFavorite,
+    getPendingContent,
+    approveContent,
+    rejectContent,
+    getSystemLogs,
+    getSettings,
+    updateSettings,
 } from '../controllers/adminController.js';
 import { protectedRoute } from '../middlewares/authMiddleware.js';
 import { adminRoute } from '../middlewares/adminMiddleware.js';
@@ -65,6 +74,25 @@ router.delete('/roles/:userId', requireSuperAdmin, validateCsrf, deleteAdminRole
 router.get('/collections', getAllCollectionsAdmin);
 router.put('/collections/:collectionId', validateCsrf, updateCollectionAdmin);
 router.delete('/collections/:collectionId', validateCsrf, deleteCollectionAdmin);
+
+// Export Data
+router.get('/export', requirePermission('exportData'), exportData);
+
+// Favorites Management
+router.get('/favorites', requirePermission('manageFavorites'), getAllFavorites);
+router.delete('/favorites/:userId/:imageId', requirePermission('manageFavorites'), validateCsrf, deleteFavorite);
+
+// Content Moderation
+router.get('/moderation/pending', requirePermission('moderateContent'), getPendingContent);
+router.post('/moderation/:contentId/approve', requirePermission('moderateContent'), validateCsrf, approveContent);
+router.post('/moderation/:contentId/reject', requirePermission('moderateContent'), validateCsrf, rejectContent);
+
+// System Logs
+router.get('/logs', requirePermission('viewLogs'), getSystemLogs);
+
+// Settings Management
+router.get('/settings', requirePermission('manageSettings'), getSettings);
+router.put('/settings', requirePermission('manageSettings'), validateCsrf, updateSettings);
 
 export default router;
 

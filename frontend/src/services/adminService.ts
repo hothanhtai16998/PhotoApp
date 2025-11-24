@@ -329,5 +329,96 @@ export const adminService = {
             withCredentials: true,
         });
     },
+
+    exportData: async (): Promise<Blob> => {
+        const res = await api.get('/admin/export', {
+            withCredentials: true,
+            responseType: 'blob',
+        });
+        return res.data;
+    },
+
+    // Favorites Management
+    getAllFavorites: async (params?: {
+        page?: number;
+        limit?: number;
+        search?: string;
+    }): Promise<{ favorites: any[]; pagination: { page: number; pages: number; total: number; limit: number } }> => {
+        const queryParams = new URLSearchParams();
+        if (params?.page) queryParams.append('page', params.page.toString());
+        if (params?.limit) queryParams.append('limit', params.limit.toString());
+        if (params?.search) queryParams.append('search', params.search);
+
+        const queryString = queryParams.toString();
+        const url = queryString ? `/admin/favorites?${queryString}` : '/admin/favorites';
+
+        const res = await api.get(url, {
+            withCredentials: true,
+        });
+        return res.data;
+    },
+
+    deleteFavorite: async (userId: string, imageId: string): Promise<void> => {
+        await api.delete(`/admin/favorites/${userId}/${imageId}`, {
+            withCredentials: true,
+        });
+    },
+
+    // Content Moderation
+    getPendingContent: async (): Promise<{ content: any[] }> => {
+        const res = await api.get('/admin/moderation/pending', {
+            withCredentials: true,
+        });
+        return res.data;
+    },
+
+    approveContent: async (contentId: string): Promise<void> => {
+        await api.post(`/admin/moderation/${contentId}/approve`, {}, {
+            withCredentials: true,
+        });
+    },
+
+    rejectContent: async (contentId: string, reason?: string): Promise<void> => {
+        await api.post(`/admin/moderation/${contentId}/reject`, { reason }, {
+            withCredentials: true,
+        });
+    },
+
+    // System Logs
+    getSystemLogs: async (params?: {
+        page?: number;
+        limit?: number;
+        level?: string;
+        search?: string;
+    }): Promise<{ logs: any[]; pagination: { page: number; pages: number; total: number; limit: number } }> => {
+        const queryParams = new URLSearchParams();
+        if (params?.page) queryParams.append('page', params.page.toString());
+        if (params?.limit) queryParams.append('limit', params.limit.toString());
+        if (params?.level) queryParams.append('level', params.level);
+        if (params?.search) queryParams.append('search', params.search);
+
+        const queryString = queryParams.toString();
+        const url = queryString ? `/admin/logs?${queryString}` : '/admin/logs';
+
+        const res = await api.get(url, {
+            withCredentials: true,
+        });
+        return res.data;
+    },
+
+    // Settings Management
+    getSettings: async (): Promise<{ settings: any }> => {
+        const res = await api.get('/admin/settings', {
+            withCredentials: true,
+        });
+        return res.data;
+    },
+
+    updateSettings: async (settings: any): Promise<{ settings: any }> => {
+        const res = await api.put('/admin/settings', { settings }, {
+            withCredentials: true,
+        });
+        return res.data;
+    },
 };
 

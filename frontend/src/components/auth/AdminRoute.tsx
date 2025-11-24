@@ -19,7 +19,12 @@ export default function AdminRoute() {
         return <Navigate to="/signin" replace />;
     }
 
-    if (!user.isAdmin && !user.isSuperAdmin) {
+    // Check if user has admin access (either isAdmin, isSuperAdmin, or has permissions)
+    const hasAdminAccess = user.isAdmin === true || 
+                          user.isSuperAdmin === true || 
+                          (user.permissions && Object.keys(user.permissions).length > 0);
+    
+    if (!hasAdminAccess) {
         return <Navigate to="/" replace />;
     }
 

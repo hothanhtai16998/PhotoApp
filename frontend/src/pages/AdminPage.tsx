@@ -15,7 +15,11 @@ import {
     UserCog,
     Tag,
     BarChart2,
-    FolderDot
+    FolderDot,
+    Heart,
+    ShieldCheck,
+    FileText,
+    Settings
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -29,6 +33,10 @@ const AdminImages = lazy(() => import('@/components/admin/tabs/AdminImages').the
 const AdminCategories = lazy(() => import('@/components/admin/tabs/AdminCategories').then(m => ({ default: m.AdminCategories })));
 const AdminCollections = lazy(() => import('@/components/admin/tabs/AdminCollections').then(m => ({ default: m.AdminCollections })));
 const AdminRoles = lazy(() => import('@/components/admin/tabs/AdminRoles').then(m => ({ default: m.AdminRoles })));
+const AdminFavorites = lazy(() => import('@/components/admin/tabs/AdminFavorites').then(m => ({ default: m.AdminFavorites })));
+const AdminModeration = lazy(() => import('@/components/admin/tabs/AdminModeration').then(m => ({ default: m.AdminModeration })));
+const AdminLogs = lazy(() => import('@/components/admin/tabs/AdminLogs').then(m => ({ default: m.AdminLogs })));
+const AdminSettings = lazy(() => import('@/components/admin/tabs/AdminSettings').then(m => ({ default: m.AdminSettings })));
 
 // Loading fallback for admin tabs
 const AdminTabLoader = () => (
@@ -40,7 +48,7 @@ const AdminTabLoader = () => (
     </div>
 );
 
-type TabType = 'dashboard' | 'analytics' | 'users' | 'images' | 'categories' | 'collections' | 'roles';
+type TabType = 'dashboard' | 'analytics' | 'users' | 'images' | 'categories' | 'collections' | 'roles' | 'favorites' | 'moderation' | 'logs' | 'settings';
 
 function AdminPage() {
     const { user, fetchMe } = useAuthStore();
@@ -173,22 +181,63 @@ function AdminPage() {
     }, [isSuperAdmin, users.length, loadUsers]);
 
     useEffect(() => {
+        let isMounted = true;
+        
         const checkAdmin = async () => {
-            try {
-                await fetchMe();
-                const currentUser = useAuthStore.getState().user;
-                if (!currentUser?.isAdmin && !currentUser?.isSuperAdmin) {
-                    toast.error('Cần quyền Admin để truy cập trang này.');
-                    navigate('/');
-                    return;
+            // Get current user from store first
+            let currentUser = useAuthStore.getState().user;
+            
+            // Only fetch if we don't have user data or don't have permissions
+            if (!currentUser || (!currentUser.permissions && currentUser.isAdmin === undefined)) {
+                try {
+                    await fetchMe();
+                    // Wait a bit for state to update
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    if (!isMounted) return;
+                    currentUser = useAuthStore.getState().user;
+                } catch (error) {
+                    // If fetchMe fails, check if we have a user from before
+                    if (!isMounted) return;
+                    currentUser = useAuthStore.getState().user;
+                    if (!currentUser) {
+                        console.error('AdminPage - Error fetching user:', error);
+                        toast.error('Vui lòng đăng nhập lại.');
+                        navigate('/signin');
+                        return;
+                    }
+                    // Continue with existing user data
                 }
-                loadDashboardStats();
-            } catch {
-                navigate('/signin');
             }
+            
+            if (!isMounted) return;
+            
+            // If still no user, redirect to sign in
+            if (!currentUser) {
+                toast.error('Vui lòng đăng nhập lại.');
+                navigate('/signin');
+                return;
+            }
+            
+            // Check if user has admin access (either isAdmin, isSuperAdmin, or has permissions)
+            const hasAdminAccess = currentUser.isAdmin === true || 
+                                  currentUser.isSuperAdmin === true || 
+                                  (currentUser.permissions && Object.keys(currentUser.permissions).length > 0);
+            
+            if (!hasAdminAccess) {
+                toast.error('Cần quyền Admin để truy cập trang này.');
+                navigate('/');
+                return;
+            }
+            
+            // Dashboard stats will be loaded by the tab change useEffect
         };
+        
         checkAdmin();
-    }, [fetchMe, navigate, loadDashboardStats]);
+        
+        return () => {
+            isMounted = false;
+        };
+    }, []); // Empty deps - only run once on mount
 
     useEffect(() => {
         if (activeTab === 'dashboard') {
@@ -202,7 +251,8 @@ function AdminPage() {
         } else if (activeTab === 'roles') {
             loadAdminRoles();
         }
-    }, [activeTab, loadAdminRoles, loadImages, loadUsers, loadCategories, loadDashboardStats]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTab]); // Only depend on activeTab to avoid infinite loops
 
     const handleDeleteUser = async (userId: string, username: string) => {
         if (!confirm(`Bạn có muốn xoá người dùng "${username}" không? Sẽ xoá cả ảnh mà người này đã đăng.`)) {
@@ -455,6 +505,42 @@ function AdminPage() {
                                     Quyền quản trị
                                 </button>
                             )}
+                            {(isSuperAdmin() || hasPermission('manageFavorites')) && (
+                                <button
+                                    className={`admin-nav-item ${activeTab === 'favorites' ? 'active' : ''}`}
+                                    onClick={() => setActiveTab('favorites')}
+                                >
+                                    <Heart size={20} />
+                                    Quản lý yêu thích
+                                </button>
+                            )}
+                            {(isSuperAdmin() || hasPermission('moderateContent')) && (
+                                <button
+                                    className={`admin-nav-item ${activeTab === 'moderation' ? 'active' : ''}`}
+                                    onClick={() => setActiveTab('moderation')}
+                                >
+                                    <ShieldCheck size={20} />
+                                    Kiểm duyệt nội dung
+                                </button>
+                            )}
+                            {(isSuperAdmin() || hasPermission('viewLogs')) && (
+                                <button
+                                    className={`admin-nav-item ${activeTab === 'logs' ? 'active' : ''}`}
+                                    onClick={() => setActiveTab('logs')}
+                                >
+                                    <FileText size={20} />
+                                    Nhật ký hệ thống
+                                </button>
+                            )}
+                            {(isSuperAdmin() || hasPermission('manageSettings')) && (
+                                <button
+                                    className={`admin-nav-item ${activeTab === 'settings' ? 'active' : ''}`}
+                                    onClick={() => setActiveTab('settings')}
+                                >
+                                    <Settings size={20} />
+                                    Cài đặt
+                                </button>
+                            )}
                         </nav>
                     </div>
 
@@ -527,6 +613,18 @@ function AdminPage() {
                                     onSaveCreate={handleCreateRole}
                                     onSaveEdit={handleUpdateRole}
                                 />
+                            )}
+                            {activeTab === 'favorites' && (isSuperAdmin() || hasPermission('manageFavorites')) && (
+                                <AdminFavorites />
+                            )}
+                            {activeTab === 'moderation' && (isSuperAdmin() || hasPermission('moderateContent')) && (
+                                <AdminModeration />
+                            )}
+                            {activeTab === 'logs' && (isSuperAdmin() || hasPermission('viewLogs')) && (
+                                <AdminLogs />
+                            )}
+                            {activeTab === 'settings' && (isSuperAdmin() || hasPermission('manageSettings')) && (
+                                <AdminSettings />
                             )}
                         </Suspense>
                     </div>

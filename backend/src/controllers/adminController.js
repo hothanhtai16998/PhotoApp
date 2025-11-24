@@ -5,6 +5,8 @@ import Category from '../models/Category.js';
 import Collection from '../models/Collection.js';
 import PageView from '../models/PageView.js';
 import Session from '../models/Session.js';
+import SystemLog from '../models/SystemLog.js';
+import Settings from '../models/Settings.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { logger } from '../utils/logger.js';
 import { deleteImageFromS3 } from '../libs/s3.js';
@@ -1304,6 +1306,66 @@ export const updateCollectionAdmin = asyncHandler(async (req, res) => {
     });
 });
 
+// Export Data
+export const exportData = asyncHandler(async (req, res) => {
+    // Check permission
+    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
+    const canExport = req.user.isSuperAdmin || await hasPermission(req.user._id, 'exportData');
+    
+    if (!canExport) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền xuất dữ liệu',
+        });
+    }
+
+    try {
+        // Get all data
+        const [users, images, categories, collections, adminRoles] = await Promise.all([
+            User.find().select('username email displayName bio phone createdAt updatedAt isAdmin isSuperAdmin').lean(),
+            Image.find().populate('uploadedBy', 'username displayName').populate('imageCategory', 'name').select('imageTitle imageCategory imageUrl uploadedBy createdAt updatedAt').lean(),
+            Category.find().select('name description createdAt updatedAt').lean(),
+            Collection.find().populate('createdBy', 'username displayName').select('name description images createdAt updatedAt createdBy').lean(),
+            AdminRole.find().populate('userId', 'username displayName email').populate('grantedBy', 'username displayName').select('userId role permissions grantedBy createdAt updatedAt').lean(),
+        ]);
+
+        // Format data for export
+        const exportData = {
+            exportDate: new Date().toISOString(),
+            exportedBy: {
+                userId: req.user._id,
+                username: req.user.username,
+                displayName: req.user.displayName,
+            },
+            statistics: {
+                totalUsers: users.length,
+                totalImages: images.length,
+                totalCategories: categories.length,
+                totalCollections: collections.length,
+                totalAdminRoles: adminRoles.length,
+            },
+            data: {
+                users,
+                images,
+                categories,
+                collections,
+                adminRoles,
+            },
+        };
+
+        // Set headers for JSON download
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename="photoapp-export-${new Date().toISOString().split('T')[0]}.json"`);
+        
+        res.json(exportData);
+    } catch (error) {
+        logger.error('Error exporting data:', error);
+        res.status(500).json({
+            message: 'Lỗi khi xuất dữ liệu',
+            error: error.message,
+        });
+    }
+});
+
 export const deleteCollectionAdmin = asyncHandler(async (req, res) => {
     // Check permission (super admin or admin with manageCollections permission)
     const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
@@ -1329,6 +1391,376 @@ export const deleteCollectionAdmin = asyncHandler(async (req, res) => {
 
     res.status(200).json({
         message: 'Xoá bộ sưu tập thành công',
+    });
+});
+
+// Favorites Management
+export const getAllFavorites = asyncHandler(async (req, res) => {
+    // Check permission
+    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
+    const canManage = req.user.isSuperAdmin || await hasPermission(req.user._id, 'manageFavorites');
+    
+    if (!canManage) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền quản lý yêu thích',
+        });
+    }
+
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 20), 100);
+    const skip = (page - 1) * limit;
+    const search = req.query.search || '';
+
+    // Build query
+    let userQuery = {};
+    if (search) {
+        userQuery = {
+            $or: [
+                { username: { $regex: search, $options: 'i' } },
+                { displayName: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } },
+            ],
+        };
+    }
+
+    // Get users with favorites
+    const users = await User.find(userQuery)
+        .select('username displayName email favorites')
+        .populate('favorites', 'imageTitle imageUrl uploadedBy')
+        .lean();
+
+    // Flatten favorites with user info
+    const allFavorites = [];
+    users.forEach(user => {
+        if (user.favorites && user.favorites.length > 0) {
+            user.favorites.forEach(fav => {
+                if (fav && typeof fav === 'object') {
+                    allFavorites.push({
+                        _id: `${user._id}_${fav._id}`,
+                        user: {
+                            _id: user._id,
+                            username: user.username,
+                            displayName: user.displayName,
+                            email: user.email,
+                        },
+                        image: fav,
+                        createdAt: fav.createdAt || new Date(),
+                    });
+                }
+            });
+        }
+    });
+
+    // Sort by date (newest first)
+    allFavorites.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    // Paginate
+    const total = allFavorites.length;
+    const paginatedFavorites = allFavorites.slice(skip, skip + limit);
+
+    res.json({
+        favorites: paginatedFavorites,
+        pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit),
+        },
+    });
+});
+
+export const deleteFavorite = asyncHandler(async (req, res) => {
+    // Check permission
+    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
+    const canManage = req.user.isSuperAdmin || await hasPermission(req.user._id, 'manageFavorites');
+    
+    if (!canManage) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền quản lý yêu thích',
+        });
+    }
+
+    const { userId, imageId } = req.params;
+
+    const user = await User.findById(userId);
+    if (!user) {
+        return res.status(404).json({
+            message: 'Không tìm thấy người dùng',
+        });
+    }
+
+    // Remove favorite
+    await User.findByIdAndUpdate(userId, {
+        $pull: { favorites: imageId },
+    });
+
+    // Log action
+    await SystemLog.create({
+        level: 'info',
+        message: `Admin removed favorite: image ${imageId} from user ${userId}`,
+        userId: req.user._id,
+        action: 'deleteFavorite',
+        metadata: { targetUserId: userId, imageId },
+    });
+
+    res.json({
+        message: 'Đã xóa yêu thích thành công',
+    });
+});
+
+// Content Moderation
+export const getPendingContent = asyncHandler(async (req, res) => {
+    // Check permission
+    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
+    const canModerate = req.user.isSuperAdmin || await hasPermission(req.user._id, 'moderateContent');
+    
+    if (!canModerate) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền kiểm duyệt nội dung',
+        });
+    }
+
+    // Get images with moderationStatus 'pending' or without moderationStatus
+    const images = await Image.find({
+        $or: [
+            { moderationStatus: 'pending' },
+            { moderationStatus: { $exists: false } },
+        ],
+    })
+        .populate('uploadedBy', 'username displayName')
+        .populate('imageCategory', 'name')
+        .sort({ createdAt: -1 })
+        .lean();
+
+    res.json({
+        content: images.map(img => ({
+            _id: img._id,
+            title: img.imageTitle,
+            content: img.imageTitle, // For now, use title as content
+            uploadedBy: img.uploadedBy,
+            status: img.moderationStatus || 'pending',
+            createdAt: img.createdAt,
+            imageUrl: img.imageUrl,
+            category: img.imageCategory,
+        })),
+    });
+});
+
+export const approveContent = asyncHandler(async (req, res) => {
+    // Check permission
+    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
+    const canModerate = req.user.isSuperAdmin || await hasPermission(req.user._id, 'moderateContent');
+    
+    if (!canModerate) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền kiểm duyệt nội dung',
+        });
+    }
+
+    const { contentId } = req.params;
+
+    const image = await Image.findById(contentId);
+    if (!image) {
+        return res.status(404).json({
+            message: 'Không tìm thấy nội dung',
+        });
+    }
+
+    // Update moderation status to approved
+    image.moderationStatus = 'approved';
+    image.isModerated = true;
+    image.moderatedAt = new Date();
+    image.moderatedBy = req.user._id;
+    await image.save();
+
+    // Log action
+    await SystemLog.create({
+        level: 'info',
+        message: `Content approved: ${contentId}`,
+        userId: req.user._id,
+        action: 'approveContent',
+        metadata: { contentId },
+    });
+
+    res.json({
+        message: 'Đã duyệt nội dung thành công',
+    });
+});
+
+export const rejectContent = asyncHandler(async (req, res) => {
+    // Check permission
+    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
+    const canModerate = req.user.isSuperAdmin || await hasPermission(req.user._id, 'moderateContent');
+    
+    if (!canModerate) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền kiểm duyệt nội dung',
+        });
+    }
+
+    const { contentId } = req.params;
+    const { reason } = req.body;
+
+    const image = await Image.findById(contentId);
+    if (!image) {
+        return res.status(404).json({
+            message: 'Không tìm thấy nội dung',
+        });
+    }
+
+    // Update moderation status to rejected
+    image.moderationStatus = 'rejected';
+    image.isModerated = true;
+    image.moderatedAt = new Date();
+    image.moderatedBy = req.user._id;
+    if (reason) {
+        image.moderationNotes = reason;
+    }
+    await image.save();
+
+    // Log action
+    await SystemLog.create({
+        level: 'info',
+        message: `Content rejected: ${contentId}${reason ? ` - Reason: ${reason}` : ''}`,
+        userId: req.user._id,
+        action: 'rejectContent',
+        metadata: { contentId, reason },
+    });
+
+    res.json({
+        message: 'Đã từ chối nội dung',
+    });
+});
+
+// System Logs
+export const getSystemLogs = asyncHandler(async (req, res) => {
+    // Check permission
+    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
+    const canView = req.user.isSuperAdmin || await hasPermission(req.user._id, 'viewLogs');
+    
+    if (!canView) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền xem nhật ký',
+        });
+    }
+
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 50), 200);
+    const skip = (page - 1) * limit;
+    const level = req.query.level; // Filter by level
+    const search = req.query.search || '';
+
+    // Build query
+    let query = {};
+    if (level) {
+        query.level = level;
+    }
+    if (search) {
+        query.message = { $regex: search, $options: 'i' };
+    }
+
+    const [logs, total] = await Promise.all([
+        SystemLog.find(query)
+            .populate('userId', 'username displayName')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean(),
+        SystemLog.countDocuments(query),
+    ]);
+
+    res.json({
+        logs: logs.map(log => ({
+            _id: log._id,
+            timestamp: log.createdAt,
+            level: log.level,
+            message: log.message,
+            userId: log.userId,
+            action: log.action,
+            metadata: log.metadata,
+        })),
+        pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit),
+        },
+    });
+});
+
+// Settings Management
+export const getSettings = asyncHandler(async (req, res) => {
+    // Check permission
+    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
+    const canManage = req.user.isSuperAdmin || await hasPermission(req.user._id, 'manageSettings');
+    
+    if (!canManage) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền quản lý cài đặt',
+        });
+    }
+
+    const settings = await Settings.findOne({ key: 'system' });
+    
+    if (!settings) {
+        // Create default settings
+        const defaultSettings = await Settings.create({
+            key: 'system',
+            value: {
+                siteName: 'PhotoApp',
+                siteDescription: 'Discover beautiful photos',
+                maxUploadSize: 10,
+                allowedFileTypes: ['jpg', 'jpeg', 'png', 'webp'],
+                maintenanceMode: false,
+            },
+            description: 'System-wide settings',
+        });
+        return res.json({ settings: defaultSettings.value });
+    }
+
+    res.json({ settings: settings.value });
+});
+
+export const updateSettings = asyncHandler(async (req, res) => {
+    // Check permission
+    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
+    const canManage = req.user.isSuperAdmin || await hasPermission(req.user._id, 'manageSettings');
+    
+    if (!canManage) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền quản lý cài đặt',
+        });
+    }
+
+    const { settings } = req.body;
+
+    let systemSettings = await Settings.findOne({ key: 'system' });
+    
+    if (!systemSettings) {
+        systemSettings = await Settings.create({
+            key: 'system',
+            value: settings,
+            description: 'System-wide settings',
+            updatedBy: req.user._id,
+        });
+    } else {
+        systemSettings.value = { ...systemSettings.value, ...settings };
+        systemSettings.updatedBy = req.user._id;
+        await systemSettings.save();
+    }
+
+    // Log action
+    await SystemLog.create({
+        level: 'info',
+        message: 'System settings updated',
+        userId: req.user._id,
+        action: 'updateSettings',
+        metadata: { settings },
+    });
+
+    res.json({
+        message: 'Đã cập nhật cài đặt thành công',
+        settings: systemSettings.value,
     });
 });
 

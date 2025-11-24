@@ -85,12 +85,9 @@ export const useAuthStore =
 					);
 				}
 
-				// Set user if provided in response, otherwise fetch it
-				if (response.user) {
-					set({ user: response.user });
-				} else {
-					await get().fetchMe();
-				}
+				// Always fetch full user data with permissions from /users/me
+				// This ensures we have the latest user data including permissions
+				await get().fetchMe();
 
 				toast.success(
 					'Chào mừng bạn quay lại 🎉'
@@ -167,11 +164,25 @@ export const useAuthStore =
 					await authService.fetchMe();
 
 				set({ user });
-			} catch {
-				set({
-					user: null,
-					accessToken: null,
-				});
+			} catch (error) {
+				// Only clear state if it's a 401/403 (unauthorized/forbidden)
+				// This means the user is actually not authenticated
+				const errorStatus = (
+					error as {
+						response?: {
+							status?: number;
+						};
+					}
+				)?.response?.status;
+				
+				if (errorStatus === 401 || errorStatus === 403) {
+					// User is not authenticated, clear state
+					set({
+						user: null,
+						accessToken: null,
+					});
+				}
+				// For other errors (network, 500, etc.), keep existing user data
 				// Don't show error toast on fetchMe failure during initialization
 				// It's expected if user is not logged in
 			} finally {
