@@ -18,7 +18,8 @@ export const adminRoute = asyncHandler(async (req, res, next) => {
     // If not computed yet, compute it now
     if (req.user.isSuperAdmin === undefined || req.user.isAdmin === undefined) {
         const { computeAdminStatus } = await import('../utils/adminUtils.js');
-        const { isAdmin, isSuperAdmin, adminRole } = await computeAdminStatus(req.user._id);
+        const clientIP = req.clientIP || null;
+        const { isAdmin, isSuperAdmin, adminRole } = await computeAdminStatus(req.user._id, clientIP);
         req.user.isAdmin = isAdmin;
         req.user.isSuperAdmin = isSuperAdmin;
         if (adminRole) {

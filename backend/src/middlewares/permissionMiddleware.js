@@ -61,10 +61,15 @@ export const PERMISSIONS = {
  * Check if user has a specific permission
  * Uses AdminRole as single source of truth
  */
-export const hasPermission = async (userId, permission) => {
-    // Compute admin status from AdminRole
+export const hasPermission = async (userId, permission, clientIP = null) => {
+    // Compute admin status from AdminRole (uses cache internally)
     const { computeAdminStatus } = await import('../utils/adminUtils.js');
-    const { isSuperAdmin, adminRole } = await computeAdminStatus(userId);
+    const { isSuperAdmin, adminRole, validation } = await computeAdminStatus(userId, clientIP);
+    
+    // If role is invalid (expired, inactive, or IP restricted), no permissions
+    if (!validation || !validation.valid || !adminRole) {
+        return false;
+    }
     
     // Super admin has all permissions
     if (isSuperAdmin) {
@@ -127,7 +132,8 @@ export const requirePermission = (permission) => {
         // If not computed yet, compute it now
         if (req.user.isSuperAdmin === undefined || req.user.isAdmin === undefined) {
             const { computeAdminStatus } = await import('../utils/adminUtils.js');
-            const { isAdmin, isSuperAdmin, adminRole } = await computeAdminStatus(req.user._id);
+            const clientIP = req.clientIP || null;
+            const { isAdmin, isSuperAdmin, adminRole } = await computeAdminStatus(req.user._id, clientIP);
             req.user.isAdmin = isAdmin;
             req.user.isSuperAdmin = isSuperAdmin;
             if (adminRole) {
@@ -147,6 +153,17 @@ export const requirePermission = (permission) => {
         if (!adminRole) {
             return res.status(403).json({
                 message: 'Admin access required',
+            });
+        }
+
+        // Check if role is valid (for time-based permissions)
+        const { isAdminRoleValid } = await import('../utils/adminUtils.js');
+        const clientIP = req.clientIP || null;
+        const validation = isAdminRoleValid(adminRole, clientIP);
+        
+        if (!validation.valid) {
+            return res.status(403).json({
+                message: `Permission denied: ${validation.reason || 'Admin role is invalid'}`,
             });
         }
 
@@ -209,7 +226,8 @@ export const requireSuperAdmin = asyncHandler(async (req, res, next) => {
     // If not computed yet, compute it now
     if (req.user.isSuperAdmin === undefined) {
         const { computeAdminStatus } = await import('../utils/adminUtils.js');
-        const { isSuperAdmin, adminRole } = await computeAdminStatus(req.user._id);
+        const clientIP = req.clientIP || null;
+        const { isSuperAdmin, adminRole } = await computeAdminStatus(req.user._id, clientIP);
         req.user.isSuperAdmin = isSuperAdmin;
         if (adminRole) {
             req.adminRole = adminRole;

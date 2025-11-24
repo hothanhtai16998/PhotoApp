@@ -193,6 +193,46 @@ export const validatePermissionsForRole = (role, permissions) => {
 };
 
 /**
+ * Get inherited permissions for a role (permissions inherited from lower roles)
+ * @param {string} role - 'moderator', 'admin', or 'super_admin'
+ * @returns {string[]} Array of inherited permission keys
+ */
+export const getInheritedPermissions = (role) => {
+    switch (role) {
+        case 'moderator':
+            // Moderator has no inheritance (base role)
+            return [];
+        case 'admin':
+            // Admin inherits all moderator permissions
+            return [...MODERATOR_ALLOWED_PERMISSIONS];
+        case 'super_admin':
+            // Super admin inherits all admin permissions (which includes moderator)
+            return [...ADMIN_ALLOWED_PERMISSIONS];
+        default:
+            return [];
+    }
+};
+
+/**
+ * Apply role inheritance to permissions object
+ * Automatically sets inherited permissions to true
+ * @param {string} role - 'moderator', 'admin', or 'super_admin'
+ * @param {Object} permissions - Permissions object (may be partial)
+ * @returns {Object} Permissions object with inherited permissions applied
+ */
+export const applyRoleInheritance = (role, permissions = {}) => {
+    const inheritedPerms = getInheritedPermissions(role);
+    const result = { ...permissions };
+    
+    // Set all inherited permissions to true
+    inheritedPerms.forEach(perm => {
+        result[perm] = true;
+    });
+    
+    return result;
+};
+
+/**
  * Get a human-readable description of role permissions
  * @param {string} role - 'moderator', 'admin', or 'super_admin'
  * @returns {string} Description of what the role can do

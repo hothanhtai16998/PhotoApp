@@ -31,6 +31,7 @@ import {
     getSystemLogs,
     getSettings,
     updateSettings,
+    getCacheStats,
 } from '../controllers/adminController.js';
 import { protectedRoute } from '../middlewares/authMiddleware.js';
 import { adminRoute } from '../middlewares/adminMiddleware.js';
@@ -93,6 +94,9 @@ router.get('/logs', requirePermission('viewLogs'), getSystemLogs);
 // Settings Management
 router.get('/settings', requirePermission('manageSettings'), getSettings);
 router.put('/settings', requirePermission('manageSettings'), validateCsrf, updateSettings);
+
+// Cache Test (Super Admin only)
+router.get('/cache/stats', requireSuperAdmin, getCacheStats);
 
 export default router;
 

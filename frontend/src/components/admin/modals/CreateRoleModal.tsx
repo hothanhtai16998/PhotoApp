@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import type { User, AdminRolePermissions } from '@/services/adminService';
 import { PERMISSION_GROUPS, getAllPermissionKeys } from '@/utils/permissionGroups';
+import { getInheritedPermissions, isPermissionInherited, getInheritedFromRole } from '@/utils/roleInheritance';
 
 interface CreateRoleModalProps {
     users: User[];
@@ -14,6 +16,19 @@ export function CreateRoleModal({ users, onClose, onSave }: CreateRoleModalProps
     const [selectedUserId, setSelectedUserId] = useState('');
     const [role, setRole] = useState<'super_admin' | 'admin' | 'moderator'>('admin');
     const [permissions, setPermissions] = useState<AdminRolePermissions>(getAllPermissionKeys());
+
+    // Apply inheritance when role changes
+    useEffect(() => {
+        const inheritedPerms = getInheritedPermissions(role);
+        setPermissions(prev => {
+            const updated = { ...prev };
+            // Set all inherited permissions to true
+            inheritedPerms.forEach(perm => {
+                updated[perm as keyof AdminRolePermissions] = true;
+            });
+            return updated;
+        });
+    }, [role]); // Only run when role changes
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -69,6 +84,11 @@ export function CreateRoleModal({ users, onClose, onSave }: CreateRoleModalProps
 
                     <div className="admin-form-group">
                         <label>Quyền hạn</label>
+                        {role !== 'moderator' && (
+                            <p className="admin-form-help" style={{ marginBottom: '12px', color: '#059669' }}>
+                                <strong>Lưu ý:</strong> Quyền từ vai trò thấp hơn sẽ tự động được kế thừa và không thể bỏ chọn.
+                            </p>
+                        )}
                         <div className="admin-permissions-container">
                             {PERMISSION_GROUPS.map((group, groupIndex) => (
                                 <div key={groupIndex} className="admin-permission-group">
@@ -76,15 +96,34 @@ export function CreateRoleModal({ users, onClose, onSave }: CreateRoleModalProps
                                     <div className="admin-permissions-checkboxes">
                                         {group.permissions.map((perm) => {
                                             const permissionKey = perm.key as keyof AdminRolePermissions;
+                                            const isInherited = isPermissionInherited(role, perm.key);
+                                            const inheritedFrom = getInheritedFromRole(role, perm.key);
+                                            const isChecked = permissions[permissionKey] || false;
+                                            
                                             return (
-                                                <label key={perm.key} className="admin-checkbox-label">
+                                                <label 
+                                                    key={perm.key} 
+                                                    className={`admin-checkbox-label ${isInherited ? 'inherited-permission' : ''}`}
+                                                    title={isInherited ? `Kế thừa từ vai trò: ${inheritedFrom === 'moderator' ? 'Moderator' : 'Admin'}` : undefined}
+                                                >
                                                     <input
                                                         type="checkbox"
-                                                        checked={permissions[permissionKey] || false}
-                                                        onChange={(e) => setPermissions({ ...permissions, [permissionKey]: e.target.checked })}
-                                                        disabled={perm.key === 'viewDashboard'}
+                                                        checked={isChecked}
+                                                        onChange={(e) => {
+                                                            if (!isInherited) {
+                                                                setPermissions({ ...permissions, [permissionKey]: e.target.checked });
+                                                            }
+                                                        }}
+                                                        disabled={perm.key === 'viewDashboard' || isInherited}
                                                     />
-                                                    <span>{perm.label}</span>
+                                                    <span>
+                                                        {perm.label}
+                                                        {isInherited && (
+                                                            <span className="inherited-badge" title={`Kế thừa từ ${inheritedFrom === 'moderator' ? 'Moderator' : 'Admin'}`}>
+                                                                (Kế thừa)
+                                                            </span>
+                                                        )}
+                                                    </span>
                                                 </label>
                                             );
                                         })}

@@ -3,6 +3,7 @@ import User from "../models/User.js";
 import { env } from "../libs/env.js";
 import { asyncHandler } from "./asyncHandler.js";
 import { enrichUserWithAdminStatus } from "../utils/adminUtils.js";
+import { getClientIp } from "../utils/auditLogger.js";
 
 /**
  * Middleware to protect routes requiring authentication
@@ -32,8 +33,13 @@ export const protectedRoute = asyncHandler(async (req, res, next) => {
             });
         }
 
+        // Get client IP for IP restriction checks
+        const clientIP = getClientIp(req);
+        req.clientIP = clientIP;
+        
         // Enrich user with computed admin status from AdminRole (single source of truth)
-        const enrichedUser = await enrichUserWithAdminStatus(user);
+        // Pass clientIP for IP restriction validation
+        const enrichedUser = await enrichUserWithAdminStatus(user, clientIP);
         
         // Attach user to request with computed admin status
         req.user = enrichedUser;

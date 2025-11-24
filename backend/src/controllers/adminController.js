@@ -13,7 +13,8 @@ import { deleteImageFromS3 } from '../libs/s3.js';
 import { PERMISSIONS } from '../middlewares/permissionMiddleware.js';
 import { clearCache } from '../middlewares/cacheMiddleware.js';
 import { logPermissionChange, getClientIp } from '../utils/auditLogger.js';
-import { validatePermissionsForRole } from '../utils/permissionValidator.js';
+import { validatePermissionsForRole, applyRoleInheritance } from '../utils/permissionValidator.js';
+import { invalidateUserCache, getCacheStats as getPermissionCacheStats, clearAllCache } from '../utils/permissionCache.js';
 
 // Statistics
 export const getDashboardStats = asyncHandler(async (req, res) => {
@@ -124,7 +125,7 @@ export const updateUser = asyncHandler(async (req, res) => {
     const { displayName, email, bio } = req.body;
 
     // Permission check is handled by requirePermission('editUsers') middleware
-    
+
     const user = await User.findById(userId);
 
     if (!user) {
@@ -136,7 +137,7 @@ export const updateUser = asyncHandler(async (req, res) => {
     // Prevent non-super admins from updating super admin users (compute from AdminRole)
     const { computeAdminStatus } = await import('../utils/adminUtils.js');
     const targetUserStatus = await computeAdminStatus(userId);
-    
+
     if (targetUserStatus.isSuperAdmin && !req.user.isSuperAdmin) {
         return res.status(403).json({
             message: 'Quyền truy cập bị từ chối: cần quyền Super admin',
@@ -186,7 +187,7 @@ export const deleteUser = asyncHandler(async (req, res) => {
     const { userId } = req.params;
 
     // Permission check is handled by requirePermission('deleteUsers') middleware
-    
+
     const user = await User.findById(userId);
 
     if (!user) {
@@ -205,7 +206,7 @@ export const deleteUser = asyncHandler(async (req, res) => {
     // Prevent non-super admins from deleting super admin users (compute from AdminRole)
     const { computeAdminStatus: computeTargetStatus } = await import('../utils/adminUtils.js');
     const targetUserStatus = await computeTargetStatus(userId);
-    
+
     if (targetUserStatus.isSuperAdmin && !req.user.isSuperAdmin) {
         return res.status(403).json({
             message: 'Quyền truy cập bị từ chối: cần quyền Super admin',
@@ -260,7 +261,7 @@ export const banUser = asyncHandler(async (req, res) => {
     // Prevent non-super admins from banning super admin users
     const { computeAdminStatus } = await import('../utils/adminUtils.js');
     const targetUserStatus = await computeAdminStatus(userId);
-    
+
     if (targetUserStatus.isSuperAdmin && !req.user.isSuperAdmin) {
         return res.status(403).json({
             message: 'Quyền truy cập bị từ chối: cần quyền Super admin',
@@ -475,11 +476,11 @@ export const updateImage = asyncHandler(async (req, res) => {
 
     // Build update object
     const updateData = {};
-    
+
     if (location !== undefined) {
         updateData.location = location?.trim() || null;
     }
-    
+
     if (coordinates !== undefined) {
         // Parse and validate coordinates if provided
         let parsedCoordinates;
@@ -500,11 +501,11 @@ export const updateImage = asyncHandler(async (req, res) => {
             updateData.coordinates = null;
         }
     }
-    
+
     if (imageTitle !== undefined) {
         updateData.imageTitle = imageTitle?.trim() || image.imageTitle;
     }
-    
+
     if (cameraModel !== undefined) {
         updateData.cameraModel = cameraModel?.trim() || null;
     }
@@ -576,26 +577,26 @@ export const getAnalytics = asyncHandler(async (req, res) => {
     // Get date range from query (default to last 30 days)
     const days = parseInt(req.query.days) || 30;
     const now = new Date();
-    
+
     // For Vietnam timezone (UTC+7), we need to adjust the date range
     // Vietnam "today" in UTC terms: from 17:00 UTC yesterday to 16:59:59 UTC today
     // To include all of today, we'll use "now + 1 day" as the upper bound
     // This ensures any record created "today" in Vietnam timezone is included
-    
+
     // Start date: (days) days ago
     // We'll use a simple approach: subtract days from now, set to start of that day in UTC
     // Then adjust for Vietnam timezone offset
     const startDateUTC = new Date(now);
     startDateUTC.setUTCDate(startDateUTC.getUTCDate() - days);
     startDateUTC.setUTCHours(0, 0, 0, 0);
-    
+
     // End date: Use now + 24 hours to ensure we include all of today in Vietnam timezone
     const endDateUTC = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    
+
     // Calculate comparison period (previous period of same length)
     const comparisonStartDateUTC = new Date(startDateUTC);
     comparisonStartDateUTC.setUTCDate(comparisonStartDateUTC.getUTCDate() - days);
-    
+
     const comparisonEndDateUTC = new Date(startDateUTC);
     comparisonEndDateUTC.setUTCMilliseconds(comparisonEndDateUTC.getUTCMilliseconds() - 1);
 
@@ -685,11 +686,11 @@ export const getAnalytics = asyncHandler(async (req, res) => {
 
     // Daily pending images for trend chart (current period)
     const dailyPending = await Image.aggregate([
-        { 
-            $match: { 
+        {
+            $match: {
                 createdAt: { $gte: startDateUTC, $lte: endDateUTC },
                 moderationStatus: 'pending'
-            } 
+            }
         },
         {
             $group: {
@@ -702,11 +703,11 @@ export const getAnalytics = asyncHandler(async (req, res) => {
 
     // Daily pending images for comparison period
     const dailyPendingComparison = await Image.aggregate([
-        { 
-            $match: { 
+        {
+            $match: {
                 createdAt: { $gte: comparisonStartDateUTC, $lte: comparisonEndDateUTC },
                 moderationStatus: 'pending'
-            } 
+            }
         },
         {
             $group: {
@@ -719,11 +720,11 @@ export const getAnalytics = asyncHandler(async (req, res) => {
 
     // Daily approved images for trend chart (current period)
     const dailyApproved = await Image.aggregate([
-        { 
-            $match: { 
+        {
+            $match: {
                 createdAt: { $gte: startDateUTC, $lte: endDateUTC },
                 moderationStatus: 'approved'
-            } 
+            }
         },
         {
             $group: {
@@ -736,11 +737,11 @@ export const getAnalytics = asyncHandler(async (req, res) => {
 
     // Daily approved images for comparison period
     const dailyApprovedComparison = await Image.aggregate([
-        { 
-            $match: { 
+        {
+            $match: {
                 createdAt: { $gte: comparisonStartDateUTC, $lte: comparisonEndDateUTC },
                 moderationStatus: 'approved'
-            } 
+            }
         },
         {
             $group: {
@@ -953,12 +954,7 @@ export const getAdminRole = asyncHandler(async (req, res) => {
 });
 
 export const createAdminRole = asyncHandler(async (req, res) => {
-    // Only super admin can create admin roles (computed from AdminRole)
-    if (!req.user.isSuperAdmin) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền Super admin',
-        });
-    }
+    // Permission check is handled by requireSuperAdmin middleware in routes
 
     const { userId, role, permissions } = req.body;
 
@@ -1012,14 +1008,20 @@ export const createAdminRole = asyncHandler(async (req, res) => {
     await user.save();
 
     // Create admin role with validated permissions
+    // Apply role inheritance: admin automatically gets all moderator permissions
     const defaultPermissions = {
         viewDashboard: true, // Default permission for all roles
     };
-    
-    const finalPermissions = permissions 
+
+    // Start with user-provided permissions (if any)
+    const userPermissions = permissions
         ? { ...defaultPermissions, ...permissions }
         : defaultPermissions;
-    
+
+    // Apply automatic inheritance based on role
+    // Admin inherits all moderator permissions, super_admin inherits all admin permissions
+    const finalPermissions = applyRoleInheritance(selectedRole, userPermissions);
+
     const adminRole = await AdminRole.create({
         userId,
         role: selectedRole,
@@ -1029,6 +1031,9 @@ export const createAdminRole = asyncHandler(async (req, res) => {
 
     await adminRole.populate('userId', 'username email displayName');
     await adminRole.populate('grantedBy', 'username displayName');
+
+    // Invalidate permission cache for this user (all IPs)
+    invalidateUserCache(userId);
 
     // Log permission change
     await logPermissionChange({
@@ -1051,12 +1056,7 @@ export const createAdminRole = asyncHandler(async (req, res) => {
 });
 
 export const updateAdminRole = asyncHandler(async (req, res) => {
-    // Only super admin can update admin roles (computed from AdminRole)
-    if (!req.user.isSuperAdmin) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền admin',
-        });
-    }
+    // Permission check is handled by requireSuperAdmin middleware in routes
 
     const { userId } = req.params;
     const { role, permissions, reason } = req.body;
@@ -1098,9 +1098,12 @@ export const updateAdminRole = asyncHandler(async (req, res) => {
             ...adminRole.permissions.toObject(),
             ...permissions,
         };
-        
+
+        // Apply role inheritance to ensure inherited permissions are set
+        const permissionsWithInheritance = applyRoleInheritance(roleToValidate, mergedPermissions);
+
         // Validate merged permissions against the role (new role if changed, otherwise current role)
-        const validation = validatePermissionsForRole(roleToValidate, mergedPermissions);
+        const validation = validatePermissionsForRole(roleToValidate, permissionsWithInheritance);
         if (!validation.valid) {
             return res.status(400).json({
                 message: 'Quyền hạn không hợp lệ cho vai trò này',
@@ -1116,10 +1119,13 @@ export const updateAdminRole = asyncHandler(async (req, res) => {
     }
 
     if (permissions !== undefined) {
-        updateData.permissions = {
-            ...adminRole.permissions,
+        // Merge permissions and apply inheritance
+        const mergedPermissions = {
+            ...adminRole.permissions.toObject(),
             ...permissions,
         };
+        // Apply inheritance to ensure inherited permissions are always true
+        updateData.permissions = applyRoleInheritance(roleToValidate, mergedPermissions);
     }
 
     const updatedRole = await AdminRole.findOneAndUpdate(
@@ -1129,6 +1135,9 @@ export const updateAdminRole = asyncHandler(async (req, res) => {
     )
         .populate('userId', 'username email displayName')
         .populate('grantedBy', 'username displayName');
+
+    // Invalidate permission cache for this user (all IPs)
+    invalidateUserCache(userId);
 
     // Get target user for audit logging
     const targetUser = await User.findById(userId).select('username email displayName').lean();
@@ -1154,12 +1163,7 @@ export const updateAdminRole = asyncHandler(async (req, res) => {
 });
 
 export const deleteAdminRole = asyncHandler(async (req, res) => {
-    // Only super admin can delete admin roles (computed from AdminRole)
-    if (!req.user.isSuperAdmin) {
-        return res.status(403).json({
-            message: 'Quyền truy cập bị từ chối: cần quyền admin',
-        });
-    }
+    // Permission check is handled by requireSuperAdmin middleware in routes
 
     const { userId } = req.params;
     const { reason } = req.body;
@@ -1185,6 +1189,9 @@ export const deleteAdminRole = asyncHandler(async (req, res) => {
 
     // Remove admin role
     await AdminRole.findOneAndDelete({ userId });
+
+    // Invalidate permission cache for this user (all IPs)
+    invalidateUserCache(userId);
 
     // Update user's isAdmin status
     const user = await User.findById(userId);
@@ -1336,7 +1343,7 @@ export const exportData = asyncHandler(async (req, res) => {
         // Set headers for JSON download
         res.setHeader('Content-Type', 'application/json');
         res.setHeader('Content-Disposition', `attachment; filename="photoapp-export-${new Date().toISOString().split('T')[0]}.json"`);
-        
+
         res.json(exportData);
     } catch (error) {
         logger.error('Error exporting data:', error);
@@ -1622,7 +1629,7 @@ export const getSettings = asyncHandler(async (req, res) => {
     // Permission check is handled by requirePermission('manageSettings') middleware
 
     const settings = await Settings.findOne({ key: 'system' });
-    
+
     if (!settings) {
         // Create default settings
         const defaultSettings = await Settings.create({
@@ -1648,7 +1655,7 @@ export const updateSettings = asyncHandler(async (req, res) => {
     const { settings } = req.body;
 
     let systemSettings = await Settings.findOne({ key: 'system' });
-    
+
     if (!systemSettings) {
         systemSettings = await Settings.create({
             key: 'system',
@@ -1674,6 +1681,19 @@ export const updateSettings = asyncHandler(async (req, res) => {
     res.json({
         message: 'Đã cập nhật cài đặt thành công',
         settings: systemSettings.value,
+    });
+});
+
+// Cache Test Endpoint (for testing permission caching)
+export const getCacheStats = asyncHandler(async (req, res) => {
+    // Permission check is handled by requireSuperAdmin middleware in routes
+
+    const stats = getPermissionCacheStats();
+
+    res.json({
+        message: 'Permission cache statistics',
+        cache: stats,
+        timestamp: new Date().toISOString(),
     });
 });
 
