@@ -661,17 +661,38 @@ export const getAnalytics = asyncHandler(async (req, res) => {
 
     // Get date range from query (default to last 30 days)
     const days = parseInt(req.query.days) || 30;
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
+    const now = new Date();
+    
+    // For Vietnam timezone (UTC+7), we need to adjust the date range
+    // Vietnam "today" in UTC terms: from 17:00 UTC yesterday to 16:59:59 UTC today
+    // To include all of today, we'll use "now + 1 day" as the upper bound
+    // This ensures any record created "today" in Vietnam timezone is included
+    
+    // Start date: (days) days ago
+    // We'll use a simple approach: subtract days from now, set to start of that day in UTC
+    // Then adjust for Vietnam timezone offset
+    const startDateUTC = new Date(now);
+    startDateUTC.setUTCDate(startDateUTC.getUTCDate() - days);
+    startDateUTC.setUTCHours(0, 0, 0, 0);
+    
+    // End date: Use now + 24 hours to ensure we include all of today in Vietnam timezone
+    const endDateUTC = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    
+    // Calculate comparison period (previous period of same length)
+    const comparisonStartDateUTC = new Date(startDateUTC);
+    comparisonStartDateUTC.setUTCDate(comparisonStartDateUTC.getUTCDate() - days);
+    
+    const comparisonEndDateUTC = new Date(startDateUTC);
+    comparisonEndDateUTC.setUTCMilliseconds(comparisonEndDateUTC.getUTCMilliseconds() - 1);
 
     // User analytics
     const totalUsers = await User.countDocuments();
-    const newUsers = await User.countDocuments({ createdAt: { $gte: startDate } });
+    const newUsers = await User.countDocuments({ createdAt: { $gte: startDateUTC } });
     const bannedUsers = await User.countDocuments({ isBanned: true });
 
     // Image analytics
     const totalImages = await Image.countDocuments();
-    const newImages = await Image.countDocuments({ createdAt: { $gte: startDate } });
+    const newImages = await Image.countDocuments({ createdAt: { $gte: startDateUTC } });
     const moderatedImages = await Image.countDocuments({ isModerated: true });
     const pendingModeration = await Image.countDocuments({ moderationStatus: 'pending' });
     const approvedImages = await Image.countDocuments({ moderationStatus: 'approved' });
@@ -700,58 +721,116 @@ export const getAnalytics = asyncHandler(async (req, res) => {
         { $sort: { count: -1 } },
     ]);
 
-    // Daily uploads for the last 30 days
+    // Daily uploads for the last 30 days (current period)
     const dailyUploads = await Image.aggregate([
-        { $match: { createdAt: { $gte: startDate } } },
+        { $match: { createdAt: { $gte: startDateUTC, $lte: endDateUTC } } },
         {
             $group: {
-                _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+                _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: 'Asia/Ho_Chi_Minh' } },
                 count: { $sum: 1 }
             }
         },
         { $sort: { _id: 1 } },
     ]);
 
-    // Daily users for trend chart
+    // Daily uploads for comparison period (previous period)
+    const dailyUploadsComparison = await Image.aggregate([
+        { $match: { createdAt: { $gte: comparisonStartDateUTC, $lte: comparisonEndDateUTC } } },
+        {
+            $group: {
+                _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: 'Asia/Ho_Chi_Minh' } },
+                count: { $sum: 1 }
+            }
+        },
+        { $sort: { _id: 1 } },
+    ]);
+
+    // Daily users for trend chart (current period)
     const dailyUsers = await User.aggregate([
-        { $match: { createdAt: { $gte: startDate } } },
+        { $match: { createdAt: { $gte: startDateUTC, $lte: endDateUTC } } },
         {
             $group: {
-                _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+                _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: 'Asia/Ho_Chi_Minh' } },
                 count: { $sum: 1 }
             }
         },
         { $sort: { _id: 1 } },
     ]);
 
-    // Daily pending images for trend chart
+    // Daily users for comparison period (previous period)
+    const dailyUsersComparison = await User.aggregate([
+        { $match: { createdAt: { $gte: comparisonStartDateUTC, $lte: comparisonEndDateUTC } } },
+        {
+            $group: {
+                _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: 'Asia/Ho_Chi_Minh' } },
+                count: { $sum: 1 }
+            }
+        },
+        { $sort: { _id: 1 } },
+    ]);
+
+    // Daily pending images for trend chart (current period)
     const dailyPending = await Image.aggregate([
         { 
             $match: { 
-                createdAt: { $gte: startDate },
+                createdAt: { $gte: startDateUTC, $lte: endDateUTC },
                 moderationStatus: 'pending'
             } 
         },
         {
             $group: {
-                _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+                _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: 'Asia/Ho_Chi_Minh' } },
                 count: { $sum: 1 }
             }
         },
         { $sort: { _id: 1 } },
     ]);
 
-    // Daily approved images for trend chart
+    // Daily pending images for comparison period
+    const dailyPendingComparison = await Image.aggregate([
+        { 
+            $match: { 
+                createdAt: { $gte: comparisonStartDateUTC, $lte: comparisonEndDateUTC },
+                moderationStatus: 'pending'
+            } 
+        },
+        {
+            $group: {
+                _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: 'Asia/Ho_Chi_Minh' } },
+                count: { $sum: 1 }
+            }
+        },
+        { $sort: { _id: 1 } },
+    ]);
+
+    // Daily approved images for trend chart (current period)
     const dailyApproved = await Image.aggregate([
         { 
             $match: { 
-                createdAt: { $gte: startDate },
+                createdAt: { $gte: startDateUTC, $lte: endDateUTC },
                 moderationStatus: 'approved'
             } 
         },
         {
             $group: {
-                _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+                _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: 'Asia/Ho_Chi_Minh' } },
+                count: { $sum: 1 }
+            }
+        },
+        { $sort: { _id: 1 } },
+    ]);
+
+    // Daily approved images for comparison period
+    const dailyApprovedComparison = await Image.aggregate([
+        { 
+            $match: { 
+                createdAt: { $gte: comparisonStartDateUTC, $lte: comparisonEndDateUTC },
+                moderationStatus: 'approved'
+            } 
+        },
+        {
+            $group: {
+                _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: 'Asia/Ho_Chi_Minh' } },
                 count: { $sum: 1 }
             }
         },
@@ -760,7 +839,7 @@ export const getAnalytics = asyncHandler(async (req, res) => {
 
     // Top uploaders
     const topUploaders = await Image.aggregate([
-        { $match: { createdAt: { $gte: startDate } } },
+        { $match: { createdAt: { $gte: startDateUTC } } },
         { $group: { _id: '$uploadedBy', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
         { $limit: 10 },
@@ -786,8 +865,8 @@ export const getAnalytics = asyncHandler(async (req, res) => {
     res.status(200).json({
         period: {
             days,
-            startDate,
-            endDate: new Date(),
+            startDate: startDateUTC,
+            endDate: endDateUTC,
         },
         users: {
             total: totalUsers,
@@ -805,9 +884,13 @@ export const getAnalytics = asyncHandler(async (req, res) => {
         },
         categories: categoryStats,
         dailyUploads,
+        dailyUploadsComparison,
         dailyUsers,
+        dailyUsersComparison,
         dailyPending,
+        dailyPendingComparison,
         dailyApproved,
+        dailyApprovedComparison,
         topUploaders,
     });
 });

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { adminService } from '@/services/adminService';
 import { toast } from 'sonner';
 import { BarChart2, Users, Images, TrendingUp, Calendar, UserPlus, Ban, ImagePlus, CheckCircle, XCircle, Flag, Clock, ArrowUp, ArrowDown, MoreVertical, Activity } from 'lucide-react';
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { AreaChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 interface AnalyticsData {
     period: {
@@ -37,11 +37,27 @@ interface AnalyticsData {
         _id: string;
         count: number;
     }>;
+    dailyUsersComparison?: Array<{
+        _id: string;
+        count: number;
+    }>;
     dailyPending: Array<{
         _id: string;
         count: number;
     }>;
+    dailyPendingComparison?: Array<{
+        _id: string;
+        count: number;
+    }>;
     dailyApproved: Array<{
+        _id: string;
+        count: number;
+    }>;
+    dailyApprovedComparison?: Array<{
+        _id: string;
+        count: number;
+    }>;
+    dailyUploadsComparison?: Array<{
         _id: string;
         count: number;
     }>;
@@ -122,44 +138,87 @@ export function AdminAnalytics() {
         if (!analytics) return [];
         
         let dataSource: Array<{ _id: string; count: number }> = [];
+        let comparisonSource: Array<{ _id: string; count: number }> = [];
         
         switch (activeTab) {
             case 'users':
                 dataSource = analytics.dailyUsers || [];
+                comparisonSource = analytics.dailyUsersComparison || [];
                 break;
             case 'images':
                 dataSource = analytics.dailyUploads || [];
+                comparisonSource = analytics.dailyUploadsComparison || [];
                 break;
             case 'pending':
                 dataSource = analytics.dailyPending || [];
+                comparisonSource = analytics.dailyPendingComparison || [];
                 break;
             case 'approved':
                 dataSource = analytics.dailyApproved || [];
+                comparisonSource = analytics.dailyApprovedComparison || [];
                 break;
         }
 
         // Fill in missing dates and format for chart
         // Include today, so we go from (days-1) days ago to today (inclusive)
-        // Use UTC dates to match backend MongoDB $dateToString format (which uses UTC)
+        // Use Vietnam timezone (Asia/Ho_Chi_Minh) to match backend MongoDB $dateToString format
         const now = new Date();
-        const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+        
+        // Helper function to get date string in Vietnam timezone (YYYY-MM-DD)
+        // This matches MongoDB's $dateToString with timezone: 'Asia/Ho_Chi_Minh'
+        const getVietnamDateString = (date: Date): string => {
+            // Use Intl.DateTimeFormat to get the date in Vietnam timezone
+            const formatter = new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'Asia/Ho_Chi_Minh',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+            // Format returns YYYY-MM-DD directly
+            return formatter.format(date);
+        };
+        
+        // Helper function to get date N days ago (in local time, will be converted to Vietnam timezone)
+        const getDateNDaysAgo = (n: number): Date => {
+            const date = new Date(now);
+            date.setDate(date.getDate() - n);
+            return date;
+        };
         
         const dataMap = new Map(dataSource.map(item => [item._id, item.count]));
+        const comparisonMap = new Map(comparisonSource.map(item => [item._id, item.count]));
         const chartDataArray = [];
         
-        // Generate dates from (days-1) days ago to today (inclusive) in UTC
+        // Generate dates from (days-1) days ago to today (inclusive) in Vietnam timezone
         // This ensures today is always included and matches backend date format
         for (let i = 0; i < days; i++) {
-            const dateUTC = new Date(todayUTC);
-            dateUTC.setUTCDate(todayUTC.getUTCDate() - (days - 1 - i)); // Start from (days-1) days ago, end at today
-            const dateStr = dateUTC.toISOString().split('T')[0]; // YYYY-MM-DD in UTC (matches backend)
+            const daysAgo = days - 1 - i; // 0 = today, (days-1) = oldest date
+            const date = getDateNDaysAgo(daysAgo);
+            const dateStr = getVietnamDateString(date); // YYYY-MM-DD in Vietnam timezone (matches backend)
             
-            // Convert UTC date to local date for display label
-            const localDate = new Date(dateUTC.getTime());
+            // Get comparison date (same day, previous month - month-over-month comparison)
+            const comparisonDate = new Date(date);
+            comparisonDate.setMonth(comparisonDate.getMonth() - 1); // Go back one month
+            const comparisonDateStr = getVietnamDateString(comparisonDate);
+            
+            // Use the date for display label (in local timezone for user)
+            const localDate = date;
+            const currentValue = dataMap.get(dateStr) || 0;
+            // For month-over-month comparison, try to find the same date in previous month from current data
+            // If not found in current data, try comparison map (which has previous period data)
+            let comparisonValue = dataMap.get(comparisonDateStr) || comparisonMap.get(comparisonDateStr) || 0;
+            
+            // Calculate percentage change
+            const percentageChange = comparisonValue > 0 
+                ? ((currentValue - comparisonValue) / comparisonValue) * 100 
+                : (currentValue > 0 ? 100 : 0);
+            
             chartDataArray.push({
                 date: dateStr,
                 dateLabel: localDate.toLocaleDateString('vi-VN', { month: 'short', day: 'numeric' }),
-                value: dataMap.get(dateStr) || 0,
+                value: currentValue,
+                comparison: comparisonValue,
+                percentageChange: percentageChange,
             });
         }
 
@@ -259,26 +318,213 @@ export function AdminAnalytics() {
                                     <stop offset="5%" stopColor="#667eea" stopOpacity={0.8}/>
                                     <stop offset="95%" stopColor="#667eea" stopOpacity={0}/>
                                 </linearGradient>
+                                <linearGradient id="colorComparison" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#a0aec0" stopOpacity={0.3}/>
+                                    <stop offset="95%" stopColor="#a0aec0" stopOpacity={0}/>
+                                </linearGradient>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#e9ecef" />
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e9ecef" strokeOpacity={0.5} />
                             <XAxis 
                                 dataKey="dateLabel" 
                                 stroke="#6c757d"
-                                tick={{ fill: '#6c757d', fontSize: 12 }}
+                                tick={{ fill: '#6c757d', fontSize: 11 }}
+                                axisLine={{ stroke: '#dee2e6' }}
                             />
                             <YAxis 
                                 stroke="#6c757d"
-                                tick={{ fill: '#6c757d', fontSize: 12 }}
+                                tick={{ fill: '#6c757d', fontSize: 11 }}
+                                axisLine={{ stroke: '#dee2e6' }}
                             />
                             <Tooltip
-                                contentStyle={{
-                                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                    border: '1px solid #e9ecef',
-                                    borderRadius: '8px',
-                                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                                content={({ active, payload, label }) => {
+                                    if (active && payload && payload.length) {
+                                        // Find the correct payload entries by dataKey
+                                        // Area component uses dataKey="value", Line component uses dataKey="comparison"
+                                        const valuePayload = payload.find(p => p.dataKey === 'value');
+                                        const comparisonPayload = payload.find(p => p.dataKey === 'comparison');
+                                        
+                                        const current = valuePayload?.value ?? 0;
+                                        const comparison = comparisonPayload?.value ?? 0;
+                                        const percentage = comparison > 0 
+                                            ? (((current as number) - (comparison as number)) / (comparison as number)) * 100 
+                                            : ((current as number) > 0 ? 100 : 0);
+                                        const isPositive = percentage >= 0;
+                                        const hasComparison = comparison > 0;
+                                        
+                                        // Check if this is today's date
+                                        const today = new Date();
+                                        const todayLabel = today.toLocaleDateString('vi-VN', { month: 'short', day: 'numeric' });
+                                        const isToday = label === todayLabel;
+                                        
+                                        // Get the comparison date (same day, previous month - month-over-month comparison)
+                                        const labelParts = label.split(' ');
+                                        const day = parseInt(labelParts[0]);
+                                        const monthName = labelParts[1];
+                                        const months: Record<string, number> = {
+                                            'thg 1': 0, 'thg 2': 1, 'thg 3': 2, 'thg 4': 3,
+                                            'thg 5': 4, 'thg 6': 5, 'thg 7': 6, 'thg 8': 7,
+                                            'thg 9': 8, 'thg 10': 9, 'thg 11': 10, 'thg 12': 11
+                                        };
+                                        const month = months[monthName] ?? today.getMonth();
+                                        const currentDate = new Date(today.getFullYear(), month, day);
+                                        const comparisonDate = new Date(currentDate);
+                                        comparisonDate.setMonth(comparisonDate.getMonth() - 1); // Go back one month
+                                        
+                                        return (
+                                            <div style={{
+                                                backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                                                border: '1px solid #e9ecef',
+                                                borderRadius: '8px',
+                                                padding: '14px',
+                                                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                                                minWidth: '200px'
+                                            }}>
+                                                {/* Date Header */}
+                                                <div style={{ 
+                                                    color: '#212529', 
+                                                    fontWeight: 600, 
+                                                    marginBottom: '14px',
+                                                    fontSize: '15px',
+                                                    borderBottom: '2px solid #e9ecef',
+                                                    paddingBottom: '10px'
+                                                }}>
+                                                    📅 {label}
+                                                    {isToday && <span style={{ color: '#667eea', marginLeft: '8px', fontSize: '12px' }}>• Hôm nay</span>}
+                                                </div>
+                                                
+                                                {/* Current Value - Main Display */}
+                                                <div style={{ marginBottom: '14px' }}>
+                                                    <div style={{ 
+                                                        color: '#6c757d', 
+                                                        fontSize: '12px',
+                                                        marginBottom: '8px',
+                                                        fontWeight: 500
+                                                    }}>
+                                                        {isToday ? 'Số lượng hôm nay (24/11)' : `Số lượng ngày ${label}`}
+                                                    </div>
+                                                    <div style={{ 
+                                                        color: '#667eea', 
+                                                        fontWeight: 700,
+                                                        fontSize: '24px',
+                                                        lineHeight: '1.2'
+                                                    }}>
+                                                        {current.toLocaleString()}
+                                                    </div>
+                                                    {current === 0 && (
+                                                        <div style={{ 
+                                                            color: '#999', 
+                                                            fontSize: '11px',
+                                                            marginTop: '4px',
+                                                            fontStyle: 'italic'
+                                                        }}>
+                                                            Không có hoạt động
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                
+                                                {/* Comparison Value */}
+                                                {hasComparison && (
+                                                    <div style={{ 
+                                                        marginBottom: '14px', 
+                                                        padding: '10px', 
+                                                        backgroundColor: '#f8f9fa', 
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #e9ecef'
+                                                    }}>
+                                                        <div style={{ 
+                                                            color: '#6c757d', 
+                                                            fontSize: '12px',
+                                                            marginBottom: '8px',
+                                                            fontWeight: 500
+                                                        }}>
+                                                            So với {comparisonDate.toLocaleDateString('vi-VN', { month: 'short', day: 'numeric' })} (kỳ trước)
+                                                        </div>
+                                                        <div style={{ 
+                                                            color: '#495057', 
+                                                            fontWeight: 600,
+                                                            fontSize: '18px'
+                                                        }}>
+                                                            {comparison.toLocaleString()}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                
+                                                {/* Change Indicator */}
+                                                {hasComparison && (
+                                                    <div style={{
+                                                        marginTop: '12px',
+                                                        paddingTop: '12px',
+                                                        borderTop: '2px solid #e9ecef'
+                                                    }}>
+                                                        <div style={{ 
+                                                            color: '#6c757d', 
+                                                            fontSize: '12px',
+                                                            marginBottom: '8px',
+                                                            fontWeight: 500
+                                                        }}>
+                                                            Thay đổi
+                                                        </div>
+                                                        <div style={{ 
+                                                            color: isPositive ? '#00d97e' : '#e63757',
+                                                            fontWeight: 700,
+                                                            fontSize: '18px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '8px'
+                                                        }}>
+                                                            <span style={{ fontSize: '20px' }}>{isPositive ? '↑' : '↓'}</span>
+                                                            <span>{Math.abs(percentage).toFixed(1)}%</span>
+                                                        </div>
+                                                        <div style={{ 
+                                                            fontSize: '11px',
+                                                            color: '#6c757d',
+                                                            marginTop: '4px'
+                                                        }}>
+                                                            {isPositive ? 'Tăng' : 'Giảm'} {Math.abs(percentage).toFixed(1)}% so với kỳ trước
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                
+                                                {!hasComparison && (
+                                                    <div style={{
+                                                        marginTop: '12px',
+                                                        paddingTop: '12px',
+                                                        borderTop: '2px solid #e9ecef',
+                                                        color: '#6c757d',
+                                                        fontSize: '12px',
+                                                        textAlign: 'center',
+                                                        padding: '8px',
+                                                        backgroundColor: '#f8f9fa',
+                                                        borderRadius: '6px'
+                                                    }}>
+                                                        ⚠️ Chưa có dữ liệu kỳ trước để so sánh
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    }
+                                    return null;
                                 }}
-                                labelStyle={{ color: '#212529', fontWeight: 600 }}
                             />
+                            <Legend 
+                                wrapperStyle={{ paddingTop: '20px' }}
+                                iconType="line"
+                                formatter={(value) => (
+                                    <span style={{ color: '#6c757d', fontSize: '12px' }}>{value}</span>
+                                )}
+                            />
+                            {/* Comparison line (previous period) - dashed */}
+                            <Line
+                                type="monotone"
+                                dataKey="comparison"
+                                stroke="#a0aec0"
+                                strokeWidth={2}
+                                strokeDasharray="5 5"
+                                dot={false}
+                                activeDot={{ r: 4 }}
+                                name="Previous Period"
+                            />
+                            {/* Current period - solid with area fill */}
                             <Area
                                 type="monotone"
                                 dataKey="value"
@@ -286,6 +532,8 @@ export function AdminAnalytics() {
                                 strokeWidth={2}
                                 fillOpacity={1}
                                 fill="url(#colorValue)"
+                                name="Current Period"
+                                activeDot={{ r: 5, fill: '#667eea' }}
                             />
                         </AreaChart>
                     </ResponsiveContainer>

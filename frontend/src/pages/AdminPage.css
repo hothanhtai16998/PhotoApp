@@ -1367,6 +1367,10 @@
     margin-bottom: 24px;
 }
 
+.falcon-main-chart .falcon-card-body {
+    padding: 24px;
+}
+
 .falcon-chart-header-left,
 .falcon-chart-header-right {
     display: flex;
