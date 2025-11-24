@@ -11,6 +11,8 @@ import cors from 'cors';
 import compression from 'compression';
 import imageRoute from './routes/imageRoute.js';
 import adminRoute from './routes/adminRoute.js';
+import { trackPageView } from './controllers/adminController.js';
+import { asyncHandler } from './middlewares/asyncHandler.js';
 import categoryRoute from './routes/categoryRoute.js';
 import favoriteRoute from './routes/favoriteRoute.js';
 import collectionRoute from './routes/collectionRoute.js';
@@ -119,6 +121,33 @@ app.get('/api/csrf-token', getCsrfToken);
 app.use('/api/auth', authRoute);
 app.use('/api/users', userRoute);
 app.use('/api/images', imageRoute);
+// Public route for tracking page views (accessible to both authenticated and anonymous users)
+// Try to authenticate if token is present, but don't require it
+app.post('/api/admin/analytics/track', async (req, res, next) => {
+    // Try to authenticate if token is present
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+    
+    if (token) {
+        try {
+            const jwt = await import("jsonwebtoken");
+            const { env } = await import('./libs/env.js');
+            const User = (await import('./models/User.js')).default;
+            const { enrichUserWithAdminStatus } = await import('./utils/adminUtils.js');
+            
+            const decoded = jwt.default.verify(token, env.ACCESS_TOKEN_SECRET);
+            const user = await User.findById(decoded.userId).select("-hashedPassword").lean();
+            
+            if (user) {
+                const enrichedUser = await enrichUserWithAdminStatus(user);
+                req.user = enrichedUser;
+            }
+        } catch (error) {
+            // Ignore auth errors - allow anonymous tracking
+        }
+    }
+    next();
+}, asyncHandler(trackPageView));
 app.use('/api/admin', adminRoute);
 app.use('/api/categories', categoryRoute);
 app.use('/api/favorites', favoriteRoute);

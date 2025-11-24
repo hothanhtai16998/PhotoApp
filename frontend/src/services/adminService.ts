@@ -267,6 +267,23 @@ export const adminService = {
         return res.data;
     },
 
+    getRealtimeAnalytics: async (): Promise<{
+        usersOnline: number;
+        viewsPerSecond: Array<{ second: number; count: number }>;
+        mostActivePages: Array<{ path: string; userCount: number }>;
+    }> => {
+        const res = await api.get('/admin/analytics/realtime', {
+            withCredentials: true,
+        });
+        return res.data;
+    },
+
+    trackPageView: async (path: string): Promise<void> => {
+        await api.post('/admin/analytics/track', { path }, {
+            withCredentials: true,
+        });
+    },
+
     // Collections
     getAllCollections: async (params?: {
         page?: number;

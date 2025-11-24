@@ -22,21 +22,42 @@ export function AdminDashboard({ stats, loading }: AdminDashboardProps) {
 
     return (
         <div className="admin-dashboard">
-            <h1 className="admin-title">Dashboard</h1>
+            <div className="admin-dashboard-hero">
+                <h1 className="admin-dashboard-title">
+                    <span>📊</span>
+                    Dashboard
+                </h1>
+                <p className="admin-dashboard-subtitle">Tổng quan về nền tảng của bạn</p>
+            </div>
 
             {/* Stats Cards */}
             <div className="admin-stats-grid">
-                <div className="admin-stat-card">
-                    <div className="admin-stat-value">{stats.stats.totalUsers}</div>
-                    <div className="admin-stat-label">Tổng số lượng người dùngn</div>
+                <div className="admin-stat-card admin-stat-card-blue">
+                    <div className="admin-stat-icon">
+                        <span>👥</span>
+                    </div>
+                    <div className="admin-stat-content">
+                        <div className="admin-stat-value">{stats.stats.totalUsers}</div>
+                        <div className="admin-stat-label">Tổng số lượng người dùng</div>
+                    </div>
                 </div>
-                <div className="admin-stat-card">
-                    <div className="admin-stat-value">{stats.stats.totalImages}</div>
-                    <div className="admin-stat-label">Tổng số lượng ảnh</div>
+                <div className="admin-stat-card admin-stat-card-purple">
+                    <div className="admin-stat-icon">
+                        <span>🖼️</span>
+                    </div>
+                    <div className="admin-stat-content">
+                        <div className="admin-stat-value">{stats.stats.totalImages}</div>
+                        <div className="admin-stat-label">Tổng số lượng ảnh</div>
+                    </div>
                 </div>
-                <div className="admin-stat-card">
-                    <div className="admin-stat-value">{stats.stats.categoryStats.length}</div>
-                    <div className="admin-stat-label">Danh mục</div>
+                <div className="admin-stat-card admin-stat-card-cyan">
+                    <div className="admin-stat-icon">
+                        <span>📁</span>
+                    </div>
+                    <div className="admin-stat-content">
+                        <div className="admin-stat-value">{stats.stats.categoryStats.length}</div>
+                        <div className="admin-stat-label">Danh mục</div>
+                    </div>
                 </div>
             </div>
 

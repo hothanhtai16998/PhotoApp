@@ -75,6 +75,7 @@ export default defineConfig({
 			'axios',
 			'zustand',
 			'immer',
+			'recharts',
 		],
 		// Don't force re-optimization - let Vite handle it naturally
 		force: false,

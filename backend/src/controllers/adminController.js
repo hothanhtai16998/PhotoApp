@@ -3,6 +3,8 @@ import Image from '../models/Image.js';
 import AdminRole from '../models/AdminRole.js';
 import Category from '../models/Category.js';
 import Collection from '../models/Collection.js';
+import PageView from '../models/PageView.js';
+import Session from '../models/Session.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { logger } from '../utils/logger.js';
 import { deleteImageFromS3 } from '../libs/s3.js';
@@ -710,6 +712,52 @@ export const getAnalytics = asyncHandler(async (req, res) => {
         { $sort: { _id: 1 } },
     ]);
 
+    // Daily users for trend chart
+    const dailyUsers = await User.aggregate([
+        { $match: { createdAt: { $gte: startDate } } },
+        {
+            $group: {
+                _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+                count: { $sum: 1 }
+            }
+        },
+        { $sort: { _id: 1 } },
+    ]);
+
+    // Daily pending images for trend chart
+    const dailyPending = await Image.aggregate([
+        { 
+            $match: { 
+                createdAt: { $gte: startDate },
+                moderationStatus: 'pending'
+            } 
+        },
+        {
+            $group: {
+                _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+                count: { $sum: 1 }
+            }
+        },
+        { $sort: { _id: 1 } },
+    ]);
+
+    // Daily approved images for trend chart
+    const dailyApproved = await Image.aggregate([
+        { 
+            $match: { 
+                createdAt: { $gte: startDate },
+                moderationStatus: 'approved'
+            } 
+        },
+        {
+            $group: {
+                _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+                count: { $sum: 1 }
+            }
+        },
+        { $sort: { _id: 1 } },
+    ]);
+
     // Top uploaders
     const topUploaders = await Image.aggregate([
         { $match: { createdAt: { $gte: startDate } } },
@@ -757,7 +805,112 @@ export const getAnalytics = asyncHandler(async (req, res) => {
         },
         categories: categoryStats,
         dailyUploads,
+        dailyUsers,
+        dailyPending,
+        dailyApproved,
         topUploaders,
+    });
+});
+
+// Real-time Analytics
+export const getRealtimeAnalytics = asyncHandler(async (req, res) => {
+    // Check permission (super admin or admin with viewAnalytics permission)
+    const { hasPermission } = await import('../middlewares/permissionMiddleware.js');
+    const canView = req.user.isSuperAdmin || await hasPermission(req.user._id, 'viewAnalytics');
+    
+    if (!canView) {
+        return res.status(403).json({
+            message: 'Quyền truy cập bị từ chối: cần quyền xem phân tích',
+        });
+    }
+
+    // Get users online (users who have viewed a page in the last 5 minutes)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const activeUsers = await PageView.distinct('userId', {
+        timestamp: { $gte: fiveMinutesAgo },
+        userId: { $exists: true, $ne: null }, // Only count authenticated users
+    });
+
+    const usersOnline = activeUsers.length;
+
+    // Get page views in the last 60 seconds (for "pages views / second" chart)
+    const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+    const recentPageViews = await PageView.find({
+        timestamp: { $gte: oneMinuteAgo },
+    }).sort({ timestamp: 1 }).lean();
+
+    // Group by second for the chart
+    const viewsPerSecond = {};
+    recentPageViews.forEach((view) => {
+        const timestamp = view.timestamp instanceof Date ? view.timestamp : new Date(view.timestamp);
+        const second = Math.floor(timestamp.getTime() / 1000);
+        viewsPerSecond[second] = (viewsPerSecond[second] || 0) + 1;
+    });
+
+    // Convert to array format for chart
+    const viewsPerSecondData = Object.entries(viewsPerSecond)
+        .map(([second, count]) => ({
+            second: parseInt(second),
+            count: count,
+        }))
+        .sort((a, b) => a.second - b.second)
+        .slice(-60); // Last 60 seconds
+
+    // Get most active pages (last 5 minutes)
+    const mostActivePages = await PageView.aggregate([
+        {
+            $match: {
+                timestamp: { $gte: fiveMinutesAgo },
+            },
+        },
+        {
+            $group: {
+                _id: '$path',
+                userCount: { $addToSet: '$userId' }, // Unique users per page
+            },
+        },
+        {
+            $project: {
+                path: '$_id',
+                userCount: { $size: '$userCount' },
+            },
+        },
+        { $sort: { userCount: -1 } },
+        { $limit: 6 },
+    ]);
+
+    res.status(200).json({
+        usersOnline,
+        viewsPerSecond: viewsPerSecondData,
+        mostActivePages: mostActivePages.map((page) => ({
+            path: page.path,
+            userCount: page.userCount,
+        })),
+    });
+});
+
+// Track page view (called from frontend)
+export const trackPageView = asyncHandler(async (req, res) => {
+    const { path } = req.body;
+    const userId = req.user?._id || null;
+    const sessionId = req.headers['x-session-id'] || req.cookies?.sessionId || null;
+
+    if (!path) {
+        return res.status(400).json({
+            message: 'Path is required',
+        });
+    }
+
+    // Create page view record
+    await PageView.create({
+        userId: userId || undefined,
+        path: path,
+        sessionId: sessionId || undefined,
+        timestamp: new Date(),
+    });
+
+    res.status(200).json({
+        message: 'Page view tracked',
     });
 });
 

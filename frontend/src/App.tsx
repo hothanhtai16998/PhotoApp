@@ -5,6 +5,7 @@ import AdminRoute from "./components/auth/AdminRoute";
 import { Skeleton } from "./components/ui/skeleton";
 import FloatingContactButton from "./components/FloatingContactButton";
 import ContactOptionSelector from "./components/ContactOptionSelector";
+import { PageViewTracker } from "./components/PageViewTracker";
 
 // Lazy load pages for code splitting
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -45,6 +46,7 @@ function App() {
 
   return (
     <Suspense fallback={<PageLoader />}>
+      <PageViewTracker />
       <Routes>
         {/**public routes */}
         <Route path="/" element={<HomePage />} />

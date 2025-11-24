@@ -12,6 +12,8 @@ import {
     updateImage,
     moderateImage,
     getAnalytics,
+    getRealtimeAnalytics,
+    trackPageView,
     getAllAdminRoles,
     getAdminRole,
     createAdminRole,
@@ -23,7 +25,7 @@ import {
 } from '../controllers/adminController.js';
 import { protectedRoute } from '../middlewares/authMiddleware.js';
 import { adminRoute } from '../middlewares/adminMiddleware.js';
-import { requireSuperAdmin } from '../middlewares/permissionMiddleware.js';
+import { requireSuperAdmin, requirePermission } from '../middlewares/permissionMiddleware.js';
 import { validateCsrf } from '../middlewares/csrfMiddleware.js';
 
 const router = express.Router();
@@ -33,8 +35,10 @@ router.use(protectedRoute);
 router.use(adminRoute);
 
 // Dashboard & Analytics
-router.get('/dashboard/stats', getDashboardStats);
-router.get('/analytics', getAnalytics);
+router.get('/dashboard/stats', requirePermission('viewDashboard'), getDashboardStats);
+router.get('/analytics', requirePermission('viewAnalytics'), getAnalytics);
+router.get('/analytics/realtime', requirePermission('viewAnalytics'), getRealtimeAnalytics);
+// Note: trackPageView is handled as a public route in server.js (before adminRoute middleware)
 
 // User Management
 router.get('/users', getAllUsers);
