@@ -112,6 +112,32 @@ const adminRoleSchema = new mongoose.Schema(
                 default: false,
             },
             
+            // Favorites Management
+            manageFavorites: {
+                type: Boolean,
+                default: false,
+            },
+            
+            // Content Moderation (general)
+            moderateContent: {
+                type: Boolean,
+                default: false,
+            },
+            
+            // System & Logs
+            viewLogs: {
+                type: Boolean,
+                default: false,
+            },
+            exportData: {
+                type: Boolean,
+                default: false,
+            },
+            manageSettings: {
+                type: Boolean,
+                default: false,
+            },
+            
             // Legacy permissions (for backward compatibility)
             manageUsers: {
                 type: Boolean,

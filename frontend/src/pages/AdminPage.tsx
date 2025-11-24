@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useImageStore } from '@/stores/useImageStore';
+import { usePermissions } from '@/hooks/usePermissions';
 import { adminService, type DashboardStats, type User, type AdminImage, type AdminRole, type AdminRolePermissions } from '@/services/adminService';
 import { categoryService, type Category } from '@/services/categoryService';
 import type { User as AuthUser } from '@/types/user';
@@ -45,6 +46,7 @@ function AdminPage() {
     const { user, fetchMe } = useAuthStore();
     const { removeImage } = useImageStore();
     const navigate = useNavigate();
+    const { hasPermission, isSuperAdmin } = usePermissions();
     const [activeTab, setActiveTab] = useState<TabType>('dashboard');
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -71,6 +73,11 @@ function AdminPage() {
     const [creatingRole, setCreatingRole] = useState(false);
 
     const loadDashboardStats = useCallback(async () => {
+        // Check permission before API call
+        if (!isSuperAdmin() && !hasPermission('viewDashboard')) {
+            toast.error('Bạn không có quyền xem bảng điều khiển');
+            return;
+        }
         try {
             setLoading(true);
             const data = await adminService.getDashboardStats();
@@ -81,9 +88,14 @@ function AdminPage() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [hasPermission, isSuperAdmin]);
 
     const loadUsers = useCallback(async (page = 1) => {
+        // Check permission before API call
+        if (!isSuperAdmin() && !hasPermission('viewUsers')) {
+            toast.error('Bạn không có quyền xem người dùng');
+            return;
+        }
         try {
             setLoading(true);
             const data = await adminService.getAllUsers({
@@ -99,9 +111,14 @@ function AdminPage() {
         } finally {
             setLoading(false);
         }
-    }, [usersSearch]);
+    }, [usersSearch, hasPermission, isSuperAdmin]);
 
     const loadImages = useCallback(async (page = 1) => {
+        // Check permission before API call
+        if (!isSuperAdmin() && !hasPermission('viewImages')) {
+            toast.error('Bạn không có quyền xem ảnh');
+            return;
+        }
         try {
             setLoading(true);
             const data = await adminService.getAllImages({
@@ -117,9 +134,14 @@ function AdminPage() {
         } finally {
             setLoading(false);
         }
-    }, [imagesSearch]);
+    }, [imagesSearch, hasPermission, isSuperAdmin]);
 
     const loadCategories = useCallback(async () => {
+        // Check permission before API call
+        if (!isSuperAdmin() && !hasPermission('viewCategories')) {
+            toast.error('Bạn không có quyền xem danh mục');
+            return;
+        }
         try {
             setLoading(true);
             const data = await categoryService.getAllCategoriesAdmin();
@@ -130,10 +152,10 @@ function AdminPage() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [hasPermission, isSuperAdmin]);
 
     const loadAdminRoles = useCallback(async () => {
-        if (!user?.isSuperAdmin) return;
+        if (!isSuperAdmin()) return;
         try {
             setLoading(true);
             const data = await adminService.getAllAdminRoles();
@@ -148,7 +170,7 @@ function AdminPage() {
         } finally {
             setLoading(false);
         }
-    }, [user?.isSuperAdmin, users.length, loadUsers]);
+    }, [isSuperAdmin, users.length, loadUsers]);
 
     useEffect(() => {
         const checkAdmin = async () => {
@@ -199,6 +221,11 @@ function AdminPage() {
     };
 
     const handleDeleteImage = async (imageId: string, imageTitle: string) => {
+        // Check permission before action
+        if (!isSuperAdmin() && !hasPermission('deleteImages')) {
+            toast.error('Bạn không có quyền xóa ảnh');
+            return;
+        }
         if (!confirm(`Bạn có muốn xoá ảnh "${imageTitle}" không?`)) {
             return;
         }
@@ -237,6 +264,11 @@ function AdminPage() {
     };
 
     const handleUpdateUser = async (userId: string, updates: Partial<User>) => {
+        // Check permission before action
+        if (!isSuperAdmin() && !hasPermission('editUsers')) {
+            toast.error('Bạn không có quyền chỉnh sửa người dùng');
+            return;
+        }
         try {
             await adminService.updateUser(userId, updates);
             toast.success('Cập nhật thông tin người dùng thành công');
@@ -250,6 +282,11 @@ function AdminPage() {
     };
 
     const handleCreateCategory = async (data: { name: string; description?: string }) => {
+        // Check permission before action
+        if (!isSuperAdmin() && !hasPermission('createCategories')) {
+            toast.error('Bạn không có quyền tạo danh mục');
+            return;
+        }
         try {
             await categoryService.createCategory(data);
             toast.success('Tạo danh mục thành công');
@@ -262,6 +299,11 @@ function AdminPage() {
     };
 
     const handleUpdateCategory = async (categoryId: string, updates: { name?: string; description?: string; isActive?: boolean }) => {
+        // Check permission before action
+        if (!isSuperAdmin() && !hasPermission('editCategories')) {
+            toast.error('Bạn không có quyền chỉnh sửa danh mục');
+            return;
+        }
         try {
             await categoryService.updateCategory(categoryId, updates);
             toast.success('Danh mục đã được cập nhật thành công');
@@ -274,6 +316,11 @@ function AdminPage() {
     };
 
     const handleDeleteCategory = async (categoryId: string, categoryName: string) => {
+        // Check permission before action
+        if (!isSuperAdmin() && !hasPermission('deleteCategories')) {
+            toast.error('Bạn không có quyền xóa danh mục');
+            return;
+        }
         if (!confirm(`Bạn có muốn xoá danh mục "${categoryName}" không? Chỉ xoá được nếu không có ảnh nào thuộc loại danh mục này.`)) {
             return;
         }
@@ -345,49 +392,61 @@ function AdminPage() {
                             <h2>Trang quản lý</h2>
                         </div>
                         <nav className="admin-nav">
-                            <button
-                                className={`admin-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('dashboard')}
-                            >
-                                <LayoutDashboard size={20} />
-                                Dashboard
-                            </button>
-                            <button
-                                className={`admin-nav-item ${activeTab === 'analytics' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('analytics')}
-                            >
-                                <BarChart2 size={20} />
-                                Phân tích
-                            </button>
-                            <button
-                                className={`admin-nav-item ${activeTab === 'users' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('users')}
-                            >
-                                <Users size={20} />
-                                Người dùng
-                            </button>
-                            <button
-                                className={`admin-nav-item ${activeTab === 'images' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('images')}
-                            >
-                                <Images size={20} />
-                                Ảnh
-                            </button>
-                            <button
-                                className={`admin-nav-item ${activeTab === 'categories' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('categories')}
-                            >
-                                <Tag size={20} />
-                                Danh mục ảnh
-                            </button>
-                            <button
-                                className={`admin-nav-item ${activeTab === 'collections' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('collections')}
-                            >
-                                <FolderDot size={20} />
-                                Bộ sưu tập
-                            </button>
-                            {user?.isSuperAdmin && (
+                            {(isSuperAdmin() || hasPermission('viewDashboard')) && (
+                                <button
+                                    className={`admin-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+                                    onClick={() => setActiveTab('dashboard')}
+                                >
+                                    <LayoutDashboard size={20} />
+                                    Dashboard
+                                </button>
+                            )}
+                            {(isSuperAdmin() || hasPermission('viewAnalytics')) && (
+                                <button
+                                    className={`admin-nav-item ${activeTab === 'analytics' ? 'active' : ''}`}
+                                    onClick={() => setActiveTab('analytics')}
+                                >
+                                    <BarChart2 size={20} />
+                                    Phân tích
+                                </button>
+                            )}
+                            {(isSuperAdmin() || hasPermission('viewUsers')) && (
+                                <button
+                                    className={`admin-nav-item ${activeTab === 'users' ? 'active' : ''}`}
+                                    onClick={() => setActiveTab('users')}
+                                >
+                                    <Users size={20} />
+                                    Người dùng
+                                </button>
+                            )}
+                            {(isSuperAdmin() || hasPermission('viewImages')) && (
+                                <button
+                                    className={`admin-nav-item ${activeTab === 'images' ? 'active' : ''}`}
+                                    onClick={() => setActiveTab('images')}
+                                >
+                                    <Images size={20} />
+                                    Ảnh
+                                </button>
+                            )}
+                            {(isSuperAdmin() || hasPermission('viewCategories')) && (
+                                <button
+                                    className={`admin-nav-item ${activeTab === 'categories' ? 'active' : ''}`}
+                                    onClick={() => setActiveTab('categories')}
+                                >
+                                    <Tag size={20} />
+                                    Danh mục ảnh
+                                </button>
+                            )}
+                            {(isSuperAdmin() || hasPermission('viewCollections')) && (
+                                <button
+                                    className={`admin-nav-item ${activeTab === 'collections' ? 'active' : ''}`}
+                                    onClick={() => setActiveTab('collections')}
+                                >
+                                    <FolderDot size={20} />
+                                    Bộ sưu tập
+                                </button>
+                            )}
+                            {isSuperAdmin() && (
                                 <button
                                     className={`admin-nav-item ${activeTab === 'roles' ? 'active' : ''}`}
                                     onClick={() => setActiveTab('roles')}
@@ -453,7 +512,7 @@ function AdminPage() {
                             {activeTab === 'collections' && (
                                 <AdminCollections />
                             )}
-                            {activeTab === 'roles' && user?.isSuperAdmin && (
+                            {activeTab === 'roles' && isSuperAdmin() && (
                                 <AdminRoles
                                     roles={adminRoles}
                                     users={users}

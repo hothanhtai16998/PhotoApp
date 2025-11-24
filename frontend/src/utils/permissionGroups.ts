@@ -56,6 +56,26 @@ export const PERMISSION_GROUPS = [
         ],
     },
     {
+        label: 'Yêu thích',
+        permissions: [
+            { key: 'manageFavorites', label: 'Quản lý yêu thích' },
+        ],
+    },
+    {
+        label: 'Kiểm duyệt nội dung',
+        permissions: [
+            { key: 'moderateContent', label: 'Kiểm duyệt nội dung' },
+        ],
+    },
+    {
+        label: 'Hệ thống',
+        permissions: [
+            { key: 'viewLogs', label: 'Xem nhật ký' },
+            { key: 'exportData', label: 'Xuất dữ liệu' },
+            { key: 'manageSettings', label: 'Quản lý cài đặt' },
+        ],
+    },
+    {
         label: 'Quyền cũ (tương thích ngược)',
         permissions: [
             { key: 'manageUsers', label: 'Quản lý người dùng (cũ)' },

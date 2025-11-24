@@ -47,10 +47,15 @@ export const enrichUserWithAdminStatus = async (user) => {
     
     const { isAdmin, isSuperAdmin, adminRole } = await computeAdminStatus(user._id);
     
+    // Extract permissions from adminRole for frontend use
+    const permissions = adminRole?.permissions || null;
+    
     return {
         ...user,
         isAdmin,
         isSuperAdmin,
+        // Attach permissions for frontend permission checks
+        permissions: permissions,
         // Attach adminRole for use in controllers/middleware
         _adminRole: adminRole,
     };

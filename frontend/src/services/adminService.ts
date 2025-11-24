@@ -77,6 +77,17 @@ export interface AdminRolePermissions {
     viewCollections?: boolean;
     manageCollections?: boolean;
     
+    // Favorites Management
+    manageFavorites?: boolean;
+    
+    // Content Moderation (general)
+    moderateContent?: boolean;
+    
+    // System & Logs
+    viewLogs?: boolean;
+    exportData?: boolean;
+    manageSettings?: boolean;
+    
     // Legacy permissions (for backward compatibility)
     manageUsers?: boolean;
     manageImages?: boolean;

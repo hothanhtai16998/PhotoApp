@@ -39,6 +39,17 @@ export const PERMISSIONS = {
     VIEW_COLLECTIONS: 'viewCollections',
     MANAGE_COLLECTIONS: 'manageCollections',
     
+    // Favorites Management
+    MANAGE_FAVORITES: 'manageFavorites',
+    
+    // Content Moderation (general)
+    MODERATE_CONTENT: 'moderateContent',
+    
+    // System & Logs
+    VIEW_LOGS: 'viewLogs',
+    EXPORT_DATA: 'exportData',
+    MANAGE_SETTINGS: 'manageSettings',
+    
     // Legacy permissions (for backward compatibility - map to new permissions)
     MANAGE_USERS: 'manageUsers', // Maps to: viewUsers, editUsers
     MANAGE_IMAGES: 'manageImages', // Maps to: viewImages, editImages

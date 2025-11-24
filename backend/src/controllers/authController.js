@@ -149,6 +149,7 @@ export const signIn = asyncHandler(async (req, res) => {
             avatarUrl: user.avatarUrl,
             isAdmin: enrichedUser.isAdmin || false,
             isSuperAdmin: enrichedUser.isSuperAdmin || false,
+            permissions: enrichedUser.permissions || null,
         },
     });
 });

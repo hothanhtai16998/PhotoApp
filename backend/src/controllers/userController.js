@@ -5,10 +5,26 @@ import { uploadAvatar, deleteAvatarFromS3 } from "../libs/s3.js";
 import { logger } from '../utils/logger.js';
 
 export const authMe = asyncHandler(async (req, res) => {
-    const user = req.user; // From authMiddleware
+    // req.user is already enriched with permissions by authMiddleware
+    const user = req.user;
 
+    // Return user with permissions (already included by enrichUserWithAdminStatus)
     return res.status(200).json({
-        user,
+        user: {
+            _id: user._id,
+            username: user.username,
+            email: user.email,
+            displayName: user.displayName,
+            avatarUrl: user.avatarUrl,
+            bio: user.bio,
+            phone: user.phone,
+            isOAuthUser: user.isOAuthUser,
+            isAdmin: user.isAdmin || false,
+            isSuperAdmin: user.isSuperAdmin || false,
+            permissions: user.permissions || null,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+        },
     });
 });
 
