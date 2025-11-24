@@ -55,6 +55,7 @@ export const Header = memo(function Header() {
 
           {/* Right Actions - Desktop */}
           <div className="header-actions desktop-only">
+            <Link to="/about" className="header-link">Về chúng tôi</Link>
             {accessToken ? (
               <>
                 <button onClick={() => setUploadModalOpen(true)} className="header-link">Thêm ảnh</button>
@@ -85,6 +86,9 @@ export const Header = memo(function Header() {
       {mobileMenuOpen && (
         <div className="mobile-menu">
           <div className="mobile-menu-content">
+            <Link to="/about" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+              Về chúng tôi
+            </Link>
             {accessToken ? (
               <>
                 <button onClick={() => { setUploadModalOpen(true); setMobileMenuOpen(false); }} className="mobile-menu-link">
