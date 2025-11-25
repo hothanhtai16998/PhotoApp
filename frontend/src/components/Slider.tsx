@@ -1,717 +1,486 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import './Slider.css';
-import { imageService } from '@/services/imageService';
-import { useImageStore } from '@/stores/useImageStore';
-import type { Image } from '@/types/image';
-import type { Slide } from '@/types/slide';
-import SlideAnimationSelector, { type SlideAnimationType } from './SlideAnimationSelector';
-// ============================================
-// SLIDE TIMING CONFIGURATION
-// ============================================
-// Change these values to adjust slide timing:
-const TRANSITION_DURATION = 1200; // Time for slide transition animation (ms)
-const IMAGE_VISIBLE_TIME = 5000; // Time image stays visible after transition (ms)
-// Total cycle time = TRANSITION_DURATION + IMAGE_VISIBLE_TIME
-const AUTO_PLAY_INTERVAL = TRANSITION_DURATION + IMAGE_VISIBLE_TIME;
-// ============================================
+import { useState, useEffect, useCallback, useRef } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { imageService } from "@/services/imageService";
+import type { Image } from "@/types/image";
+import "./Slider.css";
 
-const SWIPE_THRESHOLD = 50; // Minimum distance for swipe
+// Date-based randomization: same 10 images per day
+function getDailyRandomImages(images: Image[], count: number): Image[] {
+  // Use date as seed for consistent daily selection
+  const today = new Date();
+  const dateString = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+  
+  // Simple hash function to convert date string to number
+  let seed = 0;
+  for (let i = 0; i < dateString.length; i++) {
+    seed = ((seed << 5) - seed) + dateString.charCodeAt(i);
+    seed = seed & seed; // Convert to 32bit integer
+  }
+  
+  // Shuffle array using seed
+  const shuffled = [...images];
+  let random = seed;
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    random = (random * 9301 + 49297) % 233280; // Linear congruential generator
+    const j = Math.floor((random / 233280) * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  
+  return shuffled.slice(0, count);
+}
 
 function Slider() {
-    const { deletedImageIds } = useImageStore();
-    const [slides, setSlides] = useState<Slide[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [currentSlide, setCurrentSlide] = useState(0);
-    const [isTransitioning, setIsTransitioning] = useState(false);
-    const [animatingSlide, setAnimatingSlide] = useState<number | null>(null);
-    const [progress, setProgress] = useState(0);
-    const [animationType, setAnimationType] = useState<SlideAnimationType>('slide');
-    const [isTypewriterReversing, setIsTypewriterReversing] = useState(false);
-    const [slidesReady, setSlidesReady] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [images, setImages] = useState<Image[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isHovered, setIsHovered] = useState(false);
+  const [autoPlayProgress, setAutoPlayProgress] = useState(0);
+  const autoPlayIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const progressStartTimeRef = useRef<number | null>(null);
+  const pausedProgressRef = useRef<number>(0);
+  const isAutoPlayChangeRef = useRef<boolean>(false);
+  const nextSlideRef = useRef<() => void>();
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
 
-    // Touch/swipe handlers
-    const touchStartX = useRef<number>(0);
-    const touchEndX = useRef<number>(0);
-    const sliderRef = useRef<HTMLDivElement>(null);
-    const progressRunningRef = useRef(false);
-    const lastSlideIndexRef = useRef<number>(-1);
-    const progressStartTimeRef = useRef<number>(0);
-    const typewriterReverseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const hasInitializedRef = useRef<boolean>(false);
-    const prevAnimationTypeRef = useRef<SlideAnimationType | null>(null);
-
-    // Fetch images from backend
-    useEffect(() => {
-        const fetchImages = async () => {
-            try {
-                setLoading(true);
-                // Use cache-busting to ensure fresh data (same as ImageGrid)
-                const response = await imageService.fetchImages({
-                    limit: 10, // Fetch up to 10 images for the slider
-                    page: 1,
-                    _refresh: true // Cache-busting for fresh data
-                });
-
-                if (response.images && response.images.length > 0) {
-                    // Filter out deleted images
-                    const validImages = response.images.filter(
-                        (img: Image) => !deletedImageIds.includes(img._id)
-                    );
-
-                    // Convert images to slides format
-                    const slidesDataPromises = validImages.map(async (img: Image, index: number) => {
-                        // Use optimized image sizes for better LCP
-                        // First slide uses smaller size for faster LCP, others use regular size
-                        const isFirstSlide = index === 0;
-
-                        // Use regularUrl if available (1080px), otherwise fallback to imageUrl
-                        // For first slide, prefer smaller size for faster LCP
-                        const imageUrl = isFirstSlide && img.regularUrl
-                            ? img.regularUrl
-                            : (img.regularUrl || img.imageUrl);
-
-                        // Detect image orientation by loading a smaller image for faster detection
-                        let isPortrait = false;
-                        try {
-                            // Use thumbnail or small URL for faster detection, fallback to regular URL
-                            const detectionUrl = img.thumbnailUrl || img.smallUrl || imageUrl;
-
-                            await Promise.race([
-                                new Promise<void>((resolve) => {
-                                    const testImg = new Image();
-                                    testImg.crossOrigin = 'anonymous';
-                                    testImg.onload = () => {
-                                        isPortrait = testImg.naturalHeight > testImg.naturalWidth;
-                                        resolve();
-                                    };
-                                    testImg.onerror = () => {
-                                        // Default to landscape if image fails to load
-                                        resolve();
-                                    };
-                                    testImg.src = detectionUrl;
-                                }),
-                                new Promise<void>((resolve) => {
-                                    // Increased timeout to 5 seconds for better detection
-                                    setTimeout(() => resolve(), 5000);
-                                })
-                            ]);
-                        } catch {
-                            // If anything fails, default to landscape
-                            console.warn('Failed to detect image orientation, defaulting to landscape');
-                        }
-
-                        const slideData: Slide = {
-                            id: img._id,
-                            title: img.imageTitle,
-                            uploadedBy: img.uploadedBy,
-                            backgroundImage: imageUrl,
-                            location: img.location,
-                            cameraModel: img.cameraModel,
-                            category: img.imageCategory,
-                            createdAt: img.createdAt,
-                            isPortrait,
-                            isFirstSlide, // Track if this is the first slide for LCP optimization
-                        };
-
-                        return slideData;
-                    });
-
-                    const slidesData = await Promise.all(slidesDataPromises);
-
-                    // Filter out any slides that were deleted during async processing
-                    const finalSlides = slidesData.filter(
-                        (slide) => !deletedImageIds.includes(slide.id)
-                    );
-
-                    setSlides(finalSlides);
-                    // Mark slides as ready when they're first loaded
-                    // Use a separate effect trigger to ensure this happens
-                    if (finalSlides.length > 0) {
-                        setSlidesReady(true);
-                    }
-                    // Reset to first slide when new images are loaded, but ensure valid index
-                    if (finalSlides.length > 0 && currentSlide >= finalSlides.length) {
-                        setCurrentSlide(0);
-                    } else if (finalSlides.length === 0) {
-                        setCurrentSlide(0);
-                        setSlidesReady(false);
-                    }
-                } else {
-                    // If no images, set empty array
-                    setSlides([]);
-                }
-            } catch (error) {
-                console.error('Error fetching images:', error);
-                setSlides([]);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchImages();
-    }, [deletedImageIds]); // Re-fetch when deleted images change
-
-    // Filter out deleted slides when deletedImageIds changes
-    useEffect(() => {
-        if (slides.length > 0 && deletedImageIds.length > 0) {
-            const filteredSlides = slides.filter(
-                (slide) => !deletedImageIds.includes(slide.id)
-            );
-            if (filteredSlides.length !== slides.length) {
-                setSlides(filteredSlides);
-                // Adjust current slide index if needed
-                if (currentSlide >= filteredSlides.length && filteredSlides.length > 0) {
-                    setCurrentSlide(filteredSlides.length - 1);
-                } else if (filteredSlides.length === 0) {
-                    setCurrentSlide(0);
-                }
-            }
-        }
-    }, [deletedImageIds, slides, currentSlide]);
-
-    const goToNext = useCallback(() => {
-        if (isTransitioning || slides.length === 0) return;
-        setIsTransitioning(true);
-        setCurrentSlide((prev) => (prev + 1) % slides.length);
-        setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
-    }, [isTransitioning, slides.length]);
-
-    const goToPrev = useCallback(() => {
-        if (isTransitioning || slides.length === 0) return;
-        setIsTransitioning(true);
-        setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
-        setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
-    }, [isTransitioning, slides.length]);
-
-    // Trigger text animation when slide becomes active
-    // Text appears at the same time as image change
-    useEffect(() => {
-        // Reset animation state when transition starts
-        if (isTransitioning) {
-            setAnimatingSlide(null);
-            return;
-        }
-
-        // Set animation state immediately when slide is active and not transitioning
-        // This ensures panels are visible even if animation hasn't triggered yet
-        if (!isTransitioning && slides.length > 0) {
-            // Use a small delay to ensure smooth animation, but set it reliably
-            const timer = setTimeout(() => {
-                setAnimatingSlide(currentSlide);
-            }, 100); // Delay for smooth animation effect
-            
-            return () => clearTimeout(timer);
-        }
-    }, [currentSlide, isTransitioning, slides.length]);
-
-    // Auto-play functionality with progress indicator
-    // Progress ring runs continuously for the full cycle (6.3s including transition)
-    useEffect(() => {
-        if (slides.length === 0) {
-            setProgress(0);
-            progressRunningRef.current = false;
-            // Reset ref when no slides so we can detect when slides are loaded
-            lastSlideIndexRef.current = -1;
-            hasInitializedRef.current = false;
-            setSlidesReady(false);
-            return;
-        }
-
-        // Ensure we have valid slides before proceeding
-        if (currentSlide < 0 || currentSlide >= slides.length) {
-            return;
-        }
-
-        // Check if slide changed
-        // On initial mount, lastSlideIndexRef.current is -1, so this will be true
-        const slideChanged = currentSlide !== lastSlideIndexRef.current;
+  // Fetch all images and select 10 random ones for today
+  useEffect(() => {
+    const fetchImages = async () => {
+      setLoading(true);
+      try {
+        // Fetch images in batches (max limit is 100 per API)
+        const allImages: Image[] = [];
+        let page = 1;
+        let hasMore = true;
+        const maxPages = 10; // Limit to 10 pages (1000 images max) to avoid infinite loops
         
-        // On first load, always start auto-play
-        // Primary check: if lastSlideIndexRef is -1, slides just became available (most reliable)
-        // This is the key indicator that slides just loaded for the first time
-        const isFirstLoad = lastSlideIndexRef.current === -1;
-        
-        // Track previous animation type to detect changes
-        // If animation type changed, we need to restart auto-play
-        const animationTypeChanged = prevAnimationTypeRef.current !== null && prevAnimationTypeRef.current !== animationType;
-        
-        // Always proceed if slide changed OR it's first load OR animation type changed
-        // This ensures auto-play starts on initial mount and when animation type changes
-        if (!slideChanged && !isFirstLoad && !animationTypeChanged) {
-            // Slide hasn't changed, it's not first load, and animation type hasn't changed, don't restart
-            return;
-        }
-        
-        // Update previous animation type
-        prevAnimationTypeRef.current = animationType;
-        
-        // Mark as initialized BEFORE setting lastSlideIndexRef
-        // This ensures isFirstLoad check works correctly on this run
-        if (isFirstLoad) {
-            hasInitializedRef.current = true;
-        }
-
-        // Slide changed - reset and start fresh
-        // Always reset refs to ensure clean state
-        lastSlideIndexRef.current = currentSlide;
-        progressRunningRef.current = true;
-        progressStartTimeRef.current = Date.now();
-        setProgress(0); // Reset progress to 0 to show the circle
-        setIsTypewriterReversing(false); // Reset reverse state for new slide
-
-        let animationFrameId: number | null = null;
-        let slideTimeout: ReturnType<typeof setTimeout> | null = null;
-        let transitionTimeout: ReturnType<typeof setTimeout> | null = null;
-        
-        // For typewriter animation: trigger reverse so it completes exactly when transition starts
-        // The transition starts at AUTO_PLAY_INTERVAL (6200ms = TRANSITION_DURATION + IMAGE_VISIBLE_TIME)
-        // We want reverse to complete exactly when transition begins, so:
-        // reverseStartTime = AUTO_PLAY_INTERVAL - reverse_duration
-        const TYPEWRITER_REVERSE_DURATION = 1500; // Time for reverse animation
-        // Start reverse so it completes exactly when transition begins (at AUTO_PLAY_INTERVAL)
-        const reverseStartTime = AUTO_PLAY_INTERVAL - TYPEWRITER_REVERSE_DURATION;
-        
-        if (animationType === 'typewriter' && reverseStartTime > 0) {
-            // Clear any existing timeout
-            if (typewriterReverseTimeoutRef.current) {
-                clearTimeout(typewriterReverseTimeoutRef.current);
-            }
-            
-            // Start reverse animation so it completes exactly when transition begins
-            typewriterReverseTimeoutRef.current = setTimeout(() => {
-                if (currentSlide === lastSlideIndexRef.current) {
-                    setIsTypewriterReversing(true);
-                }
-            }, reverseStartTime);
-        }
-
-        const animate = () => {
-            // Check if we should still be running (slide hasn't changed)
-            if (currentSlide !== lastSlideIndexRef.current || !progressRunningRef.current) {
-                return;
-            }
-
-            const elapsed = Date.now() - progressStartTimeRef.current;
-            const newProgress = Math.min((elapsed / AUTO_PLAY_INTERVAL) * 100, 100);
-            setProgress(newProgress);
-
-            if (newProgress < 100) {
-                animationFrameId = requestAnimationFrame(animate);
+        while (hasMore && page <= maxPages) {
+          const response = await imageService.fetchImages({
+            limit: 100, // Maximum allowed by API
+            page: page,
+          });
+          
+          if (response.images && response.images.length > 0) {
+            allImages.push(...response.images);
+            // Check if there are more pages
+            if (response.pagination) {
+              hasMore = page < response.pagination.pages;
             } else {
-                // Progress completed, but don't set progressRunningRef to false here
-                // Let the timeout handle the next slide transition
+              // If no pagination info, stop if we got less than limit
+              hasMore = response.images.length === 100;
             }
-        };
-
-        animationFrameId = requestAnimationFrame(animate);
-
-        // Advance to next slide after AUTO_PLAY_INTERVAL (full cycle)
-        // Store the slide index at timeout setup to check against ref when it fires
-        const slideIndexAtSetup = currentSlide;
-        const slidesLengthAtSetup = slides.length;
+            page++;
+          } else {
+            hasMore = false;
+          }
+        }
         
-        slideTimeout = setTimeout(() => {
-            // Check if we're still on the expected slide using ref
-            // The ref should match the slide index we stored when setting up the timeout
-            if (slideIndexAtSetup === lastSlideIndexRef.current && slideIndexAtSetup >= 0 && slidesLengthAtSetup > 0) {
-                // Inline goToNext logic to avoid dependency on isTransitioning
-                setIsTransitioning(true);
-                // Use functional update to get latest slides.length from state
-                setCurrentSlide((prev) => {
-                    // Double-check we're still on the expected slide
-                    if (prev === slideIndexAtSetup) {
-                        // Use the stored slides length to avoid stale closure
-                        // But also get current length as fallback
-                        return (prev + 1) % slidesLengthAtSetup;
-                    }
-                    return prev;
-                });
-                transitionTimeout = setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
-            }
-        }, AUTO_PLAY_INTERVAL);
-
-        return () => {
-            if (animationFrameId !== null) {
-                cancelAnimationFrame(animationFrameId);
-            }
-            if (slideTimeout) clearTimeout(slideTimeout);
-            if (transitionTimeout) clearTimeout(transitionTimeout);
-            if (typewriterReverseTimeoutRef.current) {
-                clearTimeout(typewriterReverseTimeoutRef.current);
-                typewriterReverseTimeoutRef.current = null;
-            }
-        };
-    }, [currentSlide, slides.length, animationType, slidesReady]);
-
-    // Keyboard navigation
-    useEffect(() => {
-        const handleKeyPress = (e: KeyboardEvent) => {
-            if (e.key === 'ArrowLeft') {
-                goToPrev();
-            } else if (e.key === 'ArrowRight') {
-                goToNext();
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyPress);
-        return () => window.removeEventListener('keydown', handleKeyPress);
-    }, [goToNext, goToPrev]);
-
-    // Touch/swipe handlers
-    const handleTouchStart = (e: React.TouchEvent) => {
-        if (e.touches[0]) {
-            touchStartX.current = e.touches[0].clientX;
+        if (allImages.length > 0) {
+          // Get 10 random images for today
+          const dailyImages = getDailyRandomImages(allImages, 10);
+          setImages(dailyImages);
+        } else {
+          setImages([]);
         }
+      } catch (error) {
+        console.error("Error fetching images:", error);
+        setImages([]);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    const handleTouchMove = (e: React.TouchEvent) => {
-        if (e.touches[0]) {
-            touchEndX.current = e.touches[0].clientX;
-        }
-    };
+    fetchImages();
+  }, []);
 
-    const handleTouchEnd = () => {
-        if (!touchStartX.current) return;
+  const goToSlide = useCallback((index: number) => {
+    if (isTransitioning || images.length === 0) return;
+    setIsTransitioning(true);
+    setCurrentSlide(index % images.length);
+    setTimeout(() => setIsTransitioning(false), 600);
+  }, [isTransitioning, images.length]);
 
-        const endX = touchEndX.current || touchStartX.current;
-        const distance = touchStartX.current - endX;
-        const isLeftSwipe = distance > SWIPE_THRESHOLD;
-        const isRightSwipe = distance < -SWIPE_THRESHOLD;
+  const nextSlide = useCallback(() => {
+    if (images.length === 0) return;
+    goToSlide((currentSlide + 1) % images.length);
+  }, [currentSlide, goToSlide, images.length]);
 
-        if (isLeftSwipe) {
-            goToNext();
-        } else if (isRightSwipe) {
-            goToPrev();
-        }
+  // Keep ref updated with latest nextSlide
+  useEffect(() => {
+    nextSlideRef.current = nextSlide;
+  }, [nextSlide]);
 
-        // Reset
-        touchStartX.current = 0;
-        touchEndX.current = 0;
-    };
+  const prevSlide = useCallback(() => {
+    if (images.length === 0) return;
+    goToSlide((currentSlide - 1 + images.length) % images.length);
+  }, [currentSlide, goToSlide, images.length]);
 
-    // Initialize first slide when slides are loaded
-    useEffect(() => {
-        if (slides.length > 0 && !loading) {
-            const timer = setTimeout(() => {
-                setAnimatingSlide(0);
-            }, 200);
-            return () => clearTimeout(timer);
-        }
-    }, [slides.length, loading]);
-
-    // Show loading state
-    if (loading) {
-        return (
-            <div className="training-slider-page">
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    height: '100vh',
-                    color: 'rgb(236, 222, 195)',
-                    fontSize: '18px'
-                }}>
-                    Đang tải ảnh...
-                </div>
-            </div>
-        );
+  // Auto-play carousel (6.2 seconds interval) - pauses on hover, with progress bar
+  useEffect(() => {
+    if (images.length === 0) {
+      // Clear intervals if no images
+      if (autoPlayIntervalRef.current) {
+        clearInterval(autoPlayIntervalRef.current);
+        autoPlayIntervalRef.current = null;
+      }
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      return;
     }
 
-    // Show empty state if no images
-    if (slides.length === 0) {
-        return (
-            <div className="training-slider-page">
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    height: '100vh',
-                    color: 'rgb(236, 222, 195)',
-                    fontSize: '18px'
-                }}>
-                    Chưa có ảnh
-                </div>
-            </div>
-        );
+    // If hovering, pause (save current progress and stop intervals)
+    if (isHovered) {
+      // Save current progress before pausing
+      if (progressStartTimeRef.current !== null) {
+        const elapsed = Date.now() - progressStartTimeRef.current;
+        pausedProgressRef.current = Math.min((elapsed / 6200) * 100, 100);
+      }
+      // Pause intervals
+      if (autoPlayIntervalRef.current) {
+        clearInterval(autoPlayIntervalRef.current);
+        autoPlayIntervalRef.current = null;
+      }
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      return;
     }
 
+    // Resume/Start intervals when not hovering
+    // Clear any existing intervals first
+    if (autoPlayIntervalRef.current) {
+      clearInterval(autoPlayIntervalRef.current);
+      autoPlayIntervalRef.current = null;
+    }
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+
+    // Calculate start time based on paused progress (if resuming) or start fresh
+    const startProgress = pausedProgressRef.current;
+    const startTime = Date.now() - (startProgress / 100) * 6200;
+    progressStartTimeRef.current = startTime;
+
+    // Progress bar animation - synchronized with auto-play
+    // Update every 16ms for smoother animation (60fps)
+    progressIntervalRef.current = setInterval(() => {
+      // If progressStartTimeRef is null, don't update (but don't stop the interval)
+      if (progressStartTimeRef.current === null) {
+        // Keep the current progress value, don't update
+        return;
+      }
+      const elapsed = Date.now() - progressStartTimeRef.current;
+      const progress = Math.min((elapsed / 6200) * 100, 100);
+      setAutoPlayProgress(progress);
+    }, 16); // Update every 16ms (~60fps) for smooth animation
+
+    // Auto-play interval - change slide every 6.2 seconds
+    // Calculate delay based on remaining time if resuming from pause
+    const remainingTime = 6200 - (startProgress / 100) * 6200;
+    
+    const scheduleNextSlide = () => {
+      setAutoPlayProgress(100); // Ensure it reaches 100% before changing
+      isAutoPlayChangeRef.current = true; // Mark as auto-play change
+      if (nextSlideRef.current) {
+        nextSlideRef.current();
+      }
+      // Start progress timer immediately (synchronously)
+      // The useEffect that resets progress will be skipped because isAutoPlayChangeRef is true
+      setAutoPlayProgress(0);
+      pausedProgressRef.current = 0;
+      // Update progressStartTimeRef immediately so the interval can use it
+      progressStartTimeRef.current = Date.now();
+      // Reset the flag after ensuring the useEffect has checked it
+      // Use a longer timeout to ensure the useEffect runs first
+      setTimeout(() => {
+        isAutoPlayChangeRef.current = false;
+      }, 10);
+    };
+
+    let timeoutId: NodeJS.Timeout | null = null;
+    
+    if (startProgress > 0) {
+      // Resume from pause - use setTimeout for the first slide change
+      timeoutId = setTimeout(() => {
+        scheduleNextSlide();
+        // Then set up the regular interval
+        autoPlayIntervalRef.current = setInterval(scheduleNextSlide, 6200);
+      }, remainingTime);
+    } else {
+      // Start fresh - use regular interval
+      autoPlayIntervalRef.current = setInterval(scheduleNextSlide, 6200);
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      if (autoPlayIntervalRef.current) {
+        clearInterval(autoPlayIntervalRef.current);
+        autoPlayIntervalRef.current = null;
+      }
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+    };
+  }, [images.length, isHovered]);
+
+  // Reset progress when slide changes manually (not from auto-play)
+  useEffect(() => {
+    // Check if it's an auto-play change - if so, don't reset
+    // The flag is set synchronously in scheduleNextSlide, so we check it immediately
+    if (isAutoPlayChangeRef.current) {
+      // It's an auto-play change, scheduleNextSlide will handle the reset
+      return;
+    }
+    // Manual change - reset progress
+    setAutoPlayProgress(0);
+    pausedProgressRef.current = 0;
+    progressStartTimeRef.current = null;
+  }, [currentSlide]);
+
+
+  // Keyboard navigation - Arrow keys, Home, End
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") prevSlide();
+      if (e.key === "ArrowRight") nextSlide();
+      if (e.key === "Home") goToSlide(0);
+      if (e.key === "End") goToSlide(images.length - 1);
+    };
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
+  }, [prevSlide, nextSlide, goToSlide, images.length]);
+
+
+  // Get best image URL
+  const getImageUrl = (image: Image | null): string | null => {
+    if (!image) return null;
     return (
-        <>
-            {/* Animation Selector - Outside slider-page to avoid overflow clipping */}
-            <SlideAnimationSelector 
-                currentAnimation={animationType}
-                onAnimationChange={setAnimationType}
-            />
-            <div
-                className="slider-page"
-                ref={sliderRef}
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-            >
-            {/* Slides Container */}
-            <div className="slider-container">
-                {slides.map((slide, index) => {
-                    // Skip deleted slides
-                    if (deletedImageIds.includes(slide.id)) {
-                        return null;
-                    }
-                    
-                    const isActive = index === currentSlide;
-                    const isFirstSlide = index === 0;
-                    const isPrev = index === (currentSlide - 1 + slides.length) % slides.length;
-                    const isNext = index === (currentSlide + 1) % slides.length;
-                    const shouldShow = isActive || (isTransitioning && (isPrev || isNext));
-                    
-                    // Ensure panels show when slide is active (even during transition end)
-                    const shouldShowPanels = isActive;
-
-                    return (
-                        <div
-                            key={slide.id}
-                            className={`slider-slide ${isActive ? 'active' : ''} ${shouldShow ? 'visible' : ''} ${slide.isPortrait ? 'portrait' : 'landscape'}`}
-                            style={{
-                                backgroundImage: `url(${slide.backgroundImage})`,
-                            }}
-                        >
-                            {/* Preload image with priority for first slide (LCP optimization) */}
-                            {isActive && isFirstSlide && (
-                                <img
-                                    src={slide.backgroundImage}
-                                    alt=""
-                                    fetchPriority="high"
-                                    loading="eager"
-                                    style={{
-                                        position: 'absolute',
-                                        width: 0,
-                                        height: 0,
-                                        opacity: 0,
-                                        pointerEvents: 'none'
-                                    }}
-                                    onLoad={(e) => {
-                                        const img = e.currentTarget;
-                                        const isPortraitImg = img.naturalHeight > img.naturalWidth;
-                                        const slideElement = img.parentElement;
-                                        if (slideElement && isPortraitImg !== slide.isPortrait) {
-                                            // Update class if orientation was misdetected
-                                            if (isPortraitImg) {
-                                                slideElement.classList.add('portrait');
-                                                slideElement.classList.remove('landscape');
-                                            } else {
-                                                slideElement.classList.add('landscape');
-                                                slideElement.classList.remove('portrait');
-                                            }
-                                            // Update slide state to persist the correction
-                                            setSlides(prevSlides =>
-                                                prevSlides.map(s =>
-                                                    s.id === slide.id
-                                                        ? { ...s, isPortrait: isPortraitImg }
-                                                        : s
-                                                )
-                                            );
-                                        }
-                                    }}
-                                />
-                            )}
-                            {/* Hidden image to detect orientation on load for other slides */}
-                            {!(isActive && isFirstSlide) && (
-                                <img
-                                    src={slide.backgroundImage}
-                                    alt=""
-                                    loading="lazy"
-                                    style={{ display: 'none' }}
-                                    onLoad={(e) => {
-                                        const img = e.currentTarget;
-                                        const isPortraitImg = img.naturalHeight > img.naturalWidth;
-                                        const slideElement = img.parentElement;
-                                        if (slideElement && isPortraitImg !== slide.isPortrait) {
-                                            // Update class if orientation was misdetected
-                                            if (isPortraitImg) {
-                                                slideElement.classList.add('portrait');
-                                                slideElement.classList.remove('landscape');
-                                            } else {
-                                                slideElement.classList.add('landscape');
-                                                slideElement.classList.remove('portrait');
-                                            }
-                                            // Update slide state to persist the correction
-                                            setSlides(prevSlides =>
-                                                prevSlides.map(s =>
-                                                    s.id === slide.id
-                                                        ? { ...s, isPortrait: isPortraitImg }
-                                                        : s
-                                                )
-                                            );
-                                        }
-                                    }}
-                                />
-                            )}
-                            <div className="slide-overlay"></div>
-
-                            {/* Title and Navigation in Bottom Left */}
-                            <div className={`slide-content-left ${shouldShowPanels ? 'active' : ''} ${shouldShow ? `animation-${animationType}` : ''} ${isTypewriterReversing && isActive ? 'typewriter-reversing' : ''}`}>
-                                <h1 className={`slide-title ${shouldShowPanels ? 'active' : ''}`}>{slide.title || ''}</h1>
-
-                                {/* Image Info - Mobile Only */}
-                                <div className="slide-image-info-mobile">
-                                    {slide.location && (
-                                        <div className="info-item">
-                                            <span className="info-label">Địa điểm:</span>
-                                            <span className="info-value">{slide.location}</span>
-                                        </div>
-                                    )}
-                                    {slide.createdAt && (
-                                        <div className="info-item">
-                                            <span className="info-label">Ngày:</span>
-                                            <span className="info-value">
-                                                {new Date(slide.createdAt).toLocaleDateString('vi-VN', {
-                                                    day: 'numeric',
-                                                    month: 'long',
-                                                    year: 'numeric'
-                                                })}
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="slide-nav-buttons">
-                                    <button
-                                        className="slide-nav-btn prev-btn"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            goToPrev();
-                                        }}
-                                        aria-label="Previous slide"
-                                    >
-                                        <ChevronLeft size={18} className="nav-icon" />
-                                        <span className="nav-text">Quay lại</span>
-                                    </button>
-                                    <span className="nav-separator">/</span>
-                                    <button
-                                        className="slide-nav-btn next-btn"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            goToNext();
-                                        }}
-                                        aria-label="Next slide"
-                                    >
-                                        <span className="nav-text">Tiếp theo</span>
-                                        <ChevronRight size={18} className="nav-icon" />
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Image Info in Bottom Right */}
-                            {(slide.uploadedBy || slide.location || slide.cameraModel || slide.createdAt) && (
-                                <div className={`slide-content-right ${shouldShowPanels ? 'active' : ''} ${shouldShowPanels ? `animation-${animationType}` : ''}`}>
-                                    <div className="image-info-box">
-                                        {slide.uploadedBy && (
-                                            <div className="info-item">
-                                                <span className="info-label">Người đăng:</span>
-                                                <span className="info-value">
-                                                    {slide.uploadedBy.displayName || slide.uploadedBy.username || 'Không xác định'}
-                                                </span>
-                                            </div>
-                                        )}
-                                        {slide.location && (
-                                            <div className="info-item">
-                                                <span className="info-label">Địa điểm:</span>
-                                                <span className="info-value">{slide.location}</span>
-                                            </div>
-                                        )}
-                                        {slide.cameraModel && (
-                                            <div className="info-item">
-                                                <span className="info-label">Camera:</span>
-                                                <span className="info-value">{slide.cameraModel}</span>
-                                            </div>
-                                        )}
-
-                                        {slide.createdAt && (
-                                            <div className="info-item">
-                                                <span className="info-label">Ngày:</span>
-                                                <span className="info-value">
-                                                    {new Date(slide.createdAt).toLocaleDateString('vi-VN', {
-                                                        day: 'numeric',
-                                                        month: 'long',
-                                                        year: 'numeric'
-                                                    })}
-                                                </span>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                        </div>
-                    );
-                })}
-            </div>
-
-            {/* Brown Block in Bottom Left */}
-            {/* <div className="block-top-right"></div>
-            <div className="block-bottom"></div>
-            <div className="block-bottom-2"></div> */}
-
-
-
-            {/* Floating Side Navigation Buttons - Mobile Only */}
-            <button
-                className="slider-side-nav-btn slider-side-nav-left"
-                onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    goToPrev();
-                }}
-                aria-label="Previous slide"
-            >
-                <ChevronLeft size={24} />
-            </button>
-            <button
-                className="slider-side-nav-btn slider-side-nav-right"
-                onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    goToNext();
-                }}
-                aria-label="Next slide"
-            >
-                <ChevronRight size={24} />
-            </button>
-
-            {/* Circular Progress Indicator - Bottom Right */}
-            {slides.length > 0 && (
-                <div className="progress-indicator visible">
-                    <svg className="progress-ring" width="60" height="60" viewBox="0 0 60 60">
-                        <circle
-                            className="progress-ring-circle-bg"
-                            stroke="rgba(236, 222, 195, 0.2)"
-                            strokeWidth="5"
-                            fill="transparent"
-                            r="20"
-                            cx="30"
-                            cy="30"
-                        />
-                        <circle
-                            className="progress-ring-circle"
-                            stroke="rgb(236, 222, 195)"
-                            strokeWidth="5"
-                            fill="transparent"
-                            r="20"
-                            cx="30"
-                            cy="30"
-                            strokeDasharray={125.66}
-                            strokeDashoffset={125.66 * (1 - progress / 100)}
-                            strokeLinecap="round"
-                        />
-                    </svg>
-                </div>
-            )}
-        </div>
-        </>
+      image.regularAvifUrl ||
+      image.regularUrl ||
+      image.imageAvifUrl ||
+      image.imageUrl ||
+      image.smallUrl ||
+      image.thumbnailUrl ||
+      null
     );
+  };
+
+  // Get current and next image for bottom carousel
+  const getBottomCarouselImages = () => {
+    if (images.length === 0) return [];
+    const current = images[currentSlide];
+    const next = images[(currentSlide + 1) % images.length];
+    return [current, next].filter(Boolean);
+  };
+
+
+  // Get thumbnail URL for bottom carousel
+  const getThumbnailUrl = (image: Image | null): string | null => {
+    if (!image) return null;
+    return (
+      image.thumbnailAvifUrl ||
+      image.thumbnailUrl ||
+      image.smallAvifUrl ||
+      image.smallUrl ||
+      image.regularAvifUrl ||
+      image.regularUrl ||
+      image.imageUrl ||
+      null
+    );
+  };
+
+
+  // Touch gesture handlers for swipe
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    const diffX = touchStartX.current - touchEndX;
+    const diffY = touchStartY.current - touchEndY;
+    
+    // Only trigger if horizontal swipe is greater than vertical (to avoid conflicts with scrolling)
+    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+      if (diffX > 0) {
+        nextSlide(); // Swipe left = next
+      } else {
+        prevSlide(); // Swipe right = previous
+      }
+    }
+    
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
+
+  // Preload next 2-3 images
+  useEffect(() => {
+    if (images.length === 0) return;
+    
+    const preloadImages = () => {
+      for (let i = 1; i <= 3; i++) {
+        const nextIndex = (currentSlide + i) % images.length;
+        const image = images[nextIndex];
+        if (!image) continue;
+        
+        const imageUrl = 
+          image.regularAvifUrl ||
+          image.regularUrl ||
+          image.imageAvifUrl ||
+          image.imageUrl ||
+          image.smallUrl ||
+          image.thumbnailUrl ||
+          null;
+        
+        if (imageUrl) {
+          const img = new window.Image();
+          img.src = imageUrl;
+        }
+      }
+    };
+    
+    preloadImages();
+  }, [currentSlide, images]);
+
+  if (loading) {
+    return (
+      <div className="tripzo-page">
+        <div className="loading-state">
+          <div className="skeleton-main-slide" />
+          <div className="loading-text">Loading images...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (images.length === 0) {
+    return (
+      <div className="tripzo-page">
+        <div className="loading-state">No images available</div>
+      </div>
+    );
+  }
+
+
+  return (
+    <div 
+      className="tripzo-page"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Auto-play progress bar */}
+      {images.length > 0 && (
+        <div className="autoplay-progress" style={{ opacity: isHovered ? 0.5 : 1 }}>
+          <div 
+            className="autoplay-progress-bar" 
+            style={{ width: `${autoPlayProgress}%` }}
+          />
+        </div>
+      )}
+
+      {/* Main Carousel */}
+      <div className="main-carousel-container">
+        {images.map((image, index) => {
+          const imageUrl = getImageUrl(image);
+          
+          return (
+            <div
+              key={image._id}
+              className={`main-slide ${index === currentSlide ? "active" : ""}`}
+              style={{ backgroundColor: '#1a1a1a' }}
+            >
+              {/* Blurred background layer */}
+              {imageUrl && (
+                <div
+                  className="blur-background-layer"
+                  style={{
+                    backgroundImage: `url("${imageUrl}")`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                  }}
+                />
+              )}
+              {/* Main image layer - separate from blurred background */}
+              {imageUrl && (
+                <div
+                  className="main-image-layer"
+                  style={{
+                    backgroundImage: `url("${imageUrl}")`,
+                    backgroundSize: 'contain',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                  }}
+                />
+              )}
+              <div className="slide-content">
+                <h2 className="slide-title">{image.imageTitle}</h2>
+              </div>
+            </div>
+          );
+        })}
+
+      </div>
+
+      {/* Bottom Carousel */}
+      <div className="bottom-carousel-container">
+        <button
+          className="carousel-nav-arrow carousel-nav-left bottom-nav"
+          onClick={prevSlide}
+          aria-label="Previous slide"
+        >
+          <ChevronLeft size={20} />
+        </button>
+        <div className="bottom-carousel">
+          {getBottomCarouselImages().map((image, index) => {
+            const thumbnailUrl = getThumbnailUrl(image);
+            const slideIndex = index === 0 ? currentSlide : (currentSlide + 1) % images.length;
+            const isActive = index === 0; // First thumbnail is always the current slide
+            
+            return (
+              <div
+                key={image._id}
+                className={`bottom-slide ${isActive ? 'active-thumbnail' : ''}`}
+                onClick={() => goToSlide(slideIndex)}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+              >
+                {thumbnailUrl ? (
+                  <img
+                    src={thumbnailUrl}
+                    alt={image.imageTitle}
+                    className="bottom-slide-image"
+                    loading="eager"
+                  />
+                ) : (
+                  <div className="skeleton-loader" />
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <button
+          className="carousel-nav-arrow carousel-nav-right bottom-nav"
+          onClick={nextSlide}
+          aria-label="Next slide"
+        >
+          <ChevronRight size={20} />
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export default Slider;
-
