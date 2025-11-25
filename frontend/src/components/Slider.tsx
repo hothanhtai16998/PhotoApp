@@ -164,8 +164,15 @@ function Slider() {
 
     const goToNext = useCallback(() => {
         if (isTransitioning || slides.length === 0) return;
+        // Prevent scroll to top
+        const scrollY = window.scrollY;
         setIsTransitioning(true);
         setCurrentSlide((prev) => (prev + 1) % slides.length);
+        
+        // Restore scroll position after state update
+        requestAnimationFrame(() => {
+            window.scrollTo(0, scrollY);
+        });
         
         // Clear any existing timeout
         if (transitionTimeoutRef.current) {
@@ -176,8 +183,15 @@ function Slider() {
 
     const goToPrev = useCallback(() => {
         if (isTransitioning || slides.length === 0) return;
+        // Prevent scroll to top
+        const scrollY = window.scrollY;
         setIsTransitioning(true);
         setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+        
+        // Restore scroll position after state update
+        requestAnimationFrame(() => {
+            window.scrollTo(0, scrollY);
+        });
         
         // Clear any existing timeout
         if (transitionTimeoutRef.current) {
@@ -210,8 +224,15 @@ function Slider() {
     // Handle auto-play next slide transition
     const handleAutoPlayNext = useCallback(() => {
         if (isTransitioning || slides.length === 0) return;
+        // Prevent scroll to top
+        const scrollY = window.scrollY;
         setIsTransitioning(true);
         setCurrentSlide((prev) => (prev + 1) % slides.length);
+        
+        // Restore scroll position after state update
+        requestAnimationFrame(() => {
+            window.scrollTo(0, scrollY);
+        });
         
         // Clear any existing timeout
         if (transitionTimeoutRef.current) {
@@ -239,12 +260,25 @@ function Slider() {
         };
     }, []);
 
+    // Prevent scroll to top when slide changes
+    useEffect(() => {
+        const scrollY = window.scrollY;
+        // Restore scroll position after slide change
+        requestAnimationFrame(() => {
+            if (window.scrollY !== scrollY) {
+                window.scrollTo(0, scrollY);
+            }
+        });
+    }, [currentSlide]);
+
     // Keyboard navigation
     useEffect(() => {
         const handleKeyPress = (e: KeyboardEvent) => {
             if (e.key === 'ArrowLeft') {
+                e.preventDefault();
                 goToPrev();
             } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
                 goToNext();
             }
         };
