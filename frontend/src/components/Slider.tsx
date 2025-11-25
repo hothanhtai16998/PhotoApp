@@ -167,7 +167,7 @@ function Slider() {
         if (isTransitioning || slides.length === 0) return;
         // Prevent scroll to top
         const scrollY = window.scrollY;
-        // Immediately reset animation state to hide text during transition
+        // Reset animation state to hide text during transition
         setAnimatingSlide(null);
         setIsTransitioning(true);
         setCurrentSlide((prev) => (prev + 1) % slides.length);
@@ -188,7 +188,7 @@ function Slider() {
         if (isTransitioning || slides.length === 0) return;
         // Save scroll position before state change
         prevScrollYRef.current = window.scrollY;
-        // Immediately reset animation state to hide text during transition
+        // Reset animation state to hide text during transition
         setAnimatingSlide(null);
         setIsTransitioning(true);
         setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
@@ -198,43 +198,42 @@ function Slider() {
             clearTimeout(transitionTimeoutRef.current);
         }
         transitionTimeoutRef.current = setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
-    }, [isTransitioning, slides.length]);
+    }, [isTransitioning, slides.length, currentSlide]);
 
     // Trigger text animation when slide becomes active
-    // Text appears at the same time as image change
+    // Text appears 500ms after image change
     useEffect(() => {
-        // Reset animation state when transition starts
-        if (isTransitioning) {
-            setAnimatingSlide(null);
-            return;
-        }
-
-        // Set animation state immediately when slide is active and not transitioning
-        // This ensures panels are visible even if animation hasn't triggered yet
-        if (!isTransitioning && slides.length > 0) {
-            // Use a small delay to ensure smooth animation, but set it reliably
-            const timer = setTimeout(() => {
-                setAnimatingSlide(currentSlide);
-            }, ANIMATION_DELAY);
-            
-            return () => clearTimeout(timer);
-        }
-    }, [currentSlide, isTransitioning, slides.length]);
+        if (slides.length === 0) return;
+        
+        // Reset animation state when slide changes
+        setAnimatingSlide(null);
+        
+        // Set animation state after 500ms delay
+        const timer = setTimeout(() => {
+            setAnimatingSlide(currentSlide);
+        }, ANIMATION_DELAY);
+        
+        return () => clearTimeout(timer);
+    }, [currentSlide, slides.length]);
 
     // Handle auto-play next slide transition
     // Use refs to avoid recreating callback on every render
     const isTransitioningRef = useRef(isTransitioning);
     const slidesLengthRef = useRef(slides.length);
+    const currentSlideRef = useRef(currentSlide);
     
     useEffect(() => {
         isTransitioningRef.current = isTransitioning;
         slidesLengthRef.current = slides.length;
-    }, [isTransitioning, slides.length]);
+        currentSlideRef.current = currentSlide;
+    }, [isTransitioning, slides.length, currentSlide]);
     
     const handleAutoPlayNext = useCallback(() => {
         if (isTransitioningRef.current || slidesLengthRef.current === 0) return;
         // Save scroll position before state change
         prevScrollYRef.current = window.scrollY;
+        // Reset animation state to hide text during transition
+        setAnimatingSlide(null);
         setIsTransitioning(true);
         setCurrentSlide((prev) => (prev + 1) % slidesLengthRef.current);
         
@@ -393,8 +392,8 @@ function Slider() {
                     
                     // Ensure panels show when slide is active (even during transition end)
                     const shouldShowPanels = isActive;
-                    // Only animate text when slide is actively animating (not during transition)
-                    const shouldAnimate = animatingSlide === index && !isTransitioning;
+                    // Animate text when slide is actively animating (allow during transition for immediate appearance)
+                    const shouldAnimate = animatingSlide === index;
 
                     return (
                         <div

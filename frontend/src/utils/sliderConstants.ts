@@ -8,7 +8,7 @@ export const SLIDER_CONSTANTS = {
   TRANSITION_DURATION: 1200, // Time for slide transition animation (ms)
   IMAGE_VISIBLE_TIME: 5000, // Time image stays visible after transition (ms)
   TYPEWRITER_REVERSE_DURATION: 1500, // Time for typewriter reverse animation (ms)
-  ANIMATION_DELAY: 100, // Delay for smooth animation effect (ms)
+  ANIMATION_DELAY: 500, // Delay for text appearance after image change (ms)
 
   // Interaction thresholds
   SWIPE_THRESHOLD: 50, // Minimum distance for swipe (px)

@@ -370,8 +370,8 @@
 	color: rgb(236, 222, 195);
 	opacity: 0;
 	transform: translateY(40px) scale(0.95);
-	transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1) 0.1s,
-		transform 1s cubic-bezier(0.16, 1, 0.3, 1) 0.1s;
+	transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1) 0s,
+		transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) 0s;
 	will-change: opacity, transform;
 	text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 	width: auto;
@@ -405,7 +405,7 @@
 
 /* Typewriter typing in (forward) */
 .slide-content-left.active.animation-typewriter:not(.typewriter-reversing) .slide-title.active {
-	animation: typewriter 1.5s steps(40, end) 0.1s, 
+	animation: typewriter 1.5s steps(40, end) 0s, 
 	           typewriterBlink 0.75s step-end infinite 1.6s;
 }
 
