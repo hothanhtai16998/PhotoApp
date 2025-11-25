@@ -13,3 +13,14 @@
   }
 }
 
+.image-upload-overlay {
+  /* Ensure overlay matches image dimensions exactly */
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Match image border radius */
+  border-radius: 8px;
+}
+
