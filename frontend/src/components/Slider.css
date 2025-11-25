@@ -1,17 +1,5 @@
 /* Fonts are now loaded via link preload in index.html for better performance */
 
-/* Image Zoom Out Animation - Continuous zoom out from center */
-@keyframes image-zoom-out {
-	0% {
-		background-size: 100%;
-		background-position: center center;
-	}
-	100% {
-		background-size: 130%;
-		background-position: center center;
-	}
-}
-
 .slider-page {
 	position: relative;
 	width: 100%;
@@ -104,7 +92,7 @@
 /* Zoom animation only for landscape images - disabled on mobile to prevent shaking */
 .slider-slide.active.landscape {
 	/* Continuous zoom-out animation from center while slide is showing */
-	animation: image-zoom-out 30s ease-out forwards;
+	animation: none;
 }
 
 /* Disable zoom animation on mobile to prevent image shaking */

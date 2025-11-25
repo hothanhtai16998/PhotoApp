@@ -1,0 +1,316 @@
+.tripzo-page {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
+  background: #222;
+  margin-top: 0;
+}
+
+
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  color: #fff;
+  font-size: 24px;
+}
+
+/* Main Carousel Container */
+.main-carousel-container {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.main-slide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transform: scale(1.1);
+  transition: opacity 0.8s ease-in-out, transform 0.8s ease-in-out;
+  z-index: 1;
+  visibility: hidden;
+}
+
+/* Blurred background layer for Option 1 - fills black space only */
+.blur-background-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  filter: blur(50px) brightness(0.6);
+  transform: scale(1.2);
+  z-index: 0;
+  opacity: 0.5;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  /* The main image with contain will naturally cover this, so blur only shows in black space */
+}
+
+/* Overlay only on blurred background layer (not main image) */
+.blur-background-layer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Main image layer for Option 1 - separate bright layer */
+.main-image-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Ensure main slide content is above blurred layer */
+.main-slide .slide-content {
+  position: relative;
+  z-index: 3;
+}
+
+.main-slide.active {
+  opacity: 1;
+  transform: scale(1);
+  z-index: 2;
+  visibility: visible;
+}
+
+
+.slide-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  color: #fff;
+  padding: 0 40px;
+}
+
+.slide-title {
+  font-size: 120px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -3px;
+  line-height: 1.1;
+  text-transform: none;
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.main-slide.active .slide-title {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Navigation Arrows - Base Styles */
+.carousel-nav-arrow {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  flex-shrink: 0;
+}
+
+.carousel-nav-arrow:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #fff;
+  transform: scale(1.1);
+}
+
+/* Let's Travel Section */
+.lets-travel-section {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;
+  pointer-events: none;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.lets-travel-text {
+  font-size: 160px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.08);
+  margin: 0;
+  letter-spacing: -5px;
+  text-transform: uppercase;
+  line-height: 0.9;
+  user-select: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  padding-left: 0;
+  padding-bottom: 200px;
+  text-align: left;
+  white-space: nowrap;
+  transform: translateX(-10%);
+}
+
+/* Bottom Carousel */
+.bottom-carousel-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 40px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 20px;
+}
+
+.bottom-carousel {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.bottom-slide {
+  width: 200px;
+  height: 120px;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.bottom-slide-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.bottom-slide:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Bottom Navigation Arrows */
+.carousel-nav-arrow.bottom-nav {
+  position: static;
+  transform: none;
+  width: 50px;
+  height: 50px;
+  margin: 0;
+}
+
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .slide-title {
+    font-size: 80px;
+  }
+
+  .lets-travel-text {
+    font-size: 120px;
+  }
+
+  .bottom-slide {
+    width: 160px;
+    height: 100px;
+  }
+}
+
+@media (max-width: 768px) {
+  .slide-title {
+    font-size: 56px;
+    letter-spacing: -2px;
+  }
+
+  .carousel-nav-arrow {
+    width: 50px;
+    height: 50px;
+  }
+
+  .carousel-nav-left {
+    left: 20px;
+  }
+
+  .carousel-nav-right {
+    right: 20px;
+  }
+
+  .lets-travel-text {
+    font-size: 100px;
+    padding-bottom: 150px;
+    letter-spacing: -3px;
+  }
+
+  .bottom-carousel-container {
+    padding: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+  }
+
+  .bottom-carousel {
+    width: 100%;
+    justify-content: center;
+    gap: 15px;
+  }
+
+  .bottom-slide {
+    width: 140px;
+    height: 80px;
+  }
+
+  .carousel-nav-arrow.bottom-nav {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .slide-title {
+    font-size: 40px;
+  }
+
+  .lets-travel-text {
+    font-size: 80px;
+    padding-bottom: 120px;
+    letter-spacing: -3px;
+  }
+
+  .bottom-slide {
+    width: 120px;
+    height: 70px;
+  }
+
+}

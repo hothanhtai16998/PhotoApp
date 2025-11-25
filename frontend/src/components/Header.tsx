@@ -2,7 +2,7 @@
 
 import { memo, useState, useRef } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Shield, Heart, Menu, X, User, LogOut, Info } from "lucide-react"
+import { Shield, Heart, Menu, X, User, LogOut, Info, MapPin } from "lucide-react"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { useImageStore } from "@/stores/useImageStore"
 import UploadModal from "./UploadModal"
@@ -98,6 +98,12 @@ export const Header = memo(function Header() {
                     )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
+                      <Link to="/places" className="user-menu-item">
+                        <MapPin size={16} />
+                        Địa điểm
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
                       <Link to="/about" className="user-menu-item">
                         <Info size={16} />
                         Về chúng tôi
@@ -135,6 +141,10 @@ export const Header = memo(function Header() {
       {mobileMenuOpen && (
         <div className="mobile-menu">
           <div className="mobile-menu-content">
+            <Link to="/places" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+              <MapPin size={18} />
+              <span>Địa điểm</span>
+            </Link>
             <Link to="/about" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
               Về chúng tôi
             </Link>
