@@ -55,7 +55,7 @@ export function SignupForm({
               {/* header - logo */}
               <div className="flex flex-col items-center text-center-gap-2">
                 <Link to='/' className="mx-auto block w-fit text-center">
-                  <img src="/logo" alt="logo" />
+                  <img src="/logo.png" alt="logo" />
                 </Link>
                 <h1 className="text-2xl font-bold">Tạo tài khoản PhotoApp</h1>
                 <p className="text-muted-foreground text-balance">

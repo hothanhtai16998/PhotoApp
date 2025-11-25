@@ -32,6 +32,14 @@
   text-decoration: none;
   flex-shrink: 0;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+}
+
+.header-logo-img {
+  height: 50px;
+  width: auto;
+  object-fit: contain;
 }
 
 .header-logo:hover {
@@ -469,6 +477,10 @@
     font-size: 1.125rem;
   }
 
+  .header-logo-img {
+    height: 45px;
+  }
+
   .search-bar-container {
     position: static;
     transform: none;
@@ -522,6 +534,10 @@
 
   .header-logo {
     font-size: 1rem;
+  }
+
+  .header-logo-img {
+    height: 40px;
   }
 
   .header-actions {

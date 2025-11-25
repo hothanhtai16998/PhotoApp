@@ -45,7 +45,7 @@ export const Header = memo(function Header() {
         <div className="header-container">
           {/* Logo */}
           <Link to="/" className="header-logo" onClick={handleLogoClick}>
-            <span>PhotoApp</span>
+            <img src="/logo.png" alt="PhotoApp" className="header-logo-img" />
           </Link>
 
           {/* Mobile Menu Button */}
