@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useNavigate } from 'react-router-dom';
 import { X, Upload, ArrowRight } from 'lucide-react';
+import { toast } from 'sonner';
 import { useImageUpload, type ImageData } from './upload/hooks/useImageUpload';
 import { UploadProgress } from './upload/UploadProgress';
 import { UploadPreview } from './upload/UploadPreview';
@@ -36,6 +37,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
         loading,
         handleSubmitAll,
         resetUploadState,
+        preUploadAllImages,
     } = useImageUpload({
         onSuccess: () => {
             // Success handling is done in the hook
@@ -49,12 +51,24 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
         }
     }, [isOpen, loadCategories]);
 
-    // Check if all images have required fields filled
+    // Check if all images have required fields filled AND all are pre-uploaded
     const isFormValid = imagesData.length > 0 &&
         imagesData.every(img =>
             img.title.trim().length > 0 &&
-            img.category.trim().length > 0
+            img.category.trim().length > 0 &&
+            img.preUploadData && // Must be pre-uploaded
+            !img.isUploading && // Not currently uploading
+            !img.uploadError // No upload errors
         );
+
+    // Get upload status for user feedback
+    const uploadStatus = {
+        total: imagesData.length,
+        uploading: imagesData.filter(img => img.isUploading).length,
+        uploaded: imagesData.filter(img => img.preUploadData && !img.uploadError).length,
+        failed: imagesData.filter(img => img.uploadError).length,
+        needsUpload: imagesData.filter(img => !img.preUploadData && !img.isUploading && !img.uploadError).length,
+    };
 
     // Initialize imagesData when files are selected
     useEffect(() => {
@@ -74,7 +88,11 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                         coordinates: undefined,
                         cameraModel: '',
                         tags: [],
-                        errors: {}
+                        errors: {},
+                        preUploadData: null,
+                        uploadProgress: 0,
+                        isUploading: false,
+                        uploadError: null,
                     };
                 });
                 return newImagesData;
@@ -83,6 +101,96 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
             setImagesData([]);
         }
     }, [selectedFiles]);
+
+    // Track if upload is in progress to prevent duplicate requests
+    const uploadInProgressRef = useRef(false);
+
+    // Auto-start pre-upload when imagesData is initialized with files
+    useEffect(() => {
+        if (imagesData.length > 0 && preUploadAllImages && !uploadInProgressRef.current) {
+            // Check if any images need to be uploaded
+            const needsUpload = imagesData.some(img => !img.preUploadData && !img.isUploading && !img.uploadError);
+            
+            if (needsUpload) {
+                // Prevent duplicate upload attempts
+                uploadInProgressRef.current = true;
+                
+                // Set isUploading immediately for all images that need upload
+                const updatedImagesData = imagesData.map(img => {
+                    if (!img.preUploadData && !img.isUploading && !img.uploadError) {
+                        return {
+                            ...img,
+                            isUploading: true,
+                            uploadProgress: 0,
+                        };
+                    }
+                    return img;
+                });
+                
+                // Update state first to show overlay immediately
+                setImagesData(updatedImagesData);
+                
+                // Then start pre-uploading
+                setTimeout(() => {
+                    preUploadAllImages(updatedImagesData, (index, progress) => {
+                        // Update progress in real-time
+                        setImagesData(prev => {
+                            const updated = [...prev];
+                            if (updated[index]) {
+                                updated[index] = {
+                                    ...updated[index], // Preserve all existing fields
+                                    uploadProgress: progress,
+                                    isUploading: progress < 100, // Update isUploading based on progress
+                                };
+                            }
+                            return updated;
+                        });
+                    }).then((finalImagesData) => {
+                        // Merge upload results with existing form data to preserve user input
+                        setImagesData(prev => {
+                            return finalImagesData.map((finalImg, index) => {
+                                const existingImg = prev[index];
+                                if (!existingImg) return finalImg;
+                                
+                                // Preserve all form fields from existing data (user input takes priority)
+                                return {
+                                    ...finalImg, // Upload results (preUploadData, uploadProgress, isUploading, uploadError)
+                                    // Always preserve form fields from existing data if they exist
+                                    title: existingImg.title.trim() ? existingImg.title : finalImg.title,
+                                    category: existingImg.category.trim() ? existingImg.category : finalImg.category,
+                                    location: existingImg.location.trim() ? existingImg.location : finalImg.location,
+                                    coordinates: existingImg.coordinates || finalImg.coordinates,
+                                    cameraModel: existingImg.cameraModel.trim() ? existingImg.cameraModel : finalImg.cameraModel,
+                                    tags: existingImg.tags && existingImg.tags.length > 0 ? existingImg.tags : finalImg.tags,
+                                    errors: existingImg.errors || finalImg.errors,
+                                };
+                            });
+                        });
+                        
+                        // Check if all uploads succeeded
+                        const allSucceeded = finalImagesData.every(img => img.preUploadData && !img.uploadError);
+                        if (allSucceeded) {
+                            toast.success('Tất cả ảnh đã tải lên thành công! Bạn có thể gửi bây giờ.');
+                        } else {
+                            const failedCount = finalImagesData.filter(img => img.uploadError).length;
+                            if (failedCount > 0) {
+                                toast.error(`${failedCount} ảnh tải lên thất bại. Vui lòng thử lại.`);
+                            }
+                        }
+                        }).catch((error) => {
+                            console.error('Failed to pre-upload images:', error);
+                            toast.error('Lỗi tải ảnh lên. Vui lòng thử lại.');
+                        }).finally(() => {
+                            // Reset upload flag when done
+                            uploadInProgressRef.current = false;
+                        });
+                }, 50); // Small delay to ensure state update is processed
+            } else {
+                // No upload needed, reset flag
+                uploadInProgressRef.current = false;
+            }
+        }
+    }, [imagesData.length, preUploadAllImages]); // Only trigger when imagesData length changes (new files added)
 
     const handleDrag = (e: React.DragEvent) => {
         e.preventDefault();
@@ -253,7 +361,18 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
 
     if (!isOpen || !accessToken) return null;
 
-    // Progress Screen
+    // Check if any images are currently uploading (pre-upload phase)
+    const isPreUploading = imagesData.some(img => img.isUploading === true);
+    const preUploadingCount = imagesData.filter(img => img.isUploading === true).length;
+    const totalPreUploading = imagesData.length;
+    const overallPreUploadProgress = imagesData.length > 0
+        ? Math.round(
+            imagesData.reduce((sum, img) => sum + (img.uploadProgress || 0), 0) / imagesData.length
+          )
+        : 0;
+
+
+    // Progress Screen (finalize phase)
     if (showProgress) {
         return (
             <UploadProgress
@@ -449,6 +568,56 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
 
                     {/* Footer with Submit Button */}
                     <div className="upload-modal-footer" style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #e5e5e5', position: 'sticky', bottom: 0, backgroundColor: 'white' }}>
+                        {/* Upload Status Banner */}
+                        {(uploadStatus.uploading > 0 || uploadStatus.needsUpload > 0 || uploadStatus.failed > 0) && (
+                            <div style={{
+                                marginBottom: '16px',
+                                padding: '12px 16px',
+                                borderRadius: '8px',
+                                backgroundColor: uploadStatus.failed > 0 ? '#fef2f2' : uploadStatus.uploading > 0 ? '#eff6ff' : '#f0fdf4',
+                                border: `1px solid ${uploadStatus.failed > 0 ? '#fecaca' : uploadStatus.uploading > 0 ? '#bfdbfe' : '#bbf7d0'}`,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                fontSize: '0.875rem'
+                            }}>
+                                {uploadStatus.uploading > 0 && (
+                                    <>
+                                        <div className="spinner-circle" style={{ width: '16px', height: '16px', borderWidth: '2px' }}></div>
+                                        <span style={{ color: '#1e40af', fontWeight: '500' }}>
+                                            Đang tải {uploadStatus.uploading} ảnh lên... ({uploadStatus.uploaded}/{uploadStatus.total})
+                                        </span>
+                                    </>
+                                )}
+                                {uploadStatus.needsUpload > 0 && uploadStatus.uploading === 0 && (
+                                    <span style={{ color: '#166534', fontWeight: '500' }}>
+                                        ⏳ Đang chờ tải {uploadStatus.needsUpload} ảnh lên...
+                                    </span>
+                                )}
+                                {uploadStatus.failed > 0 && (
+                                    <span style={{ color: '#991b1b', fontWeight: '500' }}>
+                                        ❌ {uploadStatus.failed} ảnh tải lên thất bại. Vui lòng thử lại.
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                        {uploadStatus.uploaded === uploadStatus.total && uploadStatus.uploading === 0 && uploadStatus.failed === 0 && imagesData.length > 0 && (
+                            <div style={{
+                                marginBottom: '16px',
+                                padding: '12px 16px',
+                                borderRadius: '8px',
+                                backgroundColor: '#f0fdf4',
+                                border: '1px solid #bbf7d0',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                fontSize: '0.875rem',
+                                color: '#166534',
+                                fontWeight: '500'
+                            }}>
+                                ✅ Tất cả {uploadStatus.uploaded} ảnh đã tải lên thành công!
+                            </div>
+                        )}
                         <a href="#" className="footer-link"></a>
                         <div className="footer-buttons" style={{ position: 'relative', display: 'flex', gap: '12px', alignItems: 'center', justifyContent: 'flex-end', width: '100%' }}>
                             <Button type="button" variant="outline" onClick={handleCancel}>
@@ -476,6 +645,54 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                 >
                                     {loading ? 'Đang tải...' : `Gửi ${imagesData.length} ảnh`}
                                 </Button>
+                                {/* Always show status message when button is disabled */}
+                                {(!isFormValid || uploadStatus.uploading > 0) && !loading && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        bottom: 'calc(100% + 8px)',
+                                        right: 0,
+                                        padding: '12px 16px',
+                                        backgroundColor: '#1f2937',
+                                        color: 'white',
+                                        borderRadius: '8px',
+                                        fontSize: '0.875rem',
+                                        zIndex: 1000,
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                        minWidth: '250px',
+                                        maxWidth: '350px'
+                                    }}>
+                                        {uploadStatus.uploading > 0 && (
+                                            <div style={{ marginBottom: '4px' }}>
+                                                ⏳ Đang tải {uploadStatus.uploading} ảnh lên... ({uploadStatus.uploaded}/{uploadStatus.total})
+                                            </div>
+                                        )}
+                                        {uploadStatus.needsUpload > 0 && uploadStatus.uploading === 0 && (
+                                            <div style={{ marginBottom: '4px' }}>
+                                                ⏳ Đang chờ tải {uploadStatus.needsUpload} ảnh lên...
+                                            </div>
+                                        )}
+                                        {uploadStatus.failed > 0 && (
+                                            <div style={{ color: '#f87171', marginBottom: '4px' }}>
+                                                ❌ {uploadStatus.failed} ảnh tải lên thất bại. Vui lòng thử lại.
+                                            </div>
+                                        )}
+                                        {uploadStatus.uploaded === uploadStatus.total && uploadStatus.uploading === 0 && uploadStatus.failed === 0 && (
+                                            <div style={{ color: '#86efac', marginBottom: '4px' }}>
+                                                ✅ Tất cả ảnh đã tải lên thành công!
+                                            </div>
+                                        )}
+                                        {imagesData.some(img => !img.title.trim()) && (
+                                            <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.2)' }}>
+                                                📝 Vui lòng điền tiêu đề cho tất cả ảnh
+                                            </div>
+                                        )}
+                                        {imagesData.some(img => !img.category.trim()) && (
+                                            <div style={{ marginTop: '4px' }}>
+                                                📁 Vui lòng chọn danh mục cho tất cả ảnh
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                                 {showTooltip && !isFormValid && !loading && (
                                     <div style={{
                                         position: 'absolute',

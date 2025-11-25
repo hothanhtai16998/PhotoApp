@@ -1,6 +1,8 @@
 import express from 'express';
 import {
     uploadImage,
+    preUploadImage,
+    finalizeImageUpload,
     getImagesByUserId,
     downloadImage,
     getImageById,
@@ -48,6 +50,11 @@ router.patch('/:imageId/download', incrementDownload);
 router.get('/:imageId/download', downloadImage);
 
 // Protected routes (with CSRF protection for state-changing operations)
+// Pre-upload: Upload image to S3 only (no database record)
+router.post('/pre-upload', protectedRoute, validateCsrf, uploadLimiter, singleUpload, preUploadImage);
+// Finalize: Link metadata to pre-uploaded image and create database record
+router.post('/finalize', protectedRoute, validateCsrf, finalizeImageUpload);
+// Legacy upload endpoint (kept for backward compatibility)
 router.post('/upload', protectedRoute, validateCsrf, uploadLimiter, singleUpload, validateImageUpload, uploadImage);
 router.patch('/:imageId', protectedRoute, validateCsrf, updateImage);
 router.patch('/:imageId/replace', protectedRoute, validateCsrf, uploadLimiter, singleUpload, replaceImage);

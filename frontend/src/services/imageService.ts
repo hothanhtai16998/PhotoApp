@@ -23,7 +23,79 @@ interface FetchImagesResponse {
   };
 }
 
+export interface PreUploadResponse {
+  message: string;
+  uploadId: string;
+  publicId: string;
+  imageUrl: string;
+  thumbnailUrl: string;
+  smallUrl: string;
+  regularUrl: string;
+  imageAvifUrl: string;
+  thumbnailAvifUrl: string;
+  smallAvifUrl: string;
+  regularAvifUrl: string;
+}
+
+export interface FinalizeImageData {
+  uploadId: string;
+  publicId: string;
+  imageUrl: string;
+  thumbnailUrl: string;
+  smallUrl: string;
+  regularUrl: string;
+  imageAvifUrl: string;
+  thumbnailAvifUrl: string;
+  smallAvifUrl: string;
+  regularAvifUrl: string;
+  imageTitle: string;
+  imageCategory: string;
+  location?: string;
+  coordinates?: { latitude: number; longitude: number };
+  cameraModel?: string;
+  tags?: string[];
+}
+
 export const imageService = {
+  // Pre-upload: Upload image to S3 only (no database record)
+  preUploadImage: async (
+    imageFile: File,
+    onUploadProgress?: (progress: number) => void
+  ): Promise<PreUploadResponse> => {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+
+    const res = await api.post('/images/pre-upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      withCredentials: true,
+      timeout: 120000, // 2 minutes for uploads
+      onUploadProgress: (progressEvent) => {
+        if (onUploadProgress && progressEvent.total) {
+          // Calculate upload progress (0-100%)
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
+          onUploadProgress(percentCompleted);
+        }
+      },
+    });
+
+    return res.data;
+  },
+
+  // Finalize: Link metadata to pre-uploaded image and create database record
+  finalizeImageUpload: async (data: FinalizeImageData): Promise<{ message: string; image: Image }> => {
+    const res = await api.post('/images/finalize', data, {
+      withCredentials: true,
+      timeout: 30000, // 30 seconds should be enough for metadata save
+    });
+
+    return res.data;
+  },
+
+  // Legacy upload method (kept for backward compatibility)
   uploadImage: async (
     data: UploadImageData,
     onUploadProgress?: (progress: number) => void
