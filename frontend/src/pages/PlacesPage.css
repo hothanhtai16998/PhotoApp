@@ -9,6 +9,35 @@
   touch-action: pan-y; /* Allow vertical scrolling but handle horizontal swipes */
 }
 
+/* Auto-play progress indicator */
+.autoplay-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  z-index: 10000;
+  pointer-events: none;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.autoplay-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: #fff;
+  transition: none;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
+  border-radius: 0 2px 2px 0;
+  will-change: width;
+  box-sizing: border-box;
+  display: block;
+  transform: translateZ(0); /* Force hardware acceleration for smoother animation */
+}
+
 
 .loading-state {
   display: flex;

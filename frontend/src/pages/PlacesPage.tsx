@@ -35,7 +35,11 @@ function PlacesPage() {
   const [images, setImages] = useState<Image[]>([]);
   const [loading, setLoading] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
+  const [autoPlayProgress, setAutoPlayProgress] = useState(0);
   const autoPlayIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const progressStartTimeRef = useRef<number | null>(null);
+  const pausedProgressRef = useRef<number>(0);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
 
@@ -106,30 +110,112 @@ function PlacesPage() {
     goToSlide((currentSlide - 1 + images.length) % images.length);
   }, [currentSlide, goToSlide, images.length]);
 
-  // Auto-play carousel (5 seconds interval) - pauses on hover
+  // Auto-play carousel (6.2 seconds interval) - pauses on hover, with progress bar
   useEffect(() => {
-    // Clear any existing auto-play interval
-    if (autoPlayIntervalRef.current) {
-      clearInterval(autoPlayIntervalRef.current);
-      autoPlayIntervalRef.current = null;
-    }
-
-    if (images.length === 0 || isHovered) {
-      return;
-    }
-
-    // Auto-play interval - change slide every 5 seconds
-    autoPlayIntervalRef.current = setInterval(() => {
-      nextSlide();
-    }, 5000);
-
-    return () => {
+    if (images.length === 0) {
+      // Clear intervals if no images
       if (autoPlayIntervalRef.current) {
         clearInterval(autoPlayIntervalRef.current);
         autoPlayIntervalRef.current = null;
       }
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      return;
+    }
+
+    // If hovering, pause (save current progress and stop intervals)
+    if (isHovered) {
+      // Save current progress before pausing
+      if (progressStartTimeRef.current !== null) {
+        const elapsed = Date.now() - progressStartTimeRef.current;
+        pausedProgressRef.current = Math.min((elapsed / 6200) * 100, 100);
+      }
+      // Pause intervals
+      if (autoPlayIntervalRef.current) {
+        clearInterval(autoPlayIntervalRef.current);
+        autoPlayIntervalRef.current = null;
+      }
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      return;
+    }
+
+    // Resume/Start intervals when not hovering
+    // Clear any existing intervals first
+    if (autoPlayIntervalRef.current) {
+      clearInterval(autoPlayIntervalRef.current);
+      autoPlayIntervalRef.current = null;
+    }
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+
+    // Calculate start time based on paused progress (if resuming) or start fresh
+    const startProgress = pausedProgressRef.current;
+    const startTime = Date.now() - (startProgress / 100) * 6200;
+    progressStartTimeRef.current = startTime;
+
+    // Progress bar animation - synchronized with auto-play
+    // Update every 16ms for smoother animation (60fps)
+    progressIntervalRef.current = setInterval(() => {
+      if (progressStartTimeRef.current === null) return;
+      const elapsed = Date.now() - progressStartTimeRef.current;
+      const progress = Math.min((elapsed / 6200) * 100, 100);
+      setAutoPlayProgress(progress);
+    }, 16); // Update every 16ms (~60fps) for smooth animation
+
+    // Auto-play interval - change slide every 6.2 seconds
+    // Calculate delay based on remaining time if resuming from pause
+    const remainingTime = 6200 - (startProgress / 100) * 6200;
+    
+    const scheduleNextSlide = () => {
+      setAutoPlayProgress(100); // Ensure it reaches 100% before changing
+      nextSlide();
+      setAutoPlayProgress(0); // Reset immediately after slide change
+      pausedProgressRef.current = 0;
+      progressStartTimeRef.current = Date.now();
+    };
+
+    let timeoutId: NodeJS.Timeout | null = null;
+    
+    if (startProgress > 0) {
+      // Resume from pause - use setTimeout for the first slide change
+      timeoutId = setTimeout(() => {
+        scheduleNextSlide();
+        // Then set up the regular interval
+        autoPlayIntervalRef.current = setInterval(scheduleNextSlide, 6200);
+      }, remainingTime);
+    } else {
+      // Start fresh - use regular interval
+      autoPlayIntervalRef.current = setInterval(scheduleNextSlide, 6200);
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      if (autoPlayIntervalRef.current) {
+        clearInterval(autoPlayIntervalRef.current);
+        autoPlayIntervalRef.current = null;
+      }
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
     };
   }, [nextSlide, images.length, isHovered]);
+
+  // Reset progress when slide changes manually
+  useEffect(() => {
+    setAutoPlayProgress(0);
+    pausedProgressRef.current = 0;
+    progressStartTimeRef.current = null;
+  }, [currentSlide]);
 
   // Keyboard navigation - Arrow keys, Home, End
   useEffect(() => {
@@ -262,11 +348,19 @@ function PlacesPage() {
   return (
     <div 
       className="tripzo-page"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
+      {/* Auto-play progress bar */}
+      {images.length > 0 && (
+        <div className="autoplay-progress" style={{ opacity: isHovered ? 0.5 : 1 }}>
+          <div 
+            className="autoplay-progress-bar" 
+            style={{ width: `${autoPlayProgress}%` }}
+          />
+        </div>
+      )}
+
       {/* Main Carousel */}
       <div className="main-carousel-container">
         {images.map((image, index) => {
@@ -335,6 +429,8 @@ function PlacesPage() {
                 key={image._id}
                 className={`bottom-slide ${isActive ? 'active-thumbnail' : ''}`}
                 onClick={() => goToSlide(slideIndex)}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
               >
                 {thumbnailUrl ? (
                   <img
