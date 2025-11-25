@@ -180,12 +180,17 @@ function Slider() {
             return;
         }
 
-        // Trigger animation when transition completes (image is visible)
-        const timer = setTimeout(() => {
-            setAnimatingSlide(currentSlide);
-        }, 50); // Small delay to ensure DOM is ready
-        return () => clearTimeout(timer);
-    }, [currentSlide, isTransitioning]);
+        // Set animation state immediately when slide is active and not transitioning
+        // This ensures panels are visible even if animation hasn't triggered yet
+        if (!isTransitioning && slides.length > 0) {
+            // Use a small delay to ensure smooth animation, but set it reliably
+            const timer = setTimeout(() => {
+                setAnimatingSlide(currentSlide);
+            }, 100); // Delay for smooth animation effect
+            
+            return () => clearTimeout(timer);
+        }
+    }, [currentSlide, isTransitioning, slides.length]);
 
     // Auto-play functionality with progress indicator
     // Progress ring runs continuously for the full cycle (6.3s including transition)
@@ -358,12 +363,20 @@ function Slider() {
         >
             {/* Slides Container */}
             <div className="slider-container">
-                {slides.filter(slide => !deletedImageIds.includes(slide.id)).map((slide, index) => {
+                {slides.map((slide, index) => {
+                    // Skip deleted slides
+                    if (deletedImageIds.includes(slide.id)) {
+                        return null;
+                    }
+                    
                     const isActive = index === currentSlide;
                     const isFirstSlide = index === 0;
                     const isPrev = index === (currentSlide - 1 + slides.length) % slides.length;
                     const isNext = index === (currentSlide + 1) % slides.length;
                     const shouldShow = isActive || (isTransitioning && (isPrev || isNext));
+                    
+                    // Ensure panels show when slide is active (even during transition end)
+                    const shouldShowPanels = isActive;
 
                     return (
                         <div
@@ -447,8 +460,8 @@ function Slider() {
                             <div className="slide-overlay"></div>
 
                             {/* Title and Navigation in Bottom Left */}
-                            <div className={`slide-content-left ${isActive && !isTransitioning && animatingSlide === index ? 'active' : ''}`}>
-                                <h1 className={`slide-title ${isActive && !isTransitioning && animatingSlide === index ? 'active' : ''}`}>{slide.title}</h1>
+                            <div className={`slide-content-left ${shouldShowPanels ? 'active' : ''}`}>
+                                <h1 className={`slide-title ${shouldShowPanels ? 'active' : ''}`}>{slide.title || ''}</h1>
 
                                 {/* Image Info - Mobile Only */}
                                 <div className="slide-image-info-mobile">
@@ -494,8 +507,8 @@ function Slider() {
                             </div>
 
                             {/* Image Info in Bottom Right */}
-                            {(slide.location || slide.cameraModel || slide.createdAt) && (
-                                <div className={`slide-content-right ${isActive && !isTransitioning && animatingSlide === index ? 'active' : ''}`}>
+                            {(slide.uploadedBy || slide.location || slide.cameraModel || slide.createdAt) && (
+                                <div className={`slide-content-right ${shouldShowPanels ? 'active' : ''}`}>
                                     <div className="image-info-box">
                                         {slide.uploadedBy && (
                                             <div className="info-item">
