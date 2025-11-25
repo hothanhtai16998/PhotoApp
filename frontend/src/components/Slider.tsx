@@ -28,6 +28,7 @@ function Slider() {
     const [progress, setProgress] = useState(0);
     const [animationType, setAnimationType] = useState<SlideAnimationType>('slide');
     const [isTypewriterReversing, setIsTypewriterReversing] = useState(false);
+    const [slidesReady, setSlidesReady] = useState(false);
 
     // Touch/swipe handlers
     const touchStartX = useRef<number>(0);
@@ -37,6 +38,8 @@ function Slider() {
     const lastSlideIndexRef = useRef<number>(-1);
     const progressStartTimeRef = useRef<number>(0);
     const typewriterReverseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const hasInitializedRef = useRef<boolean>(false);
+    const prevAnimationTypeRef = useRef<SlideAnimationType | null>(null);
 
     // Fetch images from backend
     useEffect(() => {
@@ -122,11 +125,17 @@ function Slider() {
                     );
 
                     setSlides(finalSlides);
+                    // Mark slides as ready when they're first loaded
+                    // Use a separate effect trigger to ensure this happens
+                    if (finalSlides.length > 0) {
+                        setSlidesReady(true);
+                    }
                     // Reset to first slide when new images are loaded, but ensure valid index
                     if (finalSlides.length > 0 && currentSlide >= finalSlides.length) {
                         setCurrentSlide(0);
                     } else if (finalSlides.length === 0) {
                         setCurrentSlide(0);
+                        setSlidesReady(false);
                     }
                 } else {
                     // If no images, set empty array
@@ -202,16 +211,45 @@ function Slider() {
         if (slides.length === 0) {
             setProgress(0);
             progressRunningRef.current = false;
+            // Reset ref when no slides so we can detect when slides are loaded
             lastSlideIndexRef.current = -1;
+            hasInitializedRef.current = false;
+            setSlidesReady(false);
             return;
         }
 
-        // Only start progress if slide actually changed
-        const slideChanged = currentSlide !== lastSlideIndexRef.current;
-
-        if (!slideChanged) {
-            // Slide hasn't changed, don't restart
+        // Ensure we have valid slides before proceeding
+        if (currentSlide < 0 || currentSlide >= slides.length) {
             return;
+        }
+
+        // Check if slide changed
+        // On initial mount, lastSlideIndexRef.current is -1, so this will be true
+        const slideChanged = currentSlide !== lastSlideIndexRef.current;
+        
+        // On first load, always start auto-play
+        // Primary check: if lastSlideIndexRef is -1, slides just became available (most reliable)
+        // This is the key indicator that slides just loaded for the first time
+        const isFirstLoad = lastSlideIndexRef.current === -1;
+        
+        // Track previous animation type to detect changes
+        // If animation type changed, we need to restart auto-play
+        const animationTypeChanged = prevAnimationTypeRef.current !== null && prevAnimationTypeRef.current !== animationType;
+        
+        // Always proceed if slide changed OR it's first load OR animation type changed
+        // This ensures auto-play starts on initial mount and when animation type changes
+        if (!slideChanged && !isFirstLoad && !animationTypeChanged) {
+            // Slide hasn't changed, it's not first load, and animation type hasn't changed, don't restart
+            return;
+        }
+        
+        // Update previous animation type
+        prevAnimationTypeRef.current = animationType;
+        
+        // Mark as initialized BEFORE setting lastSlideIndexRef
+        // This ensures isFirstLoad check works correctly on this run
+        if (isFirstLoad) {
+            hasInitializedRef.current = true;
         }
 
         // Slide changed - reset and start fresh
@@ -219,7 +257,7 @@ function Slider() {
         lastSlideIndexRef.current = currentSlide;
         progressRunningRef.current = true;
         progressStartTimeRef.current = Date.now();
-        setProgress(0);
+        setProgress(0); // Reset progress to 0 to show the circle
         setIsTypewriterReversing(false); // Reset reverse state for new slide
 
         let animationFrameId: number | null = null;
@@ -269,12 +307,26 @@ function Slider() {
         animationFrameId = requestAnimationFrame(animate);
 
         // Advance to next slide after AUTO_PLAY_INTERVAL (full cycle)
+        // Store the slide index at timeout setup to check against ref when it fires
+        const slideIndexAtSetup = currentSlide;
+        const slidesLengthAtSetup = slides.length;
+        
         slideTimeout = setTimeout(() => {
-            // Only advance if we're still on the same slide
-            if (currentSlide === lastSlideIndexRef.current) {
+            // Check if we're still on the expected slide using ref
+            // The ref should match the slide index we stored when setting up the timeout
+            if (slideIndexAtSetup === lastSlideIndexRef.current && slideIndexAtSetup >= 0 && slidesLengthAtSetup > 0) {
                 // Inline goToNext logic to avoid dependency on isTransitioning
                 setIsTransitioning(true);
-                setCurrentSlide((prev) => (prev + 1) % slides.length);
+                // Use functional update to get latest slides.length from state
+                setCurrentSlide((prev) => {
+                    // Double-check we're still on the expected slide
+                    if (prev === slideIndexAtSetup) {
+                        // Use the stored slides length to avoid stale closure
+                        // But also get current length as fallback
+                        return (prev + 1) % slidesLengthAtSetup;
+                    }
+                    return prev;
+                });
                 transitionTimeout = setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
             }
         }, AUTO_PLAY_INTERVAL);
@@ -290,7 +342,7 @@ function Slider() {
                 typewriterReverseTimeoutRef.current = null;
             }
         };
-    }, [currentSlide, slides.length, animationType]);
+    }, [currentSlide, slides.length, animationType, slidesReady]);
 
     // Keyboard navigation
     useEffect(() => {
