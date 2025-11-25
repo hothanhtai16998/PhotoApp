@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi" style="overflow-y: scroll; scrollbar-gutter: stable;">
+<html lang="vi">
 	<head>
 		<meta charset="UTF-8" />
 		<link
@@ -28,13 +28,34 @@
 		<!-- Performance: Load critical fonts with font-display swap (no inline handlers for CSP compliance) -->
 		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Urbanist:wght@700&family=Proxima+Nova:wght@400;500;600&display=swap" />
 		<style>
-			/* Critical: Prevent scrollbar flash - override Tailwind if needed */
+			/* CRITICAL: Hide scrollbar IMMEDIATELY on page load to prevent flash */
+			/* Must be in <head> and load BEFORE any other CSS */
+			/* This prevents scrollbar from appearing during page refresh */
 			html {
-				overflow-y: scroll !important;
+				overflow-y: auto !important;
+				overflow-x: hidden !important;
 				scrollbar-gutter: stable !important;
+				scrollbar-width: none !important; /* Firefox */
+				-ms-overflow-style: none !important; /* IE and Edge */
+			}
+			html::-webkit-scrollbar {
+				display: none !important; /* Chrome, Safari, Opera */
+				width: 0 !important;
+				height: 0 !important;
 			}
 			body {
 				overflow-y: visible !important;
+				overflow-x: hidden !important;
+			}
+			/* Hide scrollbars on all elements to prevent any flash */
+			* {
+				scrollbar-width: none !important; /* Firefox */
+				-ms-overflow-style: none !important; /* IE and Edge */
+			}
+			*::-webkit-scrollbar {
+				display: none !important; /* Chrome, Safari, Opera */
+				width: 0 !important;
+				height: 0 !important;
 			}
 		</style>
 	</head>

@@ -1,3 +1,5 @@
+/* MINIMAL - NO SCROLLBAR FIXES YET */
+
 /* Image Modal Overlay */
 .image-modal-overlay {
   position: fixed;
@@ -8,12 +10,20 @@
   background: rgba(77, 77, 77, 0.6);
   z-index: 1000;
   cursor: pointer;
-  animation: fadeIn 0.2s ease;
+  /* DISABLE ANIMATION TO TEST - might be causing flash */
+  /* animation: fadeIn 0.2s ease; */
+  opacity: 1;
   -webkit-tap-highlight-color: transparent;
   touch-action: none;
   overflow: hidden;
   /* Prevent scrolling on overlay */
   overscroll-behavior: none;
+  /* Prevent layout shifts that could cause flash */
+  will-change: opacity;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  /* Ensure overlay doesn't cause layout shift */
+  contain: layout style paint;
 }
 
 @keyframes fadeIn {
@@ -30,7 +40,7 @@
   position: fixed;
   top: 20px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateZ(0);
   width: 90%;
   max-width: 1800px;
   height: calc(100vh - 40px);
@@ -40,10 +50,18 @@
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  animation: modalFadeIn 0.3s ease;
+  /* DISABLE ANIMATION TO TEST - might be causing flash */
+  /* animation: modalFadeIn 0.3s ease; */
+  opacity: 1;
+  transform: translateX(-50%) translateZ(0);
   cursor: default;
   overflow: hidden;
   margin: 0;
+  /* Prevent layout shifts that could cause flash */
+  will-change: opacity, transform;
+  backface-visibility: hidden;
+  /* Ensure modal doesn't cause layout shift */
+  contain: layout style paint;
 }
 
 /* Page mode - no overlay, full page */
@@ -214,6 +232,13 @@
   padding: 0;
   min-height: 0;
   padding-bottom: 40px;
+  /* Hide scrollbar but keep scrolling functionality */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.image-modal-content::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 @media (max-width: 768px) {
@@ -1078,7 +1103,14 @@
   padding: 16px;
   overflow-y: auto;
   overflow-x: visible;
+  /* Hide scrollbar but keep scrolling functionality */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
   position: relative;
+}
+
+.info-modal-content::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 .info-published {

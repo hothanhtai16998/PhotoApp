@@ -244,12 +244,6 @@
 		--sidebar-ring: 217.2 91.2% 59.8%;
 	}
 
-	html {
-		overflow-x: hidden;
-		overflow-y: scroll; /* Always show scrollbar to prevent flash */
-		scrollbar-gutter: stable; /* Reserve space for scrollbar (modern browsers) */
-		width: 100%;
-	}
 
 	body {
 		@apply text-slate-800 dark:text-slate-200;
@@ -258,6 +252,22 @@
 		width: 100%;
 	}
 }
+
+	html {
+		overflow-x: hidden !important;
+		overflow-y: auto !important; /* Auto - only show scrollbar when needed */
+		scrollbar-gutter: stable !important; /* Reserve space for scrollbar (modern browsers) */
+		width: 100%;
+		/* Hide scrollbar but keep functionality - use !important to override Tailwind */
+		scrollbar-width: none !important; /* Firefox */
+		-ms-overflow-style: none !important; /* IE and Edge */
+	}
+	
+	html::-webkit-scrollbar {
+		display: none !important; /* Chrome, Safari, Opera */
+		width: 0 !important;
+		height: 0 !important;
+	}
 
 /* Chat App Utility Classes */
 @layer components {

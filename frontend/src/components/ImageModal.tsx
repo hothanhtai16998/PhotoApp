@@ -141,24 +141,41 @@ const ImageModal = ({
   // Lock body scroll when modal is open (only when rendered as modal, not page)
   useEffect(() => {
     if (!renderAsPage) {
-      // Calculate scrollbar width to prevent layout shift
-      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-      
-      // Save current scroll position and padding
-      const scrollY = window.scrollY;
-      const originalPaddingRight = document.body.style.paddingRight;
-      const originalOverflow = document.body.style.overflow;
-      
-      // Lock body scroll and compensate for scrollbar width
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.width = '100%';
-      document.body.style.overflow = 'hidden';
-      // Add padding to compensate for scrollbar width to prevent layout shift
-      if (scrollbarWidth > 0) {
-        document.body.style.paddingRight = `${scrollbarWidth}px`;
-      }
-      
+      // SOLUTION: Prevent scrolling without any style changes or scrollTo calls
+      // This prevents any visual flash
+      // const scrollY = window.scrollY; // Not needed if we don't restore scroll position
+
+      // Prevent all scroll events - don't call scrollTo as it causes flash
+      const preventScroll = (e: Event) => {
+        // Allow scrolling within modal content
+        const target = e.target as HTMLElement;
+        if (target.closest('.image-modal-content') || target.closest('.image-modal')) {
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      };
+
+      // Prevent keyboard scrolling
+      const preventKeyboardScroll = (e: KeyboardEvent) => {
+        if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) {
+          const target = e.target as HTMLElement;
+          if (!target.closest('.image-modal-content') &&
+            target.tagName !== 'INPUT' &&
+            target.tagName !== 'TEXTAREA' &&
+            !target.isContentEditable) {
+            e.preventDefault();
+          }
+        }
+      };
+
+      // Use capture phase to prevent scroll before it happens
+      window.addEventListener('wheel', preventScroll, { passive: false, capture: true });
+      window.addEventListener('touchmove', preventScroll, { passive: false, capture: true });
+      window.addEventListener('scroll', preventScroll, { passive: false, capture: true });
+      window.addEventListener('keydown', preventKeyboardScroll, { passive: false, capture: true });
+
       // Prevent scroll events on overlay from affecting body
       const handleOverlayWheel = (e: WheelEvent) => {
         e.preventDefault();
@@ -189,16 +206,18 @@ const ImageModal = ({
         if (overlay) {
           overlay.removeEventListener('wheel', handleOverlayWheel);
         }
-        // Restore body scroll and padding
-        const savedScrollY = document.body.style.top;
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.width = '';
-        document.body.style.overflow = originalOverflow || '';
-        document.body.style.paddingRight = originalPaddingRight || '';
-        if (savedScrollY) {
-          window.scrollTo(0, parseInt(savedScrollY || '0') * -1);
-        }
+
+        // Remove scroll lock
+        window.removeEventListener('scroll', preventScroll, { capture: true } as EventListenerOptions);
+        window.removeEventListener('wheel', preventScroll, { capture: true } as EventListenerOptions);
+        window.removeEventListener('touchmove', preventScroll, { capture: true } as EventListenerOptions);
+        window.removeEventListener('keydown', preventKeyboardScroll, { capture: true } as EventListenerOptions);
+
+        // DON'T restore scroll position - this might be causing the flash
+        // The page should stay where it was when modal closes
+        // requestAnimationFrame(() => {
+        //   window.scrollTo(0, scrollY);
+        // });
       };
     }
   }, [renderAsPage]);
@@ -356,7 +375,7 @@ const ImageModal = ({
       .filter(img => img._id !== image._id) // Exclude current image
       .map(img => {
         let score = 0;
-        let reasons: string[] = []; // Track why images are related (for debugging)
+        const reasons: string[] = []; // Track why images are related (for debugging)
 
         // Same photographer (highest priority - 100 points)
         const imgPhotographerId = img.uploadedBy?._id || img.uploadedBy;

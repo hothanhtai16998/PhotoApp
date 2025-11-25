@@ -22,27 +22,39 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
       if (header) {
         const height = header.offsetHeight
         setHeaderHeight(height)
-        // Set CSS variable for use in CSS
-        document.documentElement.style.setProperty('--header-height', `${height}px`)
+        // Set CSS variable for use in CSS - use requestAnimationFrame to prevent flash
+        requestAnimationFrame(() => {
+          document.documentElement.style.setProperty('--header-height', `${height}px`)
+        })
       }
     }
 
     // Initial calculation
     updateHeaderHeight()
 
-    // Update on window resize
-    window.addEventListener('resize', updateHeaderHeight)
+    // Update on window resize - debounce to prevent excessive updates
+    let resizeTimer: NodeJS.Timeout | null = null
+    const handleResize = () => {
+      if (resizeTimer) clearTimeout(resizeTimer)
+      resizeTimer = setTimeout(updateHeaderHeight, 100)
+    }
+    window.addEventListener('resize', handleResize)
 
     // Use ResizeObserver to watch for header size changes
     const header = document.querySelector('.unsplash-header')
     let resizeObserver: ResizeObserver | null = null
     if (header) {
-      resizeObserver = new ResizeObserver(updateHeaderHeight)
+      resizeObserver = new ResizeObserver(() => {
+        // Debounce ResizeObserver updates too
+        if (resizeTimer) clearTimeout(resizeTimer)
+        resizeTimer = setTimeout(updateHeaderHeight, 100)
+      })
       resizeObserver.observe(header)
     }
 
     return () => {
-      window.removeEventListener('resize', updateHeaderHeight)
+      window.removeEventListener('resize', handleResize)
+      if (resizeTimer) clearTimeout(resizeTimer)
       if (resizeObserver) {
         resizeObserver.disconnect()
       }

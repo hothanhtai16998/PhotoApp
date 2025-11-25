@@ -170,16 +170,8 @@ export const useKeyboardNavigation = ({
     document.addEventListener('keydown', handleKeyboard);
     
     // Prevent page/body scrolling when modal is open
-    // Calculate scrollbar width to prevent layout shift
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    const originalBodyOverflow = document.body.style.overflow;
-    const originalBodyPaddingRight = document.body.style.paddingRight;
-    
-    document.body.style.overflow = 'hidden';
-    // Compensate for scrollbar width to prevent layout shift
-    if (scrollbarWidth > 0) {
-      document.body.style.paddingRight = `${scrollbarWidth}px`;
-    }
+    // DON'T change body overflow - it causes scrollbar flash
+    // Use event handlers instead to prevent scrolling
     
     // Prevent scrolling on the image grid container
     const gridContainer = document.querySelector('.image-grid-container');
@@ -187,15 +179,32 @@ export const useKeyboardNavigation = ({
       (gridContainer as HTMLElement).style.overflow = 'hidden';
     }
 
+    // Prevent scroll events on body/window
+    const preventBodyScroll = (e: Event) => {
+      // Allow scrolling within modal content
+      const target = e.target as HTMLElement;
+      if (target.closest('.image-modal-content') || target.closest('.image-modal')) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    };
+
     // Add wheel event listener to document to catch all scroll events
     document.addEventListener('wheel', handleWheel, { passive: false });
+    // Prevent body scrolling via event handlers (no style changes = no flash)
+    window.addEventListener('wheel', preventBodyScroll, { passive: false, capture: true });
+    window.addEventListener('touchmove', preventBodyScroll, { passive: false, capture: true });
+    window.addEventListener('scroll', preventBodyScroll, { passive: false, capture: true });
 
     return () => {
       document.removeEventListener('keydown', handleKeyboard);
       document.removeEventListener('wheel', handleWheel);
-      // Restore original styles
-      document.body.style.overflow = originalBodyOverflow;
-      document.body.style.paddingRight = originalBodyPaddingRight;
+      window.removeEventListener('wheel', preventBodyScroll, { capture: true } as EventListenerOptions);
+      window.removeEventListener('touchmove', preventBodyScroll, { capture: true } as EventListenerOptions);
+      window.removeEventListener('scroll', preventBodyScroll, { capture: true } as EventListenerOptions);
+      // Restore grid container
       const gridContainer = document.querySelector('.image-grid-container');
       if (gridContainer) {
         (gridContainer as HTMLElement).style.overflow = '';
