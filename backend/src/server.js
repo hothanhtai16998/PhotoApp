@@ -87,7 +87,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 app.use(
     cors({
-        origin: env.CLIENT_URL,
+        origin: env.NODE_ENV === 'development' 
+            ? ['http://localhost:3000', 'http://localhost:5173', env.CLIENT_URL].filter(Boolean)
+            : env.CLIENT_URL,
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'X-XSRF-TOKEN', 'X-CSRF-Token'],

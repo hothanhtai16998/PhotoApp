@@ -141,13 +141,23 @@ const ImageModal = ({
   // Lock body scroll when modal is open (only when rendered as modal, not page)
   useEffect(() => {
     if (!renderAsPage) {
-      // Save current scroll position
+      // Calculate scrollbar width to prevent layout shift
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      
+      // Save current scroll position and padding
       const scrollY = window.scrollY;
-      // Lock body scroll
+      const originalPaddingRight = document.body.style.paddingRight;
+      const originalOverflow = document.body.style.overflow;
+      
+      // Lock body scroll and compensate for scrollbar width
       document.body.style.position = 'fixed';
       document.body.style.top = `-${scrollY}px`;
       document.body.style.width = '100%';
       document.body.style.overflow = 'hidden';
+      // Add padding to compensate for scrollbar width to prevent layout shift
+      if (scrollbarWidth > 0) {
+        document.body.style.paddingRight = `${scrollbarWidth}px`;
+      }
       
       // Prevent scroll events on overlay from affecting body
       const handleOverlayWheel = (e: WheelEvent) => {
@@ -179,14 +189,15 @@ const ImageModal = ({
         if (overlay) {
           overlay.removeEventListener('wheel', handleOverlayWheel);
         }
-        // Restore body scroll
-        const scrollY = document.body.style.top;
+        // Restore body scroll and padding
+        const savedScrollY = document.body.style.top;
         document.body.style.position = '';
         document.body.style.top = '';
         document.body.style.width = '';
-        document.body.style.overflow = '';
-        if (scrollY) {
-          window.scrollTo(0, parseInt(scrollY || '0') * -1);
+        document.body.style.overflow = originalOverflow || '';
+        document.body.style.paddingRight = originalPaddingRight || '';
+        if (savedScrollY) {
+          window.scrollTo(0, parseInt(savedScrollY || '0') * -1);
         }
       };
     }

@@ -41,7 +41,11 @@ export const uploadImage = asyncHandler(async (req, res) => {
         });
     }
 
-    if (!imageTitle || !imageCategory) {
+    // Validate and trim inputs
+    const trimmedTitle = typeof imageTitle === 'string' ? imageTitle.trim() : '';
+    const trimmedCategory = typeof imageCategory === 'string' ? imageCategory.trim() : String(imageCategory || '');
+
+    if (!trimmedTitle || !trimmedCategory) {
         return res.status(400).json({
             message: 'Tiêu đề và danh mục của ảnh không được để trống',
         });
@@ -49,13 +53,13 @@ export const uploadImage = asyncHandler(async (req, res) => {
 
     // Find category by name (case-insensitive) - accept either category name or ID
     let categoryDoc;
-    if (mongoose.Types.ObjectId.isValid(imageCategory)) {
+    if (mongoose.Types.ObjectId.isValid(trimmedCategory)) {
         // If it's a valid ObjectId, try to find by ID
-        categoryDoc = await Category.findById(imageCategory);
+        categoryDoc = await Category.findById(trimmedCategory);
     } else {
         // Otherwise, find by name
         categoryDoc = await Category.findOne({
-            name: { $regex: new RegExp(`^${imageCategory.trim()}$`, 'i') },
+            name: { $regex: new RegExp(`^${trimmedCategory}$`, 'i') },
             isActive: true,
         });
     }
@@ -138,7 +142,7 @@ export const uploadImage = asyncHandler(async (req, res) => {
             smallAvifUrl: uploadResult.smallAvifUrl, // Small - AVIF
             regularAvifUrl: uploadResult.regularAvifUrl, // Regular - AVIF
             publicId: uploadResult.publicId,
-            imageTitle: imageTitle.trim(),
+            imageTitle: trimmedTitle,
             imageCategory: categoryDoc._id, // Use category ObjectId directly
             uploadedBy: userId,
             location: location?.trim() || undefined,

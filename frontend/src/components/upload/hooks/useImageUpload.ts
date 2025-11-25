@@ -45,8 +45,9 @@ export const useImageUpload = ({ onSuccess }: UseImageUploadProps = {}) => {
     }
   }, []);
 
-  const validateAllImages = useCallback((imagesData: ImageData[]): boolean => {
-    const updated = imagesData.map((img) => {
+  // Shared validation function that returns images with errors
+  const validateImagesWithErrors = useCallback((imagesData: ImageData[]): ImageData[] => {
+    return imagesData.map((img) => {
       const errors: { title?: string; category?: string } = {};
       if (!img.title.trim()) {
         errors.title = 'Title is required';
@@ -56,8 +57,12 @@ export const useImageUpload = ({ onSuccess }: UseImageUploadProps = {}) => {
       }
       return { ...img, errors };
     });
-    return updated.every((img) => Object.keys(img.errors).length === 0);
   }, []);
+
+  const validateAllImages = useCallback((imagesData: ImageData[]): boolean => {
+    const updated = validateImagesWithErrors(imagesData);
+    return updated.every((img) => Object.keys(img.errors).length === 0);
+  }, [validateImagesWithErrors]);
 
   const handleSubmitAll = useCallback(
     async (imagesData: ImageData[]) => {
@@ -190,5 +195,7 @@ export const useImageUpload = ({ onSuccess }: UseImageUploadProps = {}) => {
     loading,
     handleSubmitAll,
     resetUploadState,
+    validateAllImages,
+    validateImagesWithErrors,
   };
 };

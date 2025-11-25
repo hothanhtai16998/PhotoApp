@@ -244,14 +244,17 @@
 		--sidebar-ring: 217.2 91.2% 59.8%;
 	}
 
-	body {
-		@apply text-slate-800 dark:text-slate-200;
+	html {
 		overflow-x: hidden;
+		overflow-y: scroll; /* Always show scrollbar to prevent flash */
+		scrollbar-gutter: stable; /* Reserve space for scrollbar (modern browsers) */
 		width: 100%;
 	}
 
-	html {
+	body {
+		@apply text-slate-800 dark:text-slate-200;
 		overflow-x: hidden;
+		overflow-y: visible; /* Let html handle scrolling */
 		width: 100%;
 	}
 }

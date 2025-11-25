@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" style="overflow-y: scroll; scrollbar-gutter: stable;">
 	<head>
 		<meta charset="UTF-8" />
 		<link
@@ -27,6 +27,16 @@
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<!-- Performance: Load critical fonts with font-display swap (no inline handlers for CSP compliance) -->
 		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Urbanist:wght@700&family=Proxima+Nova:wght@400;500;600&display=swap" />
+		<style>
+			/* Critical: Prevent scrollbar flash - override Tailwind if needed */
+			html {
+				overflow-y: scroll !important;
+				scrollbar-gutter: stable !important;
+			}
+			body {
+				overflow-y: visible !important;
+			}
+		</style>
 	</head>
 	<body>
 		<div id="root"></div>

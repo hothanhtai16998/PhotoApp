@@ -28,6 +28,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
         loadingCategories,
         loadCategories,
         showProgress,
+        validateImagesWithErrors,
         showSuccess,
         uploadingIndex,
         totalUploads,
@@ -147,20 +148,12 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
     };
 
     const handleSubmit = async () => {
-        // Validate all images first
-        const updated = imagesData.map(img => {
-            const errors: { title?: string; category?: string } = {};
-            if (!img.title.trim()) {
-                errors.title = 'Title is required';
-            }
-            if (!img.category.trim()) {
-                errors.category = 'Category is required';
-            }
-            return { ...img, errors };
-        });
-        setImagesData(updated);
+        // Use shared validation function to avoid duplication
+        const validatedImages = validateImagesWithErrors(imagesData);
+        setImagesData(validatedImages);
 
-        if (!updated.every(img => Object.keys(img.errors).length === 0)) {
+        // Check if all images are valid
+        if (!validatedImages.every(img => Object.keys(img.errors).length === 0)) {
             return;
         }
 
@@ -200,7 +193,20 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
     // Prevent body scroll when modal is open
     useEffect(() => {
         if (isOpen) {
+            // Calculate scrollbar width to prevent layout shift
+            const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+            const originalPaddingRight = document.body.style.paddingRight;
+            
             document.body.style.overflow = 'hidden';
+            // Add padding to compensate for scrollbar width to prevent layout shift
+            if (scrollbarWidth > 0) {
+                document.body.style.paddingRight = `${scrollbarWidth}px`;
+            }
+            
+            return () => {
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = originalPaddingRight || '';
+            };
         } else {
             document.body.style.overflow = '';
         }

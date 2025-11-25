@@ -52,13 +52,34 @@ export default function SearchFiltersComponent({
   // Prevent body scroll when filter is open
   useEffect(() => {
     if (isOpen) {
-      // Save current scroll position
+      // Calculate scrollbar width to prevent layout shift
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      // Save current scroll position and padding
       const scrollY = window.scrollY;
+      const originalPaddingRight = document.body.style.paddingRight;
       // Lock body scroll
       document.body.style.position = 'fixed';
       document.body.style.top = `-${scrollY}px`;
       document.body.style.width = '100%';
       document.body.style.overflow = 'hidden';
+      // Add padding to compensate for scrollbar width to prevent layout shift
+      if (scrollbarWidth > 0) {
+        document.body.style.paddingRight = `${scrollbarWidth}px`;
+      }
+      
+      // Cleanup
+      return () => {
+        // Restore body scroll and padding
+        const savedScrollY = document.body.style.top;
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = originalPaddingRight || '';
+        if (savedScrollY) {
+          window.scrollTo(0, parseInt(savedScrollY || '0') * -1);
+        }
+      };
     } else {
       // Restore body scroll
       const scrollY = document.body.style.top;
@@ -77,6 +98,7 @@ export default function SearchFiltersComponent({
       document.body.style.top = '';
       document.body.style.width = '';
       document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
     };
   }, [isOpen]);
 
