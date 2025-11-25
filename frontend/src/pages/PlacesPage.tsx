@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { imageService } from "@/services/imageService";
 import type { Image } from "@/types/image";
@@ -34,6 +34,10 @@ function PlacesPage() {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [images, setImages] = useState<Image[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isHovered, setIsHovered] = useState(false);
+  const autoPlayIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
 
   // Fetch all images and select 10 random ones for today
   useEffect(() => {
@@ -102,24 +106,42 @@ function PlacesPage() {
     goToSlide((currentSlide - 1 + images.length) % images.length);
   }, [currentSlide, goToSlide, images.length]);
 
-  // Auto-play carousel (5 seconds interval)
+  // Auto-play carousel (5 seconds interval) - pauses on hover
   useEffect(() => {
-    if (images.length === 0) return;
-    const interval = setInterval(() => {
+    // Clear any existing auto-play interval
+    if (autoPlayIntervalRef.current) {
+      clearInterval(autoPlayIntervalRef.current);
+      autoPlayIntervalRef.current = null;
+    }
+
+    if (images.length === 0 || isHovered) {
+      return;
+    }
+
+    // Auto-play interval - change slide every 5 seconds
+    autoPlayIntervalRef.current = setInterval(() => {
       nextSlide();
     }, 5000);
-    return () => clearInterval(interval);
-  }, [nextSlide, images.length]);
 
-  // Keyboard navigation
+    return () => {
+      if (autoPlayIntervalRef.current) {
+        clearInterval(autoPlayIntervalRef.current);
+        autoPlayIntervalRef.current = null;
+      }
+    };
+  }, [nextSlide, images.length, isHovered]);
+
+  // Keyboard navigation - Arrow keys, Home, End
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key === "ArrowLeft") prevSlide();
       if (e.key === "ArrowRight") nextSlide();
+      if (e.key === "Home") goToSlide(0);
+      if (e.key === "End") goToSlide(images.length - 1);
     };
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [prevSlide, nextSlide]);
+  }, [prevSlide, nextSlide, goToSlide, images.length]);
 
 
   // Get best image URL
@@ -136,12 +158,12 @@ function PlacesPage() {
     );
   };
 
-  // Get next 2 images for bottom carousel
-  const getNextImages = () => {
+  // Get current and next image for bottom carousel
+  const getBottomCarouselImages = () => {
     if (images.length === 0) return [];
-    const next1 = images[(currentSlide + 1) % images.length];
-    const next2 = images[(currentSlide + 2) % images.length];
-    return [next1, next2].filter(Boolean);
+    const current = images[currentSlide];
+    const next = images[(currentSlide + 1) % images.length];
+    return [current, next].filter(Boolean);
   };
 
 
@@ -160,10 +182,70 @@ function PlacesPage() {
     );
   };
 
+
+  // Touch gesture handlers for swipe
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    const diffX = touchStartX.current - touchEndX;
+    const diffY = touchStartY.current - touchEndY;
+    
+    // Only trigger if horizontal swipe is greater than vertical (to avoid conflicts with scrolling)
+    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+      if (diffX > 0) {
+        nextSlide(); // Swipe left = next
+      } else {
+        prevSlide(); // Swipe right = previous
+      }
+    }
+    
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
+
+  // Preload next 2-3 images
+  useEffect(() => {
+    if (images.length === 0) return;
+    
+    const preloadImages = () => {
+      for (let i = 1; i <= 3; i++) {
+        const nextIndex = (currentSlide + i) % images.length;
+        const image = images[nextIndex];
+        if (!image) continue;
+        
+        const imageUrl = 
+          image.regularAvifUrl ||
+          image.regularUrl ||
+          image.imageAvifUrl ||
+          image.imageUrl ||
+          image.smallUrl ||
+          image.thumbnailUrl ||
+          null;
+        
+        if (imageUrl) {
+          const img = new window.Image();
+          img.src = imageUrl;
+        }
+      }
+    };
+    
+    preloadImages();
+  }, [currentSlide, images]);
+
   if (loading) {
     return (
       <div className="tripzo-page">
-        <div className="loading-state">Loading images...</div>
+        <div className="loading-state">
+          <div className="skeleton-main-slide" />
+          <div className="loading-text">Loading images...</div>
+        </div>
       </div>
     );
   }
@@ -176,10 +258,15 @@ function PlacesPage() {
     );
   }
 
-  const nextImages = getNextImages();
 
   return (
-    <div className="tripzo-page">
+    <div 
+      className="tripzo-page"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Main Carousel */}
       <div className="main-carousel-container">
         {images.map((image, index) => {
@@ -238,20 +325,26 @@ function PlacesPage() {
           <ChevronLeft size={20} />
         </button>
         <div className="bottom-carousel">
-          {nextImages.map((image, index) => {
+          {getBottomCarouselImages().map((image, index) => {
             const thumbnailUrl = getThumbnailUrl(image);
+            const slideIndex = index === 0 ? currentSlide : (currentSlide + 1) % images.length;
+            const isActive = index === 0; // First thumbnail is always the current slide
+            
             return (
               <div
                 key={image._id}
-                className="bottom-slide"
-                onClick={() => goToSlide((currentSlide + index + 1) % images.length)}
+                className={`bottom-slide ${isActive ? 'active-thumbnail' : ''}`}
+                onClick={() => goToSlide(slideIndex)}
               >
-                {thumbnailUrl && (
+                {thumbnailUrl ? (
                   <img
                     src={thumbnailUrl}
                     alt={image.imageTitle}
                     className="bottom-slide-image"
+                    loading="eager"
                   />
+                ) : (
+                  <div className="skeleton-loader" />
                 )}
               </div>
             );
