@@ -4,7 +4,6 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AdminRoute from "./components/auth/AdminRoute";
 import { Skeleton } from "./components/ui/skeleton";
 import FloatingContactButton from "./components/FloatingContactButton";
-import ContactOptionSelector from "./components/ContactOptionSelector";
 import { PageViewTracker } from "./components/PageViewTracker";
 
 // Lazy load pages for code splitting
@@ -35,15 +34,6 @@ const PageLoader = () => (
 
 
 function App() {
-  const [contactOption, setContactOption] = useState<"A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N">("A");
-
-  // Load saved option from localStorage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem("contactButtonOption") as "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N" | null;
-    if (saved && ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N"].includes(saved)) {
-      setContactOption(saved);
-    }
-  }, []);
 
   return (
     <Suspense fallback={<PageLoader />}>
@@ -75,13 +65,7 @@ function App() {
       </Routes>
       
       {/* Floating Contact Button - appears on all pages */}
-      <FloatingContactButton option={contactOption} />
-      
-      {/* Option Selector - for testing different designs */}
-      <ContactOptionSelector 
-        currentOption={contactOption} 
-        onOptionChange={setContactOption} 
-      />
+      <FloatingContactButton />
     </Suspense>
   )
 }

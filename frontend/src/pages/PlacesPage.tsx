@@ -246,6 +246,7 @@ function PlacesPage() {
     progressStartTimeRef.current = null;
   }, [currentSlide]);
 
+
   // Keyboard navigation - Arrow keys, Home, End
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -431,11 +432,6 @@ function PlacesPage() {
           );
         })}
 
-      </div>
-
-      {/* Let's Travel Section */}
-      <div className="lets-travel-section">
-        <h2 className="lets-travel-text">Let's travel</h2>
       </div>
 
       {/* Bottom Carousel */}

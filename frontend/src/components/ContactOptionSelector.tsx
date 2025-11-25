@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Settings, Star, Smartphone, Eye, Zap } from "lucide-react";
 import "./ContactOptionSelector.css";
 
-type ContactOption = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N";
+type ContactOption = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N" | "O" | "P";
 type Category = "all" | "recommended" | "mobile" | "minimal" | "visible";
 
 interface ContactOptionSelectorProps {
@@ -17,7 +17,7 @@ function ContactOptionSelector({ currentOption, onOptionChange }: ContactOptionS
     // Load saved option from localStorage
     useEffect(() => {
         const saved = localStorage.getItem("contactButtonOption") as ContactOption | null;
-        if (saved && ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N"].includes(saved)) {
+        if (saved && ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P"].includes(saved)) {
             onOptionChange(saved);
         }
     }, [onOptionChange]);
@@ -140,6 +140,22 @@ function ContactOptionSelector({ currentOption, onOptionChange }: ContactOptionS
             category: ["visible", "recommended"] as Category[],
             bestFor: "Maximum visibility",
             pros: ["Always visible", "Full width", "Professional"]
+        },
+        { 
+            value: "O" as ContactOption, 
+            label: "Uiverse Card Style", 
+            description: "Animated card with gradient background and sliding boxes",
+            category: ["recommended"] as Category[],
+            bestFor: "Modern, interactive design",
+            pros: ["Beautiful animations", "Unique design", "Interactive"]
+        },
+        { 
+            value: "P" as ContactOption, 
+            label: "Uiverse Card Variation", 
+            description: "Card with white border, purple-pink-yellow gradient, and 'Socials' text",
+            category: ["recommended"] as Category[],
+            bestFor: "Social media focused",
+            pros: ["White border accent", "Vibrant gradient", "Text logo"]
         },
     ];
 
