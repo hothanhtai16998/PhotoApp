@@ -40,6 +40,8 @@ function PlacesPage() {
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const progressStartTimeRef = useRef<number | null>(null);
   const pausedProgressRef = useRef<number>(0);
+  const isAutoPlayChangeRef = useRef<boolean>(false);
+  const nextSlideRef = useRef<() => void>();
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
 
@@ -105,6 +107,11 @@ function PlacesPage() {
     goToSlide((currentSlide + 1) % images.length);
   }, [currentSlide, goToSlide, images.length]);
 
+  // Keep ref updated with latest nextSlide
+  useEffect(() => {
+    nextSlideRef.current = nextSlide;
+  }, [nextSlide]);
+
   const prevSlide = useCallback(() => {
     if (images.length === 0) return;
     goToSlide((currentSlide - 1 + images.length) % images.length);
@@ -163,7 +170,11 @@ function PlacesPage() {
     // Progress bar animation - synchronized with auto-play
     // Update every 16ms for smoother animation (60fps)
     progressIntervalRef.current = setInterval(() => {
-      if (progressStartTimeRef.current === null) return;
+      // If progressStartTimeRef is null, don't update (but don't stop the interval)
+      if (progressStartTimeRef.current === null) {
+        // Keep the current progress value, don't update
+        return;
+      }
       const elapsed = Date.now() - progressStartTimeRef.current;
       const progress = Math.min((elapsed / 6200) * 100, 100);
       setAutoPlayProgress(progress);
@@ -175,10 +186,21 @@ function PlacesPage() {
     
     const scheduleNextSlide = () => {
       setAutoPlayProgress(100); // Ensure it reaches 100% before changing
-      nextSlide();
-      setAutoPlayProgress(0); // Reset immediately after slide change
+      isAutoPlayChangeRef.current = true; // Mark as auto-play change
+      if (nextSlideRef.current) {
+        nextSlideRef.current();
+      }
+      // Start progress timer immediately (synchronously)
+      // The useEffect that resets progress will be skipped because isAutoPlayChangeRef is true
+      setAutoPlayProgress(0);
       pausedProgressRef.current = 0;
+      // Update progressStartTimeRef immediately so the interval can use it
       progressStartTimeRef.current = Date.now();
+      // Reset the flag after ensuring the useEffect has checked it
+      // Use a longer timeout to ensure the useEffect runs first
+      setTimeout(() => {
+        isAutoPlayChangeRef.current = false;
+      }, 10);
     };
 
     let timeoutId: NodeJS.Timeout | null = null;
@@ -208,10 +230,17 @@ function PlacesPage() {
         progressIntervalRef.current = null;
       }
     };
-  }, [nextSlide, images.length, isHovered]);
+  }, [images.length, isHovered]);
 
-  // Reset progress when slide changes manually
+  // Reset progress when slide changes manually (not from auto-play)
   useEffect(() => {
+    // Check if it's an auto-play change - if so, don't reset
+    // The flag is set synchronously in scheduleNextSlide, so we check it immediately
+    if (isAutoPlayChangeRef.current) {
+      // It's an auto-play change, scheduleNextSlide will handle the reset
+      return;
+    }
+    // Manual change - reset progress
     setAutoPlayProgress(0);
     pausedProgressRef.current = 0;
     progressStartTimeRef.current = null;
