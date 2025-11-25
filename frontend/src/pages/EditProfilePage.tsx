@@ -141,8 +141,8 @@ function EditProfilePage() {
             const formData = new FormData();
 
             // Add text fields
-            formData.append('Tên', data.firstName);
-            formData.append('Họ', data.lastName);
+            formData.append('firstName', data.firstName);
+            formData.append('lastName', data.lastName);
             formData.append('email', data.email);
             if (data.bio) {
                 formData.append('bio', data.bio);
@@ -150,7 +150,7 @@ function EditProfilePage() {
 
             // Add avatar if selected
             if (selectedAvatar) {
-                formData.append('Ảnh đại diện', selectedAvatar);
+                formData.append('avatar', selectedAvatar);
             }
 
             await userService.updateProfile(formData);
