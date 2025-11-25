@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { loadContactButtonOption, saveContactButtonOption } from "@/utils/localStorage";
 import { Settings, Star, Smartphone, Eye, Zap } from "lucide-react";
 import "./ContactOptionSelector.css";
 
@@ -16,15 +17,13 @@ function ContactOptionSelector({ currentOption, onOptionChange }: ContactOptionS
 
     // Load saved option from localStorage
     useEffect(() => {
-        const saved = localStorage.getItem("contactButtonOption") as ContactOption | null;
-        if (saved && ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N"].includes(saved)) {
-            onOptionChange(saved);
-        }
+        const saved = loadContactButtonOption();
+        onOptionChange(saved);
     }, [onOptionChange]);
 
     const handleOptionChange = (option: ContactOption) => {
         onOptionChange(option);
-        localStorage.setItem("contactButtonOption", option);
+        saveContactButtonOption(option);
         setIsOpen(false);
     };
 

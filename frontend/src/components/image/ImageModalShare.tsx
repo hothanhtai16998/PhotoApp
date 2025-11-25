@@ -140,7 +140,7 @@ export const ImageModalShare = memo(({ image }: ImageModalShareProps) => {
         setShowShareMenu(false);
       } catch (error) {
         if ((error as Error).name !== 'AbortError') {
-          console.error('Share failed:', error);
+          // Share failed - user will see toast notification
           toast.error('Không thể chia sẻ. Vui lòng thử lại.');
         }
       }
@@ -157,7 +157,7 @@ export const ImageModalShare = memo(({ image }: ImageModalShareProps) => {
       toast.success('Đã sao chép liên kết vào clipboard');
       setShowShareMenu(false);
     } catch (error) {
-      console.error('Failed to copy to clipboard:', error);
+      // Copy failed - user will see toast notification
       toast.error('Không thể sao chép liên kết. Vui lòng thử lại.');
     }
   }, [getShareData]);

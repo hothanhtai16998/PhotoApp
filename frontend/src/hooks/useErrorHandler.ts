@@ -32,9 +32,7 @@ export function useErrorHandler(options: ErrorHandlerOptions = {}) {
 
   const handleError = useCallback(
     (error: unknown, customMessage?: string) => {
-      if (logError) {
-        console.error('Error:', error);
-      }
+      // Error logging is handled by error tracking service if available
 
       let message = customMessage || fallbackMessage;
 

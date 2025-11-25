@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { adminService } from '@/services/adminService';
+import type { AdminFavorite } from '@/types/admin';
 import { toast } from 'sonner';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,7 @@ import { Trash2, Search } from 'lucide-react';
 
 export function AdminFavorites() {
     const { hasPermission, isSuperAdmin } = usePermissions();
-    const [favorites, setFavorites] = useState<any[]>([]);
+    const [favorites, setFavorites] = useState<AdminFavorite[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
 
@@ -17,8 +18,7 @@ export function AdminFavorites() {
             return;
         }
         loadFavorites(1);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [isSuperAdmin, hasPermission]);
 
     const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
 

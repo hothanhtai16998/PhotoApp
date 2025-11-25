@@ -73,7 +73,7 @@ export const useImageModal = ({
         toast.success('Đã xóa khỏi yêu thích');
       }
     } catch (error) {
-      console.error('Failed to toggle favorite:', error);
+      // Error handled by toast in parent component
       toast.error('Không thể cập nhật yêu thích. Vui lòng thử lại.');
     } finally {
       setIsTogglingFavorite(false);

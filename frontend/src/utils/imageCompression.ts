@@ -33,14 +33,12 @@ export async function compressImage(
 				file,
 				compressionOptions
 			);
-			console.log(
-				`Image compressed: ${(file.size / 1024 / 1024).toFixed(2)}MB -> ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`
-			);
+			// Image compression successful
 			return compressedFile;
 		}
 		return file;
 	} catch (error) {
-		console.error('Image compression failed:', error);
+		// Compression failed - return original file
 		// Return original file if compression fails
 		return file;
 	}

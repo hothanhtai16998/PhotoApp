@@ -55,15 +55,12 @@ export const useImageStats = ({
             });
           }
         })
-        .catch((error) => {
-          console.error('Failed to increment view:', error);
+        .catch(() => {
           // Remove from set on error so it can be retried
           incrementedViewIds.current.delete(imageId);
         });
     }
-    // Only depend on image._id to avoid re-running when image object changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [image._id]);
+  }, [image._id, imageService]);
 
   // Handle download with increment
   const handleDownload = useCallback(async (
@@ -83,8 +80,8 @@ export const useImageStats = ({
           dailyDownloads: response.dailyDownloads || image.dailyDownloads
         });
       }
-    } catch (error) {
-      console.error('Failed to increment download:', error);
+    } catch {
+      // Silently fail - download increment is optional
     }
     // Then trigger the download callback if provided
     if (onDownload) {

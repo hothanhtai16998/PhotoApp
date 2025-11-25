@@ -31,7 +31,7 @@ export function updateFavoriteCache(imageId: string, isFavorited: boolean) {
       try {
         cb(isFavorited);
       } catch (error) {
-        console.error('Error in favorite callback:', error);
+        // Silently fail - favorite status update is optional
       }
     });
   }
@@ -130,7 +130,7 @@ export function useBatchedFavoriteCheck(imageId: string | undefined): boolean {
             }
           })
           .catch((error) => {
-            console.error('Failed to check favorites:', error);
+            // Silently fail - favorite check is optional
             // Clear all pending checks on error
             pendingChecks.clear();
           });

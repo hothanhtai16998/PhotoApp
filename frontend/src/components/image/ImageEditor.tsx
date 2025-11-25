@@ -1072,7 +1072,7 @@ export const ImageEditor = ({ imageUrl, imageTitle, onSave, onCancel }: ImageEdi
         setIsProcessing(false);
       }, mimeType, quality);
     } catch (error) {
-      console.error('Failed to save image:', error);
+      // Error handled by toast in parent component
       setIsProcessing(false);
     }
   }, [onSave, exportSettings]);

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { adminService } from '@/services/adminService';
+import type { PendingContent } from '@/types/admin';
 import { toast } from 'sonner';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,7 @@ import { CheckCircle, XCircle, Search } from 'lucide-react';
 
 export function AdminModeration() {
     const { hasPermission, isSuperAdmin } = usePermissions();
-    const [pendingContent, setPendingContent] = useState<any[]>([]);
+    const [pendingContent, setPendingContent] = useState<PendingContent[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
 

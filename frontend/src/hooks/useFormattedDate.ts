@@ -45,7 +45,7 @@ export function useFormattedDate(
 
       return dateObj.toLocaleDateString(locale, formatOptions);
     } catch (error) {
-      console.error('Error formatting date:', error);
+      // Silently fail - return original date string
       return null;
     }
   }, [date, locale, format, includeTime]);

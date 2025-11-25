@@ -96,7 +96,7 @@ export async function reverseGeocode(
 
 		return { location };
 	} catch (error) {
-		console.warn('Reverse geocoding error:', error);
+		// Silently fail - geocoding is optional
 		return {
 			location: null,
 			error: error instanceof Error ? error.message : 'Unknown error',
@@ -410,7 +410,7 @@ export async function searchLocations(
 
 		return suggestions;
 	} catch (error) {
-		console.warn('Location search error:', error);
+		// Silently fail - location search is optional
 		return [];
 	}
 }

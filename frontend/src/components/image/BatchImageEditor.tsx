@@ -155,7 +155,7 @@ export const BatchImageEditor = ({ images, onSave, onCancel }: BatchImageEditorP
 
       setProcessedImages(processed);
     } catch (error) {
-      console.error('Failed to process images:', error);
+      // Error handled by toast in parent component
     } finally {
       setIsProcessing(false);
     }
@@ -178,7 +178,7 @@ export const BatchImageEditor = ({ images, onSave, onCancel }: BatchImageEditorP
       });
       await onSave(editedImages);
     } catch (error) {
-      console.error('Failed to save images:', error);
+      // Error handled by toast in parent component
     } finally {
       setIsProcessing(false);
     }

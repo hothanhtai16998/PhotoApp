@@ -6,17 +6,10 @@ import { useImageStore } from '@/stores/useImageStore';
 import type { Image } from '@/types/image';
 import type { Slide } from '@/types/slide';
 import SlideAnimationSelector, { type SlideAnimationType } from './SlideAnimationSelector';
-// ============================================
-// SLIDE TIMING CONFIGURATION
-// ============================================
-// Change these values to adjust slide timing:
-const TRANSITION_DURATION = 1200; // Time for slide transition animation (ms)
-const IMAGE_VISIBLE_TIME = 5000; // Time image stays visible after transition (ms)
-// Total cycle time = TRANSITION_DURATION + IMAGE_VISIBLE_TIME
-const AUTO_PLAY_INTERVAL = TRANSITION_DURATION + IMAGE_VISIBLE_TIME;
-// ============================================
+import { useAutoPlay } from '@/hooks/useAutoPlay';
+import { SLIDER_CONSTANTS } from '@/utils/sliderConstants';
 
-const SWIPE_THRESHOLD = 50; // Minimum distance for swipe
+const { TRANSITION_DURATION, SWIPE_THRESHOLD, ORIENTATION_DETECTION_TIMEOUT, SLIDER_IMAGE_LIMIT, ANIMATION_DELAY } = SLIDER_CONSTANTS;
 
 function Slider() {
     const { deletedImageIds } = useImageStore();
@@ -25,7 +18,6 @@ function Slider() {
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [animatingSlide, setAnimatingSlide] = useState<number | null>(null);
-    const [progress, setProgress] = useState(0);
     const [animationType, setAnimationType] = useState<SlideAnimationType>('slide');
     const [isTypewriterReversing, setIsTypewriterReversing] = useState(false);
     const [slidesReady, setSlidesReady] = useState(false);
@@ -34,12 +26,7 @@ function Slider() {
     const touchStartX = useRef<number>(0);
     const touchEndX = useRef<number>(0);
     const sliderRef = useRef<HTMLDivElement>(null);
-    const progressRunningRef = useRef(false);
-    const lastSlideIndexRef = useRef<number>(-1);
-    const progressStartTimeRef = useRef<number>(0);
-    const typewriterReverseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const hasInitializedRef = useRef<boolean>(false);
-    const prevAnimationTypeRef = useRef<SlideAnimationType | null>(null);
+    const transitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Fetch images from backend
     useEffect(() => {
@@ -48,7 +35,7 @@ function Slider() {
                 setLoading(true);
                 // Use cache-busting to ensure fresh data (same as ImageGrid)
                 const response = await imageService.fetchImages({
-                    limit: 10, // Fetch up to 10 images for the slider
+                    limit: SLIDER_IMAGE_LIMIT,
                     page: 1,
                     _refresh: true // Cache-busting for fresh data
                 });
@@ -77,28 +64,33 @@ function Slider() {
                             // Use thumbnail or small URL for faster detection, fallback to regular URL
                             const detectionUrl = img.thumbnailUrl || img.smallUrl || imageUrl;
 
+                            let timeoutId: ReturnType<typeof setTimeout> | null = null;
+                            
                             await Promise.race([
                                 new Promise<void>((resolve) => {
                                     const testImg = new Image();
                                     testImg.crossOrigin = 'anonymous';
                                     testImg.onload = () => {
                                         isPortrait = testImg.naturalHeight > testImg.naturalWidth;
+                                        if (timeoutId) clearTimeout(timeoutId);
                                         resolve();
                                     };
                                     testImg.onerror = () => {
                                         // Default to landscape if image fails to load
+                                        if (timeoutId) clearTimeout(timeoutId);
                                         resolve();
                                     };
                                     testImg.src = detectionUrl;
                                 }),
                                 new Promise<void>((resolve) => {
-                                    // Increased timeout to 5 seconds for better detection
-                                    setTimeout(() => resolve(), 5000);
+                                    timeoutId = setTimeout(() => {
+                                        resolve();
+                                    }, ORIENTATION_DETECTION_TIMEOUT);
                                 })
                             ]);
                         } catch {
                             // If anything fails, default to landscape
-                            console.warn('Failed to detect image orientation, defaulting to landscape');
+                            // Error is handled silently to avoid console noise
                         }
 
                         const slideData: Slide = {
@@ -142,7 +134,7 @@ function Slider() {
                     setSlides([]);
                 }
             } catch (error) {
-                console.error('Error fetching images:', error);
+                // Error is handled silently - slides will remain empty
                 setSlides([]);
             } finally {
                 setLoading(false);
@@ -174,14 +166,24 @@ function Slider() {
         if (isTransitioning || slides.length === 0) return;
         setIsTransitioning(true);
         setCurrentSlide((prev) => (prev + 1) % slides.length);
-        setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
+        
+        // Clear any existing timeout
+        if (transitionTimeoutRef.current) {
+            clearTimeout(transitionTimeoutRef.current);
+        }
+        transitionTimeoutRef.current = setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
     }, [isTransitioning, slides.length]);
 
     const goToPrev = useCallback(() => {
         if (isTransitioning || slides.length === 0) return;
         setIsTransitioning(true);
         setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
-        setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
+        
+        // Clear any existing timeout
+        if (transitionTimeoutRef.current) {
+            clearTimeout(transitionTimeoutRef.current);
+        }
+        transitionTimeoutRef.current = setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
     }, [isTransitioning, slides.length]);
 
     // Trigger text animation when slide becomes active
@@ -199,150 +201,43 @@ function Slider() {
             // Use a small delay to ensure smooth animation, but set it reliably
             const timer = setTimeout(() => {
                 setAnimatingSlide(currentSlide);
-            }, 100); // Delay for smooth animation effect
+            }, ANIMATION_DELAY);
             
             return () => clearTimeout(timer);
         }
     }, [currentSlide, isTransitioning, slides.length]);
 
+    // Handle auto-play next slide transition
+    const handleAutoPlayNext = useCallback(() => {
+        if (isTransitioning || slides.length === 0) return;
+        setIsTransitioning(true);
+        setCurrentSlide((prev) => (prev + 1) % slides.length);
+        
+        // Clear any existing timeout
+        if (transitionTimeoutRef.current) {
+            clearTimeout(transitionTimeoutRef.current);
+        }
+        transitionTimeoutRef.current = setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
+    }, [isTransitioning, slides.length]);
+
     // Auto-play functionality with progress indicator
-    // Progress ring runs continuously for the full cycle (6.3s including transition)
+    const { progress } = useAutoPlay({
+        slidesLength: slides.length,
+        currentSlide,
+        animationType,
+        slidesReady,
+        onNextSlide: handleAutoPlayNext,
+        onTypewriterReverse: setIsTypewriterReversing,
+    });
+
+    // Cleanup transition timeout on unmount
     useEffect(() => {
-        if (slides.length === 0) {
-            setProgress(0);
-            progressRunningRef.current = false;
-            // Reset ref when no slides so we can detect when slides are loaded
-            lastSlideIndexRef.current = -1;
-            hasInitializedRef.current = false;
-            setSlidesReady(false);
-            return;
-        }
-
-        // Ensure we have valid slides before proceeding
-        if (currentSlide < 0 || currentSlide >= slides.length) {
-            return;
-        }
-
-        // Check if slide changed
-        // On initial mount, lastSlideIndexRef.current is -1, so this will be true
-        const slideChanged = currentSlide !== lastSlideIndexRef.current;
-        
-        // On first load, always start auto-play
-        // Primary check: if lastSlideIndexRef is -1, slides just became available (most reliable)
-        // This is the key indicator that slides just loaded for the first time
-        const isFirstLoad = lastSlideIndexRef.current === -1;
-        
-        // Track previous animation type to detect changes
-        // If animation type changed, we need to restart auto-play
-        const animationTypeChanged = prevAnimationTypeRef.current !== null && prevAnimationTypeRef.current !== animationType;
-        
-        // Always proceed if slide changed OR it's first load OR animation type changed
-        // This ensures auto-play starts on initial mount and when animation type changes
-        if (!slideChanged && !isFirstLoad && !animationTypeChanged) {
-            // Slide hasn't changed, it's not first load, and animation type hasn't changed, don't restart
-            return;
-        }
-        
-        // Update previous animation type
-        prevAnimationTypeRef.current = animationType;
-        
-        // Mark as initialized BEFORE setting lastSlideIndexRef
-        // This ensures isFirstLoad check works correctly on this run
-        if (isFirstLoad) {
-            hasInitializedRef.current = true;
-        }
-
-        // Slide changed - reset and start fresh
-        // Always reset refs to ensure clean state
-        lastSlideIndexRef.current = currentSlide;
-        progressRunningRef.current = true;
-        progressStartTimeRef.current = Date.now();
-        setProgress(0); // Reset progress to 0 to show the circle
-        setIsTypewriterReversing(false); // Reset reverse state for new slide
-
-        let animationFrameId: number | null = null;
-        let slideTimeout: ReturnType<typeof setTimeout> | null = null;
-        let transitionTimeout: ReturnType<typeof setTimeout> | null = null;
-        
-        // For typewriter animation: trigger reverse so it completes exactly when transition starts
-        // The transition starts at AUTO_PLAY_INTERVAL (6200ms = TRANSITION_DURATION + IMAGE_VISIBLE_TIME)
-        // We want reverse to complete exactly when transition begins, so:
-        // reverseStartTime = AUTO_PLAY_INTERVAL - reverse_duration
-        const TYPEWRITER_REVERSE_DURATION = 1500; // Time for reverse animation
-        // Start reverse so it completes exactly when transition begins (at AUTO_PLAY_INTERVAL)
-        const reverseStartTime = AUTO_PLAY_INTERVAL - TYPEWRITER_REVERSE_DURATION;
-        
-        if (animationType === 'typewriter' && reverseStartTime > 0) {
-            // Clear any existing timeout
-            if (typewriterReverseTimeoutRef.current) {
-                clearTimeout(typewriterReverseTimeoutRef.current);
-            }
-            
-            // Start reverse animation so it completes exactly when transition begins
-            typewriterReverseTimeoutRef.current = setTimeout(() => {
-                if (currentSlide === lastSlideIndexRef.current) {
-                    setIsTypewriterReversing(true);
-                }
-            }, reverseStartTime);
-        }
-
-        const animate = () => {
-            // Check if we should still be running (slide hasn't changed)
-            if (currentSlide !== lastSlideIndexRef.current || !progressRunningRef.current) {
-                return;
-            }
-
-            const elapsed = Date.now() - progressStartTimeRef.current;
-            const newProgress = Math.min((elapsed / AUTO_PLAY_INTERVAL) * 100, 100);
-            setProgress(newProgress);
-
-            if (newProgress < 100) {
-                animationFrameId = requestAnimationFrame(animate);
-            } else {
-                // Progress completed, but don't set progressRunningRef to false here
-                // Let the timeout handle the next slide transition
-            }
-        };
-
-        animationFrameId = requestAnimationFrame(animate);
-
-        // Advance to next slide after AUTO_PLAY_INTERVAL (full cycle)
-        // Store the slide index at timeout setup to check against ref when it fires
-        const slideIndexAtSetup = currentSlide;
-        const slidesLengthAtSetup = slides.length;
-        
-        slideTimeout = setTimeout(() => {
-            // Check if we're still on the expected slide using ref
-            // The ref should match the slide index we stored when setting up the timeout
-            if (slideIndexAtSetup === lastSlideIndexRef.current && slideIndexAtSetup >= 0 && slidesLengthAtSetup > 0) {
-                // Inline goToNext logic to avoid dependency on isTransitioning
-                setIsTransitioning(true);
-                // Use functional update to get latest slides.length from state
-                setCurrentSlide((prev) => {
-                    // Double-check we're still on the expected slide
-                    if (prev === slideIndexAtSetup) {
-                        // Use the stored slides length to avoid stale closure
-                        // But also get current length as fallback
-                        return (prev + 1) % slidesLengthAtSetup;
-                    }
-                    return prev;
-                });
-                transitionTimeout = setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
-            }
-        }, AUTO_PLAY_INTERVAL);
-
         return () => {
-            if (animationFrameId !== null) {
-                cancelAnimationFrame(animationFrameId);
-            }
-            if (slideTimeout) clearTimeout(slideTimeout);
-            if (transitionTimeout) clearTimeout(transitionTimeout);
-            if (typewriterReverseTimeoutRef.current) {
-                clearTimeout(typewriterReverseTimeoutRef.current);
-                typewriterReverseTimeoutRef.current = null;
+            if (transitionTimeoutRef.current) {
+                clearTimeout(transitionTimeoutRef.current);
             }
         };
-    }, [currentSlide, slides.length, animationType, slidesReady]);
+    }, []);
 
     // Keyboard navigation
     useEffect(() => {

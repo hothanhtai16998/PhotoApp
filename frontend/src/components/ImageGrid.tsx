@@ -16,6 +16,8 @@ import { favoriteService } from '@/services/favoriteService';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { applyImageFilters } from '@/utils/imageFilters';
 import { useBatchedFavoriteCheck } from '@/hooks/useBatchedFavoriteCheck';
+import { loadSearchFilters, saveSearchFilters, type SearchFilters } from '@/utils/localStorage';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 import './ImageGrid.css';
 
 // Memoized image item component to prevent unnecessary re-renders
@@ -41,6 +43,7 @@ const ImageGridItem = memo(({
   const hasUserInfo = image.uploadedBy && (image.uploadedBy.displayName || image.uploadedBy.username);
   const { accessToken } = useAuthStore();
   const [isTogglingFavorite, setIsTogglingFavorite] = useState<boolean>(false);
+  const { handleError } = useErrorHandler();
 
   // Use batched favorite check hook (reduces API calls)
   const isFavorited = useBatchedFavoriteCheck(image._id);
@@ -78,8 +81,7 @@ const ImageGridItem = memo(({
         toast.success('Đã xóa khỏi yêu thích');
       }
     } catch (error) {
-      console.error('Failed to toggle favorite:', error);
-      toast.error('Không thể cập nhật yêu thích. Vui lòng thử lại.');
+      handleError(error, 'Không thể cập nhật yêu thích. Vui lòng thử lại.');
     } finally {
       setIsTogglingFavorite(false);
     }
@@ -271,24 +273,10 @@ ImageGridItem.displayName = 'ImageGridItem';
 const ImageGrid = memo(() => {
   const { images, loading, error, pagination, currentSearch, currentCategory, currentLocation, fetchImages } = useImageStore();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { handleError } = useErrorHandler();
 
   // Load filters from localStorage - make it reactive (declare early to avoid TDZ issues)
-  const [filters, setFilters] = useState(() => {
-    try {
-      const stored = localStorage.getItem('photoApp_searchFilters');
-      if (stored) {
-        return JSON.parse(stored);
-      }
-    } catch (error) {
-      console.error('Failed to load filters:', error);
-    }
-    return {
-      orientation: 'all',
-      color: 'all',
-      dateFrom: '',
-      dateTo: '',
-    };
-  });
+  const [filters, setFilters] = useState(() => loadSearchFilters());
 
   // Get selected image slug from URL search params
   const imageSlugFromUrl = searchParams.get('image');
@@ -327,8 +315,7 @@ const ImageGrid = memo(() => {
         color: filters.color !== 'all' ? filters.color : undefined,
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [images.length, loading, filters.color, fetchImages]);
 
 
   // Note: Header component handles the refresh event to maintain category filters
@@ -345,7 +332,7 @@ const ImageGrid = memo(() => {
       location: currentLocation,
       color: filters.color !== 'all' ? filters.color : undefined,
     });
-  }, [pagination, loading, currentSearch, currentCategory, currentLocation, filters.color, fetchImages]);
+  }, [pagination, loading, currentSearch, currentCategory, currentLocation, filters.color, fetchImages, imageSlugFromUrl, setSearchParams]);
 
   const { loadMoreRef } = useInfiniteScroll({
     hasMore: pagination ? pagination.page < pagination.pages : false,
@@ -449,8 +436,8 @@ const ImageGrid = memo(() => {
               dateTo: '',
             });
           }
-        } catch (error) {
-          console.error('Failed to parse filters from storage:', error);
+        } catch {
+          // Silently fail - use default filters
         }
       }
     };
@@ -459,21 +446,8 @@ const ImageGrid = memo(() => {
 
     // Also listen for custom event from SearchBar (same window)
     const handleFilterChange = () => {
-      try {
-        const stored = localStorage.getItem('photoApp_searchFilters');
-        if (stored) {
-          setFilters(JSON.parse(stored));
-        } else {
-          setFilters({
-            orientation: 'all',
-            color: 'all',
-            dateFrom: '',
-            dateTo: '',
-          });
-        }
-      } catch (error) {
-        console.error('Failed to load filters:', error);
-      }
+      const loadedFilters = loadSearchFilters();
+      setFilters(loadedFilters);
     };
 
     window.addEventListener('filterChange', handleFilterChange);
@@ -637,8 +611,7 @@ const ImageGrid = memo(() => {
 
       toast.success('Tải ảnh thành công');
     } catch (error) {
-      console.error('Tải ảnh thất bại:', error);
-      toast.error('Tải ảnh thất bại. Vui lòng thử lại.');
+      handleError(error, 'Tải ảnh thất bại. Vui lòng thử lại.');
 
       // Fallback: try opening in new tab if download fails
       try {
@@ -646,7 +619,7 @@ const ImageGrid = memo(() => {
           window.open(image.imageUrl, '_blank');
         }
       } catch (fallbackError) {
-        console.error('Lỗi fallback khi tải ảnh:', fallbackError);
+        handleError(fallbackError, 'Không thể tải ảnh. Vui lòng thử lại.');
       }
     }
   }, []);

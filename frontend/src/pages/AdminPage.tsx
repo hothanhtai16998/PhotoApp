@@ -252,8 +252,7 @@ function AdminPage() {
         } else if (activeTab === 'roles') {
             loadAdminRoles();
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeTab]); // Only depend on activeTab to avoid infinite loops
+  }, [activeTab, loadAnalytics, loadRealtimeData]); // Only depend on activeTab to avoid infinite loops
 
     const handleDeleteUser = async (userId: string, username: string) => {
         if (!confirm(`Bạn có muốn xoá người dùng "${username}" không? Sẽ xoá cả ảnh mà người này đã đăng.`)) {

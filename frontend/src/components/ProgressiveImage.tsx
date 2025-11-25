@@ -32,42 +32,10 @@ const generateSmallUrl = (imageUrl: string): string => {
   return imageUrl;
 };
 
-// Module-level cache to persist loaded image URLs across component mounts
-// This prevents flashing when navigating back to the grid
+import { isImageCached, addToImageCache } from '@/utils/imageCache';
+
+// Keep local cache for component-specific tracking
 const globalLoadedImages = new Set<string>();
-
-/**
- * Check if an image is already loaded in the browser cache
- * Returns true if image loads quickly (likely cached)
- */
-const isImageCached = (url: string): Promise<boolean> => {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    let resolved = false;
-
-    const resolveOnce = (value: boolean) => {
-      if (!resolved) {
-        resolved = true;
-        resolve(value);
-      }
-    };
-
-    // Set a short timeout - if image loads quickly, it's likely cached
-    const timeout = setTimeout(() => resolveOnce(false), 50);
-
-    img.onload = () => {
-      clearTimeout(timeout);
-      resolveOnce(true);
-    };
-    img.onerror = () => {
-      clearTimeout(timeout);
-      resolveOnce(false);
-    };
-
-    img.src = url;
-  });
-};
 
 /**
  * ProgressiveImage component - loads images progressively like Unsplash
@@ -203,8 +171,7 @@ const ProgressiveImage = memo(({
         });
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [src, effectiveThumbnail, effectiveSmall]);
+  }, [src, effectiveThumbnail, effectiveSmall, thumbnailUrl, smallUrl, currentSrc, isImageCached]);
 
   // Use useLayoutEffect to check cache synchronously before paint
   // This prevents any flash by ensuring cached images are marked as loaded before render

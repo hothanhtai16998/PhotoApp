@@ -6,6 +6,7 @@ import { Skeleton } from "./components/ui/skeleton";
 import FloatingContactButton from "./components/FloatingContactButton";
 import ContactOptionSelector from "./components/ContactOptionSelector";
 import { PageViewTracker } from "./components/PageViewTracker";
+import { loadContactButtonOption } from "./utils/localStorage";
 
 // Lazy load pages for code splitting
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -38,10 +39,8 @@ function App() {
 
   // Load saved option from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem("contactButtonOption") as "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N" | null;
-    if (saved && ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N"].includes(saved)) {
-      setContactOption(saved);
-    }
+    const saved = loadContactButtonOption();
+    setContactOption(saved);
   }, []);
 
   return (

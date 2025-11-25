@@ -161,7 +161,7 @@ export const useImagePreload = (image: Image): UseImagePreloadReturn => {
       };
       fullSizeImg.onerror = () => {
         // If full size fails, keep the regularUrl
-        console.warn('Failed to preload full-size image');
+        // Preload failed - image will load on demand
       };
       fullSizeImg.src = image.imageUrl;
     }

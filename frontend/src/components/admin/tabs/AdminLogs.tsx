@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { adminService } from '@/services/adminService';
+import type { AdminLog } from '@/types/admin';
 import { toast } from 'sonner';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Search, Download } from 'lucide-react';
@@ -7,7 +8,7 @@ import { Button } from '@/components/ui/button';
 
 export function AdminLogs() {
     const { hasPermission, isSuperAdmin } = usePermissions();
-    const [logs, setLogs] = useState<any[]>([]);
+    const [logs, setLogs] = useState<AdminLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
 

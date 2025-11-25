@@ -7,6 +7,8 @@ import { useImageStore } from "@/stores/useImageStore"
 import { categoryService, type Category } from "@/services/categoryService"
 import { imageService } from "@/services/imageService"
 import SearchFilters, { type SearchFilters as SearchFiltersType } from "./SearchFilters"
+import { useErrorHandler } from "@/hooks/useErrorHandler"
+import { loadSearchFilters, saveSearchFilters, loadSearchHistory, addToSearchHistory } from "@/utils/localStorage"
 import './SearchBar.css'
 
 export interface SearchBarRef {
@@ -25,6 +27,7 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
   const { fetchImages, currentSearch } = useImageStore()
   const navigate = useNavigate()
   const location = useLocation()
+  const { handleError } = useErrorHandler({ showToast: false })
   const [searchQuery, setSearchQuery] = useState('')
   const [isFocused, setIsFocused] = useState(false)
   const [suggestions, setSuggestions] = useState<string[]>([])
@@ -32,25 +35,7 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([])
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const [showSuggestions, setShowSuggestions] = useState(false)
-  // Load filters from localStorage
-  const loadFiltersFromStorage = (): SearchFiltersType => {
-    try {
-      const stored = localStorage.getItem('photoApp_searchFilters');
-      if (stored) {
-        return JSON.parse(stored);
-      }
-    } catch (error) {
-      console.error('Failed to load filters:', error);
-    }
-    return {
-      orientation: 'all',
-      color: 'all',
-      dateFrom: '',
-      dateTo: '',
-    };
-  };
-
-  const [filters, setFilters] = useState<SearchFiltersType>(loadFiltersFromStorage());
+  const [filters, setFilters] = useState<SearchFiltersType>(() => loadSearchFilters());
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
@@ -64,15 +49,8 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
 
   // Load search history from localStorage
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('photoApp_searchHistory')
-      if (stored) {
-        const history = JSON.parse(stored) as SearchHistoryItem[]
-        setSearchHistory(history.slice(0, MAX_HISTORY_ITEMS))
-      }
-    } catch (error) {
-      console.error('Failed to load search history:', error)
-    }
+    const history = loadSearchHistory(MAX_HISTORY_ITEMS);
+    setSearchHistory(history);
   }, [])
 
   // Load categories and locations for suggestions
@@ -87,7 +65,8 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
         setSuggestions(categoryNames)
         setLocations(locationsData)
       } catch (error) {
-        console.error('Failed to load suggestions:', error)
+        // Silently fail - suggestions are optional
+        handleError(error)
       }
     }
     loadSuggestions()
@@ -118,7 +97,8 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
       localStorage.setItem('photoApp_searchHistory', JSON.stringify(history))
       setSearchHistory(history)
     } catch (error) {
-      console.error('Failed to save search history:', error)
+      // Silently fail - search history is optional
+      handleError(error)
     }
   }, [])
 
@@ -149,8 +129,7 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
         clearTimeout(debounceTimerRef.current)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, location.pathname])
+  }, [searchQuery, location.pathname, fetchImages])
 
   // Filter suggestions based on input
   const filteredSuggestions = searchQuery.trim()
@@ -329,6 +308,7 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
             onClick={handleClear}
             className="search-clear"
             aria-label="Xóa tìm kiếm"
+            aria-label="Xóa tìm kiếm"
           >
             <X size={16} />
           </button>
@@ -342,7 +322,7 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
               setFilters(newFilters);
               // Save to localStorage
               try {
-                localStorage.setItem('photoApp_searchFilters', JSON.stringify(newFilters));
+                saveSearchFilters(newFilters);
                 // Dispatch custom event to notify ImageGrid of filter change
                 window.dispatchEvent(new Event('filterChange'));
               } catch (error) {
@@ -372,7 +352,8 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
                 // Dispatch custom event to notify ImageGrid of filter change
                 window.dispatchEvent(new Event('filterChange'));
               } catch (error) {
-                console.error('Failed to clear filters:', error);
+                // Silently fail - filter clear is optional
+                handleError(error)
               }
             }}
           />

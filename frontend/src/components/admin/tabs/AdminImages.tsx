@@ -35,7 +35,7 @@ export function AdminImages({
             await adminService.moderateImage(imageId, status, notes || undefined);
             toast.success(`Đã ${status === 'approved' ? 'phê duyệt' : status === 'rejected' ? 'từ chối' : 'đánh dấu'} ảnh`);
             onImageUpdated?.();
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast.error(error.response?.data?.message || 'Lỗi khi kiểm duyệt ảnh');
         }
     };

@@ -24,14 +24,26 @@ export const useImageStore = create(
       });
 
       let progressInterval: ReturnType<typeof setInterval> | null = null;
+      let isCancelled = false;
 
       try {
         const response = await imageService.uploadImage(data, (progress) => {
+          if (isCancelled) return;
           set((state) => {
             // Progress tracks HTTP upload (0-85%)
             state.uploadProgress = progress;
           });
         });
+        
+        // Check if cancelled before continuing
+        if (isCancelled) {
+          if (progressInterval) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+          }
+          return;
+        }
+        
         // HTTP upload to backend complete (85%)
         // Now backend is processing and uploading to S3 - simulate progress 85-95%
         // This gives visual feedback that processing is happening
@@ -39,14 +51,24 @@ export const useImageStore = create(
 
         // Start progress simulation
         progressInterval = setInterval(() => {
+          if (isCancelled) {
+            if (progressInterval) {
+              clearInterval(progressInterval);
+              progressInterval = null;
+            }
+            return;
+          }
+          
           s3Progress += 1;
           if (s3Progress < 95) {
             set((state) => {
               state.uploadProgress = s3Progress;
             });
           } else {
-            if (progressInterval) clearInterval(progressInterval);
-            progressInterval = null;
+            if (progressInterval) {
+              clearInterval(progressInterval);
+              progressInterval = null;
+            }
           }
         }, 500); // Update every 500ms
 
@@ -87,6 +109,7 @@ export const useImageStore = create(
           toast.success('Image uploaded successfully!');
         }
       } catch (error: unknown) {
+        isCancelled = true;
         // Clear progress interval if it's still running
         if (progressInterval) {
           clearInterval(progressInterval);
@@ -354,16 +377,7 @@ export const useImageStore = create(
         state.images = state.images.filter((img) => img._id !== imageId);
         const afterCount = state.images.length;
 
-        // Debug: Log if image was actually removed from current store
-        if (beforeCount === afterCount) {
-          console.log(
-            `Image ${imageId} not in current store, but added to deleted list to prevent future fetches`
-          );
-        } else {
-          console.log(
-            `Successfully removed image ${imageId} from store. Count: ${beforeCount} -> ${afterCount}`
-          );
-        }
+        // Image successfully removed from store
 
         // Update pagination total if it exists
         if (state.pagination) {

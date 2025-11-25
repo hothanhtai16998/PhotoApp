@@ -1,4 +1,6 @@
 import api from '@/lib/axios';
+import type { Collection } from '@/types/collection';
+import type { AdminLog, AdminSettings, PendingContent, AdminFavorite } from '@/types/admin';
 
 export interface DashboardStats {
     stats: {
@@ -309,7 +311,7 @@ export const adminService = {
         page?: number;
         limit?: number;
         search?: string;
-    }): Promise<{ collections: any[]; pagination: { page: number; pages: number; total: number; limit: number } }> => {
+    }): Promise<{ collections: Collection[]; pagination: { page: number; pages: number; total: number; limit: number } }> => {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
         if (params?.limit) queryParams.append('limit', params.limit.toString());
@@ -326,7 +328,7 @@ export const adminService = {
         name?: string;
         description?: string;
         isPublic?: boolean;
-    }): Promise<{ collection: any }> => {
+    }): Promise<{ collection: Collection }> => {
         const res = await api.put(`/admin/collections/${collectionId}`, data, {
             withCredentials: true,
         });
@@ -352,7 +354,7 @@ export const adminService = {
         page?: number;
         limit?: number;
         search?: string;
-    }): Promise<{ favorites: any[]; pagination: { page: number; pages: number; total: number; limit: number } }> => {
+    }): Promise<{ favorites: AdminFavorite[]; pagination: { page: number; pages: number; total: number; limit: number } }> => {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
         if (params?.limit) queryParams.append('limit', params.limit.toString());
@@ -374,7 +376,7 @@ export const adminService = {
     },
 
     // Content Moderation
-    getPendingContent: async (): Promise<{ content: any[] }> => {
+    getPendingContent: async (): Promise<{ content: PendingContent[] }> => {
         const res = await api.get('/admin/moderation/pending', {
             withCredentials: true,
         });
@@ -399,7 +401,7 @@ export const adminService = {
         limit?: number;
         level?: string;
         search?: string;
-    }): Promise<{ logs: any[]; pagination: { page: number; pages: number; total: number; limit: number } }> => {
+    }): Promise<{ logs: AdminLog[]; pagination: { page: number; pages: number; total: number; limit: number } }> => {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
         if (params?.limit) queryParams.append('limit', params.limit.toString());
@@ -416,14 +418,14 @@ export const adminService = {
     },
 
     // Settings Management
-    getSettings: async (): Promise<{ settings: any }> => {
+    getSettings: async (): Promise<{ settings: AdminSettings }> => {
         const res = await api.get('/admin/settings', {
             withCredentials: true,
         });
         return res.data;
     },
 
-    updateSettings: async (settings: any): Promise<{ settings: any }> => {
+    updateSettings: async (settings: Partial<AdminSettings>): Promise<{ settings: AdminSettings }> => {
         const res = await api.put('/admin/settings', { settings }, {
             withCredentials: true,
         });
