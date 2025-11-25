@@ -40,7 +40,7 @@ export function useAutoPlay({
 
   useEffect(() => {
     // Reset state when no slides available
-    if (slidesLength === 0) {
+    if (slidesLength === 0 || !slidesReady) {
       setProgress(0);
       setIsRunning(false);
       lastSlideIndexRef.current = -1;

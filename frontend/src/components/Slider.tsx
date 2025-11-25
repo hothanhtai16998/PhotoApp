@@ -27,6 +27,7 @@ function Slider() {
     const touchEndX = useRef<number>(0);
     const sliderRef = useRef<HTMLDivElement>(null);
     const transitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const prevScrollYRef = useRef<number>(0);
 
     // Fetch images from backend
     useEffect(() => {
@@ -183,15 +184,10 @@ function Slider() {
 
     const goToPrev = useCallback(() => {
         if (isTransitioning || slides.length === 0) return;
-        // Prevent scroll to top
-        const scrollY = window.scrollY;
+        // Save scroll position before state change
+        prevScrollYRef.current = window.scrollY;
         setIsTransitioning(true);
         setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
-        
-        // Restore scroll position after state update
-        requestAnimationFrame(() => {
-            window.scrollTo(0, scrollY);
-        });
         
         // Clear any existing timeout
         if (transitionTimeoutRef.current) {
@@ -222,24 +218,28 @@ function Slider() {
     }, [currentSlide, isTransitioning, slides.length]);
 
     // Handle auto-play next slide transition
+    // Use refs to avoid recreating callback on every render
+    const isTransitioningRef = useRef(isTransitioning);
+    const slidesLengthRef = useRef(slides.length);
+    
+    useEffect(() => {
+        isTransitioningRef.current = isTransitioning;
+        slidesLengthRef.current = slides.length;
+    }, [isTransitioning, slides.length]);
+    
     const handleAutoPlayNext = useCallback(() => {
-        if (isTransitioning || slides.length === 0) return;
-        // Prevent scroll to top
-        const scrollY = window.scrollY;
+        if (isTransitioningRef.current || slidesLengthRef.current === 0) return;
+        // Save scroll position before state change
+        prevScrollYRef.current = window.scrollY;
         setIsTransitioning(true);
-        setCurrentSlide((prev) => (prev + 1) % slides.length);
-        
-        // Restore scroll position after state update
-        requestAnimationFrame(() => {
-            window.scrollTo(0, scrollY);
-        });
+        setCurrentSlide((prev) => (prev + 1) % slidesLengthRef.current);
         
         // Clear any existing timeout
         if (transitionTimeoutRef.current) {
             clearTimeout(transitionTimeoutRef.current);
         }
         transitionTimeoutRef.current = setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
-    }, [isTransitioning, slides.length]);
+    }, []); // Empty deps - use refs instead
 
     // Auto-play functionality with progress indicator
     const { progress } = useAutoPlay({
@@ -260,16 +260,10 @@ function Slider() {
         };
     }, []);
 
-    // Prevent scroll to top when slide changes
+    // Initialize scroll position tracking
     useEffect(() => {
-        const scrollY = window.scrollY;
-        // Restore scroll position after slide change
-        requestAnimationFrame(() => {
-            if (window.scrollY !== scrollY) {
-                window.scrollTo(0, scrollY);
-            }
-        });
-    }, [currentSlide]);
+        prevScrollYRef.current = window.scrollY;
+    }, []);
 
     // Keyboard navigation
     useEffect(() => {
