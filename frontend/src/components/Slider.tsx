@@ -5,6 +5,7 @@ import { imageService } from '@/services/imageService';
 import { useImageStore } from '@/stores/useImageStore';
 import type { Image } from '@/types/image';
 import type { Slide } from '@/types/slide';
+import SlideAnimationSelector, { type SlideAnimationType } from './SlideAnimationSelector';
 // ============================================
 // SLIDE TIMING CONFIGURATION
 // ============================================
@@ -25,6 +26,8 @@ function Slider() {
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [animatingSlide, setAnimatingSlide] = useState<number | null>(null);
     const [progress, setProgress] = useState(0);
+    const [animationType, setAnimationType] = useState<SlideAnimationType>('slide');
+    const [isTypewriterReversing, setIsTypewriterReversing] = useState(false);
 
     // Touch/swipe handlers
     const touchStartX = useRef<number>(0);
@@ -33,6 +36,7 @@ function Slider() {
     const progressRunningRef = useRef(false);
     const lastSlideIndexRef = useRef<number>(-1);
     const progressStartTimeRef = useRef<number>(0);
+    const typewriterReverseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Fetch images from backend
     useEffect(() => {
@@ -162,7 +166,7 @@ function Slider() {
         setIsTransitioning(true);
         setCurrentSlide((prev) => (prev + 1) % slides.length);
         setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
-    }, [slides.length]);
+    }, [isTransitioning, slides.length]);
 
     const goToPrev = useCallback(() => {
         if (isTransitioning || slides.length === 0) return;
@@ -216,10 +220,33 @@ function Slider() {
         progressRunningRef.current = true;
         progressStartTimeRef.current = Date.now();
         setProgress(0);
+        setIsTypewriterReversing(false); // Reset reverse state for new slide
 
         let animationFrameId: number | null = null;
         let slideTimeout: ReturnType<typeof setTimeout> | null = null;
         let transitionTimeout: ReturnType<typeof setTimeout> | null = null;
+        
+        // For typewriter animation: trigger reverse so it completes exactly when transition starts
+        // The transition starts at AUTO_PLAY_INTERVAL (6200ms = TRANSITION_DURATION + IMAGE_VISIBLE_TIME)
+        // We want reverse to complete exactly when transition begins, so:
+        // reverseStartTime = AUTO_PLAY_INTERVAL - reverse_duration
+        const TYPEWRITER_REVERSE_DURATION = 1500; // Time for reverse animation
+        // Start reverse so it completes exactly when transition begins (at AUTO_PLAY_INTERVAL)
+        const reverseStartTime = AUTO_PLAY_INTERVAL - TYPEWRITER_REVERSE_DURATION;
+        
+        if (animationType === 'typewriter' && reverseStartTime > 0) {
+            // Clear any existing timeout
+            if (typewriterReverseTimeoutRef.current) {
+                clearTimeout(typewriterReverseTimeoutRef.current);
+            }
+            
+            // Start reverse animation so it completes exactly when transition begins
+            typewriterReverseTimeoutRef.current = setTimeout(() => {
+                if (currentSlide === lastSlideIndexRef.current) {
+                    setIsTypewriterReversing(true);
+                }
+            }, reverseStartTime);
+        }
 
         const animate = () => {
             // Check if we should still be running (slide hasn't changed)
@@ -258,8 +285,12 @@ function Slider() {
             }
             if (slideTimeout) clearTimeout(slideTimeout);
             if (transitionTimeout) clearTimeout(transitionTimeout);
+            if (typewriterReverseTimeoutRef.current) {
+                clearTimeout(typewriterReverseTimeoutRef.current);
+                typewriterReverseTimeoutRef.current = null;
+            }
         };
-    }, [currentSlide, slides.length]);
+    }, [currentSlide, slides.length, animationType]);
 
     // Keyboard navigation
     useEffect(() => {
@@ -354,13 +385,19 @@ function Slider() {
     }
 
     return (
-        <div
-            className="slider-page"
-            ref={sliderRef}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-        >
+        <>
+            {/* Animation Selector - Outside slider-page to avoid overflow clipping */}
+            <SlideAnimationSelector 
+                currentAnimation={animationType}
+                onAnimationChange={setAnimationType}
+            />
+            <div
+                className="slider-page"
+                ref={sliderRef}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+            >
             {/* Slides Container */}
             <div className="slider-container">
                 {slides.map((slide, index) => {
@@ -460,7 +497,7 @@ function Slider() {
                             <div className="slide-overlay"></div>
 
                             {/* Title and Navigation in Bottom Left */}
-                            <div className={`slide-content-left ${shouldShowPanels ? 'active' : ''}`}>
+                            <div className={`slide-content-left ${shouldShowPanels ? 'active' : ''} ${shouldShow ? `animation-${animationType}` : ''} ${isTypewriterReversing && isActive ? 'typewriter-reversing' : ''}`}>
                                 <h1 className={`slide-title ${shouldShowPanels ? 'active' : ''}`}>{slide.title || ''}</h1>
 
                                 {/* Image Info - Mobile Only */}
@@ -488,7 +525,11 @@ function Slider() {
                                 <div className="slide-nav-buttons">
                                     <button
                                         className="slide-nav-btn prev-btn"
-                                        onClick={goToPrev}
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            goToPrev();
+                                        }}
                                         aria-label="Previous slide"
                                     >
                                         <ChevronLeft size={18} className="nav-icon" />
@@ -497,7 +538,11 @@ function Slider() {
                                     <span className="nav-separator">/</span>
                                     <button
                                         className="slide-nav-btn next-btn"
-                                        onClick={goToNext}
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            goToNext();
+                                        }}
                                         aria-label="Next slide"
                                     >
                                         <span className="nav-text">Tiếp theo</span>
@@ -508,7 +553,7 @@ function Slider() {
 
                             {/* Image Info in Bottom Right */}
                             {(slide.uploadedBy || slide.location || slide.cameraModel || slide.createdAt) && (
-                                <div className={`slide-content-right ${shouldShowPanels ? 'active' : ''}`}>
+                                <div className={`slide-content-right ${shouldShowPanels ? 'active' : ''} ${shouldShowPanels ? `animation-${animationType}` : ''}`}>
                                     <div className="image-info-box">
                                         {slide.uploadedBy && (
                                             <div className="info-item">
@@ -562,14 +607,22 @@ function Slider() {
             {/* Floating Side Navigation Buttons - Mobile Only */}
             <button
                 className="slider-side-nav-btn slider-side-nav-left"
-                onClick={goToPrev}
+                onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    goToPrev();
+                }}
                 aria-label="Previous slide"
             >
                 <ChevronLeft size={24} />
             </button>
             <button
                 className="slider-side-nav-btn slider-side-nav-right"
-                onClick={goToNext}
+                onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    goToNext();
+                }}
                 aria-label="Next slide"
             >
                 <ChevronRight size={24} />
@@ -604,6 +657,7 @@ function Slider() {
                 </div>
             )}
         </div>
+        </>
     );
 }
 
