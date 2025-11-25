@@ -15,41 +15,67 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
   const categoryNavRef = useRef<HTMLDivElement>(null)
   const activeCategory = currentCategory || 'Tất cả'
 
-  // Calculate header height for sticky positioning
+  // Calculate header height and category height for positioning
   useEffect(() => {
-    const updateHeaderHeight = () => {
+    const updateHeights = () => {
       const header = document.querySelector('.unsplash-header') as HTMLElement
       if (header) {
-        const height = header.offsetHeight
-        setHeaderHeight(height)
+        const headerHeight = header.offsetHeight
+        setHeaderHeight(headerHeight)
         // Set CSS variable for use in CSS - use requestAnimationFrame to prevent flash
         requestAnimationFrame(() => {
-          document.documentElement.style.setProperty('--header-height', `${height}px`)
+          document.documentElement.style.setProperty('--header-height', `${headerHeight}px`)
+        })
+      }
+      
+      // Calculate category navigation height
+      if (categoryNavRef.current) {
+        const categoryHeight = categoryNavRef.current.offsetHeight
+        requestAnimationFrame(() => {
+          document.documentElement.style.setProperty('--category-height', `${categoryHeight}px`)
         })
       }
     }
 
     // Initial calculation
-    updateHeaderHeight()
+    updateHeights()
 
     // Update on window resize - debounce to prevent excessive updates
     let resizeTimer: NodeJS.Timeout | null = null
     const handleResize = () => {
       if (resizeTimer) clearTimeout(resizeTimer)
-      resizeTimer = setTimeout(updateHeaderHeight, 100)
+      resizeTimer = setTimeout(updateHeights, 100)
     }
     window.addEventListener('resize', handleResize)
 
-    // Use ResizeObserver to watch for header size changes
+    // Use ResizeObserver to watch for header and category size changes
     const header = document.querySelector('.unsplash-header')
     let resizeObserver: ResizeObserver | null = null
     if (header) {
       resizeObserver = new ResizeObserver(() => {
         // Debounce ResizeObserver updates too
         if (resizeTimer) clearTimeout(resizeTimer)
-        resizeTimer = setTimeout(updateHeaderHeight, 100)
+        resizeTimer = setTimeout(updateHeights, 100)
       })
       resizeObserver.observe(header)
+    }
+    
+    // Also observe category navigation
+    if (categoryNavRef.current) {
+      const categoryObserver = new ResizeObserver(() => {
+        if (resizeTimer) clearTimeout(resizeTimer)
+        resizeTimer = setTimeout(updateHeights, 100)
+      })
+      categoryObserver.observe(categoryNavRef.current)
+      
+      return () => {
+        window.removeEventListener('resize', handleResize)
+        if (resizeTimer) clearTimeout(resizeTimer)
+        if (resizeObserver) {
+          resizeObserver.disconnect()
+        }
+        categoryObserver.disconnect()
+      }
     }
 
     return () => {

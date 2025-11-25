@@ -5,9 +5,10 @@ import { imageService } from '@/services/imageService';
 import { useImageStore } from '@/stores/useImageStore';
 import type { Image } from '@/types/image';
 import type { Slide } from '@/types/slide';
-import SlideAnimationSelector, { type SlideAnimationType } from './SlideAnimationSelector';
 import { useAutoPlay } from '@/hooks/useAutoPlay';
 import { SLIDER_CONSTANTS } from '@/utils/sliderConstants';
+import SlideStyleSelector, { type SlideTransitionStyle } from './SlideStyleSelector';
+import { loadSlideStyle } from '@/utils/localStorage';
 
 const { TRANSITION_DURATION, SWIPE_THRESHOLD, ORIENTATION_DETECTION_TIMEOUT, SLIDER_IMAGE_LIMIT, ANIMATION_DELAY } = SLIDER_CONSTANTS;
 
@@ -18,9 +19,11 @@ function Slider() {
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [animatingSlide, setAnimatingSlide] = useState<number | null>(null);
-    const [animationType, setAnimationType] = useState<SlideAnimationType>('slide');
+    // Both left and right text always use typewriter
+    const animationType = 'typewriter' as const;
     const [isTypewriterReversing, setIsTypewriterReversing] = useState(false);
     const [slidesReady, setSlidesReady] = useState(false);
+    const [transitionStyle, setTransitionStyle] = useState<SlideTransitionStyle>('fade' as SlideTransitionStyle);
 
     // Touch/swipe handlers
     const touchStartX = useRef<number>(0);
@@ -28,6 +31,15 @@ function Slider() {
     const sliderRef = useRef<HTMLDivElement>(null);
     const transitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const prevScrollYRef = useRef<number>(0);
+
+    // Load transition style from localStorage
+    useEffect(() => {
+        const savedStyle = loadSlideStyle();
+        const validStyles = ['fade', 'slide', 'slideVertical', 'cube', 'flip', 'cover', 'reveal', 'zoom', 'blur', 'glitch', 'split', 'cards', 'parallax', 'wipe', 'dissolve', 'push', 'doors', 'orbit', 'morph', 'swirl', 'pageTurn', 'accordion', 'shuffle'];
+        if (savedStyle && validStyles.includes(savedStyle)) {
+            setTransitionStyle(savedStyle as SlideTransitionStyle);
+        }
+    }, []);
 
     // Fetch images from backend
     useEffect(() => {
@@ -245,6 +257,7 @@ function Slider() {
     }, []); // Empty deps - use refs instead
 
     // Auto-play functionality with progress indicator
+    // Use typewriter for both left and right text
     const { progress } = useAutoPlay({
         slidesLength: slides.length,
         currentSlide,
@@ -364,11 +377,6 @@ function Slider() {
 
     return (
         <>
-            {/* Animation Selector - Outside slider-page to avoid overflow clipping */}
-            <SlideAnimationSelector 
-                currentAnimation={animationType}
-                onAnimationChange={setAnimationType}
-            />
             <div
                 className="slider-page"
                 ref={sliderRef}
@@ -377,7 +385,7 @@ function Slider() {
                 onTouchEnd={handleTouchEnd}
             >
             {/* Slides Container */}
-            <div className="slider-container">
+            <div className={`slider-container transition-${transitionStyle}`}>
                 {slides.map((slide, index) => {
                     // Skip deleted slides
                     if (deletedImageIds.includes(slide.id)) {
@@ -398,7 +406,7 @@ function Slider() {
                     return (
                         <div
                             key={slide.id}
-                            className={`slider-slide ${isActive ? 'active' : ''} ${shouldShow ? 'visible' : ''} ${slide.isPortrait ? 'portrait' : 'landscape'}`}
+                            className={`slider-slide ${isActive ? 'active' : ''} ${shouldShow ? 'visible' : ''} ${slide.isPortrait ? 'portrait' : 'landscape'} ${isPrev ? 'prev' : ''} ${isNext ? 'next' : ''}`}
                             style={{
                                 backgroundImage: `url(${slide.backgroundImage})`,
                             }}
@@ -476,7 +484,7 @@ function Slider() {
                             )}
                             <div className="slide-overlay"></div>
 
-                            {/* Title and Navigation in Bottom Left */}
+                            {/* Title and Navigation in Bottom Left - Always uses typewriter */}
                             <div className={`slide-content-left ${shouldShowPanels ? 'active' : ''} ${shouldAnimate ? `animation-${animationType}` : ''} ${isTypewriterReversing && isActive && shouldAnimate ? 'typewriter-reversing' : ''}`}>
                                 <h1 className={`slide-title ${shouldShowPanels && shouldAnimate ? 'active' : ''}`}>{slide.title || ''}</h1>
 
@@ -531,9 +539,9 @@ function Slider() {
                                 </div>
                             </div>
 
-                            {/* Image Info in Bottom Right */}
+                            {/* Image Info in Bottom Right - Always uses typewriter */}
                             {(slide.uploadedBy || slide.location || slide.cameraModel || slide.createdAt) && (
-                                <div className={`slide-content-right ${shouldShowPanels ? 'active' : ''} ${shouldShowPanels ? `animation-${animationType}` : ''}`}>
+                                <div className={`slide-content-right ${shouldShowPanels ? 'active' : ''} ${shouldAnimate ? `animation-${animationType}` : ''} ${isTypewriterReversing && isActive && shouldAnimate ? 'typewriter-reversing' : ''}`}>
                                     <div className="image-info-box">
                                         {slide.uploadedBy && (
                                             <div className="info-item">
@@ -636,6 +644,12 @@ function Slider() {
                     </svg>
                 </div>
             )}
+
+            {/* Slide Style Selector */}
+            <SlideStyleSelector 
+                currentStyle={transitionStyle}
+                onStyleChange={setTransitionStyle}
+            />
         </div>
         </>
     );

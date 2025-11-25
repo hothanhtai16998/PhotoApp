@@ -3,6 +3,7 @@
 	min-height: 100vh;
 	background: #fff;
 	width: 100%;
+	padding-top: var(--header-height, 60px);
 }
 
 .homepage-hero {

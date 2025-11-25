@@ -2,14 +2,19 @@
 .unsplash-header {
   background: #fff;
   border-bottom: 1px solid #e5e5e5;
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 1500;
+  left: 0;
+  right: 0;
+  z-index: 10000;
   width: 100%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .header-top {
-  padding: 12px 0;
+  padding: 8px 0;
   border-bottom: 1px solid #e5e5e5;
 }
 
@@ -21,7 +26,7 @@
   align-items: center;
   justify-content: space-between;
   position: relative;
-  gap: 24px;
+  gap: 16px;
 }
 
 /* Logo */
@@ -37,7 +42,7 @@
 }
 
 .header-logo-img {
-  height: 50px;
+  height: 36px;
   width: auto;
   object-fit: contain;
 }
@@ -53,7 +58,7 @@
   transform: translateX(-50%);
   max-width: 600px;
   width: 100%;
-  z-index: 1500;
+  z-index: 10001;
 }
 
 /* Search Bar */
@@ -87,8 +92,8 @@
   flex: 1;
   border: none;
   outline: none;
-  padding: 10px 8px;
-  font-size: 0.9375rem;
+  padding: 8px 6px;
+  font-size: 0.875rem;
   font-weight: 400;
   color: #111;
   background: transparent;
@@ -153,7 +158,7 @@
 }
 
 .header-link {
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   font-weight: 400;
   color: #111;
   text-decoration: none;
@@ -172,11 +177,11 @@
 }
 
 .header-button {
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   font-weight: 400;
   color: #111;
   text-decoration: none;
-  padding: 8px 16px;
+  padding: 6px 12px;
   border: 1px solid #d1d1d1;
   border-radius: 6px;
   background: #fff;
@@ -191,13 +196,14 @@
 
 /* Upload Button */
 .header-upload-button {
-  padding: 8px 16px !important;
+  padding: 6px 12px !important;
   border: 1px solid #d1d1d1 !important;
   border-radius: 6px !important;
   background: #fff !important;
   transition: all 0.2s ease !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
   font-weight: 400 !important;
+  font-size: 0.875rem !important;
 }
 
 .header-upload-button:hover {
@@ -253,12 +259,12 @@
 
 .header-user-avatar,
 .header-user-avatar-placeholder {
-  width: 32px !important;
-  height: 32px !important;
-  min-width: 32px !important;
-  min-height: 32px !important;
-  max-width: 32px !important;
-  max-height: 32px !important;
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  max-width: 28px !important;
+  max-height: 28px !important;
   border-radius: 50%;
   flex-shrink: 0;
 }

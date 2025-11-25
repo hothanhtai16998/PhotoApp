@@ -20,6 +20,7 @@ const STORAGE_KEYS = {
   SEARCH_HISTORY: 'photoApp_searchHistory',
   CONTACT_BUTTON_OPTION: 'contactButtonOption',
   ANIMATION_TYPE: 'photoApp_slideAnimationType',
+  SLIDE_STYLE: 'photoApp_slideStyle',
 } as const;
 
 /**
@@ -152,6 +153,28 @@ export function loadAnimationType(): string | null {
 export function saveAnimationType(animationType: string): void {
   try {
     localStorage.setItem(STORAGE_KEYS.ANIMATION_TYPE, animationType);
+  } catch (error) {
+    // Silently fail
+  }
+}
+
+/**
+ * Load slide style from localStorage
+ */
+export function loadSlideStyle(): string | null {
+  try {
+    return localStorage.getItem(STORAGE_KEYS.SLIDE_STYLE);
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
+ * Save slide style to localStorage
+ */
+export function saveSlideStyle(style: string): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.SLIDE_STYLE, style);
   } catch (error) {
     // Silently fail
   }
