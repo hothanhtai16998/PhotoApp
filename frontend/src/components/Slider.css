@@ -415,12 +415,17 @@
 	border-right: 3px solid rgba(236, 222, 195, 0.8);
 }
 
-/* Reset typewriter state for hidden/inactive slides */
-.slide-content-left.animation-typewriter:not(.active) .slide-title {
+/* Reset typewriter state for hidden/inactive slides and during transitions */
+.slide-content-left.animation-typewriter:not(.active) .slide-title,
+.slide-content-left.animation-typewriter:not(.active) .slide-title.active,
+.slide-content-left.active:not(.animation-typewriter) .slide-title,
+.slide-content-left.active .slide-title:not(.active) {
 	width: 0;
 	opacity: 0;
-	animation: none;
+	animation: none !important;
 	border-right: none;
+	overflow: hidden;
+	white-space: nowrap;
 }
 
 .slide-content-left.active.animation-letterReveal .slide-title.active {

@@ -167,6 +167,8 @@ function Slider() {
         if (isTransitioning || slides.length === 0) return;
         // Prevent scroll to top
         const scrollY = window.scrollY;
+        // Immediately reset animation state to hide text during transition
+        setAnimatingSlide(null);
         setIsTransitioning(true);
         setCurrentSlide((prev) => (prev + 1) % slides.length);
         
@@ -186,6 +188,8 @@ function Slider() {
         if (isTransitioning || slides.length === 0) return;
         // Save scroll position before state change
         prevScrollYRef.current = window.scrollY;
+        // Immediately reset animation state to hide text during transition
+        setAnimatingSlide(null);
         setIsTransitioning(true);
         setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
         
@@ -389,6 +393,8 @@ function Slider() {
                     
                     // Ensure panels show when slide is active (even during transition end)
                     const shouldShowPanels = isActive;
+                    // Only animate text when slide is actively animating (not during transition)
+                    const shouldAnimate = animatingSlide === index && !isTransitioning;
 
                     return (
                         <div
@@ -472,8 +478,8 @@ function Slider() {
                             <div className="slide-overlay"></div>
 
                             {/* Title and Navigation in Bottom Left */}
-                            <div className={`slide-content-left ${shouldShowPanels ? 'active' : ''} ${shouldShow ? `animation-${animationType}` : ''} ${isTypewriterReversing && isActive ? 'typewriter-reversing' : ''}`}>
-                                <h1 className={`slide-title ${shouldShowPanels ? 'active' : ''}`}>{slide.title || ''}</h1>
+                            <div className={`slide-content-left ${shouldShowPanels ? 'active' : ''} ${shouldAnimate ? `animation-${animationType}` : ''} ${isTypewriterReversing && isActive && shouldAnimate ? 'typewriter-reversing' : ''}`}>
+                                <h1 className={`slide-title ${shouldShowPanels && shouldAnimate ? 'active' : ''}`}>{slide.title || ''}</h1>
 
                                 {/* Image Info - Mobile Only */}
                                 <div className="slide-image-info-mobile">
