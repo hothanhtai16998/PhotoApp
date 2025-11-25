@@ -133,14 +133,17 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                 // Then start pre-uploading
                 setTimeout(() => {
                     preUploadAllImages(updatedImagesData, (index, progress) => {
-                        // Update progress in real-time
+                        // Update progress in real-time (0-100%)
+                        // Keep isUploading true until we get preUploadData (upload truly complete)
                         setImagesData(prev => {
                             const updated = [...prev];
                             if (updated[index]) {
                                 updated[index] = {
                                     ...updated[index], // Preserve all existing fields
-                                    uploadProgress: progress,
-                                    isUploading: progress < 100, // Update isUploading based on progress
+                                    uploadProgress: Math.min(100, Math.max(0, progress)), // Clamp between 0-100
+                                    // Keep isUploading true during progress updates
+                                    // It will be set to false only when preUploadData is received
+                                    isUploading: true,
                                 };
                             }
                             return updated;

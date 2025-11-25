@@ -125,22 +125,27 @@ export const useImageUpload = ({ onSuccess }: UseImageUploadProps = {}) => {
         // Immediately notify progress callback with initial state
         onImageProgress?.(i, 0);
 
-        // Pre-upload image
+        // Pre-upload image with real-time progress updates
         const preUploadResult = await preUploadSingleImage(
           imgData,
           (progress) => {
+            // Update progress in real-time (0-100%)
             onImageProgress?.(i, progress);
           }
         );
 
-        // Update with pre-upload result - preserve ALL existing fields
+        // Final update: mark as complete (100% and not uploading)
+        // Only set isUploading to false when we have preUploadData (upload truly complete)
         updatedImagesData[i] = {
           ...imgData, // Preserve all existing form data (title, category, location, etc.)
-          preUploadData: preUploadResult,
-          isUploading: false,
-          uploadProgress: 100,
+          preUploadData: preUploadResult, // Upload is complete when we have this
+          isUploading: false, // This will hide the overlay - only set false when preUploadData exists
+          uploadProgress: 100, // Ensure it shows 100% before hiding
           uploadError: null,
         };
+        
+        // Send final 100% update, then mark as not uploading
+        onImageProgress?.(i, 100);
       } catch (error: any) {
         // Mark as failed
         updatedImagesData[i] = {
