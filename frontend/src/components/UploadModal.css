@@ -134,9 +134,11 @@
   width: 100%;
   max-width: 1000px;
   max-height: 90vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   position: relative;
+  overflow: hidden;
 }
 
 /* Header */
@@ -149,8 +151,9 @@
   position: sticky;
   top: 0;
   background: #fff;
-  z-index: 10;
+  z-index: 100;
   border-radius: 12px 12px 0 0;
+  flex-shrink: 0;
 }
 
 .upload-modal-title {
@@ -195,6 +198,9 @@
 /* Content */
 .upload-modal-content {
   padding: 32px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 /* Dropzone */
@@ -616,11 +622,11 @@
 /* Footer */
 .upload-modal-footer {
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding-top: 24px;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 20px 32px;
   border-top: 1px solid #e5e5e5;
-  margin-top: 24px;
+  background: #fff;
 }
 
 .upload-modal-footer .footer-buttons {
@@ -708,6 +714,18 @@
     padding: 20px;
   }
 
+  @media (max-width: 768px) {
+    .upload-modal-content {
+      padding: 20px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .upload-modal-content {
+      padding: 16px;
+    }
+  }
+
   .upload-dropzone {
     padding: 40px 20px;
     min-height: 180px;
@@ -737,39 +755,43 @@
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
-    padding: 20px;
+    padding: 20px !important;
   }
 
-  .upload-modal-footer button {
+  .upload-modal-footer .footer-buttons {
+    flex-direction: column;
+    width: 100%;
+    justify-content: stretch !important;
+  }
+
+  .upload-modal-footer .footer-buttons button {
     width: 100%;
     min-height: 44px; /* Better touch target */
   }
 
-  .footer-buttons {
-    flex-direction: column;
-    width: 100%;
+  /* Make image grid single column on mobile */
+  .upload-modal-content > div > div[style*='gridTemplateColumns'] {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+    margin-bottom: 16px !important;
   }
+}
 
-  .footer-buttons button {
-    width: 100%;
-  }
-  }
-
-  @media (max-width: 480px) {
-    .upload-modal-header {
+@media (max-width: 480px) {
+  .upload-modal-header {
     padding: 12px 16px;
   }
 
   .upload-modal-title {
     font-size: 1.125rem;
-    }
+  }
 
-    .upload-modal-content {
+  .upload-modal-content {
     padding: 16px;
-    }
+  }
 
-    .upload-dropzone {
-      padding: 30px 16px;
+  .upload-dropzone {
+    padding: 30px 16px;
     min-height: 160px;
   }
 
@@ -785,16 +807,23 @@
   .upload-browse,
   .upload-max-size {
     font-size: 0.8125rem;
-    }
+  }
 
-    .upload-guidelines {
-      padding: 16px;
-      gap: 12px;
+  .upload-guidelines {
+    padding: 16px;
+    gap: 12px;
     margin: 20px 0;
-    }
+  }
 
   .upload-modal-footer {
-    padding: 16px;
+    padding: 16px !important;
+  }
+
+  /* Make image grid single column on small mobile */
+  .upload-modal-content > div > div[style*='gridTemplateColumns'] {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    margin-bottom: 12px !important;
   }
 
   .form-group input,

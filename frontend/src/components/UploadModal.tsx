@@ -462,17 +462,17 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                 ref={fileInputRef}
                             />
                         </div>
+                    </div>
 
-                        {/* Footer */}
-                        <div className="upload-modal-footer">
-                            <div className="footer-buttons">
-                                <Button type="button" variant="outline" onClick={handleCancel}>
-                                    Huỷ
-                                </Button>
-                                <Button type="button" disabled>
-                                    Tiếp theo
-                                </Button>
-                            </div>
+                    {/* Footer */}
+                    <div className="upload-modal-footer">
+                        <div className="footer-buttons">
+                            <Button type="button" variant="outline" onClick={handleCancel}>
+                                Huỷ
+                            </Button>
+                            <Button type="button" disabled>
+                                Tiếp theo
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -568,163 +568,64 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                             </div>
                         ))}
                     </div>
+                </div>
 
-                    {/* Footer with Submit Button */}
-                    <div className="upload-modal-footer" style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #e5e5e5', position: 'sticky', bottom: 0, backgroundColor: 'white' }}>
-                        {/* Upload Status Banner */}
-                        {(uploadStatus.uploading > 0 || uploadStatus.needsUpload > 0 || uploadStatus.failed > 0) && (
-                            <div style={{
-                                marginBottom: '16px',
-                                padding: '12px 16px',
-                                borderRadius: '8px',
-                                backgroundColor: uploadStatus.failed > 0 ? '#fef2f2' : uploadStatus.uploading > 0 ? '#eff6ff' : '#f0fdf4',
-                                border: `1px solid ${uploadStatus.failed > 0 ? '#fecaca' : uploadStatus.uploading > 0 ? '#bfdbfe' : '#bbf7d0'}`,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                fontSize: '0.875rem'
-                            }}>
-                                {uploadStatus.uploading > 0 && (
-                                    <>
-                                        <div className="spinner-circle" style={{ width: '16px', height: '16px', borderWidth: '2px' }}></div>
-                                        <span style={{ color: '#1e40af', fontWeight: '500' }}>
-                                            Đang tải {uploadStatus.uploading} ảnh lên... ({uploadStatus.uploaded}/{uploadStatus.total})
-                                        </span>
-                                    </>
-                                )}
-                                {uploadStatus.needsUpload > 0 && uploadStatus.uploading === 0 && (
-                                    <span style={{ color: '#166534', fontWeight: '500' }}>
-                                        ⏳ Đang chờ tải {uploadStatus.needsUpload} ảnh lên...
-                                    </span>
-                                )}
-                                {uploadStatus.failed > 0 && (
-                                    <span style={{ color: '#991b1b', fontWeight: '500' }}>
-                                        ❌ {uploadStatus.failed} ảnh tải lên thất bại. Vui lòng thử lại.
-                                    </span>
-                                )}
-                            </div>
-                        )}
-                        {uploadStatus.uploaded === uploadStatus.total && uploadStatus.uploading === 0 && uploadStatus.failed === 0 && imagesData.length > 0 && (
-                            <div style={{
-                                marginBottom: '16px',
-                                padding: '12px 16px',
-                                borderRadius: '8px',
-                                backgroundColor: '#f0fdf4',
-                                border: '1px solid #bbf7d0',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                fontSize: '0.875rem',
-                                color: '#166534',
-                                fontWeight: '500'
-                            }}>
-                                ✅ Tất cả {uploadStatus.uploaded} ảnh đã tải lên thành công!
-                            </div>
-                        )}
-                        <a href="#" className="footer-link"></a>
-                        <div className="footer-buttons" style={{ position: 'relative', display: 'flex', gap: '12px', alignItems: 'center', justifyContent: 'flex-end', width: '100%' }}>
-                            <Button type="button" variant="outline" onClick={handleCancel}>
-                                Huỷ
-                            </Button>
-                            <div
-                                style={{
-                                    position: 'relative',
-                                    display: 'inline-block'
-                                }}
-                                onMouseEnter={() => {
-                                    if (!isFormValid && !loading) {
-                                        setShowTooltip(true);
-                                    }
-                                }}
-                                onMouseLeave={() => {
-                                    setShowTooltip(false);
-                                }}
+                {/* Footer with Submit Button */}
+                <div className="upload-modal-footer" style={{ paddingTop: '20px', paddingBottom: '20px', paddingLeft: '32px', paddingRight: '32px', borderTop: '1px solid #e5e5e5', backgroundColor: 'white' }}>
+                    <div className="footer-buttons" style={{ position: 'relative', display: 'flex', gap: '12px', alignItems: 'center', justifyContent: 'flex-end', width: '100%' }}>
+                        <Button type="button" variant="outline" onClick={handleCancel}>
+                            Huỷ
+                        </Button>
+                        <div
+                            style={{
+                                position: 'relative',
+                                display: 'inline-block'
+                            }}
+                            onMouseEnter={() => {
+                                if (!isFormValid && !loading) {
+                                    setShowTooltip(true);
+                                }
+                            }}
+                            onMouseLeave={() => {
+                                setShowTooltip(false);
+                            }}
+                        >
+                            <Button
+                                type="button"
+                                onClick={handleSubmit}
+                                disabled={loading || !isFormValid}
+                                style={{ minWidth: '120px' }}
                             >
-                                <Button
-                                    type="button"
-                                    onClick={handleSubmit}
-                                    disabled={loading || !isFormValid}
-                                    style={{ minWidth: '120px' }}
-                                >
-                                    {loading ? 'Đang tải...' : `Gửi ${imagesData.length} ảnh`}
-                                </Button>
-                                {/* Always show status message when button is disabled */}
-                                {(!isFormValid || uploadStatus.uploading > 0) && !loading && (
+                                {loading ? 'Đang tải...' : `Gửi ${imagesData.length} ảnh`}
+                            </Button>
+                            {showTooltip && !isFormValid && !loading && (
+                                <div style={{
+                                    position: 'absolute',
+                                    bottom: 'calc(100% + 8px)',
+                                    right: 0,
+                                    padding: '10px 14px',
+                                    backgroundColor: '#1f2937',
+                                    color: 'white',
+                                    borderRadius: '8px',
+                                    fontSize: '13px',
+                                    whiteSpace: 'nowrap',
+                                    zIndex: 10000,
+                                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                                    pointerEvents: 'none'
+                                }}>
+                                    Vui lòng điền đầy đủ các trường có dấu <span style={{ color: '#ef4444', fontWeight: 'bold' }}>*</span>
                                     <div style={{
                                         position: 'absolute',
-                                        bottom: 'calc(100% + 8px)',
-                                        right: 0,
-                                        padding: '12px 16px',
-                                        backgroundColor: '#1f2937',
-                                        color: 'white',
-                                        borderRadius: '8px',
-                                        fontSize: '0.875rem',
-                                        zIndex: 1000,
-                                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                        minWidth: '250px',
-                                        maxWidth: '350px'
-                                    }}>
-                                        {uploadStatus.uploading > 0 && (
-                                            <div style={{ marginBottom: '4px' }}>
-                                                ⏳ Đang tải {uploadStatus.uploading} ảnh lên... ({uploadStatus.uploaded}/{uploadStatus.total})
-                                            </div>
-                                        )}
-                                        {uploadStatus.needsUpload > 0 && uploadStatus.uploading === 0 && (
-                                            <div style={{ marginBottom: '4px' }}>
-                                                ⏳ Đang chờ tải {uploadStatus.needsUpload} ảnh lên...
-                                            </div>
-                                        )}
-                                        {uploadStatus.failed > 0 && (
-                                            <div style={{ color: '#f87171', marginBottom: '4px' }}>
-                                                ❌ {uploadStatus.failed} ảnh tải lên thất bại. Vui lòng thử lại.
-                                            </div>
-                                        )}
-                                        {uploadStatus.uploaded === uploadStatus.total && uploadStatus.uploading === 0 && uploadStatus.failed === 0 && (
-                                            <div style={{ color: '#86efac', marginBottom: '4px' }}>
-                                                ✅ Tất cả ảnh đã tải lên thành công!
-                                            </div>
-                                        )}
-                                        {imagesData.some(img => !img.title.trim()) && (
-                                            <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.2)' }}>
-                                                📝 Vui lòng điền tiêu đề cho tất cả ảnh
-                                            </div>
-                                        )}
-                                        {imagesData.some(img => !img.category.trim()) && (
-                                            <div style={{ marginTop: '4px' }}>
-                                                📁 Vui lòng chọn danh mục cho tất cả ảnh
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                                {showTooltip && !isFormValid && !loading && (
-                                    <div style={{
-                                        position: 'absolute',
-                                        bottom: 'calc(100% + 8px)',
-                                        right: 0,
-                                        padding: '10px 14px',
-                                        backgroundColor: '#1f2937',
-                                        color: 'white',
-                                        borderRadius: '8px',
-                                        fontSize: '13px',
-                                        whiteSpace: 'nowrap',
-                                        zIndex: 10000,
-                                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                                        pointerEvents: 'none'
-                                    }}>
-                                        Vui lòng điền đầy đủ các trường có dấu <span style={{ color: '#ef4444', fontWeight: 'bold' }}>*</span>
-                                        <div style={{
-                                            position: 'absolute',
-                                            top: '100%',
-                                            right: '20px',
-                                            width: 0,
-                                            height: 0,
-                                            borderLeft: '6px solid transparent',
-                                            borderRight: '6px solid transparent',
-                                            borderTop: '6px solid #1f2937'
-                                        }}></div>
-                                    </div>
-                                )}
-                            </div>
+                                        top: '100%',
+                                        right: '20px',
+                                        width: 0,
+                                        height: 0,
+                                        borderLeft: '6px solid transparent',
+                                        borderRight: '6px solid transparent',
+                                        borderTop: '6px solid #1f2937'
+                                    }}></div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

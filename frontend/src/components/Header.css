@@ -2,8 +2,10 @@
 .unsplash-header {
   background: #fff;
   border-bottom: 1px solid #e5e5e5;
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 1500;
   width: 100%;
 }
