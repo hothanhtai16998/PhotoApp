@@ -5,19 +5,24 @@ import { collectionService } from '@/services/collectionService';
 import type { Collection } from '@/types/collection';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { Folder, Plus, Trash2, Edit2, Eye } from 'lucide-react';
+import { Folder, Plus, Trash2, Edit2, Eye, Share2, Copy, Lock, Unlock, ExternalLink, Search, X, Filter } from 'lucide-react';
 import ProgressiveImage from '@/components/ProgressiveImage';
 import CollectionModal from '@/components/CollectionModal';
+import { CollectionShare } from '@/components/collection/CollectionShare';
 import './CollectionsPage.css';
 
 export default function CollectionsPage() {
 	const { accessToken } = useAuthStore();
 	const navigate = useNavigate();
 	const [collections, setCollections] = useState<Collection[]>([]);
+	const [filteredCollections, setFilteredCollections] = useState<Collection[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [deletingId, setDeletingId] = useState<string | null>(null);
 	const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
 	const [showEditModal, setShowEditModal] = useState(false);
+	const [searchQuery, setSearchQuery] = useState('');
+	const [showPublicOnly, setShowPublicOnly] = useState(false);
+	const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name' | 'images'>('newest');
 
 	useEffect(() => {
 		if (!accessToken) {
@@ -31,6 +36,7 @@ export default function CollectionsPage() {
 				setLoading(true);
 				const data = await collectionService.getUserCollections();
 				setCollections(data);
+				setFilteredCollections(data);
 			} catch (error: any) {
 				console.error('Failed to load collections:', error);
 				toast.error('Không thể tải danh sách bộ sưu tập');
@@ -41,6 +47,43 @@ export default function CollectionsPage() {
 
 		loadCollections();
 	}, [accessToken, navigate]);
+
+	// Filter and sort collections
+	useEffect(() => {
+		let filtered = [...collections];
+
+		// Search filter
+		if (searchQuery.trim()) {
+			const query = searchQuery.toLowerCase().trim();
+			filtered = filtered.filter(collection => 
+				collection.name.toLowerCase().includes(query) ||
+				collection.description?.toLowerCase().includes(query)
+			);
+		}
+
+		// Public filter
+		if (showPublicOnly) {
+			filtered = filtered.filter(collection => collection.isPublic);
+		}
+
+		// Sort
+		filtered.sort((a, b) => {
+			switch (sortBy) {
+				case 'newest':
+					return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+				case 'oldest':
+					return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+				case 'name':
+					return a.name.localeCompare(b.name);
+				case 'images':
+					return (b.imageCount || 0) - (a.imageCount || 0);
+				default:
+					return 0;
+			}
+		});
+
+		setFilteredCollections(filtered);
+	}, [collections, searchQuery, showPublicOnly, sortBy]);
 
 	const handleDeleteCollection = async (collectionId: string) => {
 		if (!confirm('Bạn có chắc chắn muốn xóa bộ sưu tập này?')) {
@@ -83,6 +126,79 @@ export default function CollectionsPage() {
 		reloadCollections();
 	};
 
+	const clearSearch = () => {
+		setSearchQuery('');
+	};
+
+	const handleShareCollection = async (e: React.MouseEvent, collection: Collection) => {
+		e.stopPropagation();
+		// This will be handled by CollectionShare component
+		// Keep this for backward compatibility but it's now handled in the share menu
+	};
+
+	const handleTogglePublic = async (e: React.MouseEvent, collection: Collection) => {
+		e.stopPropagation();
+		try {
+			const updated = await collectionService.updateCollection(collection._id, {
+				isPublic: !collection.isPublic,
+			});
+			setCollections(prev => 
+				prev.map(c => c._id === collection._id ? updated : c)
+			);
+			toast.success(
+				updated.isPublic 
+					? 'Đã công khai bộ sưu tập' 
+					: 'Đã ẩn bộ sưu tập'
+			);
+		} catch (error: any) {
+			console.error('Failed to toggle public:', error);
+			toast.error('Không thể cập nhật. Vui lòng thử lại.');
+		}
+	};
+
+	const handleDuplicateCollection = async (e: React.MouseEvent, collection: Collection) => {
+		e.stopPropagation();
+		if (!confirm(`Tạo bản sao của "${collection.name}"?`)) {
+			return;
+		}
+
+		try {
+			const newCollection = await collectionService.createCollection({
+				name: `${collection.name} (Bản sao)`,
+				description: collection.description || undefined,
+				isPublic: false, // Duplicates are private by default
+			});
+
+			// Copy images if any
+			if (collection.images && Array.isArray(collection.images) && collection.images.length > 0) {
+				const imageIds = collection.images
+					.filter((img): img is string => typeof img === 'string')
+					.concat(
+						collection.images
+							.filter((img): img is { _id: string } => typeof img === 'object' && img !== null && '_id' in img)
+							.map(img => img._id)
+					);
+
+				// Add images in batches to avoid overwhelming the server
+				for (const imageId of imageIds) {
+					try {
+						await collectionService.addImageToCollection(newCollection._id, imageId);
+					} catch (err) {
+						console.warn('Failed to add image to duplicate:', err);
+					}
+				}
+			}
+
+			// Reload collections
+			const data = await collectionService.getUserCollections();
+			setCollections(data);
+			toast.success('Đã tạo bản sao bộ sưu tập');
+		} catch (error: any) {
+			console.error('Failed to duplicate collection:', error);
+			toast.error('Không thể tạo bản sao. Vui lòng thử lại.');
+		}
+	};
+
 	if (loading) {
 		return (
 			<>
@@ -115,6 +231,51 @@ export default function CollectionsPage() {
 					</button>
 				</div>
 
+				{/* Search and Filter Bar */}
+				{collections.length > 0 && (
+					<div className="collections-filters">
+						<div className="collections-search-wrapper">
+							<Search size={20} className="collections-search-icon" />
+							<input
+								type="text"
+								className="collections-search-input"
+								placeholder="Tìm kiếm bộ sưu tập..."
+								value={searchQuery}
+								onChange={(e) => setSearchQuery(e.target.value)}
+							/>
+							{searchQuery && (
+								<button
+									className="collections-search-clear"
+									onClick={clearSearch}
+									title="Xóa tìm kiếm"
+								>
+									<X size={16} />
+								</button>
+							)}
+						</div>
+						<div className="collections-filter-controls">
+							<button
+								className={`collections-filter-btn ${showPublicOnly ? 'active' : ''}`}
+								onClick={() => setShowPublicOnly(!showPublicOnly)}
+								title={showPublicOnly ? 'Hiển thị tất cả' : 'Chỉ hiển thị công khai'}
+							>
+								<Filter size={16} />
+								<span>{showPublicOnly ? 'Công khai' : 'Tất cả'}</span>
+							</button>
+							<select
+								className="collections-sort-select"
+								value={sortBy}
+								onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+							>
+								<option value="newest">Mới nhất</option>
+								<option value="oldest">Cũ nhất</option>
+								<option value="name">Tên A-Z</option>
+								<option value="images">Nhiều ảnh nhất</option>
+							</select>
+						</div>
+					</div>
+				)}
+
 				{collections.length === 0 ? (
 					<div className="collections-empty">
 						<Folder size={64} />
@@ -127,9 +288,36 @@ export default function CollectionsPage() {
 							Khám phá ảnh
 						</button>
 					</div>
+				) : filteredCollections.length === 0 ? (
+					<div className="collections-empty">
+						<Folder size={64} />
+						<h2>Không tìm thấy bộ sưu tập</h2>
+						<p>
+							{searchQuery 
+								? `Không có bộ sưu tập nào khớp với "${searchQuery}"`
+								: 'Không có bộ sưu tập nào phù hợp với bộ lọc'}
+						</p>
+						{(searchQuery || showPublicOnly) && (
+							<button
+								className="collections-empty-btn"
+								onClick={() => {
+									setSearchQuery('');
+									setShowPublicOnly(false);
+								}}
+							>
+								Xóa bộ lọc
+							</button>
+						)}
+					</div>
 				) : (
-					<div className="collections-grid">
-						{collections.map((collection) => {
+					<>
+						{searchQuery && (
+							<div className="collections-results-info">
+								Tìm thấy {filteredCollections.length} bộ sưu tập
+							</div>
+						)}
+						<div className="collections-grid">
+							{filteredCollections.map((collection) => {
 							const coverImage =
 								collection.coverImage &&
 								typeof collection.coverImage === 'object'
@@ -159,7 +347,7 @@ export default function CollectionsPage() {
 										<div className="collection-card-overlay">
 											<div className="collection-card-actions">
 												<button
-													className="collection-card-action-btn"
+													className="collection-card-action-btn action-primary"
 													onClick={(e) => {
 														e.stopPropagation();
 														handleCollectionClick(collection);
@@ -167,6 +355,27 @@ export default function CollectionsPage() {
 													title="Xem bộ sưu tập"
 												>
 													<Eye size={18} />
+												</button>
+												<div onClick={(e) => e.stopPropagation()}>
+													<CollectionShare collection={collection} />
+												</div>
+												<button
+													className="collection-card-action-btn"
+													onClick={(e) => handleTogglePublic(e, collection)}
+													title={collection.isPublic ? 'Ẩn bộ sưu tập' : 'Công khai bộ sưu tập'}
+												>
+													{collection.isPublic ? (
+														<Unlock size={18} />
+													) : (
+														<Lock size={18} />
+													)}
+												</button>
+												<button
+													className="collection-card-action-btn"
+													onClick={(e) => handleDuplicateCollection(e, collection)}
+													title="Tạo bản sao"
+												>
+													<Copy size={18} />
 												</button>
 												<button
 													className="collection-card-action-btn"
@@ -176,7 +385,7 @@ export default function CollectionsPage() {
 													<Edit2 size={18} />
 												</button>
 												<button
-													className="collection-card-action-btn"
+													className="collection-card-action-btn action-danger"
 													onClick={(e) => {
 														e.stopPropagation();
 														handleDeleteCollection(collection._id);
@@ -210,7 +419,8 @@ export default function CollectionsPage() {
 								</div>
 							);
 						})}
-					</div>
+						</div>
+					</>
 				)}
 			</div>
 

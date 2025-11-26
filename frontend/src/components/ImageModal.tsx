@@ -10,6 +10,7 @@ import {
   ChevronDown,
   X,
   FolderPlus,
+  Tag,
 } from 'lucide-react';
 import type { Image } from '@/types/image';
 import ProgressiveImage from './ProgressiveImage';
@@ -813,6 +814,32 @@ const ImageModal = ({
                 {formattedDate && (
                   <div className="image-info-date">
                     {formattedDate}
+                  </div>
+                )}
+                {/* Debug: Uncomment to check tags in console */}
+                {/* {console.log('Image tags debug:', image.tags, 'Type:', typeof image.tags, 'Is Array:', Array.isArray(image.tags))} */}
+                {image.tags && Array.isArray(image.tags) && image.tags.length > 0 && (
+                  <div className="image-info-tags">
+                    <div className="image-info-tags-list">
+                      {image.tags.map((tag, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          className="image-info-tag"
+                          onClick={() => {
+                            onClose();
+                            navigate('/');
+                            setTimeout(() => {
+                              useImageStore.getState().fetchImages({ tag });
+                            }, 100);
+                          }}
+                          title={`Tìm kiếm: ${tag}`}
+                        >
+                          <Tag size={12} />
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

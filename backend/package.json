@@ -26,6 +26,7 @@
 		"cors": "^2.8.5",
 		"dompurify": "^3.3.0",
 		"dotenv": "^17.2.3",
+		"exif-parser": "^0.1.12",
 		"express": "^4.21.2",
 		"express-rate-limit": "^8.2.1",
 		"express-validator": "^7.3.0",

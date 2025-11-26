@@ -7,6 +7,7 @@ import { logger } from '../utils/logger.js';
 import { PAGINATION } from '../utils/constants.js';
 import { clearCache } from '../middlewares/cacheMiddleware.js';
 import { extractDominantColors } from '../utils/colorExtractor.js';
+import { extractExifData } from '../utils/exifExtractor.js';
 
 export const uploadImage = asyncHandler(async (req, res) => {
     const userId = req.user._id;
@@ -105,6 +106,16 @@ export const uploadImage = asyncHandler(async (req, res) => {
             // Don't fail upload if color extraction fails
         }
 
+        // Extract EXIF data from image
+        let exifData = {};
+        try {
+            exifData = await extractExifData(req.file.buffer);
+            logger.info('Extracted EXIF data from image');
+        } catch (exifError) {
+            logger.warn('Failed to extract EXIF data, continuing without EXIF:', exifError);
+            // Don't fail upload if EXIF extraction fails
+        }
+
         // Parse and validate tags
         let parsedTags = [];
         if (tags) {
@@ -147,7 +158,13 @@ export const uploadImage = asyncHandler(async (req, res) => {
             uploadedBy: userId,
             location: location?.trim() || undefined,
             coordinates: parsedCoordinates || undefined,
-            cameraModel: cameraModel?.trim() || undefined,
+            // Use EXIF data if available, otherwise use manual input
+            cameraMake: exifData.cameraMake || undefined,
+            cameraModel: exifData.cameraModel || cameraModel?.trim() || undefined,
+            focalLength: exifData.focalLength || undefined,
+            aperture: exifData.aperture || undefined,
+            shutterSpeed: exifData.shutterSpeed || undefined,
+            iso: exifData.iso || undefined,
             dominantColors: dominantColors.length > 0 ? dominantColors : undefined,
             tags: parsedTags.length > 0 ? parsedTags : undefined,
             // Moderation status
@@ -332,9 +349,10 @@ export const finalizeImageUpload = asyncHandler(async (req, res) => {
         });
     }
 
-    // Extract dominant colors from the uploaded image
-    // We need to fetch the image from S3 to extract colors
+    // Extract dominant colors and EXIF data from the uploaded image
+    // We need to fetch the image from S3 to extract metadata
     let dominantColors = [];
+    let exifData = {};
     try {
         const imageData = await getImageFromS3(imageUrl);
         if (imageData.Body) {
@@ -344,12 +362,18 @@ export const finalizeImageUpload = asyncHandler(async (req, res) => {
                 chunks.push(chunk);
             }
             const imageBuffer = Buffer.concat(chunks);
+            
+            // Extract colors
             dominantColors = await extractDominantColors(imageBuffer, 3);
             logger.info(`Extracted ${dominantColors.length} dominant colors for image`);
+            
+            // Extract EXIF data
+            exifData = await extractExifData(imageBuffer);
+            logger.info('Extracted EXIF data from image');
         }
-    } catch (colorError) {
-        logger.warn('Failed to extract colors, continuing without colors:', colorError);
-        // Don't fail finalize if color extraction fails
+    } catch (error) {
+        logger.warn('Failed to extract metadata, continuing without metadata:', error);
+        // Don't fail finalize if metadata extraction fails
     }
 
     // Parse and validate tags
@@ -391,7 +415,13 @@ export const finalizeImageUpload = asyncHandler(async (req, res) => {
             uploadedBy: userId,
             location: location?.trim() || undefined,
             coordinates: parsedCoordinates || undefined,
-            cameraModel: cameraModel?.trim() || undefined,
+            // Use EXIF data if available, otherwise use manual input
+            cameraMake: exifData.cameraMake || undefined,
+            cameraModel: exifData.cameraModel || cameraModel?.trim() || undefined,
+            focalLength: exifData.focalLength || undefined,
+            aperture: exifData.aperture || undefined,
+            shutterSpeed: exifData.shutterSpeed || undefined,
+            iso: exifData.iso || undefined,
             dominantColors: dominantColors.length > 0 ? dominantColors : undefined,
             tags: parsedTags.length > 0 ? parsedTags : undefined,
             moderationStatus,
@@ -668,7 +698,7 @@ export const downloadImage = asyncHandler(async (req, res) => {
 // Update image information
 export const updateImage = asyncHandler(async (req, res) => {
     const imageId = req.params.imageId;
-    const { imageTitle, location, coordinates, cameraModel, tags } = req.body;
+    const { imageTitle, location, coordinates, cameraModel, cameraMake, focalLength, aperture, shutterSpeed, iso, tags } = req.body;
     const userId = req.user?._id;
 
     // Find the image
@@ -711,8 +741,65 @@ export const updateImage = asyncHandler(async (req, res) => {
         }
     }
 
+    if (cameraMake !== undefined) {
+        updateData.cameraMake = cameraMake ? cameraMake.trim() : null;
+    }
+
     if (cameraModel !== undefined) {
         updateData.cameraModel = cameraModel ? cameraModel.trim() : null;
+    }
+
+    if (focalLength !== undefined) {
+        const focalValue = typeof focalLength === 'string' ? parseFloat(focalLength) : focalLength;
+        updateData.focalLength = focalValue && !isNaN(focalValue) && focalValue > 0 ? Math.round(focalValue * 10) / 10 : null;
+    }
+
+    if (aperture !== undefined) {
+        const apertureValue = typeof aperture === 'string' ? parseFloat(aperture) : aperture;
+        updateData.aperture = apertureValue && !isNaN(apertureValue) && apertureValue > 0 ? Math.round(apertureValue * 10) / 10 : null;
+    }
+
+    if (shutterSpeed !== undefined) {
+        updateData.shutterSpeed = shutterSpeed ? shutterSpeed.trim() : null;
+    }
+
+    if (iso !== undefined) {
+        const isoValue = typeof iso === 'string' ? parseInt(iso, 10) : iso;
+        updateData.iso = isoValue && !isNaN(isoValue) && isoValue > 0 ? Math.round(isoValue) : null;
+    }
+
+    if (tags !== undefined) {
+        // Handle tags: can be array, JSON string, or null/empty to clear
+        if (tags === null || (Array.isArray(tags) && tags.length === 0)) {
+            updateData.tags = [];
+        } else if (Array.isArray(tags)) {
+            // Clean and validate tags (trim, lowercase, remove duplicates, max 20 tags)
+            const parsedTags = tags
+                .map(tag => typeof tag === 'string' ? tag.trim().toLowerCase() : String(tag).trim().toLowerCase())
+                .filter(tag => tag.length > 0 && tag.length <= 50)
+                .filter((tag, index, self) => self.indexOf(tag) === index) // Remove duplicates
+                .slice(0, 20); // Max 20 tags
+            updateData.tags = parsedTags;
+        } else if (typeof tags === 'string') {
+            try {
+                const tagsArray = JSON.parse(tags);
+                if (Array.isArray(tagsArray)) {
+                    const parsedTags = tagsArray
+                        .map(tag => typeof tag === 'string' ? tag.trim().toLowerCase() : String(tag).trim().toLowerCase())
+                        .filter(tag => tag.length > 0 && tag.length <= 50)
+                        .filter((tag, index, self) => self.indexOf(tag) === index)
+                        .slice(0, 20);
+                    updateData.tags = parsedTags;
+                } else {
+                    updateData.tags = [];
+                }
+            } catch (error) {
+                logger.warn('Invalid tags format:', error);
+                updateData.tags = [];
+            }
+        } else {
+            updateData.tags = [];
+        }
     }
 
     // Update the image

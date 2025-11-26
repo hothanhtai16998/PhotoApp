@@ -1,8 +1,9 @@
 /* Profile Page */
 .profile-page {
-	min-height: 100vh;
+	min-height: calc(100vh - var(--header-height, 80px));
 	background: #fff;
 	padding: 40px 20px;
+	margin-top: var(--header-height, 80px);
 }
 
 .profile-container {

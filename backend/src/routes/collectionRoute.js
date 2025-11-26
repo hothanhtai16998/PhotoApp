@@ -8,6 +8,7 @@ import {
     addImageToCollection,
     removeImageFromCollection,
     getCollectionsContainingImage,
+    reorderCollectionImages,
 } from '../controllers/collectionController.js';
 import { protectedRoute } from '../middlewares/authMiddleware.js';
 import { validateCsrf } from '../middlewares/csrfMiddleware.js';
@@ -40,6 +41,9 @@ router.post('/:collectionId/images', validateCsrf, addImageToCollection);
 
 // Remove image from collection
 router.delete('/:collectionId/images/:imageId', validateCsrf, removeImageFromCollection);
+
+// Reorder images in collection
+router.patch('/:collectionId/images/reorder', validateCsrf, reorderCollectionImages);
 
 export default router;
 

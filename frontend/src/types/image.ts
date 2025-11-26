@@ -25,6 +25,12 @@ export interface Image {
     longitude: number;
   };
   cameraModel?: string;
+  // EXIF metadata
+  cameraMake?: string; // Camera manufacturer (e.g., "Canon", "Nikon")
+  focalLength?: number; // Focal length in mm (e.g., 60.0)
+  aperture?: number; // Aperture f-stop (e.g., 9.0)
+  shutterSpeed?: string; // Shutter speed (e.g., "1/80", "2s")
+  iso?: number; // ISO sensitivity (e.g., 100)
   dominantColors?: string[]; // Array of color names: 'red', 'orange', 'yellow', etc.
   tags?: string[]; // Array of tag strings for searchability
   views?: number;

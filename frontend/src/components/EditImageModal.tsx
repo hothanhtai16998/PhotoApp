@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, MapPin, Camera, Image as ImageIcon } from 'lucide-react';
+import { X, MapPin, Camera, Image as ImageIcon, HelpCircle } from 'lucide-react';
 import type { Image } from '@/types/image';
 import { imageService } from '@/services/imageService';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -25,6 +25,11 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
   const [imageTitle, setImageTitle] = useState(image.imageTitle || '');
   const [location, setLocation] = useState(image.location || '');
   const [cameraModel, setCameraModel] = useState(image.cameraModel || '');
+  const [cameraMake, setCameraMake] = useState(image.cameraMake || '');
+  const [focalLength, setFocalLength] = useState(image.focalLength?.toString() || '');
+  const [aperture, setAperture] = useState(image.aperture?.toString() || '');
+  const [shutterSpeed, setShutterSpeed] = useState(image.shutterSpeed || '');
+  const [iso, setIso] = useState(image.iso?.toString() || '');
   const [tags, setTags] = useState<string[]>(image.tags || []);
   const [description, setDescription] = useState(''); // Placeholder for future description field
 
@@ -34,6 +39,11 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
       setImageTitle(image.imageTitle || '');
       setLocation(image.location || '');
       setCameraModel(image.cameraModel || '');
+      setCameraMake(image.cameraMake || '');
+      setFocalLength(image.focalLength?.toString() || '');
+      setAperture(image.aperture?.toString() || '');
+      setShutterSpeed(image.shutterSpeed || '');
+      setIso(image.iso?.toString() || '');
       setTags(image.tags || []);
       setDescription('');
     }
@@ -60,7 +70,12 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
         imageTitle: imageTitle.trim(),
         location: location.trim() || undefined,
         cameraModel: cameraModel.trim() || undefined,
-        tags: tags.length > 0 ? tags : undefined,
+        cameraMake: cameraMake.trim() || undefined,
+        focalLength: focalLength.trim() ? parseFloat(focalLength) : undefined,
+        aperture: aperture.trim() ? parseFloat(aperture) : undefined,
+        shutterSpeed: shutterSpeed.trim() || undefined,
+        iso: iso.trim() ? parseInt(iso, 10) : undefined,
+        tags: tags, // Always send tags array (even if empty) to ensure proper update
       });
 
       toast.success('Cập nhật thông tin ảnh thành công');
@@ -75,7 +90,7 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
     } finally {
       setIsSubmitting(false);
     }
-  }, [image._id, imageTitle, location, cameraModel, tags, canEdit, onUpdate, onClose]);
+  }, [image._id, imageTitle, location, cameraModel, cameraMake, focalLength, aperture, shutterSpeed, iso, tags, canEdit, onUpdate, onClose]);
 
   // Handle saving edited image
   const handleSaveEditedImage = useCallback(async (editedImageBlob: Blob) => {
@@ -229,20 +244,142 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
 
           {activeTab === 'exif' && (
             <div className="edit-modal-tab-panel">
-              <div className="edit-form-group">
-                <label htmlFor="camera">
-                  <Camera size={16} />
-                  Camera
-                </label>
-                <input
-                  id="camera"
-                  type="text"
-                  className="edit-form-input"
-                  value={cameraModel}
-                  onChange={(e) => setCameraModel(e.target.value)}
-                  placeholder="Camera model"
-                  maxLength={100}
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                {/* Camera Make */}
+                <div className="edit-form-group">
+                  <label htmlFor="cameraMake" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Camera size={16} />
+                    Hãng máy ảnh
+                    <div className="tooltip-wrapper">
+                      <HelpCircle size={14} className="tooltip-icon" />
+                      <span className="tooltip-text">
+                        Tên hãng sản xuất máy ảnh (ví dụ: Canon, Nikon, Sony, iPhone)
+                      </span>
+                    </div>
+                  </label>
+                  <input
+                    id="cameraMake"
+                    type="text"
+                    className="edit-form-input"
+                    value={cameraMake}
+                    onChange={(e) => setCameraMake(e.target.value)}
+                    placeholder="Ví dụ: Canon, Nikon, Sony"
+                    maxLength={50}
+                  />
+                </div>
+
+                {/* Camera Model */}
+                <div className="edit-form-group">
+                  <label htmlFor="cameraModel" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Camera size={16} />
+                    Model máy ảnh
+                    <div className="tooltip-wrapper">
+                      <HelpCircle size={14} className="tooltip-icon" />
+                      <span className="tooltip-text">
+                        Tên model máy ảnh (ví dụ: Canon EOS 7D, iPhone X, Sony A7 III)
+                      </span>
+                    </div>
+                  </label>
+                  <input
+                    id="cameraModel"
+                    type="text"
+                    className="edit-form-input"
+                    value={cameraModel}
+                    onChange={(e) => setCameraModel(e.target.value)}
+                    placeholder="Ví dụ: Canon EOS 7D"
+                    maxLength={100}
+                  />
+                </div>
+
+                {/* Focal Length */}
+                <div className="edit-form-group">
+                  <label htmlFor="focalLength" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    Tiêu cự (mm)
+                    <div className="tooltip-wrapper">
+                      <HelpCircle size={14} className="tooltip-icon" />
+                      <span className="tooltip-text">
+                        Độ dài tiêu cự của ống kính (tính bằng mm). Số càng nhỏ = góc rộng hơn, số càng lớn = zoom xa hơn. Ví dụ: 24mm (góc rộng), 50mm (bình thường), 200mm (tele)
+                      </span>
+                    </div>
+                  </label>
+                  <input
+                    id="focalLength"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    className="edit-form-input"
+                    value={focalLength}
+                    onChange={(e) => setFocalLength(e.target.value)}
+                    placeholder="Ví dụ: 60.0"
+                  />
+                </div>
+
+                {/* Aperture */}
+                <div className="edit-form-group">
+                  <label htmlFor="aperture" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    Khẩu độ (f)
+                    <div className="tooltip-wrapper">
+                      <HelpCircle size={14} className="tooltip-icon" />
+                      <span className="tooltip-text">
+                        Độ mở của ống kính (f-stop). Số càng nhỏ = mở rộng hơn = xóa phông nhiều hơn. Số càng lớn = mở hẹp hơn = ảnh sắc nét hơn. Ví dụ: f/1.8 (mở rộng), f/9.0 (mở hẹp)
+                      </span>
+                    </div>
+                  </label>
+                  <input
+                    id="aperture"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    className="edit-form-input"
+                    value={aperture}
+                    onChange={(e) => setAperture(e.target.value)}
+                    placeholder="Ví dụ: 9.0"
+                  />
+                </div>
+
+                {/* Shutter Speed */}
+                <div className="edit-form-group">
+                  <label htmlFor="shutterSpeed" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    Tốc độ màn trập (s)
+                    <div className="tooltip-wrapper">
+                      <HelpCircle size={14} className="tooltip-icon" />
+                      <span className="tooltip-text">
+                        Thời gian màn trập mở (tính bằng giây). Nhanh (1/1000) = đóng băng chuyển động. Chậm (1/30) = làm mờ chuyển động. Ví dụ: 1/80 (nhanh), 2s (chậm)
+                      </span>
+                    </div>
+                  </label>
+                  <input
+                    id="shutterSpeed"
+                    type="text"
+                    className="edit-form-input"
+                    value={shutterSpeed}
+                    onChange={(e) => setShutterSpeed(e.target.value)}
+                    placeholder="Ví dụ: 1/80 hoặc 2s"
+                    maxLength={20}
+                  />
+                </div>
+
+                {/* ISO */}
+                <div className="edit-form-group">
+                  <label htmlFor="iso" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    ISO
+                    <div className="tooltip-wrapper">
+                      <HelpCircle size={14} className="tooltip-icon" />
+                      <span className="tooltip-text">
+                        Độ nhạy sáng của cảm biến. Số thấp (100-400) = ảnh sạch, ít nhiễu. Số cao (1600+) = ảnh sáng hơn nhưng nhiều nhiễu hơn. Ví dụ: 100 (thấp), 800 (trung bình), 3200 (cao)
+                      </span>
+                    </div>
+                  </label>
+                  <input
+                    id="iso"
+                    type="number"
+                    min="0"
+                    className="edit-form-input"
+                    value={iso}
+                    onChange={(e) => setIso(e.target.value)}
+                    placeholder="Ví dụ: 100"
+                  />
+                </div>
               </div>
             </div>
           )}

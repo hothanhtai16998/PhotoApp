@@ -423,3 +423,88 @@ export const getCollectionsContainingImage = async (req, res) => {
     }
 };
 
+/**
+ * Reorder images in a collection
+ */
+export const reorderCollectionImages = async (req, res) => {
+    try {
+        const { collectionId } = req.params;
+        const { imageIds } = req.body; // Array of image IDs in new order
+        const userId = req.user._id;
+
+        if (!Array.isArray(imageIds)) {
+            return res.status(400).json({
+                success: false,
+                message: 'imageIds must be an array',
+            });
+        }
+
+        // Verify collection exists and belongs to user
+        const collection = await Collection.findOne({
+            _id: collectionId,
+            createdBy: userId,
+        });
+
+        if (!collection) {
+            return res.status(404).json({
+                success: false,
+                message: 'Collection not found',
+            });
+        }
+
+        // Verify all image IDs are in the collection
+        const collectionImageIds = collection.images.map(id => id.toString());
+        const allImagesInCollection = imageIds.every(id => 
+            collectionImageIds.includes(id.toString())
+        );
+
+        if (!allImagesInCollection) {
+            return res.status(400).json({
+                success: false,
+                message: 'All image IDs must be in the collection',
+            });
+        }
+
+        // Verify all collection images are in the new order
+        if (imageIds.length !== collection.images.length) {
+            return res.status(400).json({
+                success: false,
+                message: 'Image count mismatch',
+            });
+        }
+
+        // Reorder images
+        collection.images = imageIds.map(id => 
+            collection.images.find(imgId => imgId.toString() === id.toString())
+        ).filter(Boolean);
+
+        await collection.save();
+
+        const populatedCollection = await Collection.findById(collection._id)
+            .populate('coverImage', 'thumbnailUrl smallUrl imageUrl imageTitle')
+            .populate({
+                path: 'images',
+                select: 'thumbnailUrl smallUrl regularUrl imageUrl imageTitle location uploadedBy views downloads createdAt',
+                populate: {
+                    path: 'uploadedBy',
+                    select: 'username displayName avatarUrl',
+                },
+            })
+            .lean();
+
+        res.json({
+            success: true,
+            collection: {
+                ...populatedCollection,
+                imageCount: populatedCollection.images ? populatedCollection.images.length : 0,
+            },
+        });
+    } catch (error) {
+        logger.error('Error reordering collection images:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to reorder images',
+        });
+    }
+};
+

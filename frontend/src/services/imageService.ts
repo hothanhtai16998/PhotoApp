@@ -293,6 +293,11 @@ export const imageService = {
       location?: string;
       coordinates?: { latitude: number; longitude: number } | null;
       cameraModel?: string;
+      cameraMake?: string;
+      focalLength?: number;
+      aperture?: number;
+      shutterSpeed?: string;
+      iso?: number;
       tags?: string[];
     }
   ): Promise<Image> => {

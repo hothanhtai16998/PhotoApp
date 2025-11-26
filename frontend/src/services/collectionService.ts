@@ -109,6 +109,23 @@ export const collectionService = {
 		}
 		throw new Error('Failed to fetch collections');
 	},
+
+	/**
+	 * Reorder images in a collection
+	 */
+	reorderCollectionImages: async (
+		collectionId: string,
+		imageIds: string[]
+	): Promise<Collection> => {
+		const response = await api.patch<CollectionResponse>(
+			`/collections/${collectionId}/images/reorder`,
+			{ imageIds }
+		);
+		if (response.data.success && response.data.collection) {
+			return response.data.collection;
+		}
+		throw new Error(response.data.message || 'Failed to reorder images');
+	},
 };
 
 

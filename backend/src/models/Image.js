@@ -82,6 +82,27 @@ const imageSchema = new mongoose.Schema(
             type: String,
             trim: true,
         },
+        // EXIF metadata for camera settings
+        cameraMake: {
+            type: String,
+            trim: true,
+        },
+        focalLength: {
+            type: Number,
+            min: 0,
+        },
+        aperture: {
+            type: Number,
+            min: 0,
+        },
+        shutterSpeed: {
+            type: String,
+            trim: true,
+        },
+        iso: {
+            type: Number,
+            min: 0,
+        },
         // Dominant colors extracted from image (for color filtering)
         dominantColors: {
             type: [String],
