@@ -1,6 +1,9 @@
 import { asyncHandler } from "../middlewares/asyncHandler.js";
 import bcrypt from "bcrypt";
 import User from "../models/User.js";
+import Image from "../models/Image.js";
+import Collection from "../models/Collection.js";
+import Follow from "../models/Follow.js";
 import Notification from "../models/Notification.js";
 import { uploadAvatar, deleteAvatarFromS3 } from "../libs/s3.js";
 import { logger } from '../utils/logger.js';
@@ -259,5 +262,178 @@ export const changeInfo = asyncHandler(async (req, res) => {
     return res.status(200).json({
         message: "Cập nhật thông tin thành công",
         user: updatedUser
+    });
+});
+
+/**
+ * Get user profile statistics
+ * GET /api/users/:userId/stats
+ * Returns: totalImages, totalCollections, totalFavorites (received), totalDownloads, totalViews, followersCount, followingCount, profileViews, joinDate
+ */
+export const getUserStats = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+    
+    // Get user with profile fields for completion calculation
+    const user = await User.findById(userId).select('profileViews createdAt avatarUrl bio phone displayName').lean();
+    if (!user) {
+        return res.status(404).json({
+            message: 'User not found',
+        });
+    }
+
+    // Get user's images
+    const userImages = await Image.find({ uploadedBy: userId }).select('views downloads').lean();
+    
+    // Calculate stats
+    const totalImages = userImages.length;
+    const totalViews = userImages.reduce((sum, img) => sum + (img.views || 0), 0);
+    const totalDownloads = userImages.reduce((sum, img) => sum + (img.downloads || 0), 0);
+    
+    // Get collections count
+    const totalCollections = await Collection.countDocuments({ createdBy: userId });
+    
+    // Calculate total likes received (how many users have favorited this user's images)
+    // Count all users who have any of this user's images in their favorites
+    const userImageIds = userImages.map(img => img._id);
+    const totalLikesReceived = userImageIds.length > 0 
+        ? await User.countDocuments({
+            favorites: { $in: userImageIds }
+        })
+        : 0;
+    
+    // Get followers/following count
+    const followersCount = await Follow.countDocuments({ following: userId });
+    const followingCount = await Follow.countDocuments({ follower: userId });
+    
+    // Calculate profile completion percentage
+    // Criteria: avatar, bio, phone, at least 1 image, at least 1 collection
+    const completionCriteria = {
+        hasAvatar: !!(user.avatarUrl && user.avatarUrl.trim() !== ''),
+        hasBio: !!(user.bio && user.bio.trim() !== ''),
+        hasPhone: !!(user.phone && user.phone.trim() !== ''),
+        hasImages: totalImages > 0,
+        hasCollections: totalCollections > 0,
+    };
+    
+    const completedCount = Object.values(completionCriteria).filter(Boolean).length;
+    const totalCriteria = Object.keys(completionCriteria).length;
+    const completionPercentage = Math.round((completedCount / totalCriteria) * 100);
+    
+    res.status(200).json({
+        totalImages,
+        totalCollections,
+        totalFavorites: totalLikesReceived, // Likes received (favorites on user's images)
+        totalDownloads,
+        totalViews,
+        followersCount,
+        followingCount,
+        profileViews: user.profileViews || 0,
+        joinDate: user.createdAt,
+        verifiedBadge: false, // Future feature
+        profileCompletion: {
+            percentage: completionPercentage,
+            completed: completedCount,
+            total: totalCriteria,
+            criteria: completionCriteria,
+        },
+    });
+});
+
+/**
+ * Track profile view
+ * POST /api/users/:userId/view
+ * Increments profileViews when someone visits a user's profile
+ */
+export const trackProfileView = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+    const viewerId = req.user?._id; // Optional - can be null for anonymous views
+    
+    // Don't count self-views
+    if (viewerId && viewerId.toString() === userId) {
+        return res.status(200).json({
+            message: 'Self-view not counted',
+            profileViews: 0,
+        });
+    }
+    
+    // Update profile views
+    const user = await User.findByIdAndUpdate(
+        userId,
+        {
+            $inc: { profileViews: 1 },
+            $set: { lastProfileView: new Date() },
+        },
+        { new: true }
+    ).select('profileViews');
+    
+    if (!user) {
+        return res.status(404).json({
+            message: 'User not found',
+        });
+    }
+    
+    res.status(200).json({
+        message: 'Profile view tracked',
+        profileViews: user.profileViews,
+    });
+});
+
+/**
+ * Get public user data by username
+ * GET /api/users/username/:username
+ * Public endpoint - returns basic user info
+ */
+export const getUserByUsername = asyncHandler(async (req, res) => {
+    const { username } = req.params;
+    
+    const user = await User.findOne({ username: username.toLowerCase() })
+        .select('username displayName avatarUrl bio createdAt')
+        .lean();
+    
+    if (!user) {
+        return res.status(404).json({
+            message: 'User not found',
+        });
+    }
+    
+    res.status(200).json({
+        user: {
+            _id: user._id,
+            username: user.username,
+            displayName: user.displayName,
+            avatarUrl: user.avatarUrl || '',
+            bio: user.bio || '',
+            createdAt: user.createdAt,
+        },
+    });
+});
+
+/**
+ * Get public user data by userId
+ * GET /api/users/:userId
+ * Public endpoint - returns basic user info
+ */
+export const getUserById = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+    
+    const user = await User.findById(userId)
+        .select('username displayName avatarUrl bio createdAt')
+        .lean();
+    
+    if (!user) {
+        return res.status(404).json({
+            message: 'User not found',
+        });
+    }
+    
+    res.status(200).json({
+        user: {
+            _id: user._id,
+            username: user.username,
+            displayName: user.displayName,
+            avatarUrl: user.avatarUrl || '',
+            bio: user.bio || '',
+            createdAt: user.createdAt,
+        },
     });
 })

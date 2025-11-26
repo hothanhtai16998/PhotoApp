@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { imageService } from "@/services/imageService";
 import Header from "@/components/Header";
@@ -15,17 +15,23 @@ import api from "@/lib/axios";
 import { generateImageSlug, extractIdFromSlug } from "@/lib/utils";
 import { collectionService } from "@/services/collectionService";
 import type { Collection } from "@/types/collection";
-import { Folder, Eye } from "lucide-react";
+import { Folder, Eye, Image as ImageIcon, Heart, Download, Users, UserPlus, Eye as EyeIcon } from "lucide-react";
 import { UserAnalyticsDashboard } from "@/components/UserAnalyticsDashboard";
 import { followService } from "@/services/followService";
+import { userStatsService, type UserStats } from "@/services/userStatsService";
+import { ProfileCompletion } from "@/components/ProfileCompletion";
+import { userService, type PublicUser } from "@/services/userService";
 import "./ProfilePage.css";
 
 type TabType = 'photos' | 'illustrations' | 'collections' | 'stats';
 
 function ProfilePage() {
-    const { user } = useAuthStore();
+    const { user: currentUser } = useAuthStore();
     const navigate = useNavigate();
+    const params = useParams<{ username?: string; userId?: string }>();
     const [searchParams, setSearchParams] = useSearchParams();
+    const [profileUser, setProfileUser] = useState<PublicUser | null>(null);
+    const [profileUserLoading, setProfileUserLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<TabType>('photos');
     const [images, setImages] = useState<Image[]>([]);
     const [loading, setLoading] = useState(true);
@@ -35,17 +41,66 @@ function ProfilePage() {
     const [collectionsLoading, setCollectionsLoading] = useState(false);
     const [collectionsCount, setCollectionsCount] = useState(0);
     const [followStats, setFollowStats] = useState({ followers: 0, following: 0, isFollowing: false });
+    const [userStats, setUserStats] = useState<UserStats | null>(null);
+    const [statsLoading, setStatsLoading] = useState(false);
     
     // Track image aspect ratios (portrait vs landscape)
     const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
     const processedImages = useRef<Set<string>>(new Set());
 
+    // Fetch profile user data if viewing someone else's profile
+    useEffect(() => {
+        const fetchProfileUser = async () => {
+            if (params.username && !profileUser) {
+                try {
+                    setProfileUserLoading(true);
+                    const userData = await userService.getUserByUsername(params.username);
+                    setProfileUser(userData);
+                } catch (error) {
+                    console.error('Failed to fetch user:', error);
+                    toast.error('Không tìm thấy người dùng');
+                    navigate('/');
+                } finally {
+                    setProfileUserLoading(false);
+                }
+            } else if (params.userId && !profileUser) {
+                try {
+                    setProfileUserLoading(true);
+                    const userData = await userService.getUserById(params.userId);
+                    setProfileUser(userData);
+                } catch (error) {
+                    console.error('Failed to fetch user:', error);
+                    toast.error('Không tìm thấy người dùng');
+                    navigate('/');
+                } finally {
+                    setProfileUserLoading(false);
+                }
+            } else if (!params.username && !params.userId) {
+                // Viewing own profile
+                setProfileUser(null);
+            }
+        };
+
+        fetchProfileUser();
+    }, [params.username, params.userId, navigate]);
+
+    // Determine which user's profile to display
+    const displayUserId = useMemo(() => {
+        if (params.userId) return params.userId;
+        if (params.username && profileUser) return profileUser._id;
+        return currentUser?._id;
+    }, [params.userId, params.username, profileUser, currentUser?._id]);
+
+    const isOwnProfile = useMemo(() => {
+        return displayUserId === currentUser?._id;
+    }, [displayUserId, currentUser?._id]);
+
     const fetchUserImages = useCallback(async (refresh = false) => {
-        if (!user?._id) return;
+        if (!displayUserId) return;
 
         try {
             setLoading(true);
-            const response = await imageService.fetchUserImages(user._id, refresh ? { _refresh: true } : undefined);
+            const response = await imageService.fetchUserImages(displayUserId, refresh ? { _refresh: true } : undefined);
             const userImages = response.images || [];
             setImages(userImages);
 
@@ -74,13 +129,19 @@ function ProfilePage() {
         } finally {
             setLoading(false);
         }
-    }, [user]);
+    }, [displayUserId]);
 
     const fetchCollections = useCallback(async () => {
-        if (!user?._id) return;
+        if (!displayUserId) return;
 
         try {
             setCollectionsLoading(true);
+            // For now, only fetch own collections. TODO: Add endpoint to fetch other users' collections
+            if (!isOwnProfile) {
+                setCollections([]);
+                setCollectionsCount(0);
+                return;
+            }
             const data = await collectionService.getUserCollections();
             setCollections(data);
             setCollectionsCount(data.length);
@@ -89,30 +150,64 @@ function ProfilePage() {
         } finally {
             setCollectionsLoading(false);
         }
-    }, [user]);
+    }, [displayUserId, isOwnProfile]);
 
     const fetchFollowStats = useCallback(async () => {
-        if (!user?._id) return;
+        if (!displayUserId) return;
 
         try {
-            const response = await followService.getUserFollowStats(user._id);
+            const response = await followService.getUserFollowStats(displayUserId);
             setFollowStats(response.stats);
         } catch (error) {
             console.error('Failed to fetch follow stats:', error);
         }
-    }, [user]);
+    }, [displayUserId]);
 
+    const fetchUserStats = useCallback(async () => {
+        if (!displayUserId) return;
+
+        try {
+            setStatsLoading(true);
+            const stats = await userStatsService.getUserStats(displayUserId);
+            setUserStats(stats);
+        } catch (error) {
+            console.error('Failed to fetch user stats:', error);
+        } finally {
+            setStatsLoading(false);
+        }
+    }, [displayUserId]);
+
+    // Track profile view when component mounts (only once per session)
+    useEffect(() => {
+        if (!displayUserId || !currentUser?._id) return;
+        
+        // Only track views for other users' profiles
+        if (!isOwnProfile) {
+            const hasTrackedView = sessionStorage.getItem(`profile_view_${displayUserId}_${currentUser._id}`);
+            if (!hasTrackedView) {
+                userStatsService.trackProfileView(displayUserId).catch(err => {
+                    console.error('Failed to track profile view:', err);
+                    // Don't show error to user - this is background tracking
+                });
+                sessionStorage.setItem(`profile_view_${displayUserId}_${currentUser._id}`, 'true');
+            }
+        }
+    }, [displayUserId, currentUser?._id, isOwnProfile]);
 
     useEffect(() => {
-        if (!user?._id) {
+        // Require authentication for viewing profiles
+        if (!currentUser?._id) {
             navigate('/signin');
             return;
         }
 
+        if (!displayUserId) return;
+
         fetchUserImages();
         fetchCollections();
         fetchFollowStats();
-    }, [user, navigate, fetchUserImages, fetchCollections, fetchFollowStats]);
+        fetchUserStats();
+    }, [displayUserId, currentUser, navigate, fetchUserImages, fetchCollections, fetchFollowStats, fetchUserStats]);
 
     // Listen for refresh event after image upload
     useEffect(() => {
@@ -295,9 +390,24 @@ function ProfilePage() {
         }
     }, []);
 
-    if (!user) {
+    if (!currentUser) {
         return null;
     }
+
+    if (profileUserLoading) {
+        return (
+            <>
+                <Header />
+                <main className="profile-page">
+                    <div className="profile-container">
+                        <Skeleton className="h-32 w-full" />
+                    </div>
+                </main>
+            </>
+        );
+    }
+
+    const displayUser = profileUser || currentUser;
 
     return (
         <>
@@ -308,7 +418,7 @@ function ProfilePage() {
                     <div className="profile-header">
                         <div className="profile-avatar-container">
                             <Avatar
-                                user={user}
+                                user={displayUser}
                                 size={120}
                                 className="profile-avatar"
                                 fallbackClassName="profile-avatar-placeholder"
@@ -316,7 +426,7 @@ function ProfilePage() {
                         </div>
                         <div className="profile-info">
                             <div className="profile-name-section">
-                                <h1 className="profile-name">{user.displayName || user.username}</h1>
+                                <h1 className="profile-name">{displayUser.displayName || displayUser.username}</h1>
                                 <div className="profile-actions">
                                     <Button
                                         variant="outline"
@@ -325,7 +435,7 @@ function ProfilePage() {
                                         className="edit-profile-btn"
                                     >
                                         <Edit2 size={16} />
-                                        Edit profile
+                                        Chỉnh sửa hồ sơ
                                     </Button>
                                     <Button
                                         variant="outline"
@@ -334,43 +444,129 @@ function ProfilePage() {
                                         className="edit-pins-btn"
                                     >
                                         <Star size={16} />
-                                        Edit pins
+                                        Chỉnh sửa ghim
                                     </Button>
                                 </div>
                             </div>
                             <p className="profile-description">
-                                Download free, beautiful high-quality photos curated by {user.displayName || user.username}.
+                                {displayUser.bio || `Tải xuống miễn phí những bức ảnh chất lượng cao đẹp mắt được tuyển chọn bởi ${displayUser.displayName || displayUser.username}.`}
                             </p>
-                            <div className="profile-stats">
+                            {/* Profile Completion */}
+                            {userStats && userStats.profileCompletion && (
+                                <ProfileCompletion
+                                    completion={userStats.profileCompletion}
+                                    onEditProfile={handleEditProfile}
+                                />
+                            )}
+
+                            {/* Visual Stats Cards */}
+                            <div className="profile-stats-grid">
                                 <button 
-                                    className="profile-stat-item"
+                                    className="profile-stat-card"
+                                    onClick={() => setActiveTab('photos')}
+                                >
+                                    <div className="stat-card-icon" style={{ backgroundColor: '#e0f2fe' }}>
+                                        <ImageIcon size={20} color="#0369a1" />
+                                    </div>
+                                    <div className="stat-card-content">
+                                        <span className="stat-card-value">{photosCount}</span>
+                                        <span className="stat-card-label">Ảnh</span>
+                                    </div>
+                                </button>
+                                <button 
+                                    className="profile-stat-card"
+                                    onClick={() => setActiveTab('collections')}
+                                >
+                                    <div className="stat-card-icon" style={{ backgroundColor: '#fef3c7' }}>
+                                        <Folder size={20} color="#d97706" />
+                                    </div>
+                                    <div className="stat-card-content">
+                                        <span className="stat-card-value">{collectionsCount}</span>
+                                        <span className="stat-card-label">Bộ sưu tập</span>
+                                    </div>
+                                </button>
+                                {userStats && (
+                                    <>
+                                        <button 
+                                            className="profile-stat-card"
+                                            title="Total likes received on your images"
+                                        >
+                                            <div className="stat-card-icon" style={{ backgroundColor: '#fce7f3' }}>
+                                                <Heart size={20} color="#be185d" />
+                                            </div>
+                                            <div className="stat-card-content">
+                                                <span className="stat-card-value">{userStats.totalFavorites.toLocaleString()}</span>
+                                                <span className="stat-card-label">Lượt thích</span>
+                                            </div>
+                                        </button>
+                                        <button 
+                                            className="profile-stat-card"
+                                            title="Total downloads of your images"
+                                        >
+                                            <div className="stat-card-icon" style={{ backgroundColor: '#d1fae5' }}>
+                                                <Download size={20} color="#059669" />
+                                            </div>
+                                            <div className="stat-card-content">
+                                                <span className="stat-card-value">{userStats.totalDownloads.toLocaleString()}</span>
+                                                <span className="stat-card-label">Lượt tải</span>
+                                            </div>
+                                        </button>
+                                        {/* Profile views - Only show for own profile */}
+                                        {isOwnProfile && userStats.profileViews > 0 && (
+                                            <button 
+                                                className="profile-stat-card"
+                                                title="Lượt xem hồ sơ"
+                                            >
+                                                <div className="stat-card-icon" style={{ backgroundColor: '#e0e7ff' }}>
+                                                    <EyeIcon size={20} color="#4f46e5" />
+                                                </div>
+                                                <div className="stat-card-content">
+                                                    <span className="stat-card-value">{userStats.profileViews.toLocaleString()}</span>
+                                                    <span className="stat-card-label">Lượt xem</span>
+                                                </div>
+                                            </button>
+                                        )}
+                                    </>
+                                )}
+                                <button 
+                                    className="profile-stat-card"
                                     onClick={() => {
                                         // TODO: Show followers list modal
                                         toast.info('Danh sách người theo dõi sẽ sớm ra mắt');
                                     }}
                                 >
-                                    <span className="profile-stat-value">{followStats.followers}</span>
-                                    <span className="profile-stat-label">Followers</span>
+                                    <div className="stat-card-icon" style={{ backgroundColor: '#f3e8ff' }}>
+                                        <Users size={20} color="#7c3aed" />
+                                    </div>
+                                    <div className="stat-card-content">
+                                        <span className="stat-card-value">{followStats.followers}</span>
+                                        <span className="stat-card-label">Người theo dõi</span>
+                                    </div>
                                 </button>
                                 <button 
-                                    className="profile-stat-item"
+                                    className="profile-stat-card"
                                     onClick={() => {
                                         // TODO: Show following list modal
                                         toast.info('Danh sách đang theo dõi sẽ sớm ra mắt');
                                     }}
                                 >
-                                    <span className="profile-stat-value">{followStats.following}</span>
-                                    <span className="profile-stat-label">Following</span>
+                                    <div className="stat-card-icon" style={{ backgroundColor: '#fef3c7' }}>
+                                        <UserPlus size={20} color="#d97706" />
+                                    </div>
+                                    <div className="stat-card-content">
+                                        <span className="stat-card-value">{followStats.following}</span>
+                                        <span className="stat-card-label">Đang theo dõi</span>
+                                    </div>
                                 </button>
                             </div>
                             <div className="profile-availability">
                                 <XCircle size={16} />
-                                <span>Not available for hire</span>
+                                <span>Không sẵn sàng nhận việc</span>
                                 <button
                                     className="availability-update-link"
                                     onClick={handleUpdateAvailability}
                                 >
-                                    Update
+                                    Cập nhật
                                 </button>
                             </div>
                         </div>
@@ -383,7 +579,7 @@ function ProfilePage() {
                             onClick={() => setActiveTab('photos')}
                         >
                             <span className="tab-icon">📷</span>
-                            <span className="tab-label">Photos</span>
+                            <span className="tab-label">Ảnh</span>
                             <span className="tab-count">{photosCount}</span>
                         </button>
                         <button
@@ -391,7 +587,7 @@ function ProfilePage() {
                             onClick={() => setActiveTab('illustrations')}
                         >
                             <span className="tab-icon">✏️</span>
-                            <span className="tab-label">Illustrations</span>
+                            <span className="tab-label">Minh họa</span>
                             <span className="tab-count">{illustrationsCount}</span>
                         </button>
                         <button
@@ -407,7 +603,7 @@ function ProfilePage() {
                             onClick={() => setActiveTab('stats')}
                         >
                             <span className="tab-icon">📊</span>
-                            <span className="tab-label">Stats</span>
+                            <span className="tab-label">Thống kê</span>
                         </button>
                     </div>
 

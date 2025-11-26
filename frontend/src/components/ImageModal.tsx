@@ -444,16 +444,16 @@ const ImageModal = ({
     setShowUserProfileCard(false);
     // Small delay to ensure card is closed before navigation
     setTimeout(() => {
-      // If viewing own profile or if user is logged in, navigate to profile page
-      // Note: Currently the app only supports viewing own profile
-      if (user && user._id === image.uploadedBy._id) {
-        navigate('/profile');
-      } else {
-        // For other users, show a message (feature coming soon)
-        toast.info('Xem hồ sơ người dùng khác sẽ sớm ra mắt!');
+      // Navigate to user's profile using username or userId
+      if (image.uploadedBy?.username) {
+        navigate(`/profile/${image.uploadedBy.username}`);
+        onClose(); // Close modal when navigating to profile
+      } else if (image.uploadedBy?._id) {
+        navigate(`/profile/user/${image.uploadedBy._id}`);
+        onClose();
       }
     }, 50);
-  }, [navigate, image.uploadedBy._id, user]);
+  }, [navigate, image.uploadedBy, onClose]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -603,11 +603,21 @@ const ImageModal = ({
         <div className="image-modal-header">
           {/* Left: User Info */}
           <div
-            className="modal-header-left"
+            className="modal-header-left clickable-user-info"
             ref={userInfoRef}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
-            style={{ position: 'relative' }}
+            onClick={() => {
+              if (image.uploadedBy?.username) {
+                navigate(`/profile/${image.uploadedBy.username}`);
+                onClose(); // Close modal when navigating to profile
+              } else if (image.uploadedBy?._id) {
+                navigate(`/profile/user/${image.uploadedBy._id}`);
+                onClose();
+              }
+            }}
+            style={{ position: 'relative', cursor: 'pointer', willChange: 'opacity' }}
+            title="Xem hồ sơ"
           >
             <Avatar
               user={image.uploadedBy}
@@ -623,7 +633,7 @@ const ImageModal = ({
                 {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}
                 <CheckCircle2 className="verified-badge" size={16} />
               </div>
-              <div className="modal-user-status">Available for hire</div>
+              <div className="modal-user-status">Sẵn sàng nhận việc</div>
             </div>
 
             {/* User Profile Card */}
@@ -694,7 +704,7 @@ const ImageModal = ({
                   className="user-profile-card-view-btn"
                   onClick={handleViewProfile}
                 >
-                  View profile
+                  Xem hồ sơ
                 </button>
               </div>
             )}
@@ -715,7 +725,7 @@ const ImageModal = ({
               className="modal-close-btn-header"
               onClick={onClose}
               title="Đóng (Esc)"
-              aria-label="Close modal"
+              aria-label="Đóng"
             >
               <X size={20} />
             </button>

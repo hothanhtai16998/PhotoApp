@@ -60,6 +60,8 @@ function App() {
         {/**protected routes */}
         <Route element={<ProtectedRoute />}>
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/profile/:username" element={<ProfilePage />} />
+          <Route path="/profile/user/:userId" element={<ProfilePage />} />
           <Route path="/profile/edit" element={<EditProfilePage />} />
           <Route path="/upload" element={<UploadPage />} />
           <Route path="/favorites" element={<FavoritesPage />} />

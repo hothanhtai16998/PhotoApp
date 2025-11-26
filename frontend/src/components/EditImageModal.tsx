@@ -148,7 +148,7 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
         {/* Modal Header */}
         <div className="edit-modal-header">
           <h2>Sửa ảnh</h2>
-          <button className="edit-modal-close" onClick={onClose} aria-label="Close">
+          <button className="edit-modal-close" onClick={onClose} aria-label="Đóng">
             <X size={20} />
           </button>
         </div>
@@ -193,7 +193,7 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
                   className="edit-form-textarea"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Add a description"
+                  placeholder="Thêm mô tả"
                   maxLength={600}
                   rows={4}
                 />

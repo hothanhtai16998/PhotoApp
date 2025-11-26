@@ -92,6 +92,15 @@ const userSchema = new mongoose.Schema(
         // location: {
         //     type: String,
         // }
+        // Enhanced Profile Statistics
+        profileViews: {
+            type: Number,
+            default: 0,
+        },
+        lastProfileView: {
+            type: Date,
+        },
+        // Note: totalLikesReceived will be computed from favorites, not stored
     },
     {
         timestamps: true,

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useState, useRef, useCallback, memo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useImageStore } from '@/stores/useImageStore';
 import { Download, MapPin, Heart } from 'lucide-react';
 import type { Image } from '@/types/image';
@@ -42,10 +42,21 @@ const ImageGridItem = memo(({
 }) => {
   const hasUserInfo = image.uploadedBy && (image.uploadedBy.displayName || image.uploadedBy.username);
   const { accessToken } = useAuthStore();
+  const navigate = useNavigate();
   const [isTogglingFavorite, setIsTogglingFavorite] = useState<boolean>(false);
 
   // Use batched favorite check hook (reduces API calls)
   const isFavorited = useBatchedFavoriteCheck(image._id);
+
+  // Handle click on user avatar/name to navigate to profile
+  const handleUserClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering image modal
+    if (image.uploadedBy?.username) {
+      navigate(`/profile/${image.uploadedBy.username}`);
+    } else if (image.uploadedBy?._id) {
+      navigate(`/profile/user/${image.uploadedBy._id}`);
+    }
+  }, [image.uploadedBy, navigate]);
 
   const handleClick = useCallback(() => {
     onSelect(image);
@@ -145,7 +156,12 @@ const ImageGridItem = memo(({
       {/* Mobile: Author Block (Top) */}
       {hasUserInfo && (
         <div className="masonry-item-author-mobile">
-          <div className="image-author-info">
+          <div 
+            className="image-author-info clickable-user-info"
+            onClick={handleUserClick}
+            style={{ cursor: 'pointer' }}
+            title="Xem hồ sơ"
+          >
             <Avatar
               user={image.uploadedBy}
               size={32}
@@ -218,7 +234,12 @@ const ImageGridItem = memo(({
           {/* Desktop: Author Info (Bottom Left) */}
           {hasUserInfo && (
             <div className="image-info">
-              <div className="image-author-info">
+              <div 
+                className="image-author-info clickable-user-info"
+                onClick={handleUserClick}
+                style={{ cursor: 'pointer' }}
+                title="Xem hồ sơ"
+              >
                 <Avatar
                   user={image.uploadedBy}
                   size={32}

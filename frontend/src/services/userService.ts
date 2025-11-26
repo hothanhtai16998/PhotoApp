@@ -8,6 +8,15 @@ export interface UserSearchResult {
 	avatarUrl?: string;
 }
 
+export interface PublicUser {
+	_id: string;
+	username: string;
+	displayName: string;
+	avatarUrl?: string;
+	bio?: string;
+	createdAt: string;
+}
+
 export const userService = {
 	changePassword: async (
 		password: string,
@@ -43,17 +52,36 @@ export const userService = {
 		return res.data;
 	},
 
-	searchUsers: async (search: string, limit = 10, signal?: AbortSignal): Promise<UserSearchResult[]> => {
-		if (!search || search.length < 2) {
-			return [];
-		}
-		const res = await api.get<{ users: UserSearchResult[] }>(
-			`/users/search?search=${encodeURIComponent(search)}&limit=${limit}`,
-			{ 
-				withCredentials: true,
-				signal, // Support request cancellation
-			}
-		);
-		return res.data.users;
+	searchUsers: async (
+		search: string,
+		limit?: number
+	): Promise<{ users: UserSearchResult[] }> => {
+		const res = await api.get('/users/search', {
+			params: { search, limit },
+			withCredentials: true,
+		});
+		return res.data;
+	},
+
+	/**
+	 * Get public user data by username
+	 * @param username Username to fetch
+	 */
+	getUserByUsername: async (username: string): Promise<PublicUser> => {
+		const res = await api.get(`/users/username/${username}`, {
+			withCredentials: true,
+		});
+		return res.data.user;
+	},
+
+	/**
+	 * Get public user data by userId
+	 * @param userId User ID to fetch
+	 */
+	getUserById: async (userId: string): Promise<PublicUser> => {
+		const res = await api.get(`/users/${userId}`, {
+			withCredentials: true,
+		});
+		return res.data.user;
 	},
 };

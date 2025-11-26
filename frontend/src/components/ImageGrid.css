@@ -824,6 +824,15 @@
   backdrop-filter: none;
 }
 
+.clickable-user-info {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.clickable-user-info:hover {
+  opacity: 0.8;
+  transform: translateX(2px);
+}
+
 .masonry-overlay .author-avatar {
   width: 32px !important;
   height: 32px !important;

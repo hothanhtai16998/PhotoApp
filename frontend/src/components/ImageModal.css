@@ -111,6 +111,20 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  position: relative; /* Ensure stable positioning for child elements */
+}
+
+.modal-header-left.clickable-user-info {
+  transition: opacity 0.2s ease;
+  /* Prevent layout shifts */
+  will-change: opacity;
+  backface-visibility: hidden;
+}
+
+.modal-header-left.clickable-user-info:hover {
+  opacity: 0.8;
+  /* Ensure no transform or position changes on hover */
+  transform: none;
 }
 
 .modal-user-avatar,
@@ -1511,12 +1525,16 @@
   overflow: hidden;
   pointer-events: auto;
   transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+  /* Prevent layout shifts and ensure stable positioning */
+  will-change: opacity, transform;
+  backface-visibility: hidden;
+  transform: translateZ(0); /* Force GPU acceleration and prevent movement */
 }
 
 .user-profile-card.closing {
   animation: profileCardFadeOut 0.3s ease-in;
   opacity: 0;
-  transform: translateY(-8px);
+  transform: translateY(-8px) translateZ(0);
 }
 
 /* Add invisible bridge to prevent gap between trigger and card */
@@ -1533,22 +1551,22 @@
 @keyframes profileCardFadeIn {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(-8px) translateZ(0);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) translateZ(0);
   }
 }
 
 @keyframes profileCardFadeOut {
   from {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) translateZ(0);
   }
   to {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(-8px) translateZ(0);
   }
 }
 
@@ -1629,10 +1647,13 @@
   cursor: pointer;
   background: #e5e5e5;
   transition: transform 0.2s ease, opacity 0.2s ease;
+  /* Prevent layout shifts on hover */
+  will-change: transform;
+  transform: translateZ(0); /* Force GPU acceleration */
 }
 
 .user-profile-card-image-item:hover {
-  transform: scale(1.05);
+  transform: scale(1.05) translateZ(0); /* Maintain translateZ(0) on hover */
   opacity: 0.9;
 }
 
