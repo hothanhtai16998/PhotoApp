@@ -144,42 +144,29 @@ const ImageModal = ({
   // Lock body scroll when modal is open (only when rendered as modal, not page)
   useEffect(() => {
     if (!renderAsPage) {
-      // SOLUTION: Prevent scrolling without any style changes or scrollTo calls
-      // This prevents any visual flash
-      // const scrollY = window.scrollY; // Not needed if we don't restore scroll position
+      // Store current scroll position
+      const scrollY = window.scrollY;
+      
+      // Calculate scrollbar width to prevent layout shift
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      
+      // Use both overflow hidden AND position fixed for maximum scroll prevention
+      // This ensures scroll is prevented on all browsers and devices
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.width = '100%';
+      // Add class to body to indicate modal is open (for other components to check)
+      document.body.classList.add('image-modal-open');
+      // Add padding to compensate for scrollbar to prevent layout shift
+      if (scrollbarWidth > 0) {
+        document.body.style.paddingRight = `${scrollbarWidth}px`;
+      }
 
-      // Prevent all scroll events - don't call scrollTo as it causes flash
-      const preventScroll = (e: Event) => {
-        // Allow scrolling within modal content
-        const target = e.target as HTMLElement;
-        if (target.closest('.image-modal-content') || target.closest('.image-modal')) {
-          return;
-        }
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-      };
-
-      // Prevent keyboard scrolling
-      const preventKeyboardScroll = (e: KeyboardEvent) => {
-        if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) {
-          const target = e.target as HTMLElement;
-          if (!target.closest('.image-modal-content') &&
-            target.tagName !== 'INPUT' &&
-            target.tagName !== 'TEXTAREA' &&
-            !target.isContentEditable) {
-            e.preventDefault();
-          }
-        }
-      };
-
-      // Use capture phase to prevent scroll before it happens
-      window.addEventListener('wheel', preventScroll, { passive: false, capture: true });
-      window.addEventListener('touchmove', preventScroll, { passive: false, capture: true });
-      window.addEventListener('scroll', preventScroll, { passive: false, capture: true });
-      window.addEventListener('keydown', preventKeyboardScroll, { passive: false, capture: true });
-
-      // Prevent scroll events on overlay from affecting body
+      // Prevent scroll events on overlay and redirect to modal content
       const handleOverlayWheel = (e: WheelEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -191,16 +178,117 @@ const ImageModal = ({
         }
       };
 
+      // Prevent touch scrolling on overlay
+      const handleOverlayTouchMove = (e: TouchEvent) => {
+        const target = e.target as HTMLElement;
+        // Allow touch scrolling within modal content
+        if (target.closest('.image-modal-content')) {
+          return;
+        }
+        e.preventDefault();
+      };
+
+      // Prevent scroll events from reaching body - more aggressive approach
+      const preventBodyScroll = (e: Event) => {
+        const target = e.target as HTMLElement;
+        // Allow scrolling within modal content only
+        const modalContent = target.closest('.image-modal-content');
+        if (modalContent) {
+          // Check if the scroll event is actually on the modal content element
+          if (target === modalContent || modalContent.contains(target)) {
+            return; // Allow this scroll
+          }
+        }
+        // Prevent all other scrolling - be aggressive
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      };
+
+      // Prevent scroll events on document and window
+      const preventScroll = (e: Event) => {
+        const target = e.target as HTMLElement;
+        // Only allow scrolling within modal content
+        const modalContent = target.closest('.image-modal-content');
+        if (modalContent) {
+          // Check if the scroll event is actually on the modal content element
+          if (target === modalContent || modalContent.contains(target)) {
+            return; // Allow this scroll
+          }
+        }
+        // Prevent everything else
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      };
+      
+      // Additional handler specifically for scroll events (not wheel/touch)
+      const preventScrollEvent = (e: Event) => {
+        // For scroll events, we need to check if it's the window/document scrolling
+        // If it's not the modal content scrolling, prevent it
+        const target = e.target as HTMLElement;
+        if (target === document || target === document.documentElement || target === document.body) {
+          // This is a body/document scroll - prevent it
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+        // Allow scroll events within modal content
+        if (target.closest('.image-modal-content')) {
+          return;
+        }
+        // Prevent all other scroll events
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      };
+
       // Wait for overlay to be rendered
       const timer = setTimeout(() => {
         const overlay = document.querySelector('.image-modal-overlay') as HTMLElement;
         if (overlay) {
           overlay.addEventListener('wheel', handleOverlayWheel, { passive: false });
-          overlay.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-          }, { passive: false });
+          overlay.addEventListener('touchmove', handleOverlayTouchMove, { passive: false });
         }
       }, 0);
+
+      // Prevent scroll events at multiple levels - use capture phase to catch early
+      // Use preventScrollEvent for scroll events specifically
+      document.addEventListener('scroll', preventScrollEvent, { passive: false, capture: true });
+      document.documentElement.addEventListener('scroll', preventScrollEvent, { passive: false, capture: true });
+      document.body.addEventListener('scroll', preventScrollEvent, { passive: false, capture: true });
+      window.addEventListener('scroll', preventScrollEvent, { passive: false, capture: true });
+      
+      // Use preventScroll for wheel and touchmove
+      document.addEventListener('wheel', preventScroll, { passive: false, capture: true });
+      document.addEventListener('touchmove', preventScroll, { passive: false, capture: true });
+      window.addEventListener('wheel', preventBodyScroll, { passive: false, capture: true });
+      window.addEventListener('touchmove', preventBodyScroll, { passive: false, capture: true });
+      
+      // Also prevent on body and documentElement directly
+      document.body.addEventListener('wheel', preventScroll, { passive: false, capture: true });
+      document.body.addEventListener('touchmove', preventScroll, { passive: false, capture: true });
+      document.documentElement.addEventListener('wheel', preventScroll, { passive: false, capture: true });
+      document.documentElement.addEventListener('touchmove', preventScroll, { passive: false, capture: true });
+
+      // Prevent keyboard scrolling on body (but allow in modal content)
+      const handleKeyboardScroll = (e: KeyboardEvent) => {
+        const target = e.target as HTMLElement;
+        // Allow keyboard scrolling within modal content and input fields
+        if (target.closest('.image-modal-content') ||
+            target.tagName === 'INPUT' ||
+            target.tagName === 'TEXTAREA' ||
+            target.isContentEditable) {
+          return;
+        }
+        
+        // Prevent keyboard scrolling on body
+        if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) {
+          e.preventDefault();
+        }
+      };
+
+      document.addEventListener('keydown', handleKeyboardScroll, { passive: false });
 
       // Cleanup
       return () => {
@@ -208,19 +296,36 @@ const ImageModal = ({
         const overlay = document.querySelector('.image-modal-overlay') as HTMLElement;
         if (overlay) {
           overlay.removeEventListener('wheel', handleOverlayWheel);
+          overlay.removeEventListener('touchmove', handleOverlayTouchMove);
         }
+        
+        document.removeEventListener('scroll', preventScrollEvent, { capture: true } as EventListenerOptions);
+        document.documentElement.removeEventListener('scroll', preventScrollEvent, { capture: true } as EventListenerOptions);
+        document.body.removeEventListener('scroll', preventScrollEvent, { capture: true } as EventListenerOptions);
+        window.removeEventListener('scroll', preventScrollEvent, { capture: true } as EventListenerOptions);
+        document.removeEventListener('wheel', preventScroll, { capture: true } as EventListenerOptions);
+        document.removeEventListener('touchmove', preventScroll, { capture: true } as EventListenerOptions);
+        window.removeEventListener('wheel', preventBodyScroll, { capture: true } as EventListenerOptions);
+        window.removeEventListener('touchmove', preventBodyScroll, { capture: true } as EventListenerOptions);
+        document.body.removeEventListener('wheel', preventScroll, { capture: true } as EventListenerOptions);
+        document.body.removeEventListener('touchmove', preventScroll, { capture: true } as EventListenerOptions);
+        document.documentElement.removeEventListener('wheel', preventScroll, { capture: true } as EventListenerOptions);
+        document.documentElement.removeEventListener('touchmove', preventScroll, { capture: true } as EventListenerOptions);
+        document.removeEventListener('keydown', handleKeyboardScroll);
 
-        // Remove scroll lock
-        window.removeEventListener('scroll', preventScroll, { capture: true } as EventListenerOptions);
-        window.removeEventListener('wheel', preventScroll, { capture: true } as EventListenerOptions);
-        window.removeEventListener('touchmove', preventScroll, { capture: true } as EventListenerOptions);
-        window.removeEventListener('keydown', preventKeyboardScroll, { capture: true } as EventListenerOptions);
-
-        // DON'T restore scroll position - this might be causing the flash
-        // The page should stay where it was when modal closes
-        // requestAnimationFrame(() => {
-        //   window.scrollTo(0, scrollY);
-        // });
+        // Restore body scrolling
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        document.body.style.width = '';
+        document.body.classList.remove('image-modal-open');
+        document.body.style.paddingRight = '';
+        
+        // Restore scroll position
+        window.scrollTo(0, scrollY);
       };
     }
   }, [renderAsPage]);
@@ -482,6 +587,15 @@ const ImageModal = ({
           // Prevent scroll events from bubbling to body
           if (!renderAsPage) {
             e.stopPropagation();
+            // If scrolling on modal (not content), redirect to content
+            const target = e.target as HTMLElement;
+            if (!target.closest('.image-modal-content')) {
+              e.preventDefault();
+              const modalContent = modalContentRef.current;
+              if (modalContent) {
+                modalContent.scrollTop += e.deltaY;
+              }
+            }
           }
         }}
       >

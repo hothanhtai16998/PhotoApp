@@ -74,12 +74,31 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
     }
   }, [categories, isSticky])
 
+  // Preserve sticky state when modal opens
+  useEffect(() => {
+    const checkModalState = () => {
+      if (document.body.classList.contains('image-modal-open')) {
+        // Modal is open - preserve current sticky state, don't let it change
+        // The scroll handler will skip updates, so we just need to ensure state is preserved
+      }
+    }
+    
+    // Check immediately
+    checkModalState()
+    
+    // Watch for modal state changes
+    const observer = new MutationObserver(checkModalState)
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] })
+    
+    return () => observer.disconnect()
+  }, [])
+
   // Handle scroll to make category nav stick to header
   useEffect(() => {
     if (!categoryNavRef.current || headerHeight === 0) return
     
     const nav = categoryNavRef.current
-    let lastStickyState = false
+    let lastStickyState = isSticky // Initialize with current state
     
     // Store initial nav position once
     const storeInitialPosition = () => {
@@ -91,6 +110,11 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
     }
     
     const handleScroll = () => {
+      // Don't update sticky state when image modal is open
+      if (document.body.classList.contains('image-modal-open')) {
+        return
+      }
+      
       const scrollY = window.scrollY || window.pageYOffset
       
       // Store initial position on first scroll or if not stored
