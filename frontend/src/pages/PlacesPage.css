@@ -5,7 +5,7 @@
   height: 100vh;
   overflow: hidden;
   background: #222;
-  margin-top: 0;
+  margin-top: var(--header-height, 65px);
   touch-action: pan-y; /* Allow vertical scrolling but handle horizontal swipes */
 }
 

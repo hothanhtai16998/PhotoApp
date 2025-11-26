@@ -1,11 +1,11 @@
 .tripzo-page {
   position: relative;
   width: 100%;
-  min-height: calc(100vh - var(--header-height, 80px));
-  height: calc(100vh - var(--header-height, 80px));
+  min-height: calc(100vh - var(--header-height, 65px));
+  height: calc(100vh - var(--header-height, 65px));
   overflow: hidden;
   background: #222;
-  margin-top: var(--header-height, 80px);
+  margin-top: var(--header-height, 65px);
   touch-action: pan-y; /* Allow vertical scrolling but handle horizontal swipes */
 }
 
@@ -44,7 +44,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: calc(100vh - var(--header-height, 80px));
+  height: calc(100vh - var(--header-height, 65px));
   color: #fff;
   font-size: 24px;
   gap: 20px;
@@ -85,7 +85,7 @@
 .main-carousel-container {
   position: relative;
   width: 100%;
-  height: calc(100vh - var(--header-height, 80px));
+  height: calc(100vh - var(--header-height, 65px));
   overflow: hidden;
 }
 

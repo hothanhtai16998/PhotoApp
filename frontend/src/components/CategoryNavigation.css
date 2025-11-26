@@ -13,7 +13,7 @@
 
 .category-navigation-container.is-sticky {
   position: fixed;
-  top: var(--header-height, 80px);
+  top: var(--header-height, 65px);
   left: 0;
   right: 0;
   width: 100%;

@@ -2,6 +2,8 @@
 .about-page {
 	min-height: 100vh;
 	background: #fff;
+	padding-top: var(--header-height, 65px);
+	margin-top: 0;
 }
 
 .about-container {

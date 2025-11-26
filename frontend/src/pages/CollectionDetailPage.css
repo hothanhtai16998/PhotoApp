@@ -1,6 +1,8 @@
 .collection-detail-page {
 	min-height: 100vh;
 	background: #fafafa;
+	padding-top: var(--header-height, 65px);
+	margin-top: 0;
 }
 
 .collection-detail-collaborators-wrapper {

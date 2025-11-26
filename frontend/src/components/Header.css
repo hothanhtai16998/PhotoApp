@@ -1,4 +1,8 @@
 /* Unsplash-style Header */
+:root {
+  --header-height: 65px; /* Standard header height for all pages */
+}
+
 .unsplash-header {
   background: #fff;
   border-bottom: 1px solid #e5e5e5;
@@ -8,6 +12,8 @@
   right: 0;
   z-index: 1500;
   width: 100%;
+  height: var(--header-height);
+  box-sizing: border-box;
 }
 
 .header-top {
