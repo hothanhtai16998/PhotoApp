@@ -1,6 +1,7 @@
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import User from '../models/User.js';
 import Collection from '../models/Collection.js';
+import Notification from '../models/Notification.js';
 import mongoose from 'mongoose';
 import { logger } from '../utils/logger.js';
 
@@ -45,7 +46,7 @@ export const toggleCollectionFavorite = asyncHandler(async (req, res) => {
             { $pull: { favoriteCollections: collectionId } },
             { new: true }
         ).select('favoriteCollections');
-        
+
         logger.info('Collection removed from favorites', {
             userId,
             collectionId,
@@ -57,18 +58,33 @@ export const toggleCollectionFavorite = asyncHandler(async (req, res) => {
             { $addToSet: { favoriteCollections: collectionId } },
             { new: true }
         ).select('favoriteCollections');
-        
+
         logger.info('Collection added to favorites', {
             userId,
             collectionId,
         });
+
+        // Create notification for collection owner (if different from user who favorited)
+        if (collection.createdBy && collection.createdBy.toString() !== userId.toString()) {
+            try {
+                await Notification.create({
+                    recipient: collection.createdBy,
+                    type: 'collection_favorited',
+                    collection: collectionId,
+                    actor: userId,
+                });
+            } catch (notifError) {
+                logger.error('Failed to create collection favorite notification:', notifError);
+                // Don't fail the main operation if notification fails
+            }
+        }
     }
 
     res.status(200).json({
         success: true,
         isFavorited: !isFavorited,
-        message: !isFavorited 
-            ? 'Collection added to favorites' 
+        message: !isFavorited
+            ? 'Collection added to favorites'
             : 'Collection removed from favorites',
     });
 });
@@ -146,7 +162,7 @@ export const checkCollectionFavorites = asyncHandler(async (req, res) => {
         const idString = String(collectionId).trim();
         const matchesRegex = objectIdRegex.test(idString);
         const isValidMongoose = mongoose.Types.ObjectId.isValid(idString);
-        
+
         if (matchesRegex && isValidMongoose) {
             validCollectionIds.push(idString);
         } else {
@@ -175,7 +191,7 @@ export const checkCollectionFavorites = asyncHandler(async (req, res) => {
     }
 
     const favoriteIds = (user.favoriteCollections || []).map(id => id.toString());
-    
+
     // Create map of favorited collection IDs
     const favoritesMap = {};
     validCollectionIds.forEach(collectionId => {

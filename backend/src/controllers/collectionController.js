@@ -291,6 +291,71 @@ export const updateCollection = async (req, res) => {
                     }
                 );
             }
+
+            // Notify collaborators about collection updates (not the owner)
+            const collaborators = collection.collaborators || [];
+            const recipients = collaborators
+                .map(c => c.user.toString())
+                .filter(id => id !== userId.toString());
+
+            if (recipients.length > 0) {
+                // Check if cover image was changed
+                const coverChanged = changes.some(c => c.field === 'coverImage');
+                const nameChanged = changes.some(c => c.field === 'name');
+                const descriptionChanged = changes.some(c => c.field === 'description');
+                const otherChanges = changes.filter(c => 
+                    c.field !== 'coverImage' && 
+                    c.field !== 'name' && 
+                    c.field !== 'description' &&
+                    c.field !== 'tags'
+                );
+
+                // Create notifications for each collaborator
+                const notificationPromises = [];
+
+                // Create specific notifications
+                if (coverChanged) {
+                    recipients.forEach(recipientId => {
+                        notificationPromises.push(
+                            Notification.create({
+                                recipient: recipientId,
+                                type: 'collection_cover_changed',
+                                collection: collectionId,
+                                actor: userId,
+                                metadata: {
+                                    collectionName: collection.name,
+                                },
+                            })
+                        );
+                    });
+                }
+
+                // Create general update notification for other changes
+                if (nameChanged || descriptionChanged || otherChanges.length > 0) {
+                    recipients.forEach(recipientId => {
+                        notificationPromises.push(
+                            Notification.create({
+                                recipient: recipientId,
+                                type: 'collection_updated',
+                                collection: collectionId,
+                                actor: userId,
+                                metadata: {
+                                    collectionName: collection.name,
+                                    changes: changes.map(c => c.field),
+                                },
+                            })
+                        );
+                    });
+                }
+
+                // Create all notifications in parallel
+                try {
+                    await Promise.all(notificationPromises);
+                } catch (notifError) {
+                    logger.error('Failed to create collection update notifications:', notifError);
+                    // Don't fail the update if notifications fail
+                }
+            }
         }
 
         const populatedCollection = await Collection.findById(collection._id)
@@ -672,6 +737,33 @@ export const reorderCollectionImages = async (req, res) => {
             }
         );
 
+        // Notify collaborators about reordering (not the owner)
+        const collaborators = collection.collaborators || [];
+        const recipients = collaborators
+            .map(c => c.user.toString())
+            .filter(id => id !== userId.toString());
+
+        if (recipients.length > 0) {
+            try {
+                const notificationPromises = recipients.map(recipientId =>
+                    Notification.create({
+                        recipient: recipientId,
+                        type: 'collection_reordered',
+                        collection: collectionId,
+                        actor: userId,
+                        metadata: {
+                            collectionName: collection.name,
+                            imageCount: imageIds.length,
+                        },
+                    })
+                );
+                await Promise.all(notificationPromises);
+            } catch (notifError) {
+                logger.error('Failed to create collection reorder notifications:', notifError);
+                // Don't fail the reorder if notifications fail
+            }
+        }
+
         const populatedCollection = await Collection.findById(collection._id)
             .populate('coverImage', 'thumbnailUrl smallUrl imageUrl imageTitle')
             .populate({
@@ -1026,6 +1118,63 @@ export const updateCollaboratorPermission = asyncHandler(async (req, res) => {
 /**
  * Export collection as ZIP file
  */
+/**
+ * Track collection share - Create notification for collection owner
+ * POST /api/collections/:collectionId/share
+ */
+export const trackCollectionShare = asyncHandler(async (req, res) => {
+    try {
+        const { collectionId } = req.params;
+        const userId = req.user._id;
+
+        // Find collection
+        const collection = await Collection.findById(collectionId)
+            .populate('createdBy', '_id')
+            .lean();
+
+        if (!collection) {
+            return res.status(404).json({
+                success: false,
+                message: 'Collection not found',
+            });
+        }
+
+        // Don't notify if user is sharing their own collection
+        const createdBy = typeof collection.createdBy === 'object' 
+            ? collection.createdBy._id 
+            : collection.createdBy;
+
+        if (createdBy.toString() === userId.toString()) {
+            return res.json({
+                success: true,
+                message: 'Collection share tracked (no notification for own collection)',
+            });
+        }
+
+        // Create notification for collection owner
+        await Notification.create({
+            recipient: createdBy,
+            type: 'collection_shared',
+            collection: collectionId,
+            actor: userId,
+            metadata: {
+                collectionName: collection.name,
+            },
+        });
+
+        res.json({
+            success: true,
+            message: 'Collection share tracked',
+        });
+    } catch (error) {
+        logger.error('Error tracking collection share:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to track collection share',
+        });
+    }
+});
+
 export const exportCollection = asyncHandler(async (req, res) => {
     const { collectionId } = req.params;
     const userId = req.user._id;

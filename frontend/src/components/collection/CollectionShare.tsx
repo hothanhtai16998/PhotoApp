@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { Share2, Mail, Link as LinkIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Collection } from '@/types/collection';
+import { collectionService } from '@/services/collectionService';
 import './CollectionShare.css';
 
 interface CollectionShareProps {
@@ -103,24 +104,30 @@ export const CollectionShare = memo(({ collection }: CollectionShareProps) => {
 		const { shareUrl } = getShareData();
 		const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
 		window.open(facebookUrl, '_blank', 'width=600,height=400');
+		// Track share for notification
+		collectionService.trackCollectionShare(collection._id);
 		setShowShareMenu(false);
-	}, [getShareData]);
+	}, [getShareData, collection._id]);
 
 	// Handle share to Twitter
 	const handleShareTwitter = useCallback(() => {
 		const { shareUrl, shareText } = getShareData();
 		const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
 		window.open(twitterUrl, '_blank', 'width=600,height=400');
+		// Track share for notification
+		collectionService.trackCollectionShare(collection._id);
 		setShowShareMenu(false);
-	}, [getShareData]);
+	}, [getShareData, collection._id]);
 
 	// Handle share via Email
 	const handleShareEmail = useCallback(() => {
 		const { shareUrl, shareText } = getShareData();
 		const emailUrl = `mailto:?subject=${encodeURIComponent(collection.name)}&body=${encodeURIComponent(`${shareText}\n\n${shareUrl}`)}`;
 		window.location.href = emailUrl;
+		// Track share for notification
+		collectionService.trackCollectionShare(collection._id);
 		setShowShareMenu(false);
-	}, [getShareData, collection.name]);
+	}, [getShareData, collection.name, collection._id]);
 
 	// Handle share via Web Share API
 	const handleShareVia = useCallback(async () => {
@@ -133,6 +140,8 @@ export const CollectionShare = memo(({ collection }: CollectionShareProps) => {
 					text: shareText,
 					url: shareUrl,
 				});
+				// Track share for notification
+				collectionService.trackCollectionShare(collection._id);
 				toast.success('Đã chia sẻ bộ sưu tập');
 				setShowShareMenu(false);
 			} catch (error) {
@@ -144,13 +153,15 @@ export const CollectionShare = memo(({ collection }: CollectionShareProps) => {
 		} else {
 			toast.error('Trình duyệt của bạn không hỗ trợ tính năng này');
 		}
-	}, [getShareData, collection.name]);
+	}, [getShareData, collection.name, collection._id]);
 
 	// Handle copy link
 	const handleCopyLink = useCallback(async () => {
 		const { shareUrl } = getShareData();
 		try {
 			await navigator.clipboard.writeText(shareUrl);
+			// Track share for notification
+			collectionService.trackCollectionShare(collection._id);
 			toast.success('Đã sao chép liên kết vào clipboard');
 			setShowShareMenu(false);
 		} catch (error) {
@@ -161,10 +172,12 @@ export const CollectionShare = memo(({ collection }: CollectionShareProps) => {
 			textArea.select();
 			document.execCommand('copy');
 			document.body.removeChild(textArea);
+			// Track share for notification
+			collectionService.trackCollectionShare(collection._id);
 			toast.success('Đã sao chép liên kết vào clipboard');
 			setShowShareMenu(false);
 		}
-	}, [getShareData]);
+	}, [getShareData, collection._id]);
 
 	// Handle share button click
 	const handleShare = useCallback((e: React.MouseEvent) => {

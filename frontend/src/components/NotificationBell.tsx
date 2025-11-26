@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Bell, X, Check, CheckCheck, Trash2, Users, Image as ImageIcon, Shield, Folder, RefreshCw } from 'lucide-react';
+import { Bell, X, Check, CheckCheck, Trash2, Users, Image as ImageIcon, Shield, Folder, RefreshCw, Heart, Download, Share2, Upload, CheckCircle, XCircle, Loader2, Star, AlertTriangle, Ban } from 'lucide-react';
 import { notificationService, type Notification } from '@/services/notificationService';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useNavigate } from 'react-router-dom';
@@ -25,6 +25,8 @@ export default function NotificationBell() {
 		const actorName = notification.actor?.displayName || notification.actor?.username || 'Ai đó';
 		const collectionName = notification.collection?.name || 'bộ sưu tập';
 
+		const imageTitle = notification.image?.imageTitle || 'ảnh của bạn';
+
 		switch (notification.type) {
 			case 'collection_invited':
 				const permission = notification.metadata?.permission;
@@ -43,6 +45,60 @@ export default function NotificationBell() {
 				return `${actorName} đã thay đổi quyền của bạn trong bộ sưu tập "${collectionName}"`;
 			case 'collection_removed':
 				return `Bạn đã bị xóa khỏi bộ sưu tập "${collectionName}"`;
+			case 'image_favorited':
+				return `${actorName} đã yêu thích ảnh "${imageTitle}"`;
+			case 'image_downloaded':
+				return `${actorName} đã tải xuống ảnh "${imageTitle}"`;
+			case 'collection_favorited':
+				return `${actorName} đã yêu thích bộ sưu tập "${collectionName}"`;
+			case 'collection_shared':
+				return `${actorName} đã chia sẻ bộ sưu tập "${collectionName}"`;
+			case 'upload_completed':
+				return `Ảnh "${notification.image?.imageTitle || notification.metadata?.imageTitle || 'của bạn'}" đã tải lên thành công`;
+			case 'upload_failed':
+				return `Tải lên ảnh "${notification.metadata?.imageTitle || 'của bạn'}" thất bại: ${notification.metadata?.error || 'Lỗi không xác định'}`;
+			case 'upload_processing':
+				return `Đã xử lý ảnh: nén và tạo thumbnail thành công`;
+			case 'bulk_upload_completed':
+				const successCount = notification.metadata?.successCount || 0;
+				const totalCount = notification.metadata?.totalCount || 0;
+				const failedCount = notification.metadata?.failedCount || 0;
+				if (failedCount === 0) {
+					return `Đã tải lên thành công ${successCount}/${totalCount} ảnh`;
+				} else {
+					return `Đã tải lên ${successCount}/${totalCount} ảnh (${failedCount} thất bại)`;
+				}
+			case 'collection_updated':
+				const changes = notification.metadata?.changes || [];
+				const changeText = changes.length > 0 
+					? changes.join(', ')
+					: 'thông tin';
+				return `${actorName} đã cập nhật ${changeText} của bộ sưu tập "${collectionName}"`;
+			case 'collection_cover_changed':
+				return `${actorName} đã thay đổi ảnh bìa của bộ sưu tập "${collectionName}"`;
+			case 'collection_reordered':
+				const imageCount = notification.metadata?.imageCount || 0;
+				return `${actorName} đã sắp xếp lại ${imageCount} ảnh trong bộ sưu tập "${collectionName}"`;
+			case 'bulk_delete_completed':
+				const deletedCount = notification.metadata?.deletedCount || 0;
+				return `Đã xóa thành công ${deletedCount} ảnh`;
+			case 'bulk_add_to_collection':
+				const addedCount = notification.metadata?.addedCount || 0;
+				return `Đã thêm ${addedCount} ảnh vào bộ sưu tập "${collectionName}"`;
+			case 'image_featured':
+				return `Ảnh "${imageTitle}" đã được đưa lên trang chủ`;
+			case 'image_removed':
+				const reason = notification.metadata?.reason || 'Lý do không xác định';
+				return `Ảnh "${imageTitle}" đã bị xóa bởi quản trị viên: ${reason}`;
+			case 'account_verified':
+				return `Tài khoản của bạn đã được xác minh`;
+			case 'account_warning':
+				const warningReason = notification.metadata?.reason || 'Vi phạm quy tắc';
+				return `Cảnh báo: ${warningReason}`;
+			case 'account_banned':
+				const banReason = notification.metadata?.reason || 'Vi phạm quy tắc';
+				const bannedBy = notification.metadata?.bannedBy || 'Quản trị viên';
+				return `Tài khoản của bạn đã bị cấm bởi ${bannedBy}: ${banReason}`;
 			default:
 				return 'Bạn có thông báo mới';
 		}
@@ -194,9 +250,18 @@ export default function NotificationBell() {
 			handleMarkAsRead(notification._id);
 		}
 
-		// Navigate to collection
-		if (notification.collection?._id) {
-			setIsOpen(false);
+		setIsOpen(false);
+
+		// Navigate based on notification type
+		if (notification.image?._id) {
+			// For image-related notifications, navigate to the image
+			const imageTitle = notification.image.imageTitle || '';
+			const imageSlug = imageTitle 
+				? `${imageTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${notification.image._id.slice(-12)}`
+				: notification.image._id.slice(-12);
+			navigate(`/?image=${imageSlug}`);
+		} else if (notification.collection?._id) {
+			// For collection-related notifications, navigate to the collection
 			navigate(`/collections/${notification.collection._id}`);
 		}
 	};
@@ -212,6 +277,40 @@ export default function NotificationBell() {
 				return <Shield size={16} />;
 			case 'collection_removed':
 				return <Folder size={16} />;
+			case 'image_favorited':
+			case 'collection_favorited':
+				return <Heart size={16} />;
+			case 'image_downloaded':
+				return <Download size={16} />;
+			case 'collection_shared':
+				return <Share2 size={16} />;
+			case 'upload_completed':
+				return <CheckCircle size={16} />;
+			case 'upload_failed':
+				return <XCircle size={16} />;
+			case 'upload_processing':
+				return <Loader2 size={16} className="spinning" />;
+			case 'bulk_upload_completed':
+				return <Upload size={16} />;
+			case 'collection_updated':
+			case 'collection_cover_changed':
+				return <Folder size={16} />;
+			case 'collection_reordered':
+				return <RefreshCw size={16} />;
+			case 'bulk_delete_completed':
+				return <Trash2 size={16} />;
+			case 'bulk_add_to_collection':
+				return <ImageIcon size={16} />;
+			case 'image_featured':
+				return <Star size={16} />;
+			case 'image_removed':
+				return <Trash2 size={16} />;
+			case 'account_verified':
+				return <CheckCircle size={16} />;
+			case 'account_warning':
+				return <AlertTriangle size={16} />;
+			case 'account_banned':
+				return <Ban size={16} />;
 			default:
 				return <Bell size={16} />;
 		}

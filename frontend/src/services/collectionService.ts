@@ -98,6 +98,20 @@ export const collectionService = {
 	},
 
 	/**
+	 * Track collection share - Create notification for collection owner
+	 */
+	trackCollectionShare: async (collectionId: string): Promise<void> => {
+		try {
+			await api.post(`/collections/${collectionId}/share`, {}, {
+				withCredentials: true,
+			});
+		} catch (error) {
+			// Silently fail - don't interrupt sharing flow if notification fails
+			console.error('Failed to track collection share:', error);
+		}
+	},
+
+	/**
 	 * Get collections that contain a specific image
 	 */
 	getCollectionsContainingImage: async (imageId: string): Promise<Collection[]> => {

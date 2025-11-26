@@ -86,6 +86,24 @@ export const imageService = {
   },
 
   // Finalize: Link metadata to pre-uploaded image and create database record
+  /**
+   * Create bulk upload notification
+   */
+  createBulkUploadNotification: async (successCount: number, totalCount: number, failedCount?: number): Promise<void> => {
+    try {
+      await api.post('/images/bulk-upload-notification', {
+        successCount,
+        totalCount,
+        failedCount: failedCount || 0,
+      }, {
+        withCredentials: true,
+      });
+    } catch (error) {
+      // Silently fail - don't interrupt upload flow if notification fails
+      console.error('Failed to create bulk upload notification:', error);
+    }
+  },
+
   finalizeImageUpload: async (data: FinalizeImageData): Promise<{ message: string; image: Image }> => {
     const res = await api.post('/images/finalize', data, {
       withCredentials: true,

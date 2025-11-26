@@ -7,6 +7,7 @@ import PageView from '../models/PageView.js';
 import Session from '../models/Session.js';
 import SystemLog from '../models/SystemLog.js';
 import Settings from '../models/Settings.js';
+import Notification from '../models/Notification.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { logger } from '../utils/logger.js';
 import { deleteImageFromS3 } from '../libs/s3.js';
@@ -275,6 +276,22 @@ export const banUser = asyncHandler(async (req, res) => {
     user.banReason = reason?.trim() || 'Không có lý do';
     await user.save();
 
+    // Create account_banned notification
+    try {
+        await Notification.create({
+            recipient: userId,
+            type: 'account_banned',
+            actor: req.user._id,
+            metadata: {
+                reason: user.banReason,
+                bannedBy: req.user.displayName || req.user.username,
+            },
+        });
+    } catch (notifError) {
+        logger.error('Failed to create account banned notification:', notifError);
+        // Don't fail the ban if notification fails
+    }
+
     res.status(200).json({
         message: 'Cấm người dùng thành công',
         user: {
@@ -446,6 +463,25 @@ export const deleteImage = asyncHandler(async (req, res) => {
         { favorites: imageId },
         { $pull: { favorites: imageId } }
     );
+
+    // Create image_removed notification for image owner
+    if (image.uploadedBy) {
+        try {
+            await Notification.create({
+                recipient: image.uploadedBy,
+                type: 'image_removed',
+                image: imageId,
+                actor: req.user._id,
+                metadata: {
+                    imageTitle: image.imageTitle,
+                    reason: 'Removed by admin',
+                },
+            });
+        } catch (notifError) {
+            logger.error('Failed to create image removed notification:', notifError);
+            // Don't fail the deletion if notification fails
+        }
+    }
 
     // Delete from database
     await Image.findByIdAndDelete(imageId);

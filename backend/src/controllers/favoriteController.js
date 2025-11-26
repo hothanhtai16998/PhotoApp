@@ -1,6 +1,7 @@
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import User from '../models/User.js';
 import Image from '../models/Image.js';
+import Notification from '../models/Notification.js';
 import mongoose from 'mongoose';
 import { logger } from '../utils/logger.js';
 
@@ -62,6 +63,21 @@ export const toggleFavorite = asyncHandler(async (req, res) => {
             userId,
             imageId,
         });
+
+        // Create notification for image owner (if different from user who favorited)
+        if (image.uploadedBy && image.uploadedBy.toString() !== userId.toString()) {
+            try {
+                await Notification.create({
+                    recipient: image.uploadedBy,
+                    type: 'image_favorited',
+                    image: imageId,
+                    actor: userId,
+                });
+            } catch (notifError) {
+                logger.error('Failed to create favorite notification:', notifError);
+                // Don't fail the main operation if notification fails
+            }
+        }
     }
 
     res.status(200).json({

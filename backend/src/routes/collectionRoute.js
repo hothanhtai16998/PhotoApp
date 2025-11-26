@@ -13,6 +13,7 @@ import {
     addCollaborator,
     removeCollaborator,
     updateCollaboratorPermission,
+    trackCollectionShare,
 } from '../controllers/collectionController.js';
 import { protectedRoute } from '../middlewares/authMiddleware.js';
 import { validateCsrf } from '../middlewares/csrfMiddleware.js';
@@ -27,6 +28,9 @@ router.get('/', getUserCollections);
 
 // Get collections containing a specific image
 router.get('/containing/:imageId', getCollectionsContainingImage);
+
+// Track collection share (must be before /:collectionId route)
+router.post('/:collectionId/share', validateCsrf, trackCollectionShare);
 
 // Export collection as ZIP (must be before /:collectionId route)
 router.get('/:collectionId/export', exportCollection);

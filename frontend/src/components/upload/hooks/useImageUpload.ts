@@ -238,6 +238,15 @@ export const useImageUpload = ({ onSuccess }: UseImageUploadProps = {}) => {
         setShowProgress(false);
         setIsFinalizing(false);
 
+        // Create bulk upload notification
+        if (imagesData.length > 1) {
+          await imageService.createBulkUploadNotification(
+            successfulUploads.length,
+            imagesData.length,
+            failedUploads.length
+          );
+        }
+
         // Show appropriate message based on results
         if (failedUploads.length === 0) {
           // All successful

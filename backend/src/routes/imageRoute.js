@@ -9,6 +9,7 @@ import {
     updateImage,
     replaceImage,
     batchReplaceImages,
+    createBulkUploadNotification,
 } from '../controllers/imageController.js';
 import {
     incrementView,
@@ -54,6 +55,8 @@ router.get('/:imageId/download', downloadImage);
 router.post('/pre-upload', protectedRoute, validateCsrf, uploadLimiter, singleUpload, preUploadImage);
 // Finalize: Link metadata to pre-uploaded image and create database record
 router.post('/finalize', protectedRoute, validateCsrf, finalizeImageUpload);
+// Bulk upload notification
+router.post('/bulk-upload-notification', protectedRoute, validateCsrf, createBulkUploadNotification);
 // Legacy upload endpoint (kept for backward compatibility)
 router.post('/upload', protectedRoute, validateCsrf, uploadLimiter, singleUpload, validateImageUpload, uploadImage);
 router.patch('/:imageId', protectedRoute, validateCsrf, updateImage);

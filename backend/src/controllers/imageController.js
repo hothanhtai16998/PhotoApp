@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { uploadImageWithSizes, deleteImageFromS3, getImageFromS3 } from '../libs/s3.js';
 import Image from '../models/Image.js';
 import Category from '../models/Category.js';
+import Notification from '../models/Notification.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { logger } from '../utils/logger.js';
 import { PAGINATION } from '../utils/constants.js';
@@ -248,6 +249,23 @@ export const preUploadImage = asyncHandler(async (req, res) => {
             filename
         );
 
+        // Create upload_processing notification (image compressed and thumbnails generated)
+        // Note: This notification is created when image processing completes (compression + thumbnail generation)
+        // The upload_completed notification will be created later during finalization
+        try {
+            await Notification.create({
+                recipient: req.user._id,
+                type: 'upload_processing',
+                metadata: {
+                    uploadId: filename,
+                    message: 'Image processing complete: compressed and thumbnails generated',
+                },
+            });
+        } catch (notifError) {
+            logger.error('Failed to create upload processing notification:', notifError);
+            // Don't fail the upload if notification fails
+        }
+
         // Return upload result with URLs (no database record yet)
         res.status(200).json({
             message: 'Tải ảnh lên thành công',
@@ -439,6 +457,21 @@ export const finalizeImageUpload = asyncHandler(async (req, res) => {
         // Clear cache for images endpoint when new image is uploaded
         clearCache('/api/images');
 
+        // Create upload completed notification
+        try {
+            await Notification.create({
+                recipient: userId,
+                type: 'upload_completed',
+                image: newImage._id,
+                metadata: {
+                    imageTitle: trimmedTitle,
+                },
+            });
+        } catch (notifError) {
+            logger.error('Failed to create upload notification:', notifError);
+            // Don't fail the upload if notification fails
+        }
+
         res.status(201).json({
             message: 'Thêm ảnh thành công',
             image: newImage,
@@ -453,6 +486,21 @@ export const finalizeImageUpload = asyncHandler(async (req, res) => {
             publicId,
         });
 
+        // Create upload failed notification
+        try {
+            await Notification.create({
+                recipient: userId,
+                type: 'upload_failed',
+                metadata: {
+                    imageTitle: trimmedTitle || 'Unknown',
+                    error: error.message || 'Unknown error',
+                },
+            });
+        } catch (notifError) {
+            logger.error('Failed to create upload failed notification:', notifError);
+            // Don't fail if notification creation fails
+        }
+
         // Rollback S3 upload if DB save failed
         if (publicId) {
             try {
@@ -463,6 +511,45 @@ export const finalizeImageUpload = asyncHandler(async (req, res) => {
         }
 
         throw error;
+    }
+});
+
+/**
+ * Create bulk upload completed notification
+ * POST /api/images/bulk-upload-notification
+ */
+export const createBulkUploadNotification = asyncHandler(async (req, res) => {
+    const userId = req.user._id;
+    const { successCount, totalCount, failedCount } = req.body;
+
+    if (typeof successCount !== 'number' || typeof totalCount !== 'number') {
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid parameters',
+        });
+    }
+
+    try {
+        await Notification.create({
+            recipient: userId,
+            type: 'bulk_upload_completed',
+            metadata: {
+                successCount,
+                totalCount,
+                failedCount: failedCount || 0,
+            },
+        });
+
+        res.json({
+            success: true,
+            message: 'Bulk upload notification created',
+        });
+    } catch (error) {
+        logger.error('Failed to create bulk upload notification:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to create notification',
+        });
     }
 });
 
@@ -633,9 +720,10 @@ export const getImageById = asyncHandler(async (req, res) => {
 // Download image - proxy from S3 to avoid CORS issues
 export const downloadImage = asyncHandler(async (req, res) => {
     const imageId = req.params.imageId;
+    const userId = req.user?._id; // User downloading the image
 
-    // Find the image in database
-    const image = await Image.findById(imageId);
+    // Find the image in database (populate uploadedBy for notification)
+    const image = await Image.findById(imageId).populate('uploadedBy', '_id');
     if (!image) {
         return res.status(404).json({
             message: 'Không tìm thấy ảnh',
@@ -665,6 +753,30 @@ export const downloadImage = asyncHandler(async (req, res) => {
             res.setHeader('Content-Length', s3Response.ContentLength);
         }
         res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+
+        // Create notification for image owner (if user is authenticated and different from owner)
+        // Note: downloadImage is a public route, so req.user might not exist
+        if (req.user?._id && image.uploadedBy) {
+            const uploadedById = typeof image.uploadedBy === 'object' 
+                ? image.uploadedBy._id?.toString() 
+                : image.uploadedBy.toString();
+            const userId = req.user._id.toString();
+            
+            if (uploadedById && uploadedById !== userId) {
+                try {
+                    const Notification = (await import('../models/Notification.js')).default;
+                    await Notification.create({
+                        recipient: uploadedById,
+                        type: 'image_downloaded',
+                        image: imageId,
+                        actor: userId,
+                    });
+                } catch (notifError) {
+                    logger.error('Failed to create download notification:', notifError);
+                    // Don't fail the download if notification fails
+                }
+            }
+        }
 
         // Stream the image to the response
         s3Response.Body.pipe(res);
@@ -1028,6 +1140,25 @@ export const batchReplaceImages = asyncHandler(async (req, res) => {
         }
 
         clearCache('/api/images');
+
+        // Create bulk operation notification if multiple images were replaced
+        if (updatedImages.length > 1 && userId) {
+            try {
+                await Notification.create({
+                    recipient: userId,
+                    type: 'bulk_upload_completed', // Reuse this type for bulk operations
+                    metadata: {
+                        operation: 'batch_replace',
+                        successCount: updatedImages.length,
+                        totalCount: files.length,
+                        failedCount: files.length - updatedImages.length,
+                    },
+                });
+            } catch (notifError) {
+                logger.error('Failed to create bulk operation notification:', notifError);
+                // Don't fail the operation if notification fails
+            }
+        }
 
         res.status(200).json({
             message: `Đã cập nhật ${updatedImages.length} ảnh thành công`,

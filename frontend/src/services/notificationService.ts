@@ -3,8 +3,31 @@ import api from '@/lib/axios';
 export interface Notification {
 	_id: string;
 	recipient: string;
-	type: 'collection_invited' | 'collection_image_added' | 'collection_image_removed' | 'collection_permission_changed' | 'collection_removed';
-	collection: {
+	type: 
+		| 'collection_invited' 
+		| 'collection_image_added' 
+		| 'collection_image_removed' 
+		| 'collection_permission_changed' 
+		| 'collection_removed'
+		| 'image_favorited'
+		| 'image_downloaded'
+		| 'collection_favorited'
+		| 'collection_shared'
+		| 'upload_completed'
+		| 'upload_failed'
+		| 'upload_processing'
+		| 'bulk_upload_completed'
+		| 'collection_updated'
+		| 'collection_cover_changed'
+		| 'collection_reordered'
+		| 'bulk_delete_completed'
+		| 'bulk_add_to_collection'
+		| 'image_featured'
+		| 'image_removed'
+		| 'account_verified'
+		| 'account_warning'
+		| 'account_banned';
+	collection?: {
 		_id: string;
 		name: string;
 		coverImage?: {
