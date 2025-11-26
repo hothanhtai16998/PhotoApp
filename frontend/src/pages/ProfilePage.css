@@ -100,6 +100,41 @@
 	line-height: 1.6;
 }
 
+.profile-stats {
+	display: flex;
+	gap: 32px;
+	margin: 8px 0;
+}
+
+.profile-stat-item {
+	background: none;
+	border: none;
+	cursor: pointer;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 4px;
+	padding: 0;
+	transition: opacity 0.2s ease;
+}
+
+.profile-stat-item:hover {
+	opacity: 0.7;
+}
+
+.profile-stat-value {
+	font-size: 1.125rem;
+	font-weight: 600;
+	color: #111;
+	line-height: 1.2;
+}
+
+.profile-stat-label {
+	font-size: 0.875rem;
+	color: #767676;
+	line-height: 1.2;
+}
+
 .profile-availability {
 	display: flex;
 	align-items: center;

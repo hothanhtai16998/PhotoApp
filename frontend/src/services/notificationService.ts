@@ -39,7 +39,9 @@ export interface Notification {
 		| 'terms_updated'
 		| 'image_reported'
 		| 'collection_reported'
-		| 'user_reported';
+		| 'user_reported'
+		| 'user_followed'
+		| 'user_unfollowed';
 	collection?: {
 		_id: string;
 		name: string;

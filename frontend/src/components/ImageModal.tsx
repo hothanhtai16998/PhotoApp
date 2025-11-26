@@ -29,6 +29,7 @@ import CollectionModal from './CollectionModal';
 import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { useImageStore } from '@/stores/useImageStore';
 import ReportButton from './ReportButton';
+import { FollowButton } from './FollowButton';
 import './ImageModal.css';
 
 interface ImageModalProps {
@@ -534,6 +535,16 @@ const ImageModal = ({
                       <div className="user-profile-card-username">{image.uploadedBy.username}</div>
                     </div>
                   </div>
+                  {user && user._id !== image.uploadedBy._id && (
+                    <div className="user-profile-card-follow">
+                      <FollowButton
+                        userId={image.uploadedBy._id}
+                        userDisplayName={image.uploadedBy.displayName || image.uploadedBy.username}
+                        variant="default"
+                        size="sm"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {isLoadingUserImages && userImages.length === 0 ? (

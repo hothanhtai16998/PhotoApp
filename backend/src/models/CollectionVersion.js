@@ -83,6 +83,7 @@ const collectionVersionSchema = new mongoose.Schema(
     },
     {
         timestamps: true,
+        suppressReservedKeysWarning: true, // Suppress warning for 'collection' field (reserved but safe to use here)
     }
 );
 

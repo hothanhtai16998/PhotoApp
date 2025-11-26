@@ -295,8 +295,8 @@ export const updateCollection = async (req, res) => {
             // Notify collaborators about collection updates (not the owner)
             const collaborators = collection.collaborators || [];
             const recipients = collaborators
-                .map(c => c.user.toString())
-                .filter(id => id !== userId.toString());
+                .map(c => getUserId(c.user))
+                .filter(id => id && id !== userId.toString());
 
             if (recipients.length > 0) {
                 // Check if cover image was changed
@@ -493,8 +493,9 @@ export const addImageToCollection = async (req, res) => {
             
             // Add collaborators
             collaborators.forEach(collab => {
-                if (collab.user.toString() !== userId.toString()) {
-                    notificationRecipients.add(collab.user.toString());
+                const collabUserId = getUserId(collab.user);
+                if (collabUserId && collabUserId !== userId.toString()) {
+                    notificationRecipients.add(collabUserId);
                 }
             });
 
@@ -595,8 +596,9 @@ export const removeImageFromCollection = async (req, res) => {
             
             // Add collaborators
             collaborators.forEach(collab => {
-                if (collab.user.toString() !== userId.toString()) {
-                    notificationRecipients.add(collab.user.toString());
+                const collabUserId = getUserId(collab.user);
+                if (collabUserId && collabUserId !== userId.toString()) {
+                    notificationRecipients.add(collabUserId);
                 }
             });
 
@@ -740,8 +742,8 @@ export const reorderCollectionImages = async (req, res) => {
         // Notify collaborators about reordering (not the owner)
         const collaborators = collection.collaborators || [];
         const recipients = collaborators
-            .map(c => c.user.toString())
-            .filter(id => id !== userId.toString());
+            .map(c => getUserId(c.user))
+            .filter(id => id && id !== userId.toString());
 
         if (recipients.length > 0) {
             try {
@@ -793,6 +795,20 @@ export const reorderCollectionImages = async (req, res) => {
 };
 
 /**
+ * Helper function to safely extract user ID from collaborator user field
+ * Handles both ObjectId and populated user objects
+ */
+const getUserId = (userField) => {
+    if (!userField) return null;
+    // If it's a populated object, extract _id
+    if (typeof userField === 'object' && userField._id) {
+        return userField._id.toString();
+    }
+    // If it's an ObjectId, convert to string
+    return userField.toString();
+};
+
+/**
  * Helper function to check if user has permission on collection
  */
 const hasPermission = (collection, userId, requiredPermission) => {
@@ -803,7 +819,7 @@ const hasPermission = (collection, userId, requiredPermission) => {
 
     // Check collaborator permissions
     const collaborator = collection.collaborators?.find(
-        collab => collab.user.toString() === userId.toString()
+        collab => getUserId(collab.user) === userId.toString()
     );
 
     if (!collaborator) {
@@ -878,7 +894,7 @@ export const addCollaborator = asyncHandler(async (req, res) => {
 
         // Check if user is already a collaborator
         const existingCollaborator = collection.collaborators?.find(
-            collab => collab.user.toString() === userToAdd._id.toString()
+            collab => getUserId(collab.user) === userToAdd._id.toString()
         );
 
         if (existingCollaborator) {
@@ -970,12 +986,12 @@ export const removeCollaborator = asyncHandler(async (req, res) => {
 
         // Find collaborator before removing
         const collaboratorToRemove = collection.collaborators?.find(
-            collab => collab.user.toString() === collaboratorId
+            collab => getUserId(collab.user) === collaboratorId
         );
 
         // Remove collaborator
         collection.collaborators = collection.collaborators?.filter(
-            collab => collab.user.toString() !== collaboratorId
+            collab => getUserId(collab.user) !== collaboratorId
         ) || [];
 
         await collection.save();
@@ -1059,7 +1075,7 @@ export const updateCollaboratorPermission = asyncHandler(async (req, res) => {
 
         // Find and update collaborator
         const collaborator = collection.collaborators?.find(
-            collab => collab.user.toString() === collaboratorId
+            collab => getUserId(collab.user) === collaboratorId
         );
 
         if (!collaborator) {

@@ -17,6 +17,7 @@ import { collectionService } from "@/services/collectionService";
 import type { Collection } from "@/types/collection";
 import { Folder, Eye } from "lucide-react";
 import { UserAnalyticsDashboard } from "@/components/UserAnalyticsDashboard";
+import { followService } from "@/services/followService";
 import "./ProfilePage.css";
 
 type TabType = 'photos' | 'illustrations' | 'collections' | 'stats';
@@ -33,6 +34,7 @@ function ProfilePage() {
     const [collections, setCollections] = useState<Collection[]>([]);
     const [collectionsLoading, setCollectionsLoading] = useState(false);
     const [collectionsCount, setCollectionsCount] = useState(0);
+    const [followStats, setFollowStats] = useState({ followers: 0, following: 0, isFollowing: false });
     
     // Track image aspect ratios (portrait vs landscape)
     const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
@@ -89,6 +91,18 @@ function ProfilePage() {
         }
     }, [user]);
 
+    const fetchFollowStats = useCallback(async () => {
+        if (!user?._id) return;
+
+        try {
+            const response = await followService.getUserFollowStats(user._id);
+            setFollowStats(response.stats);
+        } catch (error) {
+            console.error('Failed to fetch follow stats:', error);
+        }
+    }, [user]);
+
+
     useEffect(() => {
         if (!user?._id) {
             navigate('/signin');
@@ -97,7 +111,8 @@ function ProfilePage() {
 
         fetchUserImages();
         fetchCollections();
-    }, [user, navigate, fetchUserImages, fetchCollections]);
+        fetchFollowStats();
+    }, [user, navigate, fetchUserImages, fetchCollections, fetchFollowStats]);
 
     // Listen for refresh event after image upload
     useEffect(() => {
@@ -326,6 +341,28 @@ function ProfilePage() {
                             <p className="profile-description">
                                 Download free, beautiful high-quality photos curated by {user.displayName || user.username}.
                             </p>
+                            <div className="profile-stats">
+                                <button 
+                                    className="profile-stat-item"
+                                    onClick={() => {
+                                        // TODO: Show followers list modal
+                                        toast.info('Danh sách người theo dõi sẽ sớm ra mắt');
+                                    }}
+                                >
+                                    <span className="profile-stat-value">{followStats.followers}</span>
+                                    <span className="profile-stat-label">Followers</span>
+                                </button>
+                                <button 
+                                    className="profile-stat-item"
+                                    onClick={() => {
+                                        // TODO: Show following list modal
+                                        toast.info('Danh sách đang theo dõi sẽ sớm ra mắt');
+                                    }}
+                                >
+                                    <span className="profile-stat-value">{followStats.following}</span>
+                                    <span className="profile-stat-label">Following</span>
+                                </button>
+                            </div>
                             <div className="profile-availability">
                                 <XCircle size={16} />
                                 <span>Not available for hire</span>

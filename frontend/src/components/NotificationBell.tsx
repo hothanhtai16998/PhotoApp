@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Bell, X, Check, CheckCheck, Trash2, Users, Image as ImageIcon, Shield, Folder, RefreshCw, Heart, Download, Share2, Upload, CheckCircle, XCircle, Loader2, Star, AlertTriangle, Ban, User, Eye, Key, Mail, Smartphone, LogIn, Megaphone, Wrench, FileText, Sparkles, Flag } from 'lucide-react';
+import { Bell, X, Check, CheckCheck, Trash2, Users, Image as ImageIcon, Shield, Folder, RefreshCw, Heart, Download, Share2, Upload, CheckCircle, XCircle, Loader2, Star, AlertTriangle, Ban, User, Eye, Key, Mail, Smartphone, LogIn, Megaphone, Wrench, FileText, Sparkles, Flag, UserPlus, UserMinus } from 'lucide-react';
 import { notificationService, type Notification } from '@/services/notificationService';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useNavigate } from 'react-router-dom';
@@ -141,6 +141,10 @@ export default function NotificationBell() {
 			case 'user_reported':
 				const userReportReason = notification.metadata?.reason || 'Lý do không xác định';
 				return `Người dùng đã được báo cáo: ${userReportReason}`;
+			case 'user_followed':
+				return `${actorName} đã bắt đầu theo dõi bạn`;
+			case 'user_unfollowed':
+				return `${actorName} đã ngừng theo dõi bạn`;
 			default:
 				return 'Bạn có thông báo mới';
 		}
@@ -305,6 +309,9 @@ export default function NotificationBell() {
 		} else if (notification.collection?._id) {
 			// For collection-related notifications, navigate to the collection
 			navigate(`/collections/${notification.collection._id}`);
+		} else if (notification.type === 'user_followed' || notification.type === 'user_unfollowed') {
+			// For follow notifications, navigate to the actor's profile (if we add profile viewing)
+			// For now, just close the notification
 		}
 	};
 
@@ -377,6 +384,10 @@ export default function NotificationBell() {
 			case 'collection_reported':
 			case 'user_reported':
 				return <Flag size={16} />;
+			case 'user_followed':
+				return <UserPlus size={16} />;
+			case 'user_unfollowed':
+				return <UserMinus size={16} />;
 			default:
 				return <Bell size={16} />;
 		}

@@ -48,6 +48,8 @@ const notificationSchema = new mongoose.Schema(
                 'image_reported',
                 'collection_reported',
                 'user_reported',
+                'user_followed',
+                'user_unfollowed',
             ],
             index: true,
         },
@@ -67,6 +69,11 @@ const notificationSchema = new mongoose.Schema(
             ref: 'Image',
             // For image-related notifications
         },
+        follow: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Follow',
+            // For follow-related notifications
+        },
         metadata: {
             type: mongoose.Schema.Types.Mixed,
             // Additional data like permission level, etc.
@@ -82,6 +89,7 @@ const notificationSchema = new mongoose.Schema(
     },
     {
         timestamps: true,
+        suppressReservedKeysWarning: true, // Suppress warning for 'collection' field (reserved but safe to use here)
     }
 );
 
