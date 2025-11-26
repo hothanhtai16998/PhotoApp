@@ -522,11 +522,18 @@
   width: 100%;
   padding: 0;
   background: #fff;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.3s ease;
+  /* Prevent layout shift */
+  min-height: 200px;
 }
 
 .masonry-grid.transitioning {
-  opacity: 0.7;
+  opacity: 1; /* Keep fully visible during transition */
+  /* Old images fade out, new ones fade in smoothly */
+}
+
+.masonry-grid.transitioning .masonry-item {
+  transition: opacity 0.4s ease;
 }
 
 /* Smooth transition when category changes */
@@ -539,10 +546,24 @@
   transition: opacity 0.25s ease, transform 0.25s ease;
 }
 
+/* Fading out images (old category) - stay in grid but fade out */
+.masonry-item.fading-out {
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.3s ease-out;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1;
+}
+
 /* Ensure smooth fade-in when new images appear */
 .masonry-item {
   animation: fadeIn 0.4s ease-out;
   will-change: opacity, transform;
+  position: relative;
+  z-index: 2;
 }
 
 @keyframes fadeIn {

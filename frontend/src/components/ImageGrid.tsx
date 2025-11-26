@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef, useCallback, memo } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState, useRef, useCallback, memo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useImageStore } from '@/stores/useImageStore';
 import { Download, MapPin, Heart } from 'lucide-react';
@@ -27,7 +27,8 @@ const ImageGridItem = memo(({
   onDownload,
   onImageLoad,
   currentImageIds,
-  processedImages
+  processedImages,
+  isFadingOut = false
 }: {
   image: Image;
   imageType: 'portrait' | 'landscape';
@@ -37,6 +38,7 @@ const ImageGridItem = memo(({
   onImageLoad: (imageId: string, img: HTMLImageElement) => void;
   currentImageIds: Set<string>;
   processedImages: React.MutableRefObject<Set<string>>;
+  isFadingOut?: boolean;
 }) => {
   const hasUserInfo = image.uploadedBy && (image.uploadedBy.displayName || image.uploadedBy.username);
   const { accessToken } = useAuthStore();
@@ -133,8 +135,7 @@ const ImageGridItem = memo(({
 
   return (
     <div
-      key={image._id}
-      className={`masonry-item ${imageType}`}
+      className={`masonry-item ${imageType} ${isFadingOut ? 'fading-out' : ''}`}
       role="listitem"
       aria-label={`Ảnh: ${image.imageTitle || 'Không có tiêu đề'}`}
       style={{
@@ -389,34 +390,54 @@ const ImageGrid = memo(() => {
   const processedImages = useRef<Set<string>>(new Set());
   const preloadQueue = useRef<Set<string>>(new Set());
   
-  // Simple transition tracking - just prevent showing skeleton during quick category changes
-  const [isTransitioning, setIsTransitioning] = useState(false);
+  // Improved transition tracking - keep old images visible to prevent flash
+  const [displayImages, setDisplayImages] = useState<Image[]>(images); // Current images to display
+  const [prevImages, setPrevImages] = useState<Image[]>([]); // Previous images (kept visible during transition)
   const previousCategoryRef = useRef<string | undefined>(currentCategory);
+  const previousImagesRef = useRef<Image[]>(images);
   
-  // Handle category changes
-  useEffect(() => {
-    if (previousCategoryRef.current !== currentCategory) {
-      setIsTransitioning(true);
+  // Keep old images visible when category changes until new ones load
+  // Use useLayoutEffect to prevent flickering - runs synchronously before browser paints
+  useLayoutEffect(() => {
+    const categoryChanged = previousCategoryRef.current !== currentCategory;
+    const imagesChanged = previousImagesRef.current !== images;
+    
+    if (categoryChanged && displayImages.length > 0) {
+      // Category changed - keep old images visible, start transition
+      setPrevImages(displayImages); // Keep old images visible
       previousCategoryRef.current = currentCategory;
-      
-      // End transition when images load or after timeout
-      const timer = setTimeout(() => {
-        setIsTransitioning(false);
-      }, 500);
-      
-      return () => clearTimeout(timer);
     }
-  }, [currentCategory]);
-  
-  // End transition when images are loaded
-  useEffect(() => {
-    if (isTransitioning && images.length > 0 && !loading) {
-      const timer = setTimeout(() => {
-        setIsTransitioning(false);
-      }, 200);
-      return () => clearTimeout(timer);
+    
+    // When new images arrive (after category change or regular update)
+    if (images.length > 0 && imagesChanged) {
+      if (categoryChanged) {
+        // Category changed - show new images immediately, keep old ones visible briefly
+        setDisplayImages(images);
+        // Clear old images after new ones are rendered (double RAF ensures paint)
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            setPrevImages([]);
+          });
+        });
+      } else {
+        // Regular update (pagination, etc.) - just update display
+        setDisplayImages(images);
+        setPrevImages([]); // Clear any old images
+      }
+      previousImagesRef.current = images;
+    } else if (images.length === 0 && categoryChanged) {
+      // Category changed but new category has 0 images
+      // Clear displayImages and prevImages immediately - no images to show
+      setDisplayImages([]);
+      setPrevImages([]);
+      previousImagesRef.current = images;
+    } else if (images.length === 0 && !loading && displayImages.length > 0) {
+      // Images cleared and not loading - clear display (shouldn't happen normally)
+      setDisplayImages([]);
+      setPrevImages([]);
+      previousImagesRef.current = images;
     }
-  }, [isTransitioning, images.length, loading]);
+  }, [currentCategory, images, displayImages.length, loading]);
   
   // Clear processed images when image list changes significantly
   useEffect(() => {
@@ -484,10 +505,10 @@ const ImageGrid = memo(() => {
     };
   }, []);
 
-  // Apply filters to images
+  // Apply filters to display images (may include old images during transition)
   const filteredImages = useMemo(() => {
-    return applyImageFilters(images, filters, imageTypes);
-  }, [images, filters, imageTypes]);
+    return applyImageFilters(displayImages, filters, imageTypes);
+  }, [displayImages, filters, imageTypes]);
 
   const currentImageIds = useMemo(() => new Set(filteredImages.map(img => img._id)), [filteredImages]);
 
@@ -748,9 +769,9 @@ const ImageGrid = memo(() => {
 
       {/* Main Image Grid */}
       {/* Show loading skeleton only when truly loading with no images and not transitioning */}
-      {loading && images.length === 0 && !pagination && !isTransitioning ? (
+      {loading && displayImages.length === 0 && !pagination ? (
         <ImageGridSkeleton />
-      ) : filteredImages.length === 0 && !isTransitioning ? (
+          ) : filteredImages.length === 0 && prevImages.length === 0 ? (
         <div className="empty-state" role="status" aria-live="polite">
           {currentSearch ? (
             <>
@@ -779,11 +800,39 @@ const ImageGrid = memo(() => {
         </div>
       ) : (
         <div 
-          className={`masonry-grid ${isTransitioning ? 'transitioning' : ''}`}
+          className="masonry-grid"
           role="list" 
           aria-label="Danh sách ảnh"
+          style={{ position: 'relative' }}
         >
-            {filteredImages.length > 0 ? filteredImages.map((image) => {
+          {/* Show previous images fading out (keep visible until new ones render) */}
+          {/* Only show prevImages if we're loading OR if displayImages has images (transition state) */}
+          {prevImages.length > 0 && (loading || displayImages.length > 0) && (() => {
+            const filteredPrevImages = applyImageFilters(prevImages, filters, imageTypes);
+            return filteredPrevImages.map((image) => {
+              const imageType = imageTypes.get(image._id);
+              const aspectRatio = imageAspectRatios.get(image._id);
+              const displayType = imageType || 'landscape';
+              
+              return (
+                <ImageGridItem
+                  key={`prev-${image._id}`}
+                  image={image}
+                  imageType={displayType}
+                  aspectRatio={aspectRatio}
+                  onSelect={() => {}}
+                  onDownload={handleDownloadImage}
+                  onImageLoad={handleImageLoad}
+                  currentImageIds={currentImageIds}
+                  processedImages={processedImages}
+                  isFadingOut={true}
+                />
+              );
+            });
+          })()}
+          
+          {/* Show current images */}
+          {filteredImages.length > 0 ? filteredImages.map((image) => {
             // Get image type and aspect ratio
             const imageType = imageTypes.get(image._id);
             const aspectRatio = imageAspectRatios.get(image._id);

@@ -1,0 +1,499 @@
+.grid-layout-test-page {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+  background: #f5f5f5;
+  min-height: 100vh;
+}
+
+/* Controls */
+.grid-layout-controls {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.control-section {
+  margin-bottom: 24px;
+}
+
+.control-section:last-child {
+  margin-bottom: 0;
+}
+
+.control-section h2 {
+  margin: 0 0 16px 0;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.control-section h3 {
+  margin: 0 0 12px 0;
+  font-size: 1.1rem;
+  color: #666;
+}
+
+/* Layout Buttons */
+.layout-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.layout-btn {
+  padding: 10px 20px;
+  border: 2px solid #e0e0e0;
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #666;
+  transition: all 0.2s ease;
+}
+
+.layout-btn:hover {
+  border-color: #007bff;
+  color: #007bff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2);
+}
+
+.layout-btn.active {
+  background: #007bff;
+  border-color: #007bff;
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+/* Category Navigation */
+.category-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.category-btn {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #555;
+  transition: all 0.2s ease;
+}
+
+.category-btn:hover:not(:disabled) {
+  border-color: #007bff;
+  color: #007bff;
+  background: #f0f8ff;
+}
+
+.category-btn.active {
+  background: #007bff;
+  border-color: #007bff;
+  color: white;
+}
+
+.category-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.loading-indicator {
+  margin-top: 12px;
+  color: #007bff;
+  font-size: 0.9rem;
+}
+
+/* Image Grid Base Styles */
+.image-grid {
+  width: 100%;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+/* Fading out images (old category) - stay in grid but fade out */
+.grid-item.fading-out {
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.2s ease-out;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1;
+}
+
+/* New images (new category) - fade in instantly for cached, smooth for new */
+.grid-item.new-image {
+  opacity: 1;
+  transition: opacity 0.2s ease-in;
+  position: relative;
+  z-index: 2;
+}
+
+.grid-item {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  /* Ensure grid items have height */
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+}
+
+.grid-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+}
+
+.image-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Prevent layout shifts */
+  contain: layout style paint;
+}
+
+.image-wrapper img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block !important;
+  transition: transform 0.3s ease;
+  /* Images show immediately - browser handles caching */
+  opacity: 1 !important;
+  visibility: visible !important;
+  /* Ensure images are always visible */
+  min-width: 100%;
+  min-height: 100%;
+  position: relative;
+  z-index: 1;
+  /* Prevent image flash during load */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  /* Force GPU acceleration for smooth rendering */
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+.grid-item:hover .image-wrapper img {
+  transform: scale(1.05);
+}
+
+/* Image Placeholder */
+.image-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f0f0f0;
+  color: #999;
+  font-size: 0.9rem;
+  gap: 12px;
+}
+
+.placeholder-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e0e0e0;
+  border-top-color: #007bff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Image Error State */
+.image-error {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f8f8f8;
+  color: #999;
+  font-size: 0.9rem;
+  gap: 8px;
+}
+
+.image-error span:first-child {
+  font-size: 1.5rem;
+}
+
+.image-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+  padding: 16px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.grid-item:hover .image-overlay {
+  opacity: 1;
+}
+
+.image-title {
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* Cache indicator badge */
+.cache-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(76, 175, 80, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  animation: fadeInCache 0.3s ease;
+}
+
+@keyframes fadeInCache {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 1. Masonry Layout (Pinterest-style) */
+.grid-masonry {
+  columns: 4;
+  column-gap: 16px;
+}
+
+.grid-masonry .grid-item {
+  break-inside: avoid;
+  margin-bottom: 16px;
+  display: inline-block;
+  width: 100%;
+}
+
+@media (max-width: 1200px) {
+  .grid-masonry {
+    columns: 3;
+  }
+}
+
+@media (max-width: 768px) {
+  .grid-masonry {
+    columns: 2;
+  }
+}
+
+@media (max-width: 480px) {
+  .grid-masonry {
+    columns: 1;
+  }
+}
+
+/* 2. Uniform Grid (Instagram-style) */
+.grid-uniform {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.grid-uniform .grid-item {
+  aspect-ratio: 1;
+}
+
+@media (max-width: 768px) {
+  .grid-uniform {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+  }
+}
+
+/* 3. Staggered Grid */
+.grid-staggered {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  grid-auto-rows: 8px;
+}
+
+.grid-staggered .grid-item {
+  grid-row-end: span var(--row-span, 30);
+}
+
+@media (max-width: 768px) {
+  .grid-staggered {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+  }
+}
+
+/* 4. Waterfall Layout */
+.grid-waterfall {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.grid-waterfall .grid-item {
+  flex: 1 1 300px;
+  min-width: 250px;
+  max-width: 400px;
+}
+
+@media (max-width: 768px) {
+  .grid-waterfall .grid-item {
+    flex: 1 1 150px;
+    min-width: 150px;
+    max-width: 100%;
+  }
+}
+
+/* 5. Cards Grid */
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.grid-cards .grid-item {
+  background: white;
+  padding: 12px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.grid-cards .image-wrapper {
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.grid-cards .image-overlay {
+  position: static;
+  background: transparent;
+  padding: 0;
+  opacity: 1;
+}
+
+.grid-cards .image-title {
+  color: #333;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .grid-cards {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+  }
+}
+
+/* 6. Magazine Layout */
+.grid-magazine {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+}
+
+.grid-magazine .grid-item:nth-child(1) {
+  grid-column: span 8;
+  grid-row: span 2;
+}
+
+.grid-magazine .grid-item:nth-child(2) {
+  grid-column: span 4;
+  grid-row: span 1;
+}
+
+.grid-magazine .grid-item:nth-child(3) {
+  grid-column: span 4;
+  grid-row: span 1;
+}
+
+.grid-magazine .grid-item:nth-child(4) {
+  grid-column: span 4;
+  grid-row: span 1;
+}
+
+.grid-magazine .grid-item:nth-child(5) {
+  grid-column: span 4;
+  grid-row: span 1;
+}
+
+.grid-magazine .grid-item:nth-child(n + 6) {
+  grid-column: span 3;
+  grid-row: span 1;
+}
+
+@media (max-width: 1200px) {
+  .grid-magazine {
+    grid-template-columns: repeat(6, 1fr);
+  }
+  
+  .grid-magazine .grid-item:nth-child(1) {
+    grid-column: span 6;
+  }
+  
+  .grid-magazine .grid-item:nth-child(n + 2) {
+    grid-column: span 3;
+  }
+}
+
+@media (max-width: 768px) {
+  .grid-magazine {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .grid-magazine .grid-item {
+    grid-column: span 1 !important;
+    grid-row: span 1 !important;
+  }
+}
+
+/* Smooth transitions */
+.image-grid {
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.image-grid.loading {
+  opacity: 0.7;
+}
+
