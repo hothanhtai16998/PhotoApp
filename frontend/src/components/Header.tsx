@@ -8,6 +8,7 @@ import { useImageStore } from "@/stores/useImageStore"
 import UploadModal from "./UploadModal"
 import { SearchBar, type SearchBarRef } from "./SearchBar"
 import { Avatar } from "./Avatar"
+import NotificationBell from "./NotificationBell"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,6 +67,7 @@ export const Header = memo(function Header() {
             {accessToken ? (
               <>
                 <button onClick={() => setUploadModalOpen(true)} className="header-link header-upload-button">Thêm ảnh</button>
+                <NotificationBell />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className="header-link user-menu-trigger" aria-label="Menu người dùng">
@@ -153,6 +155,9 @@ export const Header = memo(function Header() {
                 <button onClick={() => { setUploadModalOpen(true); setMobileMenuOpen(false); }} className="mobile-menu-link">
                   Thêm ảnh
                 </button>
+                <div className="mobile-menu-notification-wrapper" onClick={(e) => e.stopPropagation()}>
+                  <NotificationBell />
+                </div>
                 <Link to="/favorites" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
                   <Heart size={18} />
                   <span>Yêu thích</span>

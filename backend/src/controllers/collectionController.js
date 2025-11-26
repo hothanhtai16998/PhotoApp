@@ -1,6 +1,12 @@
 import Collection from '../models/Collection.js';
 import Image from '../models/Image.js';
+import User from '../models/User.js';
+import Notification from '../models/Notification.js';
 import { logger } from '../utils/logger.js';
+import JSZip from 'jszip';
+import { asyncHandler } from '../middlewares/asyncHandler.js';
+import axios from 'axios';
+import { createCollectionVersion } from '../utils/collectionVersionHelper.js';
 
 /**
  * Get all collections for the authenticated user
@@ -9,9 +15,19 @@ export const getUserCollections = async (req, res) => {
     try {
         const userId = req.user._id;
 
-        const collections = await Collection.find({ createdBy: userId })
+        // Get collections created by user OR where user is a collaborator
+        const collections = await Collection.find({
+            $or: [
+                { createdBy: userId },
+                { 'collaborators.user': userId },
+            ],
+        })
             .populate('coverImage', 'thumbnailUrl smallUrl imageUrl imageTitle')
             .populate('images', 'thumbnailUrl smallUrl imageUrl imageTitle')
+            .populate({
+                path: 'collaborators.user',
+                select: 'username displayName avatarUrl',
+            })
             .sort({ createdAt: -1 })
             .lean();
 
@@ -47,10 +63,19 @@ export const getCollectionById = async (req, res) => {
             $or: [
                 { createdBy: userId }, // User's own collection
                 { isPublic: true }, // Or public collection
+                { 'collaborators.user': userId }, // Or user is a collaborator
             ],
         })
             .populate('createdBy', 'username displayName avatarUrl')
             .populate('coverImage', 'thumbnailUrl smallUrl imageUrl imageTitle')
+            .populate({
+                path: 'collaborators.user',
+                select: 'username displayName avatarUrl email',
+            })
+            .populate({
+                path: 'collaborators.invitedBy',
+                select: 'username displayName avatarUrl',
+            })
             .populate({
                 path: 'images',
                 select: 'thumbnailUrl smallUrl regularUrl imageUrl imageTitle location uploadedBy views downloads createdAt',
@@ -97,7 +122,7 @@ export const getCollectionById = async (req, res) => {
 export const createCollection = async (req, res) => {
     try {
         const userId = req.user._id;
-        const { name, description, isPublic } = req.body;
+        const { name, description, isPublic, tags } = req.body;
 
         if (!name || name.trim().length === 0) {
             return res.status(400).json({
@@ -113,15 +138,34 @@ export const createCollection = async (req, res) => {
             });
         }
 
+        // Process tags: normalize, remove empty, deduplicate
+        let processedTags = [];
+        if (Array.isArray(tags)) {
+            processedTags = tags
+                .map(tag => String(tag).trim().toLowerCase())
+                .filter(tag => tag.length > 0)
+                .filter((tag, index, self) => self.indexOf(tag) === index) // Remove duplicates
+                .slice(0, 10); // Limit to 10 tags
+        }
+
         const collection = new Collection({
             name: name.trim(),
             description: description?.trim() || '',
             createdBy: userId,
             images: [],
             isPublic: isPublic !== undefined ? isPublic : true,
+            tags: processedTags,
         });
 
         await collection.save();
+
+        // Create initial version
+        await createCollectionVersion(
+            collection._id,
+            userId,
+            'created',
+            { description: 'Collection created' }
+        );
 
         const populatedCollection = await Collection.findById(collection._id)
             .populate('coverImage', 'thumbnailUrl smallUrl imageUrl imageTitle')
@@ -150,7 +194,7 @@ export const updateCollection = async (req, res) => {
     try {
         const { collectionId } = req.params;
         const userId = req.user._id;
-        const { name, description, isPublic, coverImage } = req.body;
+        const { name, description, isPublic, coverImage, tags } = req.body;
 
         const collection = await Collection.findOne({
             _id: collectionId,
@@ -199,7 +243,55 @@ export const updateCollection = async (req, res) => {
             collection.coverImage = coverImage || null;
         }
 
+        if (tags !== undefined) {
+            // Process tags: normalize, remove empty, deduplicate
+            let processedTags = [];
+            if (Array.isArray(tags)) {
+                processedTags = tags
+                    .map(tag => String(tag).trim().toLowerCase())
+                    .filter(tag => tag.length > 0)
+                    .filter((tag, index, self) => self.indexOf(tag) === index) // Remove duplicates
+                    .slice(0, 10); // Limit to 10 tags
+            }
+            collection.tags = processedTags;
+        }
+
+        // Track what changed for versioning
+        const changes = [];
+        if (name !== undefined && name.trim() !== collection.name) {
+            changes.push({ field: 'name', oldValue: collection.name, newValue: name.trim() });
+        }
+        if (description !== undefined && description.trim() !== collection.description) {
+            changes.push({ field: 'description', oldValue: collection.description, newValue: description.trim() });
+        }
+        if (isPublic !== undefined && isPublic !== collection.isPublic) {
+            changes.push({ field: 'isPublic', oldValue: collection.isPublic, newValue: isPublic });
+        }
+        if (coverImage !== undefined && coverImage !== collection.coverImage?.toString()) {
+            changes.push({ field: 'coverImage', oldValue: collection.coverImage, newValue: coverImage });
+        }
+        if (tags !== undefined) {
+            changes.push({ field: 'tags', oldValue: collection.tags, newValue: tags });
+        }
+
         await collection.save();
+
+        // Create version for each change
+        if (changes.length > 0) {
+            for (const change of changes) {
+                await createCollectionVersion(
+                    collectionId,
+                    userId,
+                    'updated',
+                    {
+                        fieldChanged: change.field,
+                        oldValue: change.oldValue,
+                        newValue: change.newValue,
+                        description: `Updated ${change.field}`,
+                    }
+                );
+            }
+        }
 
         const populatedCollection = await Collection.findById(collection._id)
             .populate('coverImage', 'thumbnailUrl smallUrl imageUrl imageTitle')
@@ -313,6 +405,48 @@ export const addImageToCollection = async (req, res) => {
 
         await collection.save();
 
+        // Create version
+        await createCollectionVersion(
+            collectionId,
+            userId,
+            'image_added',
+            {
+                imageId,
+                description: `Image added to collection`,
+            }
+        );
+
+        // Notify collaborators and owner (except the user who added the image)
+        try {
+            const collaborators = collection.collaborators || [];
+            const notificationRecipients = new Set();
+            
+            // Add owner if not the current user
+            if (collection.createdBy.toString() !== userId.toString()) {
+                notificationRecipients.add(collection.createdBy.toString());
+            }
+            
+            // Add collaborators
+            collaborators.forEach(collab => {
+                if (collab.user.toString() !== userId.toString()) {
+                    notificationRecipients.add(collab.user.toString());
+                }
+            });
+
+            const notificationPromises = Array.from(notificationRecipients).map(recipientId =>
+                Notification.create({
+                    recipient: recipientId,
+                    type: 'collection_image_added',
+                    collection: collectionId,
+                    actor: userId,
+                    image: imageId,
+                })
+            );
+            await Promise.all(notificationPromises);
+        } catch (notifError) {
+            logger.error('Failed to create notifications for image added:', notifError);
+        }
+
         const populatedCollection = await Collection.findById(collection._id)
             .populate('coverImage', 'thumbnailUrl smallUrl imageUrl imageTitle')
             .populate('images', 'thumbnailUrl smallUrl imageUrl imageTitle')
@@ -342,16 +476,22 @@ export const removeImageFromCollection = async (req, res) => {
         const { collectionId, imageId } = req.params;
         const userId = req.user._id;
 
-        // Verify collection exists and belongs to user
-        const collection = await Collection.findOne({
-            _id: collectionId,
-            createdBy: userId,
-        });
+        // Verify collection exists and user has permission
+        const collection = await Collection.findById(collectionId)
+            .populate('collaborators.user');
 
         if (!collection) {
             return res.status(404).json({
                 success: false,
                 message: 'Collection not found',
+            });
+        }
+
+        // Check if user has permission to edit
+        if (!hasPermission(collection, userId, 'edit')) {
+            return res.status(403).json({
+                success: false,
+                message: 'Bạn không có quyền chỉnh sửa bộ sưu tập này',
             });
         }
 
@@ -366,6 +506,48 @@ export const removeImageFromCollection = async (req, res) => {
         }
 
         await collection.save();
+
+        // Create version
+        await createCollectionVersion(
+            collectionId,
+            userId,
+            'image_removed',
+            {
+                imageId,
+                description: `Image removed from collection`,
+            }
+        );
+
+        // Notify collaborators and owner (except the user who removed the image)
+        try {
+            const collaborators = collection.collaborators || [];
+            const notificationRecipients = new Set();
+            
+            // Add owner if not the current user
+            if (collection.createdBy.toString() !== userId.toString()) {
+                notificationRecipients.add(collection.createdBy.toString());
+            }
+            
+            // Add collaborators
+            collaborators.forEach(collab => {
+                if (collab.user.toString() !== userId.toString()) {
+                    notificationRecipients.add(collab.user.toString());
+                }
+            });
+
+            const notificationPromises = Array.from(notificationRecipients).map(recipientId =>
+                Notification.create({
+                    recipient: recipientId,
+                    type: 'collection_image_removed',
+                    collection: collectionId,
+                    actor: userId,
+                    image: imageId,
+                })
+            );
+            await Promise.all(notificationPromises);
+        } catch (notifError) {
+            logger.error('Failed to create notifications for image removed:', notifError);
+        }
 
         const populatedCollection = await Collection.findById(collection._id)
             .populate('coverImage', 'thumbnailUrl smallUrl imageUrl imageTitle')
@@ -480,6 +662,16 @@ export const reorderCollectionImages = async (req, res) => {
 
         await collection.save();
 
+        // Create version
+        await createCollectionVersion(
+            collectionId,
+            userId,
+            'reordered',
+            {
+                description: `Images reordered`,
+            }
+        );
+
         const populatedCollection = await Collection.findById(collection._id)
             .populate('coverImage', 'thumbnailUrl smallUrl imageUrl imageTitle')
             .populate({
@@ -507,4 +699,440 @@ export const reorderCollectionImages = async (req, res) => {
         });
     }
 };
+
+/**
+ * Helper function to check if user has permission on collection
+ */
+const hasPermission = (collection, userId, requiredPermission) => {
+    // Owner has all permissions
+    if (collection.createdBy.toString() === userId.toString()) {
+        return true;
+    }
+
+    // Check collaborator permissions
+    const collaborator = collection.collaborators?.find(
+        collab => collab.user.toString() === userId.toString()
+    );
+
+    if (!collaborator) {
+        return false;
+    }
+
+    // Permission hierarchy: view < edit < admin
+    const permissionLevels = { view: 1, edit: 2, admin: 3 };
+    const userLevel = permissionLevels[collaborator.permission] || 0;
+    const requiredLevel = permissionLevels[requiredPermission] || 0;
+
+    return userLevel >= requiredLevel;
+};
+
+/**
+ * Add collaborator to collection
+ */
+export const addCollaborator = asyncHandler(async (req, res) => {
+    try {
+        const { collectionId } = req.params;
+        const userId = req.user._id;
+        const { userEmail, permission = 'view' } = req.body;
+
+        if (!userEmail) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email người dùng là bắt buộc',
+            });
+        }
+
+        if (!['view', 'edit', 'admin'].includes(permission)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Quyền không hợp lệ. Phải là: view, edit, hoặc admin',
+            });
+        }
+
+        const collection = await Collection.findById(collectionId);
+
+        if (!collection) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy bộ sưu tập',
+            });
+        }
+
+        // Check if user is owner or admin collaborator
+        if (!hasPermission(collection, userId, 'admin')) {
+            return res.status(403).json({
+                success: false,
+                message: 'Bạn không có quyền thêm cộng tác viên',
+            });
+        }
+
+        // Find user by email
+        const userToAdd = await User.findOne({ email: userEmail.toLowerCase() });
+
+        if (!userToAdd) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy người dùng với email này',
+            });
+        }
+
+        // Can't add owner as collaborator
+        if (collection.createdBy.toString() === userToAdd._id.toString()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Chủ sở hữu bộ sưu tập không thể được thêm làm cộng tác viên',
+            });
+        }
+
+        // Check if user is already a collaborator
+        const existingCollaborator = collection.collaborators?.find(
+            collab => collab.user.toString() === userToAdd._id.toString()
+        );
+
+        if (existingCollaborator) {
+            return res.status(400).json({
+                success: false,
+                message: 'Người dùng này đã là cộng tác viên',
+            });
+        }
+
+        // Add collaborator
+        collection.collaborators = collection.collaborators || [];
+        collection.collaborators.push({
+            user: userToAdd._id,
+            permission,
+            invitedBy: userId,
+            invitedAt: new Date(),
+        });
+
+        await collection.save();
+
+        // Create notification for the invited user
+        try {
+            await Notification.create({
+                recipient: userToAdd._id,
+                type: 'collection_invited',
+                collection: collectionId,
+                actor: userId,
+                metadata: {
+                    permission,
+                    collectionName: collection.name,
+                },
+            });
+        } catch (notifError) {
+            // Log error but don't fail the request
+            logger.error('Failed to create notification:', notifError);
+        }
+
+        // Populate and return updated collection
+        const updatedCollection = await Collection.findById(collectionId)
+            .populate('createdBy', 'username displayName avatarUrl')
+            .populate({
+                path: 'collaborators.user',
+                select: 'username displayName avatarUrl email',
+            })
+            .populate({
+                path: 'collaborators.invitedBy',
+                select: 'username displayName avatarUrl',
+            })
+            .lean();
+
+        res.json({
+            success: true,
+            message: 'Đã thêm cộng tác viên thành công',
+            collection: updatedCollection,
+        });
+    } catch (error) {
+        logger.error('Error adding collaborator:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Không thể thêm cộng tác viên. Vui lòng thử lại.',
+        });
+    }
+});
+
+/**
+ * Remove collaborator from collection
+ */
+export const removeCollaborator = asyncHandler(async (req, res) => {
+    try {
+        const { collectionId, collaboratorId } = req.params;
+        const userId = req.user._id;
+
+        const collection = await Collection.findById(collectionId);
+
+        if (!collection) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy bộ sưu tập',
+            });
+        }
+
+        // Check if user is owner or admin collaborator
+        if (!hasPermission(collection, userId, 'admin')) {
+            return res.status(403).json({
+                success: false,
+                message: 'Bạn không có quyền xóa cộng tác viên',
+            });
+        }
+
+        // Find collaborator before removing
+        const collaboratorToRemove = collection.collaborators?.find(
+            collab => collab.user.toString() === collaboratorId
+        );
+
+        // Remove collaborator
+        collection.collaborators = collection.collaborators?.filter(
+            collab => collab.user.toString() !== collaboratorId
+        ) || [];
+
+        await collection.save();
+
+        // Notify the removed collaborator
+        if (collaboratorToRemove) {
+            try {
+                await Notification.create({
+                    recipient: collaboratorId,
+                    type: 'collection_removed',
+                    collection: collectionId,
+                    actor: userId,
+                    metadata: {
+                        collectionName: collection.name,
+                    },
+                });
+            } catch (notifError) {
+                logger.error('Failed to create notification for collaborator removal:', notifError);
+            }
+        }
+
+        // Populate and return updated collection
+        const updatedCollection = await Collection.findById(collectionId)
+            .populate('createdBy', 'username displayName avatarUrl')
+            .populate({
+                path: 'collaborators.user',
+                select: 'username displayName avatarUrl email',
+            })
+            .populate({
+                path: 'collaborators.invitedBy',
+                select: 'username displayName avatarUrl',
+            })
+            .lean();
+
+        res.json({
+            success: true,
+            message: 'Đã xóa cộng tác viên thành công',
+            collection: updatedCollection,
+        });
+    } catch (error) {
+        logger.error('Error removing collaborator:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Không thể xóa cộng tác viên. Vui lòng thử lại.',
+        });
+    }
+});
+
+/**
+ * Update collaborator permission
+ */
+export const updateCollaboratorPermission = asyncHandler(async (req, res) => {
+    try {
+        const { collectionId, collaboratorId } = req.params;
+        const userId = req.user._id;
+        const { permission } = req.body;
+
+        if (!['view', 'edit', 'admin'].includes(permission)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Quyền không hợp lệ. Phải là: view, edit, hoặc admin',
+            });
+        }
+
+        const collection = await Collection.findById(collectionId);
+
+        if (!collection) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy bộ sưu tập',
+            });
+        }
+
+        // Check if user is owner or admin collaborator
+        if (!hasPermission(collection, userId, 'admin')) {
+            return res.status(403).json({
+                success: false,
+                message: 'Bạn không có quyền cập nhật quyền cộng tác viên',
+            });
+        }
+
+        // Find and update collaborator
+        const collaborator = collection.collaborators?.find(
+            collab => collab.user.toString() === collaboratorId
+        );
+
+        if (!collaborator) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy cộng tác viên',
+            });
+        }
+
+        collaborator.permission = permission;
+        await collection.save();
+
+        // Notify the collaborator whose permission was changed
+        try {
+            await Notification.create({
+                recipient: collaboratorId,
+                type: 'collection_permission_changed',
+                collection: collectionId,
+                actor: userId,
+                metadata: {
+                    permission,
+                    collectionName: collection.name,
+                },
+            });
+        } catch (notifError) {
+            logger.error('Failed to create notification for permission change:', notifError);
+        }
+
+        // Populate and return updated collection
+        const updatedCollection = await Collection.findById(collectionId)
+            .populate('createdBy', 'username displayName avatarUrl')
+            .populate({
+                path: 'collaborators.user',
+                select: 'username displayName avatarUrl email',
+            })
+            .populate({
+                path: 'collaborators.invitedBy',
+                select: 'username displayName avatarUrl',
+            })
+            .lean();
+
+        res.json({
+            success: true,
+            message: 'Đã cập nhật quyền cộng tác viên thành công',
+            collection: updatedCollection,
+        });
+    } catch (error) {
+        logger.error('Error updating collaborator permission:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Không thể cập nhật quyền cộng tác viên. Vui lòng thử lại.',
+        });
+    }
+});
+
+/**
+ * Export collection as ZIP file
+ */
+export const exportCollection = asyncHandler(async (req, res) => {
+    const { collectionId } = req.params;
+    const userId = req.user._id;
+
+    // Find collection and verify ownership or public access
+    const collection = await Collection.findOne({
+        _id: collectionId,
+        $or: [
+            { createdBy: userId },
+            { isPublic: true },
+        ],
+    }).populate('images', 'imageUrl imageTitle');
+
+    if (!collection) {
+        return res.status(404).json({
+            success: false,
+            message: 'Không tìm thấy bộ sưu tập',
+        });
+    }
+
+    if (!collection.images || collection.images.length === 0) {
+        return res.status(400).json({
+            success: false,
+            message: 'Bộ sưu tập không có ảnh nào để xuất',
+        });
+    }
+
+    try {
+        const zip = new JSZip();
+        const imagePromises = [];
+
+        // Fetch all images and add to ZIP
+        for (let i = 0; i < collection.images.length; i++) {
+            const image = collection.images[i];
+            const imageUrl = image.imageUrl || image.regularUrl || image.smallUrl;
+            
+            if (!imageUrl) {
+                logger.warn(`Image ${image._id} has no URL, skipping`);
+                continue;
+            }
+
+            // Fetch image using axios
+            const fetchPromise = axios.get(imageUrl, {
+                responseType: 'arraybuffer',
+                timeout: 30000, // 30 second timeout per image
+            })
+                .then(response => {
+                    return Buffer.from(response.data);
+                })
+                .then(buffer => {
+                    // Generate safe filename
+                    const sanitizedTitle = (image.imageTitle || `image-${i + 1}`)
+                        .replace(/[^a-z0-9]/gi, '_')
+                        .toLowerCase()
+                        .substring(0, 50);
+                    
+                    // Get file extension from URL or default to jpg
+                    const urlExtension = imageUrl.match(/\.([a-z]+)(?:\?|$)/i)?.[1] || 'jpg';
+                    const filename = `${sanitizedTitle}.${urlExtension}`;
+                    
+                    // Add to ZIP
+                    zip.file(filename, buffer);
+                })
+                .catch(error => {
+                    logger.error(`Failed to fetch image ${image._id}:`, error);
+                    // Continue with other images even if one fails
+                });
+
+            imagePromises.push(fetchPromise);
+        }
+
+        // Wait for all images to be fetched
+        await Promise.all(imagePromises);
+
+        // Generate ZIP file
+        const zipBuffer = await zip.generateAsync({
+            type: 'nodebuffer',
+            compression: 'DEFLATE',
+            compressionOptions: { level: 6 },
+        });
+
+        // Set response headers
+        const safeCollectionName = collection.name
+            .replace(/[^a-z0-9]/gi, '_')
+            .toLowerCase()
+            .substring(0, 50);
+        const filename = `${safeCollectionName}_${Date.now()}.zip`;
+
+        // Set headers (CORS middleware should handle CORS headers, but set explicitly for blob responses)
+        const origin = req.headers.origin;
+        if (origin) {
+            res.setHeader('Access-Control-Allow-Origin', origin);
+            res.setHeader('Access-Control-Allow-Credentials', 'true');
+        }
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+        res.setHeader('Content-Length', zipBuffer.length);
+        res.setHeader('Cache-Control', 'no-cache');
+
+        // Send ZIP file with 200 status
+        res.status(200).send(Buffer.from(zipBuffer));
+    } catch (error) {
+        logger.error('Error exporting collection:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi xuất bộ sưu tập. Vui lòng thử lại.',
+        });
+    }
+});
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Plus, Folder, Check } from 'lucide-react';
+import { X, Plus, Folder, Check, FileText, Sparkles } from 'lucide-react';
 import { collectionService } from '@/services/collectionService';
+import { collectionTemplateService, type CollectionTemplate } from '@/services/collectionTemplateService';
 import type { Collection } from '@/types/collection';
 import { toast } from 'sonner';
 import './CollectionModal.css';
@@ -29,12 +30,20 @@ export default function CollectionModal({
 	const [newCollectionName, setNewCollectionName] = useState('');
 	const [newCollectionDescription, setNewCollectionDescription] = useState('');
 	const [newCollectionPublic, setNewCollectionPublic] = useState(true);
+	const [newCollectionTags, setNewCollectionTags] = useState<string[]>([]);
+	const [newTagInput, setNewTagInput] = useState('');
 	const [editCollectionName, setEditCollectionName] = useState('');
 	const [editCollectionDescription, setEditCollectionDescription] = useState('');
 	const [editCollectionPublic, setEditCollectionPublic] = useState(true);
+	const [editCollectionTags, setEditCollectionTags] = useState<string[]>([]);
+	const [editTagInput, setEditTagInput] = useState('');
 	const [collectionsContainingImage, setCollectionsContainingImage] = useState<Set<string>>(
 		new Set()
 	);
+	const [templates, setTemplates] = useState<CollectionTemplate[]>([]);
+	const [loadingTemplates, setLoadingTemplates] = useState(false);
+	const [selectedTemplate, setSelectedTemplate] = useState<CollectionTemplate | null>(null);
+	const [showTemplates, setShowTemplates] = useState(false);
 
 	// Initialize edit form when collectionToEdit changes
 	useEffect(() => {
@@ -42,9 +51,69 @@ export default function CollectionModal({
 			setEditCollectionName(collectionToEdit.name || '');
 			setEditCollectionDescription(collectionToEdit.description || '');
 			setEditCollectionPublic(collectionToEdit.isPublic !== false);
+			setEditCollectionTags(collectionToEdit.tags || []);
 			setShowCreateForm(false);
 		}
 	}, [collectionToEdit]);
+
+	// Helper functions for tags
+	const addTag = (tag: string, isEdit: boolean) => {
+		const trimmedTag = tag.trim().toLowerCase();
+		if (!trimmedTag) return;
+		
+		if (isEdit) {
+			if (!editCollectionTags.includes(trimmedTag) && editCollectionTags.length < 10) {
+				setEditCollectionTags([...editCollectionTags, trimmedTag]);
+				setEditTagInput('');
+			}
+		} else {
+			if (!newCollectionTags.includes(trimmedTag) && newCollectionTags.length < 10) {
+				setNewCollectionTags([...newCollectionTags, trimmedTag]);
+				setNewTagInput('');
+			}
+		}
+	};
+
+	const removeTag = (tag: string, isEdit: boolean) => {
+		if (isEdit) {
+			setEditCollectionTags(editCollectionTags.filter(t => t !== tag));
+		} else {
+			setNewCollectionTags(newCollectionTags.filter(t => t !== tag));
+		}
+	};
+
+	const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, isEdit: boolean) => {
+		if (e.key === 'Enter' || e.key === ',') {
+			e.preventDefault();
+			const input = e.currentTarget.value;
+			if (input.includes(',')) {
+				// Multiple tags separated by commas
+				input.split(',').forEach(tag => addTag(tag, isEdit));
+			} else {
+				addTag(input, isEdit);
+			}
+		}
+	};
+
+	// Load templates
+	useEffect(() => {
+		if (!isOpen || isEditMode) return;
+
+		const loadTemplates = async () => {
+			setLoadingTemplates(true);
+			try {
+				const templatesData = await collectionTemplateService.getTemplates();
+				setTemplates(templatesData);
+			} catch (error: any) {
+				console.error('Failed to load templates:', error);
+				// Don't show error toast for templates, it's optional
+			} finally {
+				setLoadingTemplates(false);
+			}
+		};
+
+		loadTemplates();
+	}, [isOpen, isEditMode]);
 
 	// Load collections and check which ones contain this image
 	useEffect(() => {
@@ -81,6 +150,16 @@ export default function CollectionModal({
 
 		loadData();
 	}, [isOpen, imageId, isEditMode]);
+
+	// Apply template when selected
+	useEffect(() => {
+		if (selectedTemplate && showCreateForm) {
+			setNewCollectionName(selectedTemplate.templateName);
+			setNewCollectionDescription(selectedTemplate.description || '');
+			setNewCollectionPublic(selectedTemplate.defaultIsPublic);
+			setNewCollectionTags([...selectedTemplate.defaultTags]);
+		}
+	}, [selectedTemplate, showCreateForm]);
 
 	const handleToggleCollection = useCallback(
 		async (collectionId: string, isInCollection: boolean) => {
@@ -126,11 +205,28 @@ export default function CollectionModal({
 
 		setCreating(true);
 		try {
-			const newCollection = await collectionService.createCollection({
-				name: newCollectionName.trim(),
-				description: newCollectionDescription.trim() || undefined,
-				isPublic: newCollectionPublic,
-			});
+			let newCollection: Collection;
+
+			// Create from template if selected
+			if (selectedTemplate) {
+				newCollection = await collectionTemplateService.createCollectionFromTemplate(
+					selectedTemplate._id,
+					{
+						name: newCollectionName.trim(),
+						description: newCollectionDescription.trim() || undefined,
+						isPublic: newCollectionPublic,
+						tags: newCollectionTags.length > 0 ? newCollectionTags : undefined,
+					}
+				);
+			} else {
+				// Create normally
+				newCollection = await collectionService.createCollection({
+					name: newCollectionName.trim(),
+					description: newCollectionDescription.trim() || undefined,
+					isPublic: newCollectionPublic,
+					tags: newCollectionTags.length > 0 ? newCollectionTags : undefined,
+				});
+			}
 
 			// Add the image to the new collection if imageId is provided
 			if (imageId) {
@@ -149,7 +245,11 @@ export default function CollectionModal({
 			setNewCollectionName('');
 			setNewCollectionDescription('');
 			setNewCollectionPublic(true);
+			setNewCollectionTags([]);
+			setNewTagInput('');
 			setShowCreateForm(false);
+			setSelectedTemplate(null);
+			setShowTemplates(false);
 
 			toast.success('Đã tạo bộ sưu tập' + (imageId ? ' và thêm ảnh' : ''));
 			onCollectionUpdate?.();
@@ -165,6 +265,8 @@ export default function CollectionModal({
 		newCollectionName,
 		newCollectionDescription,
 		newCollectionPublic,
+		newCollectionTags,
+		selectedTemplate,
 		imageId,
 		onCollectionUpdate,
 	]);
@@ -181,6 +283,7 @@ export default function CollectionModal({
 				name: editCollectionName.trim(),
 				description: editCollectionDescription.trim() || undefined,
 				isPublic: editCollectionPublic,
+				tags: editCollectionTags.length > 0 ? editCollectionTags : undefined,
 			});
 
 			toast.success('Đã cập nhật bộ sưu tập');
@@ -199,6 +302,7 @@ export default function CollectionModal({
 		editCollectionName,
 		editCollectionDescription,
 		editCollectionPublic,
+		editCollectionTags,
 		onCollectionUpdate,
 		onClose,
 	]);
@@ -243,17 +347,54 @@ export default function CollectionModal({
 									rows={3}
 								/>
 							</div>
-							<div className="collection-modal-form-group">
-								<label className="collection-modal-checkbox-label">
-									<input
-										type="checkbox"
-										checked={editCollectionPublic}
-										onChange={(e) => setEditCollectionPublic(e.target.checked)}
-									/>
-									<span>Công khai (mọi người có thể xem)</span>
-								</label>
-							</div>
-							<div className="collection-modal-form-actions">
+									<div className="collection-modal-form-group">
+										<label className="collection-modal-checkbox-label">
+											<input
+												type="checkbox"
+												checked={editCollectionPublic}
+												onChange={(e) => setEditCollectionPublic(e.target.checked)}
+											/>
+											<span>Công khai (mọi người có thể xem)</span>
+										</label>
+									</div>
+									<div className="collection-modal-form-group">
+										<label htmlFor="edit-collection-tags">Thẻ (tối đa 10)</label>
+										<div className="collection-modal-tags-input-wrapper">
+											<input
+												id="edit-collection-tags"
+												type="text"
+												value={editTagInput}
+												onChange={(e) => setEditTagInput(e.target.value)}
+												onKeyDown={(e) => handleTagInputKeyDown(e, true)}
+												placeholder="Nhập thẻ và nhấn Enter hoặc dấu phẩy"
+											/>
+											<button
+												type="button"
+												className="collection-modal-tag-add-btn"
+												onClick={() => addTag(editTagInput, true)}
+												disabled={!editTagInput.trim() || editCollectionTags.length >= 10}
+											>
+												<Plus size={16} />
+											</button>
+										</div>
+										{editCollectionTags.length > 0 && (
+											<div className="collection-modal-tags-list">
+												{editCollectionTags.map((tag, index) => (
+													<span key={index} className="collection-modal-tag">
+														{tag}
+														<button
+															type="button"
+															onClick={() => removeTag(tag, true)}
+															className="collection-modal-tag-remove"
+														>
+															<X size={12} />
+														</button>
+													</span>
+												))}
+											</div>
+										)}
+									</div>
+									<div className="collection-modal-form-actions">
 								<button
 									className="collection-modal-cancel-btn"
 									onClick={onClose}
@@ -278,13 +419,73 @@ export default function CollectionModal({
 						<>
 							{!showCreateForm ? (
 								<>
-									<button
-										className="collection-modal-create-btn"
-										onClick={() => setShowCreateForm(true)}
-									>
-										<Plus size={18} />
-										Tạo bộ sưu tập mới
-									</button>
+									<div className="collection-modal-create-options">
+										<button
+											className="collection-modal-create-btn"
+											onClick={() => {
+												setShowCreateForm(true);
+												setShowTemplates(false);
+												setSelectedTemplate(null);
+											}}
+										>
+											<Plus size={18} />
+											Tạo bộ sưu tập mới
+										</button>
+										{templates.length > 0 && (
+											<button
+												className="collection-modal-template-btn"
+												onClick={() => setShowTemplates(!showTemplates)}
+											>
+												<Sparkles size={18} />
+												Tạo từ mẫu ({templates.length})
+											</button>
+										)}
+									</div>
+
+									{showTemplates && (
+										<div className="collection-modal-templates">
+											<h4>Chọn mẫu</h4>
+											<div className="collection-modal-templates-list">
+												{templates.map((template) => (
+													<button
+														key={template._id}
+														className={`collection-modal-template-item ${
+															selectedTemplate?._id === template._id ? 'selected' : ''
+														}`}
+														onClick={() => {
+															setSelectedTemplate(template);
+															setShowCreateForm(true);
+															setShowTemplates(false);
+														}}
+													>
+														<div className="collection-modal-template-icon">
+															<FileText size={24} />
+														</div>
+														<div className="collection-modal-template-info">
+															<h5>{template.templateName}</h5>
+															{template.description && (
+																<p>{template.description}</p>
+															)}
+															{template.defaultTags.length > 0 && (
+																<div className="collection-modal-template-tags">
+																	{template.defaultTags.slice(0, 3).map((tag, idx) => (
+																		<span key={idx} className="collection-modal-template-tag">
+																			{tag}
+																		</span>
+																	))}
+																	{template.defaultTags.length > 3 && (
+																		<span className="collection-modal-template-tag-more">
+																			+{template.defaultTags.length - 3}
+																		</span>
+																	)}
+																</div>
+															)}
+														</div>
+													</button>
+												))}
+											</div>
+										</div>
+									)}
 
 									{collections.length === 0 ? (
 										<div className="collection-modal-empty">
@@ -356,7 +557,29 @@ export default function CollectionModal({
 								</>
 							) : (
 								<div className="collection-modal-create-form">
-									<h3>Tạo bộ sưu tập mới</h3>
+									<div className="collection-modal-form-header">
+										<h3>
+											{selectedTemplate
+												? `Tạo từ mẫu: ${selectedTemplate.templateName}`
+												: 'Tạo bộ sưu tập mới'}
+										</h3>
+										{selectedTemplate && (
+											<button
+												type="button"
+												className="collection-modal-clear-template"
+												onClick={() => {
+													setSelectedTemplate(null);
+													setNewCollectionName('');
+													setNewCollectionDescription('');
+													setNewCollectionPublic(true);
+													setNewCollectionTags([]);
+												}}
+												title="Xóa mẫu"
+											>
+												<X size={16} />
+											</button>
+										)}
+									</div>
 									<div className="collection-modal-form-group">
 										<label htmlFor="collection-name">Tên bộ sưu tập *</label>
 										<input
@@ -391,6 +614,43 @@ export default function CollectionModal({
 											/>
 											<span>Công khai (mọi người có thể xem)</span>
 										</label>
+									</div>
+									<div className="collection-modal-form-group">
+										<label htmlFor="collection-tags">Thẻ (tối đa 10)</label>
+										<div className="collection-modal-tags-input-wrapper">
+											<input
+												id="collection-tags"
+												type="text"
+												value={newTagInput}
+												onChange={(e) => setNewTagInput(e.target.value)}
+												onKeyDown={(e) => handleTagInputKeyDown(e, false)}
+												placeholder="Nhập thẻ và nhấn Enter hoặc dấu phẩy"
+											/>
+											<button
+												type="button"
+												className="collection-modal-tag-add-btn"
+												onClick={() => addTag(newTagInput, false)}
+												disabled={!newTagInput.trim() || newCollectionTags.length >= 10}
+											>
+												<Plus size={16} />
+											</button>
+										</div>
+										{newCollectionTags.length > 0 && (
+											<div className="collection-modal-tags-list">
+												{newCollectionTags.map((tag, index) => (
+													<span key={index} className="collection-modal-tag">
+														{tag}
+														<button
+															type="button"
+															onClick={() => removeTag(tag, false)}
+															className="collection-modal-tag-remove"
+														>
+															<X size={12} />
+														</button>
+													</span>
+												))}
+											</div>
+										)}
 									</div>
 									<div className="collection-modal-form-actions">
 										<button

@@ -67,6 +67,11 @@ const userSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Image',
         }],
+        // Favorite Collections - array of collection IDs that user has favorited
+        favoriteCollections: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Collection',
+        }],
         // Ban status
         isBanned: {
             type: Boolean,
@@ -97,6 +102,20 @@ const userSchema = new mongoose.Schema(
 userSchema.index({ email: 1, isAdmin: 1 }); // For admin queries filtering by email
 userSchema.index({ createdAt: -1 }); // For sorting users by creation date
 userSchema.index({ username: 1, isAdmin: 1 }); // For admin queries filtering by username
+
+// Text index for fast user search (username, email, displayName)
+userSchema.index({ 
+	username: 'text', 
+	email: 'text', 
+	displayName: 'text' 
+}, { 
+	name: 'user_search_text_index',
+	weights: {
+		username: 10,  // Username matches are most important
+		email: 5,       // Email matches are important
+		displayName: 1  // Display name matches are less important
+	}
+});
 
 const User = mongoose.model("User", userSchema);
 export default User;

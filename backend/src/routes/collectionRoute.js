@@ -9,6 +9,10 @@ import {
     removeImageFromCollection,
     getCollectionsContainingImage,
     reorderCollectionImages,
+    exportCollection,
+    addCollaborator,
+    removeCollaborator,
+    updateCollaboratorPermission,
 } from '../controllers/collectionController.js';
 import { protectedRoute } from '../middlewares/authMiddleware.js';
 import { validateCsrf } from '../middlewares/csrfMiddleware.js';
@@ -23,6 +27,9 @@ router.get('/', getUserCollections);
 
 // Get collections containing a specific image
 router.get('/containing/:imageId', getCollectionsContainingImage);
+
+// Export collection as ZIP (must be before /:collectionId route)
+router.get('/:collectionId/export', exportCollection);
 
 // Get a single collection by ID
 router.get('/:collectionId', getCollectionById);
@@ -44,6 +51,11 @@ router.delete('/:collectionId/images/:imageId', validateCsrf, removeImageFromCol
 
 // Reorder images in collection
 router.patch('/:collectionId/images/reorder', validateCsrf, reorderCollectionImages);
+
+// Collaboration routes
+router.post('/:collectionId/collaborators', validateCsrf, addCollaborator);
+router.delete('/:collectionId/collaborators/:collaboratorId', validateCsrf, removeCollaborator);
+router.patch('/:collectionId/collaborators/:collaboratorId/permission', validateCsrf, updateCollaboratorPermission);
 
 export default router;
 

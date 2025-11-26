@@ -16,6 +16,10 @@ import { asyncHandler } from './middlewares/asyncHandler.js';
 import categoryRoute from './routes/categoryRoute.js';
 import favoriteRoute from './routes/favoriteRoute.js';
 import collectionRoute from './routes/collectionRoute.js';
+import collectionFavoriteRoute from './routes/collectionFavoriteRoute.js';
+import notificationRoute from './routes/notificationRoute.js';
+import collectionTemplateRoute from './routes/collectionTemplateRoute.js';
+import collectionVersionRoute from './routes/collectionVersionRoute.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { apiLimiter } from './middlewares/rateLimiter.js';
 import { requestDeduplication } from './middlewares/requestDeduplication.js';
@@ -154,6 +158,10 @@ app.use('/api/admin', adminRoute);
 app.use('/api/categories', categoryRoute);
 app.use('/api/favorites', favoriteRoute);
 app.use('/api/collections', collectionRoute);
+app.use('/api/collection-favorites', collectionFavoriteRoute);
+app.use('/api/notifications', notificationRoute);
+app.use('/api/collection-templates', collectionTemplateRoute);
+app.use('/api/collection-versions', collectionVersionRoute);
 
 // Serve static files in production
 if (env.NODE_ENV === 'production') {

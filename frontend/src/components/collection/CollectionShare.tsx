@@ -31,21 +31,17 @@ export const CollectionShare = memo(({ collection }: CollectionShareProps) => {
 				// Calculate menu position
 				const menuWidth = 200; // min-width from CSS
 				const left = buttonRect.right - menuWidth;
-				
+				const top = buttonRect.bottom + 12;
+
+				setMenuPosition({
+					top: top,
+					left: Math.max(12, left) // Ensure menu doesn't go off-screen left
+				});
+
 				if (spaceAbove < requiredSpace && spaceBelow >= requiredSpace) {
-					// Position below button
 					setPositionBelow(true);
-					setMenuPosition({
-						top: buttonRect.bottom + 12,
-						left: Math.max(12, left) // Ensure menu doesn't go off-screen left
-					});
 				} else {
-					// Position above button
 					setPositionBelow(false);
-					setMenuPosition({
-						top: buttonRect.top - estimatedMenuHeight - 12,
-						left: Math.max(12, left) // Ensure menu doesn't go off-screen left
-					});
 				}
 			}
 		};

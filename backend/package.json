@@ -20,6 +20,7 @@
 	"type": "module",
 	"dependencies": {
 		"@aws-sdk/client-s3": "^3.935.0",
+		"axios": "^1.13.2",
 		"bcrypt": "^6.0.0",
 		"compression": "^1.8.1",
 		"cookie-parser": "^1.4.7",
@@ -33,6 +34,7 @@
 		"helmet": "^8.1.0",
 		"jsdom": "^27.2.0",
 		"jsonwebtoken": "^9.0.2",
+		"jszip": "^3.10.1",
 		"mongoose": "^8.19.3",
 		"multer": "^2.0.2",
 		"sharp": "^0.34.5"

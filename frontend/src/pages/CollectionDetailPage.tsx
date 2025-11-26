@@ -9,8 +9,11 @@ import { generateImageSlug, extractIdFromSlug } from '@/lib/utils';
 import ImageModal from '@/components/ImageModal';
 import ProgressiveImage from '@/components/ProgressiveImage';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { ImageIcon, Check, GripVertical, Square, CheckSquare2, Trash2, X } from 'lucide-react';
+import { ImageIcon, Check, GripVertical, Square, CheckSquare2, Trash2, X, Download, Heart, History, RotateCcw, Clock } from 'lucide-react';
 import { CollectionShare } from '@/components/collection/CollectionShare';
+import CollectionCollaborators from '@/components/collection/CollectionCollaborators';
+import { collectionFavoriteService } from '@/services/collectionFavoriteService';
+import { collectionVersionService, type CollectionVersion } from '@/services/collectionVersionService';
 import api from '@/lib/axios';
 import './CollectionDetailPage.css';
 
@@ -30,6 +33,12 @@ export default function CollectionDetailPage() {
 	const [isBulkRemoving, setIsBulkRemoving] = useState(false);
 	const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
 	const processedImages = useRef<Set<string>>(new Set());
+	const [isFavorited, setIsFavorited] = useState(false);
+	const [togglingFavorite, setTogglingFavorite] = useState(false);
+	const [versions, setVersions] = useState<CollectionVersion[]>([]);
+	const [loadingVersions, setLoadingVersions] = useState(false);
+	const [showVersionHistory, setShowVersionHistory] = useState(false);
+	const [restoringVersion, setRestoringVersion] = useState<number | null>(null);
 
 	// Get selected image slug from URL
 	const imageSlugFromUrl = searchParams.get('image');
@@ -104,6 +113,23 @@ export default function CollectionDetailPage() {
 			: collection.createdBy;
 		return createdBy === user._id;
 	}, [collection, user]);
+
+	// Get user's permission level (owner, admin, edit, view, or null)
+	const userPermission = useMemo(() => {
+		if (!collection || !user) return undefined;
+		if (isOwner) return 'admin' as const; // Owner has admin permissions
+		
+		const collaborator = collection.collaborators?.find(
+			collab => typeof collab.user === 'object' && collab.user._id === user._id
+		);
+		
+		return collaborator?.permission;
+	}, [collection, user, isOwner]);
+
+	// Check if user can edit (owner, admin, or edit permission)
+	const canEdit = useMemo(() => {
+		return isOwner || userPermission === 'admin' || userPermission === 'edit';
+	}, [isOwner, userPermission]);
 
 	// Get current cover image ID
 	const coverImageId = useMemo(() => {
@@ -303,6 +329,23 @@ export default function CollectionDetailPage() {
 		}
 	}, [collectionId, isOwner]);
 
+	// Handle toggle favorite
+	const handleToggleFavorite = useCallback(async () => {
+		if (!collectionId || togglingFavorite) return;
+
+		setTogglingFavorite(true);
+		try {
+			const response = await collectionFavoriteService.toggleFavorite(collectionId);
+			setIsFavorited(response.isFavorited);
+			toast.success(response.isFavorited ? 'Đã thêm vào yêu thích' : 'Đã xóa khỏi yêu thích');
+		} catch (error: any) {
+			console.error('Failed to toggle favorite:', error);
+			toast.error('Không thể cập nhật yêu thích. Vui lòng thử lại.');
+		} finally {
+			setTogglingFavorite(false);
+		}
+	}, [collectionId, togglingFavorite]);
+
 	// Handle download
 	const handleDownload = useCallback(async (image: Image, e: React.MouseEvent) => {
 		e.preventDefault();
@@ -332,6 +375,124 @@ export default function CollectionDetailPage() {
 		}
 	}, []);
 
+	// Load version history
+	const fetchVersions = useCallback(async () => {
+		if (!collectionId) return;
+		setLoadingVersions(true);
+		try {
+			const versionsData = await collectionVersionService.getCollectionVersions(collectionId);
+			setVersions(versionsData);
+		} catch (error: any) {
+			console.error('Failed to load versions:', error);
+			toast.error('Không thể tải lịch sử phiên bản');
+		} finally {
+			setLoadingVersions(false);
+		}
+	}, [collectionId]);
+
+	// Load versions when collection is loaded and user can edit
+	useEffect(() => {
+		if (collection && canEdit) {
+			fetchVersions();
+		}
+	}, [collection, canEdit, fetchVersions]);
+
+	// Handle restore version
+	const handleRestoreVersion = useCallback(async (versionNumber: number) => {
+		if (!collectionId) return;
+
+		if (!confirm(`Bạn có chắc chắn muốn khôi phục bộ sưu tập về phiên bản ${versionNumber}? Tất cả thay đổi sau phiên bản này sẽ bị mất.`)) {
+			return;
+		}
+
+		setRestoringVersion(versionNumber);
+		try {
+			const restoredCollection = await collectionVersionService.restoreCollectionVersion(
+				collectionId,
+				versionNumber
+			);
+			setCollection(restoredCollection);
+			await fetchVersions(); // Reload versions
+			toast.success(`Đã khôi phục về phiên bản ${versionNumber}`);
+		} catch (error: any) {
+			console.error('Failed to restore version:', error);
+			toast.error(error.response?.data?.message || 'Không thể khôi phục phiên bản. Vui lòng thử lại.');
+		} finally {
+			setRestoringVersion(null);
+		}
+	}, [collectionId, fetchVersions]);
+
+	// Format version change description
+	const getVersionChangeDescription = (version: CollectionVersion): string => {
+		const changeTypeMap: Record<string, string> = {
+			created: 'Tạo mới',
+			updated: 'Cập nhật',
+			image_added: 'Thêm ảnh',
+			image_removed: 'Xóa ảnh',
+			reordered: 'Sắp xếp lại',
+			collaborator_added: 'Thêm cộng tác viên',
+			collaborator_removed: 'Xóa cộng tác viên',
+			permission_changed: 'Thay đổi quyền',
+		};
+		return changeTypeMap[version.changes.type] || version.changes.description || 'Thay đổi';
+	};
+
+	// Format time ago
+	const formatTimeAgo = (dateString: string): string => {
+		const date = new Date(dateString);
+		const now = new Date();
+		const diffMs = now.getTime() - date.getTime();
+		const diffMins = Math.floor(diffMs / 60000);
+		const diffHours = Math.floor(diffMs / 3600000);
+		const diffDays = Math.floor(diffMs / 86400000);
+
+		if (diffMins < 1) return 'Vừa xong';
+		if (diffMins < 60) return `${diffMins} phút trước`;
+		if (diffHours < 24) return `${diffHours} giờ trước`;
+		if (diffDays < 7) return `${diffDays} ngày trước`;
+		return date.toLocaleDateString('vi-VN');
+	};
+
+	// Handle export collection
+	const handleExportCollection = useCallback(async () => {
+		if (!collectionId || !collection || images.length === 0) {
+			toast.error('Bộ sưu tập không có ảnh để xuất');
+			return;
+		}
+
+		try {
+			toast.loading('Đang tạo file ZIP...', { id: 'export-collection' });
+			
+			const blob = await collectionService.exportCollection(collectionId);
+			const blobUrl = URL.createObjectURL(blob);
+			const link = document.createElement('a');
+			link.href = blobUrl;
+			
+			// Generate filename from collection name
+			const safeCollectionName = (collection.name || 'collection')
+				.replace(/[^a-z0-9]/gi, '_')
+				.toLowerCase()
+				.substring(0, 50);
+			link.download = `${safeCollectionName}_${Date.now()}.zip`;
+			
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+			
+			setTimeout(() => {
+				URL.revokeObjectURL(blobUrl);
+			}, 100);
+			
+			toast.success(`Đã xuất ${images.length} ảnh thành công`, { id: 'export-collection' });
+		} catch (error: any) {
+			console.error('Export failed:', error);
+			toast.error(
+				error.response?.data?.message || 'Xuất bộ sưu tập thất bại. Vui lòng thử lại.',
+				{ id: 'export-collection' }
+			);
+		}
+	}, [collectionId, collection, images.length]);
+
 	useEffect(() => {
 		if (!collectionId) {
 			navigate('/collections');
@@ -343,6 +504,16 @@ export default function CollectionDetailPage() {
 				setLoading(true);
 				const data = await collectionService.getCollectionById(collectionId);
 				setCollection(data);
+
+				// Check favorite status
+				if (collectionId) {
+					try {
+						const favoritesResponse = await collectionFavoriteService.checkFavorites([collectionId]);
+						setIsFavorited(favoritesResponse.favorites[collectionId] || false);
+					} catch (error) {
+						console.error('Failed to check favorite status:', error);
+					}
+				}
 			} catch (error: any) {
 				console.error('Failed to load collection:', error);
 				toast.error('Không thể tải bộ sưu tập');
@@ -399,18 +570,18 @@ export default function CollectionDetailPage() {
 					<div className="collection-detail-info">
 						<div className="collection-detail-title-row">
 							<div>
-								<h1>{collection.name}</h1>
-								{collection.description && (
+								<h1>{collection?.name || 'Bộ sưu tập'}</h1>
+								{collection?.description && (
 									<p className="collection-detail-description">
 										{collection.description}
 									</p>
 								)}
 								<div className="collection-detail-meta">
 									<span>{images.length} ảnh</span>
-									{collection.views !== undefined && collection.views > 0 && (
+									{collection?.views !== undefined && collection.views > 0 && (
 										<span>{collection.views} lượt xem</span>
 									)}
-									{typeof collection.createdBy === 'object' &&
+									{typeof collection?.createdBy === 'object' &&
 										collection.createdBy && (
 											<span>
 												bởi {collection.createdBy.displayName || collection.createdBy.username}
@@ -419,12 +590,31 @@ export default function CollectionDetailPage() {
 								</div>
 							</div>
 							<div className="collection-detail-actions">
-								{collection.isPublic && (
+								<button
+									className={`collection-favorite-btn ${isFavorited ? 'favorited' : ''}`}
+									onClick={handleToggleFavorite}
+									disabled={togglingFavorite}
+									title={isFavorited ? 'Xóa khỏi yêu thích' : 'Thêm vào yêu thích'}
+								>
+									<Heart size={18} fill={isFavorited ? 'currentColor' : 'none'} />
+									<span>{isFavorited ? 'Đã yêu thích' : 'Yêu thích'}</span>
+								</button>
+								{collection?.isPublic && (
 									<div onClick={(e) => e.stopPropagation()}>
 										<CollectionShare collection={collection} />
 									</div>
 								)}
-								{isOwner && images.length > 0 && (
+								{images.length > 0 && collection && (
+									<button
+										className="collection-export-btn"
+										onClick={handleExportCollection}
+										title="Xuất bộ sưu tập (ZIP)"
+									>
+										<Download size={18} />
+										<span>Xuất</span>
+									</button>
+								)}
+								{canEdit && images.length > 0 && (
 									<button
 										className={`collection-selection-mode-btn ${selectionMode ? 'active' : ''}`}
 										onClick={toggleSelectionMode}
@@ -447,6 +637,99 @@ export default function CollectionDetailPage() {
 						</div>
 					</div>
 				</div>
+
+				{/* Collaborators Section */}
+				{collection && (
+					<div className="collection-detail-collaborators-wrapper">
+						<CollectionCollaborators
+							collection={collection}
+							onCollectionUpdate={(updatedCollection) => setCollection(updatedCollection)}
+							isOwner={isOwner}
+							userPermission={userPermission}
+						/>
+					</div>
+				)}
+
+				{/* Version History Section */}
+				{collection && canEdit && (
+					<div className="collection-detail-versions-wrapper">
+						<div className="collection-versions-header">
+							<h2>
+								<History size={20} />
+								Lịch sử phiên bản
+							</h2>
+							<button
+								className="collection-versions-toggle"
+								onClick={() => setShowVersionHistory(!showVersionHistory)}
+							>
+								{showVersionHistory ? 'Ẩn' : 'Hiện'} ({versions.length})
+							</button>
+						</div>
+
+						{showVersionHistory && (
+							<div className="collection-versions-content">
+								{loadingVersions ? (
+									<div className="collection-versions-loading">
+										<p>Đang tải...</p>
+									</div>
+								) : versions.length === 0 ? (
+									<div className="collection-versions-empty">
+										<Clock size={48} />
+										<p>Chưa có lịch sử phiên bản</p>
+									</div>
+								) : (
+									<div className="collection-versions-list">
+										{versions.map((version) => (
+											<div key={version._id} className="collection-version-item">
+												<div className="collection-version-header">
+													<div className="collection-version-info">
+														<span className="collection-version-number">
+															Phiên bản {version.versionNumber}
+														</span>
+														<span className="collection-version-type">
+															{getVersionChangeDescription(version)}
+														</span>
+													</div>
+													<div className="collection-version-meta">
+														<span className="collection-version-time">
+															{formatTimeAgo(version.createdAt)}
+														</span>
+														{typeof version.changedBy === 'object' && (
+															<span className="collection-version-author">
+																bởi {version.changedBy.displayName || version.changedBy.username}
+															</span>
+														)}
+													</div>
+												</div>
+												{version.changes.description && (
+													<div className="collection-version-description">
+														{version.changes.description}
+													</div>
+												)}
+												{version.note && (
+													<div className="collection-version-note">
+														<strong>Ghi chú:</strong> {version.note}
+													</div>
+												)}
+												{version.versionNumber > 1 && (
+													<button
+														className="collection-version-restore-btn"
+														onClick={() => handleRestoreVersion(version.versionNumber)}
+														disabled={restoringVersion === version.versionNumber}
+														title="Khôi phục về phiên bản này"
+													>
+														<RotateCcw size={16} />
+														{restoringVersion === version.versionNumber ? 'Đang khôi phục...' : 'Khôi phục'}
+													</button>
+												)}
+											</div>
+										))}
+									</div>
+								)}
+							</div>
+						)}
+					</div>
+				)}
 
 				{/* Bulk Action Bar */}
 				{selectionMode && selectedImageIds.size > 0 && (

@@ -4,6 +4,48 @@ import User from "../models/User.js";
 import { uploadAvatar, deleteAvatarFromS3 } from "../libs/s3.js";
 import { logger } from '../utils/logger.js';
 
+/**
+ * Search users by email, username, or displayName
+ * Public endpoint for collaboration features
+ */
+export const searchUsers = asyncHandler(async (req, res) => {
+    const search = req.query.search?.trim();
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 10), 20);
+
+    if (!search || search.length < 2) {
+        return res.status(200).json({
+            users: [],
+        });
+    }
+
+    // Escape special regex characters for safety
+    const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const searchRegex = new RegExp(escapedSearch, 'i');
+    
+    // Optimized query: Use indexed fields with regex
+    // Try to match username first (most common), then email, then displayName
+    // Using $or with indexed fields for better performance
+    const query = {
+        $or: [
+            { username: searchRegex },      // Username is indexed
+            { email: searchRegex },          // Email is indexed  
+            { displayName: searchRegex },     // Display name search
+        ],
+    };
+
+    // Use lean() for faster queries (no Mongoose overhead)
+    // Select only needed fields to reduce data transfer
+    // Limit results early for better performance
+    const users = await User.find(query)
+        .select('username email displayName avatarUrl')
+        .limit(limit)
+        .lean();
+
+    res.status(200).json({
+        users,
+    });
+});
+
 export const authMe = asyncHandler(async (req, res) => {
     // req.user is already enriched with permissions by authMiddleware
     const user = req.user;

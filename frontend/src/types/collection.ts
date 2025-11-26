@@ -1,6 +1,13 @@
 import type { Image } from './image';
 import type { User } from './user';
 
+export interface CollectionCollaborator {
+	user: User;
+	permission: 'view' | 'edit' | 'admin';
+	invitedBy?: User;
+	invitedAt?: string;
+}
+
 export interface Collection {
 	_id: string;
 	name: string;
@@ -11,6 +18,8 @@ export interface Collection {
 	isPublic: boolean;
 	coverImage?: Image | string | null;
 	views?: number;
+	tags?: string[];
+	collaborators?: CollectionCollaborator[];
 	createdAt: string;
 	updatedAt: string;
 }
@@ -19,6 +28,7 @@ export interface CreateCollectionData {
 	name: string;
 	description?: string;
 	isPublic?: boolean;
+	tags?: string[];
 }
 
 export interface UpdateCollectionData {
@@ -26,6 +36,7 @@ export interface UpdateCollectionData {
 	description?: string;
 	isPublic?: boolean;
 	coverImage?: string | null;
+	tags?: string[];
 }
 
 export interface CollectionResponse {

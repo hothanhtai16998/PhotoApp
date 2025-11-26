@@ -5,10 +5,12 @@ import { collectionService } from '@/services/collectionService';
 import type { Collection } from '@/types/collection';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { Folder, Plus, Trash2, Edit2, Eye, Share2, Copy, Lock, Unlock, ExternalLink, Search, X, Filter } from 'lucide-react';
+import { Folder, Plus, Trash2, Edit2, Eye, Share2, Copy, Lock, Unlock, ExternalLink, Search, X, Filter, Heart, FileText } from 'lucide-react';
 import ProgressiveImage from '@/components/ProgressiveImage';
 import CollectionModal from '@/components/CollectionModal';
 import { CollectionShare } from '@/components/collection/CollectionShare';
+import { collectionFavoriteService } from '@/services/collectionFavoriteService';
+import { collectionTemplateService } from '@/services/collectionTemplateService';
 import './CollectionsPage.css';
 
 export default function CollectionsPage() {
@@ -23,6 +25,10 @@ export default function CollectionsPage() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [showPublicOnly, setShowPublicOnly] = useState(false);
 	const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name' | 'images'>('newest');
+	const [selectedTag, setSelectedTag] = useState<string | null>(null);
+	const [favoriteStatuses, setFavoriteStatuses] = useState<Record<string, boolean>>({});
+	const [togglingFavoriteId, setTogglingFavoriteId] = useState<string | null>(null);
+	const [savingAsTemplate, setSavingAsTemplate] = useState<string | null>(null);
 
 	useEffect(() => {
 		if (!accessToken) {
@@ -37,6 +43,17 @@ export default function CollectionsPage() {
 				const data = await collectionService.getUserCollections();
 				setCollections(data);
 				setFilteredCollections(data);
+
+				// Check favorite statuses
+				if (data.length > 0) {
+					const collectionIds = data.map(c => c._id).filter(Boolean) as string[];
+					try {
+						const favoritesResponse = await collectionFavoriteService.checkFavorites(collectionIds);
+						setFavoriteStatuses(favoritesResponse.favorites);
+					} catch (error) {
+						console.error('Failed to check favorite statuses:', error);
+					}
+				}
 			} catch (error: any) {
 				console.error('Failed to load collections:', error);
 				toast.error('Không thể tải danh sách bộ sưu tập');
@@ -48,6 +65,17 @@ export default function CollectionsPage() {
 		loadCollections();
 	}, [accessToken, navigate]);
 
+	// Get all unique tags from collections
+	const allTags = useMemo(() => {
+		const tagSet = new Set<string>();
+		collections.forEach(collection => {
+			if (collection.tags && Array.isArray(collection.tags)) {
+				collection.tags.forEach(tag => tagSet.add(tag));
+			}
+		});
+		return Array.from(tagSet).sort();
+	}, [collections]);
+
 	// Filter and sort collections
 	useEffect(() => {
 		let filtered = [...collections];
@@ -57,7 +85,15 @@ export default function CollectionsPage() {
 			const query = searchQuery.toLowerCase().trim();
 			filtered = filtered.filter(collection => 
 				collection.name.toLowerCase().includes(query) ||
-				collection.description?.toLowerCase().includes(query)
+				collection.description?.toLowerCase().includes(query) ||
+				collection.tags?.some(tag => tag.toLowerCase().includes(query))
+			);
+		}
+
+		// Tag filter
+		if (selectedTag) {
+			filtered = filtered.filter(collection => 
+				collection.tags?.includes(selectedTag)
 			);
 		}
 
@@ -83,7 +119,7 @@ export default function CollectionsPage() {
 		});
 
 		setFilteredCollections(filtered);
-	}, [collections, searchQuery, showPublicOnly, sortBy]);
+	}, [collections, searchQuery, showPublicOnly, sortBy, selectedTag]);
 
 	const handleDeleteCollection = async (collectionId: string) => {
 		if (!confirm('Bạn có chắc chắn muốn xóa bộ sưu tập này?')) {
@@ -130,6 +166,26 @@ export default function CollectionsPage() {
 		setSearchQuery('');
 	};
 
+	const handleToggleFavorite = async (e: React.MouseEvent, collection: Collection) => {
+		e.stopPropagation();
+		if (!accessToken || !collection._id || togglingFavoriteId === collection._id) return;
+
+		setTogglingFavoriteId(collection._id);
+		try {
+			const response = await collectionFavoriteService.toggleFavorite(collection._id);
+			setFavoriteStatuses(prev => ({
+				...prev,
+				[collection._id]: response.isFavorited,
+			}));
+			toast.success(response.isFavorited ? 'Đã thêm vào yêu thích' : 'Đã xóa khỏi yêu thích');
+		} catch (error: any) {
+			console.error('Failed to toggle favorite:', error);
+			toast.error('Không thể cập nhật yêu thích. Vui lòng thử lại.');
+		} finally {
+			setTogglingFavoriteId(null);
+		}
+	};
+
 	const handleShareCollection = async (e: React.MouseEvent, collection: Collection) => {
 		e.stopPropagation();
 		// This will be handled by CollectionShare component
@@ -153,6 +209,27 @@ export default function CollectionsPage() {
 		} catch (error: any) {
 			console.error('Failed to toggle public:', error);
 			toast.error('Không thể cập nhật. Vui lòng thử lại.');
+		}
+	};
+
+	const handleSaveAsTemplate = async (e: React.MouseEvent, collection: Collection) => {
+		e.stopPropagation();
+		const templateName = prompt(`Nhập tên mẫu cho "${collection.name}":`, collection.name);
+		if (!templateName || !templateName.trim()) {
+			return;
+		}
+
+		setSavingAsTemplate(collection._id);
+		try {
+			await collectionTemplateService.saveCollectionAsTemplate(collection._id, {
+				templateName: templateName.trim(),
+			});
+			toast.success('Đã lưu bộ sưu tập thành mẫu');
+		} catch (error: any) {
+			console.error('Failed to save as template:', error);
+			toast.error(error.response?.data?.message || 'Không thể lưu mẫu. Vui lòng thử lại.');
+		} finally {
+			setSavingAsTemplate(null);
 		}
 	};
 
@@ -253,6 +330,27 @@ export default function CollectionsPage() {
 								</button>
 							)}
 						</div>
+						{allTags.length > 0 && (
+							<div className="collections-tags-filter">
+								<button
+									className={`collections-tag-filter-btn ${!selectedTag ? 'active' : ''}`}
+									onClick={() => setSelectedTag(null)}
+									title="Tất cả thẻ"
+								>
+									Tất cả
+								</button>
+								{allTags.map(tag => (
+									<button
+										key={tag}
+										className={`collections-tag-filter-btn ${selectedTag === tag ? 'active' : ''}`}
+										onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+										title={`Lọc theo: ${tag}`}
+									>
+										{tag}
+									</button>
+								))}
+							</div>
+						)}
 						<div className="collections-filter-controls">
 							<button
 								className={`collections-filter-btn ${showPublicOnly ? 'active' : ''}`}
@@ -356,6 +454,14 @@ export default function CollectionsPage() {
 												>
 													<Eye size={18} />
 												</button>
+												<button
+													className={`collection-card-action-btn ${favoriteStatuses[collection._id] ? 'action-favorite' : ''}`}
+													onClick={(e) => handleToggleFavorite(e, collection)}
+													disabled={togglingFavoriteId === collection._id}
+													title={favoriteStatuses[collection._id] ? 'Xóa khỏi yêu thích' : 'Thêm vào yêu thích'}
+												>
+													<Heart size={18} fill={favoriteStatuses[collection._id] ? 'currentColor' : 'none'} />
+												</button>
 												<div onClick={(e) => e.stopPropagation()}>
 													<CollectionShare collection={collection} />
 												</div>
@@ -385,6 +491,14 @@ export default function CollectionsPage() {
 													<Edit2 size={18} />
 												</button>
 												<button
+													className="collection-card-action-btn action-secondary"
+													onClick={(e) => handleSaveAsTemplate(e, collection)}
+													disabled={savingAsTemplate === collection._id}
+													title="Lưu thành mẫu"
+												>
+													<FileText size={18} />
+												</button>
+												<button
 													className="collection-card-action-btn action-danger"
 													onClick={(e) => {
 														e.stopPropagation();
@@ -404,6 +518,20 @@ export default function CollectionsPage() {
 											<p className="collection-card-description">
 												{collection.description}
 											</p>
+										)}
+										{collection.tags && collection.tags.length > 0 && (
+											<div className="collection-card-tags">
+												{collection.tags.slice(0, 3).map((tag, index) => (
+													<span key={index} className="collection-card-tag">
+														{tag}
+													</span>
+												))}
+												{collection.tags.length > 3 && (
+													<span className="collection-card-tag-more">
+														+{collection.tags.length - 3}
+													</span>
+												)}
+											</div>
 										)}
 										<div className="collection-card-meta">
 											<span className="collection-card-count">

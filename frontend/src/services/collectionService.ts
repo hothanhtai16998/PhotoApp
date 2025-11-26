@@ -126,6 +126,68 @@ export const collectionService = {
 		}
 		throw new Error(response.data.message || 'Failed to reorder images');
 	},
+
+	/**
+	 * Export collection as ZIP file
+	 */
+	exportCollection: async (collectionId: string): Promise<Blob> => {
+		const response = await api.get(`/collections/${collectionId}/export`, {
+			responseType: 'blob',
+		});
+		return response.data;
+	},
+
+	/**
+	 * Add collaborator to collection
+	 */
+	addCollaborator: async (
+		collectionId: string,
+		userEmail: string,
+		permission: 'view' | 'edit' | 'admin' = 'view'
+	): Promise<Collection> => {
+		const response = await api.post<CollectionResponse>(
+			`/collections/${collectionId}/collaborators`,
+			{ userEmail, permission }
+		);
+		if (response.data.success && response.data.collection) {
+			return response.data.collection;
+		}
+		throw new Error(response.data.message || 'Failed to add collaborator');
+	},
+
+	/**
+	 * Remove collaborator from collection
+	 */
+	removeCollaborator: async (
+		collectionId: string,
+		collaboratorId: string
+	): Promise<Collection> => {
+		const response = await api.delete<CollectionResponse>(
+			`/collections/${collectionId}/collaborators/${collaboratorId}`
+		);
+		if (response.data.success && response.data.collection) {
+			return response.data.collection;
+		}
+		throw new Error(response.data.message || 'Failed to remove collaborator');
+	},
+
+	/**
+	 * Update collaborator permission
+	 */
+	updateCollaboratorPermission: async (
+		collectionId: string,
+		collaboratorId: string,
+		permission: 'view' | 'edit' | 'admin'
+	): Promise<Collection> => {
+		const response = await api.patch<CollectionResponse>(
+			`/collections/${collectionId}/collaborators/${collaboratorId}/permission`,
+			{ permission }
+		);
+		if (response.data.success && response.data.collection) {
+			return response.data.collection;
+		}
+		throw new Error(response.data.message || 'Failed to update collaborator permission');
+	},
 };
 
 
