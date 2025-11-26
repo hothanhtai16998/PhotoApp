@@ -22,6 +22,7 @@ import collectionTemplateRoute from './routes/collectionTemplateRoute.js';
 import collectionVersionRoute from './routes/collectionVersionRoute.js';
 import reportRoute from './routes/reportRoute.js';
 import followRoute from './routes/followRoute.js';
+import searchRoute from './routes/searchRoute.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { apiLimiter } from './middlewares/rateLimiter.js';
 import { requestDeduplication } from './middlewares/requestDeduplication.js';
@@ -166,6 +167,7 @@ app.use('/api/collection-templates', collectionTemplateRoute);
 app.use('/api/collection-versions', collectionVersionRoute);
 app.use('/api/reports', reportRoute);
 app.use('/api/follows', followRoute);
+app.use('/api/search', searchRoute);
 
 // Serve static files in production
 if (env.NODE_ENV === 'production') {

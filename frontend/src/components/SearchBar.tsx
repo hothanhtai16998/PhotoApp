@@ -6,6 +6,7 @@ import { Search, X, Clock, TrendingUp, MapPin } from "lucide-react"
 import { useImageStore } from "@/stores/useImageStore"
 import { categoryService, type Category } from "@/services/categoryService"
 import { imageService } from "@/services/imageService"
+import { searchService, type SearchSuggestion } from "@/services/searchService"
 import SearchFilters, { type SearchFilters as SearchFiltersType } from "./SearchFilters"
 import './SearchBar.css'
 
@@ -20,6 +21,7 @@ interface SearchHistoryItem {
 
 const MAX_HISTORY_ITEMS = 5
 const SEARCH_DEBOUNCE_MS = 300
+const SUGGESTIONS_DEBOUNCE_MS = 200 // Faster debounce for suggestions
 
 export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
   const { fetchImages, currentSearch } = useImageStore()
@@ -30,8 +32,11 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [locations, setLocations] = useState<string[]>([])
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([])
+  const [apiSuggestions, setApiSuggestions] = useState<SearchSuggestion[]>([])
+  const [popularSearches, setPopularSearches] = useState<SearchSuggestion[]>([])
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false)
   // Load filters from localStorage
   const loadFiltersFromStorage = (): SearchFiltersType => {
     try {
@@ -52,6 +57,7 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
 
   const [filters, setFilters] = useState<SearchFiltersType>(loadFiltersFromStorage());
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const suggestionsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
 
@@ -79,19 +85,54 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
   useEffect(() => {
     const loadSuggestions = async () => {
       try {
-        const [categories, locationsData] = await Promise.all([
+        const [categories, locationsData, popular] = await Promise.all([
           categoryService.fetchCategories(),
-          imageService.fetchLocations()
+          imageService.fetchLocations(),
+          searchService.getPopularSearches()
         ])
         const categoryNames = categories.map((cat: Category) => cat.name)
         setSuggestions(categoryNames)
         setLocations(locationsData)
+        setPopularSearches(popular)
       } catch (error) {
         console.error('Failed to load suggestions:', error)
       }
     }
     loadSuggestions()
   }, [])
+
+  // Fetch API suggestions when user types (debounced)
+  useEffect(() => {
+    if (suggestionsDebounceRef.current) {
+      clearTimeout(suggestionsDebounceRef.current)
+    }
+
+    const query = searchQuery.trim()
+    
+    if (query.length >= 1) {
+      setLoadingSuggestions(true)
+      suggestionsDebounceRef.current = setTimeout(async () => {
+        try {
+          const apiResults = await searchService.getSuggestions(query, 10)
+          setApiSuggestions(apiResults)
+        } catch (error) {
+          console.error('Failed to fetch API suggestions:', error)
+          setApiSuggestions([])
+        } finally {
+          setLoadingSuggestions(false)
+        }
+      }, SUGGESTIONS_DEBOUNCE_MS)
+    } else {
+      setApiSuggestions([])
+      setLoadingSuggestions(false)
+    }
+
+    return () => {
+      if (suggestionsDebounceRef.current) {
+        clearTimeout(suggestionsDebounceRef.current)
+      }
+    }
+  }, [searchQuery])
 
   // Sync with current search from store
   useEffect(() => {
@@ -152,39 +193,103 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, location.pathname])
 
-  // Filter suggestions based on input
-  const filteredSuggestions = searchQuery.trim()
-    ? [
-        // Show matching locations first (with location icon)
-        ...locations
-          .filter(loc => 
-            loc.toLowerCase().includes(searchQuery.toLowerCase())
-          )
-          .map(loc => ({ type: 'location', value: loc })),
-        // Then matching categories
-        ...suggestions
-          .filter(s => 
-            s.toLowerCase().includes(searchQuery.toLowerCase()) &&
-            !locations.some(loc => loc.toLowerCase() === s.toLowerCase())
-          )
-          .map(s => ({ type: 'category', value: s })),
-        // Then matching history
-        ...searchHistory
-          .filter(item => 
-            item.query.toLowerCase().includes(searchQuery.toLowerCase()) &&
-            !suggestions.some(s => s.toLowerCase() === item.query.toLowerCase()) &&
-            !locations.some(loc => loc.toLowerCase() === item.query.toLowerCase())
-          )
-          .map(item => ({ type: 'history', value: item.query }))
-      ].slice(0, 8)
-    : [
-        // Show recent searches when input is empty
-        ...searchHistory.map(item => ({ type: 'history', value: item.query })),
-        // Then popular locations
-        ...locations.slice(0, 3).map(loc => ({ type: 'location', value: loc })),
-        // Then popular categories
-        ...suggestions.slice(0, 5 - searchHistory.length - Math.min(3, locations.length)).map(s => ({ type: 'category', value: s }))
-      ].slice(0, 8)
+  // Merge API suggestions with local suggestions
+  const filteredSuggestions = (() => {
+    const query = searchQuery.trim().toLowerCase()
+    const seen = new Set<string>()
+    const result: Array<{ type: string; value: string; apiType?: string }> = []
+
+    if (query) {
+      // When user is typing, prioritize API suggestions
+      // 1. API suggestions (from backend - titles, tags, locations, categories)
+      apiSuggestions.forEach(suggestion => {
+        const key = suggestion.text.toLowerCase()
+        if (!seen.has(key)) {
+          result.push({
+            type: suggestion.type === 'location' ? 'location' : 'api',
+            value: suggestion.text,
+            apiType: suggestion.type,
+          })
+          seen.add(key)
+        }
+      })
+
+      // 2. Local matching locations (if not already in API suggestions)
+      locations
+        .filter(loc => 
+          loc.toLowerCase().includes(query) &&
+          !seen.has(loc.toLowerCase())
+        )
+        .forEach(loc => {
+          result.push({ type: 'location', value: loc })
+          seen.add(loc.toLowerCase())
+        })
+
+      // 3. Local matching categories (if not already in API suggestions)
+      suggestions
+        .filter(s => 
+          s.toLowerCase().includes(query) &&
+          !seen.has(s.toLowerCase())
+        )
+        .forEach(s => {
+          result.push({ type: 'category', value: s })
+          seen.add(s.toLowerCase())
+        })
+
+      // 4. Matching history (if not already shown)
+      searchHistory
+        .filter(item => 
+          item.query.toLowerCase().includes(query) &&
+          !seen.has(item.query.toLowerCase())
+        )
+        .forEach(item => {
+          result.push({ type: 'history', value: item.query })
+          seen.add(item.query.toLowerCase())
+        })
+
+      return result.slice(0, 10)
+    } else {
+      // When input is empty, show recent searches and popular
+      // 1. Recent searches
+      searchHistory.forEach(item => {
+        if (!seen.has(item.query.toLowerCase())) {
+          result.push({ type: 'history', value: item.query })
+          seen.add(item.query.toLowerCase())
+        }
+      })
+
+      // 2. Popular searches from API
+      popularSearches.forEach(suggestion => {
+        const key = suggestion.text.toLowerCase()
+        if (!seen.has(key)) {
+          result.push({
+            type: suggestion.type === 'location' ? 'location' : 'popular',
+            value: suggestion.text,
+            apiType: suggestion.type,
+          })
+          seen.add(key)
+        }
+      })
+
+      // 3. Popular locations
+      locations.slice(0, 3).forEach(loc => {
+        if (!seen.has(loc.toLowerCase())) {
+          result.push({ type: 'location', value: loc })
+          seen.add(loc.toLowerCase())
+        }
+      })
+
+      // 4. Popular categories
+      suggestions.slice(0, 5 - result.length).forEach(s => {
+        if (!seen.has(s.toLowerCase())) {
+          result.push({ type: 'category', value: s })
+          seen.add(s.toLowerCase())
+        }
+      })
+
+      return result.slice(0, 10)
+    }
+  })()
 
   const handleSearch = (query: string | { type: string; value: string }) => {
     const searchValue = typeof query === 'string' ? query : query.value
@@ -411,43 +516,59 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
                 </div>
               )}
               <div className="suggestions-list">
-                {filteredSuggestions.map((suggestion, index) => {
-                  const suggestionValue = typeof suggestion === 'string' ? suggestion : suggestion.value
-                  const suggestionType = typeof suggestion === 'string' ? 'history' : suggestion.type
-                  const isHistory = searchHistory.some(
-                    item => item.query.toLowerCase() === suggestionValue.toLowerCase()
-                  ) || suggestionType === 'history'
-                  
-                  return (
-                    <button
-                      key={`${suggestionValue}-${index}`}
-                      type="button"
-                      className={`suggestion-item ${selectedIndex === index ? 'selected' : ''}`}
-                      onClick={() => handleSearch(suggestion)}
-                      role="option"
-                      aria-selected={selectedIndex === index}
-                    >
-                      {suggestionType === 'location' ? (
-                        <MapPin size={16} className="suggestion-icon" style={{ color: '#059669' }} />
-                      ) : isHistory ? (
-                        <Clock size={16} className="suggestion-icon" />
-                      ) : (
-                        <Search size={16} className="suggestion-icon" />
-                      )}
-                      <span className="suggestion-text">{suggestionValue}</span>
-                      {suggestionType === 'location' && (
-                        <span style={{ fontSize: '11px', color: '#059669', marginLeft: 'auto', marginRight: '8px' }}>
-                          Địa điểm
-                        </span>
-                      )}
-                      {selectedIndex === index && (
-                        <div className="suggestion-hint">
-                          <kbd>Enter</kbd>
-                        </div>
-                      )}
-                    </button>
-                  )
-                })}
+                {loadingSuggestions && searchQuery.trim() ? (
+                  <div className="suggestion-item" style={{ justifyContent: 'center', cursor: 'default' }}>
+                    <span style={{ color: '#767676', fontSize: '0.875rem' }}>Đang tải gợi ý...</span>
+                  </div>
+                ) : (
+                  filteredSuggestions.map((suggestion, index) => {
+                    const suggestionValue = suggestion.value
+                    const suggestionType = suggestion.type
+                    const apiType = suggestion.apiType
+                    const isHistory = searchHistory.some(
+                      item => item.query.toLowerCase() === suggestionValue.toLowerCase()
+                    ) || suggestionType === 'history'
+                    
+                    // Determine icon based on type
+                    let icon = <Search size={16} className="suggestion-icon" />
+                    if (suggestionType === 'location' || apiType === 'location') {
+                      icon = <MapPin size={16} className="suggestion-icon" style={{ color: '#059669' }} />
+                    } else if (isHistory) {
+                      icon = <Clock size={16} className="suggestion-icon" />
+                    } else if (suggestionType === 'popular' || apiType) {
+                      icon = <TrendingUp size={16} className="suggestion-icon" style={{ color: '#2563eb' }} />
+                    }
+                    
+                    return (
+                      <button
+                        key={`${suggestionValue}-${index}`}
+                        type="button"
+                        className={`suggestion-item ${selectedIndex === index ? 'selected' : ''}`}
+                        onClick={() => handleSearch(suggestion)}
+                        role="option"
+                        aria-selected={selectedIndex === index}
+                      >
+                        {icon}
+                        <span className="suggestion-text">{suggestionValue}</span>
+                        {(suggestionType === 'location' || apiType === 'location') && (
+                          <span style={{ fontSize: '11px', color: '#059669', marginLeft: 'auto', marginRight: '8px' }}>
+                            Địa điểm
+                          </span>
+                        )}
+                        {(suggestionType === 'popular' || apiType === 'tag') && (
+                          <span style={{ fontSize: '11px', color: '#2563eb', marginLeft: 'auto', marginRight: '8px' }}>
+                            {apiType === 'tag' ? 'Tag' : 'Phổ biến'}
+                          </span>
+                        )}
+                        {selectedIndex === index && (
+                          <div className="suggestion-hint">
+                            <kbd>Enter</kbd>
+                          </div>
+                        )}
+                      </button>
+                    )
+                  })
+                )}
               </div>
             </>
           ) : searchQuery.trim() ? (
