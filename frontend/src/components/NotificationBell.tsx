@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Bell, X, Check, CheckCheck, Trash2, Users, Image as ImageIcon, Shield, Folder, RefreshCw, Heart, Download, Share2, Upload, CheckCircle, XCircle, Loader2, Star, AlertTriangle, Ban } from 'lucide-react';
+import { Bell, X, Check, CheckCheck, Trash2, Users, Image as ImageIcon, Shield, Folder, RefreshCw, Heart, Download, Share2, Upload, CheckCircle, XCircle, Loader2, Star, AlertTriangle, Ban, User, Eye, Key, Mail, Smartphone, LogIn, Megaphone, Wrench, FileText, Sparkles, Flag } from 'lucide-react';
 import { notificationService, type Notification } from '@/services/notificationService';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useNavigate } from 'react-router-dom';
@@ -99,6 +99,48 @@ export default function NotificationBell() {
 				const banReason = notification.metadata?.reason || 'Vi phạm quy tắc';
 				const bannedBy = notification.metadata?.bannedBy || 'Quản trị viên';
 				return `Tài khoản của bạn đã bị cấm bởi ${bannedBy}: ${banReason}`;
+			case 'profile_viewed':
+				return `${actorName} đã xem hồ sơ của bạn`;
+			case 'profile_updated':
+				const changedFields = notification.metadata?.changedFields || [];
+				const fieldsText = changedFields.length > 0 
+					? changedFields.join(', ')
+					: 'thông tin';
+				return `Hồ sơ của bạn đã được cập nhật: ${fieldsText}`;
+			case 'login_new_device':
+				const deviceInfo = notification.metadata?.deviceInfo || 'Thiết bị mới';
+				const ipAddress = notification.metadata?.ipAddress || 'IP không xác định';
+				return `Đăng nhập từ ${deviceInfo} (${ipAddress})`;
+			case 'password_changed':
+				const changeIp = notification.metadata?.ipAddress || 'IP không xác định';
+				return `Mật khẩu của bạn đã được thay đổi từ ${changeIp}`;
+			case 'email_changed':
+				const oldEmail = notification.metadata?.oldEmail || 'Email cũ';
+				const newEmail = notification.metadata?.newEmail || 'Email mới';
+				return `Email đã được thay đổi từ ${oldEmail} sang ${newEmail}`;
+			case 'two_factor_enabled':
+				return `Xác thực hai yếu tố đã được bật cho tài khoản của bạn`;
+			case 'system_announcement':
+				const announcementTitle = notification.metadata?.title || 'Thông báo hệ thống';
+				return `${announcementTitle}: ${notification.metadata?.message || 'Bạn có thông báo mới'}`;
+			case 'feature_update':
+				const featureTitle = notification.metadata?.title || 'Tính năng mới';
+				return `${featureTitle}: ${notification.metadata?.message || 'Có tính năng mới được cập nhật'}`;
+			case 'maintenance_scheduled':
+				const maintenanceTitle = notification.metadata?.title || 'Bảo trì hệ thống';
+				return `${maintenanceTitle}: ${notification.metadata?.message || 'Hệ thống sẽ được bảo trì'}`;
+			case 'terms_updated':
+				const termsTitle = notification.metadata?.title || 'Cập nhật điều khoản';
+				return `${termsTitle}: ${notification.metadata?.message || 'Điều khoản sử dụng đã được cập nhật'}`;
+			case 'image_reported':
+				const imageReportReason = notification.metadata?.reason || 'Lý do không xác định';
+				return `Ảnh "${imageTitle}" đã được báo cáo: ${imageReportReason}`;
+			case 'collection_reported':
+				const collectionReportReason = notification.metadata?.reason || 'Lý do không xác định';
+				return `Bộ sưu tập "${collectionName}" đã được báo cáo: ${collectionReportReason}`;
+			case 'user_reported':
+				const userReportReason = notification.metadata?.reason || 'Lý do không xác định';
+				return `Người dùng đã được báo cáo: ${userReportReason}`;
 			default:
 				return 'Bạn có thông báo mới';
 		}
@@ -311,6 +353,30 @@ export default function NotificationBell() {
 				return <AlertTriangle size={16} />;
 			case 'account_banned':
 				return <Ban size={16} />;
+			case 'profile_viewed':
+				return <Eye size={16} />;
+			case 'profile_updated':
+				return <User size={16} />;
+			case 'login_new_device':
+				return <LogIn size={16} />;
+			case 'password_changed':
+				return <Key size={16} />;
+			case 'email_changed':
+				return <Mail size={16} />;
+			case 'two_factor_enabled':
+				return <Smartphone size={16} />;
+			case 'system_announcement':
+				return <Megaphone size={16} />;
+			case 'feature_update':
+				return <Sparkles size={16} />;
+			case 'maintenance_scheduled':
+				return <Wrench size={16} />;
+			case 'terms_updated':
+				return <FileText size={16} />;
+			case 'image_reported':
+			case 'collection_reported':
+			case 'user_reported':
+				return <Flag size={16} />;
 			default:
 				return <Bell size={16} />;
 		}

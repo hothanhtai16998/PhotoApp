@@ -26,7 +26,20 @@ export interface Notification {
 		| 'image_removed'
 		| 'account_verified'
 		| 'account_warning'
-		| 'account_banned';
+		| 'account_banned'
+		| 'profile_viewed'
+		| 'profile_updated'
+		| 'login_new_device'
+		| 'password_changed'
+		| 'email_changed'
+		| 'two_factor_enabled'
+		| 'system_announcement'
+		| 'feature_update'
+		| 'maintenance_scheduled'
+		| 'terms_updated'
+		| 'image_reported'
+		| 'collection_reported'
+		| 'user_reported';
 	collection?: {
 		_id: string;
 		name: string;

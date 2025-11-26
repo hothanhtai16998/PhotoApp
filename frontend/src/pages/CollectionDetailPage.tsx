@@ -12,6 +12,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { ImageIcon, Check, GripVertical, Square, CheckSquare2, Trash2, X, Download, Heart, History, RotateCcw, Clock } from 'lucide-react';
 import { CollectionShare } from '@/components/collection/CollectionShare';
 import CollectionCollaborators from '@/components/collection/CollectionCollaborators';
+import ReportButton from '@/components/ReportButton';
 import { collectionFavoriteService } from '@/services/collectionFavoriteService';
 import { collectionVersionService, type CollectionVersion } from '@/services/collectionVersionService';
 import api from '@/lib/axios';
@@ -602,6 +603,13 @@ export default function CollectionDetailPage() {
 								{collection?.isPublic && (
 									<div onClick={(e) => e.stopPropagation()}>
 										<CollectionShare collection={collection} />
+									{user && user._id !== (typeof collection.createdBy === 'object' ? collection.createdBy._id : collection.createdBy) && (
+										<ReportButton
+											type="collection"
+											targetId={collection._id}
+											targetName={collection.name}
+										/>
+									)}
 									</div>
 								)}
 								{images.length > 0 && collection && (

@@ -20,6 +20,7 @@ import collectionFavoriteRoute from './routes/collectionFavoriteRoute.js';
 import notificationRoute from './routes/notificationRoute.js';
 import collectionTemplateRoute from './routes/collectionTemplateRoute.js';
 import collectionVersionRoute from './routes/collectionVersionRoute.js';
+import reportRoute from './routes/reportRoute.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { apiLimiter } from './middlewares/rateLimiter.js';
 import { requestDeduplication } from './middlewares/requestDeduplication.js';
@@ -162,6 +163,7 @@ app.use('/api/collection-favorites', collectionFavoriteRoute);
 app.use('/api/notifications', notificationRoute);
 app.use('/api/collection-templates', collectionTemplateRoute);
 app.use('/api/collection-versions', collectionVersionRoute);
+app.use('/api/reports', reportRoute);
 
 // Serve static files in production
 if (env.NODE_ENV === 'production') {

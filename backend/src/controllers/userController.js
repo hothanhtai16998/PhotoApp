@@ -1,6 +1,7 @@
 import { asyncHandler } from "../middlewares/asyncHandler.js";
 import bcrypt from "bcrypt";
 import User from "../models/User.js";
+import Notification from "../models/Notification.js";
 import { uploadAvatar, deleteAvatarFromS3 } from "../libs/s3.js";
 import { logger } from '../utils/logger.js';
 
@@ -104,6 +105,21 @@ export const changePassword = asyncHandler(async (req, res) => {
     // Update user password
     await User.findByIdAndUpdate(userId, { hashedPassword });
 
+    // Create password_changed notification
+    try {
+        await Notification.create({
+            recipient: userId,
+            type: 'password_changed',
+            metadata: {
+                timestamp: new Date().toISOString(),
+                ipAddress: req.ip || req.headers['x-forwarded-for'] || 'Unknown',
+            },
+        });
+    } catch (notifError) {
+        logger.error('Failed to create password changed notification:', notifError);
+        // Don't fail the password change if notification fails
+    }
+
     return res.status(200).json({
         message: "Cập nhật mật khẩu thành công"
     });
@@ -148,6 +164,22 @@ export const changeInfo = asyncHandler(async (req, res) => {
             });
         }
         updateData.email = email.toLowerCase().trim();
+
+        // Create email_changed notification
+        try {
+            await Notification.create({
+                recipient: userId,
+                type: 'email_changed',
+                metadata: {
+                    oldEmail: currentUser.email,
+                    newEmail: email.toLowerCase().trim(),
+                    timestamp: new Date().toISOString(),
+                },
+            });
+        } catch (notifError) {
+            logger.error('Failed to create email changed notification:', notifError);
+            // Don't fail the email change if notification fails
+        }
     }
 
     // Update bio if provided
@@ -204,6 +236,25 @@ export const changeInfo = asyncHandler(async (req, res) => {
         updateData,
         { new: true, runValidators: true }
     ).select('-hashedPassword');
+
+    // Create profile_updated notification (user is notified of their own profile update)
+    // This can be useful for security purposes (detecting unauthorized changes)
+    try {
+        const changedFields = Object.keys(updateData);
+        if (changedFields.length > 0) {
+            await Notification.create({
+                recipient: userId,
+                type: 'profile_updated',
+                metadata: {
+                    changedFields: changedFields,
+                    timestamp: new Date().toISOString(),
+                },
+            });
+        }
+    } catch (notifError) {
+        logger.error('Failed to create profile updated notification:', notifError);
+        // Don't fail the update if notification fails
+    }
 
     return res.status(200).json({
         message: "Cập nhật thông tin thành công",

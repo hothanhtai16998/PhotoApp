@@ -28,6 +28,7 @@ import { useFormattedDate } from '@/hooks/useFormattedDate';
 import CollectionModal from './CollectionModal';
 import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { useImageStore } from '@/stores/useImageStore';
+import ReportButton from './ReportButton';
 import './ImageModal.css';
 
 interface ImageModalProps {
@@ -887,6 +888,14 @@ const ImageModal = ({
                   }, 100);
                 }}
               />
+              {user && user._id !== image.uploadedBy._id && (
+                <ReportButton
+                  type="image"
+                  targetId={image._id}
+                  targetName={image.imageTitle}
+                  className="modal-footer-btn"
+                />
+              )}
               {user && (user._id === image.uploadedBy._id || user.isAdmin || user.isSuperAdmin) && (
                 <button
                   className="modal-footer-btn"

@@ -32,6 +32,7 @@ import {
     getSettings,
     updateSettings,
     getCacheStats,
+    createSystemAnnouncement,
 } from '../controllers/adminController.js';
 import { protectedRoute } from '../middlewares/authMiddleware.js';
 import { adminRoute } from '../middlewares/adminMiddleware.js';
@@ -97,6 +98,9 @@ router.put('/settings', requirePermission('manageSettings'), validateCsrf, updat
 
 // Cache Test (Super Admin only)
 router.get('/cache/stats', requireSuperAdmin, getCacheStats);
+
+// System Announcements
+router.post('/announcements', requirePermission('manageSettings'), validateCsrf, createSystemAnnouncement);
 
 export default router;
 

@@ -8,6 +8,7 @@ import Session from '../models/Session.js';
 import SystemLog from '../models/SystemLog.js';
 import Settings from '../models/Settings.js';
 import Notification from '../models/Notification.js';
+import mongoose from 'mongoose';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { logger } from '../utils/logger.js';
 import { deleteImageFromS3 } from '../libs/s3.js';
@@ -1797,6 +1798,83 @@ export const updateSettings = asyncHandler(async (req, res) => {
         message: 'Đã cập nhật cài đặt thành công',
         settings: systemSettings.value,
     });
+});
+
+/**
+ * Create system announcement
+ * POST /api/admin/announcements
+ */
+export const createSystemAnnouncement = asyncHandler(async (req, res) => {
+    const { type, title, message, recipientIds } = req.body;
+
+    // Validate required fields
+    if (!type || !title || !message) {
+        return res.status(400).json({
+            success: false,
+            message: 'Type, title, and message are required',
+        });
+    }
+
+    // Validate type
+    const validTypes = ['system_announcement', 'feature_update', 'maintenance_scheduled', 'terms_updated'];
+    if (!validTypes.includes(type)) {
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid announcement type',
+        });
+    }
+
+    try {
+        let recipients = [];
+
+        // If recipientIds provided, send to specific users
+        if (recipientIds && Array.isArray(recipientIds) && recipientIds.length > 0) {
+            // Validate ObjectIds
+            const validIds = recipientIds.filter(id => mongoose.Types.ObjectId.isValid(id));
+            recipients = validIds;
+        } else {
+            // Send to all users
+            const allUsers = await User.find({}).select('_id').lean();
+            recipients = allUsers.map(user => user._id);
+        }
+
+        // Create notifications for all recipients
+        const notificationPromises = recipients.map(recipientId =>
+            Notification.create({
+                recipient: recipientId,
+                type: type,
+                actor: req.user._id,
+                metadata: {
+                    title: title,
+                    message: message,
+                    announcementType: type,
+                },
+            })
+        );
+
+        await Promise.all(notificationPromises);
+
+        // Log action
+        await SystemLog.create({
+            level: 'info',
+            message: `System announcement created: ${type}`,
+            userId: req.user._id,
+            action: 'createAnnouncement',
+            metadata: { type, title, recipientCount: recipients.length },
+        });
+
+        res.json({
+            success: true,
+            message: `Đã gửi thông báo đến ${recipients.length} người dùng`,
+            recipientCount: recipients.length,
+        });
+    } catch (error) {
+        logger.error('Error creating system announcement:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to create system announcement',
+        });
+    }
 });
 
 // Cache Test Endpoint (for testing permission caching)
