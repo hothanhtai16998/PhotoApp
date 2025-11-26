@@ -20,7 +20,7 @@ import {
     getLocations,
 } from '../controllers/imageSearchController.js';
 import { singleUpload, multipleUpload } from '../middlewares/multerMiddleware.js';
-import { protectedRoute } from '../middlewares/authMiddleware.js';
+import { protectedRoute, optionalAuth } from '../middlewares/authMiddleware.js';
 import { uploadLimiter } from '../middlewares/rateLimiter.js';
 import { validateImageUpload, validateGetImages, validateUserId } from '../middlewares/validationMiddleware.js';
 import { validateCsrf } from '../middlewares/csrfMiddleware.js';
@@ -47,8 +47,9 @@ router.patch('/:imageId/view', incrementView);
 router.patch('/:imageId/download', incrementDownload);
 
 // Public route - download image (proxy from S3 to avoid CORS)
+// Use optionalAuth to populate req.user if user is logged in (for notifications)
 // Must be after PATCH route to avoid conflicts
-router.get('/:imageId/download', downloadImage);
+router.get('/:imageId/download', optionalAuth, downloadImage);
 
 // Protected routes (with CSRF protection for state-changing operations)
 // Pre-upload: Upload image to S3 only (no database record)

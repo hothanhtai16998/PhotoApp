@@ -277,11 +277,11 @@ export const banUser = asyncHandler(async (req, res) => {
     user.banReason = reason?.trim() || 'Không có lý do';
     await user.save();
 
-    // Create account_banned notification
+    // Create user_banned_admin notification
     try {
         await Notification.create({
             recipient: userId,
-            type: 'account_banned',
+            type: 'user_banned_admin',
             actor: req.user._id,
             metadata: {
                 reason: user.banReason,
@@ -289,7 +289,7 @@ export const banUser = asyncHandler(async (req, res) => {
             },
         });
     } catch (notifError) {
-        logger.error('Failed to create account banned notification:', notifError);
+        logger.error('Failed to create user banned notification:', notifError);
         // Don't fail the ban if notification fails
     }
 
@@ -331,6 +331,21 @@ export const unbanUser = asyncHandler(async (req, res) => {
     user.bannedBy = undefined;
     user.banReason = undefined;
     await user.save();
+
+    // Create user_unbanned_admin notification
+    try {
+        await Notification.create({
+            recipient: userId,
+            type: 'user_unbanned_admin',
+            actor: req.user._id,
+            metadata: {
+                unbannedBy: req.user.displayName || req.user.username,
+            },
+        });
+    } catch (notifError) {
+        logger.error('Failed to create user unbanned notification:', notifError);
+        // Don't fail the unban if notification fails
+    }
 
     res.status(200).json({
         message: 'Bỏ cấm người dùng thành công',
@@ -465,12 +480,12 @@ export const deleteImage = asyncHandler(async (req, res) => {
         { $pull: { favorites: imageId } }
     );
 
-    // Create image_removed notification for image owner
+    // Create image_removed_admin notification for image owner
     if (image.uploadedBy) {
         try {
             await Notification.create({
                 recipient: image.uploadedBy,
-                type: 'image_removed',
+                type: 'image_removed_admin',
                 image: imageId,
                 actor: req.user._id,
                 metadata: {

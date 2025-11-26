@@ -88,6 +88,7 @@ export default function NotificationBell() {
 			case 'image_featured':
 				return `Ảnh "${imageTitle}" đã được đưa lên trang chủ`;
 			case 'image_removed':
+			case 'image_removed_admin':
 				const reason = notification.metadata?.reason || 'Lý do không xác định';
 				return `Ảnh "${imageTitle}" đã bị xóa bởi quản trị viên: ${reason}`;
 			case 'account_verified':
@@ -96,9 +97,13 @@ export default function NotificationBell() {
 				const warningReason = notification.metadata?.reason || 'Vi phạm quy tắc';
 				return `Cảnh báo: ${warningReason}`;
 			case 'account_banned':
+			case 'user_banned_admin':
 				const banReason = notification.metadata?.reason || 'Vi phạm quy tắc';
 				const bannedBy = notification.metadata?.bannedBy || 'Quản trị viên';
 				return `Tài khoản của bạn đã bị cấm bởi ${bannedBy}: ${banReason}`;
+			case 'user_unbanned_admin':
+				const unbannedBy = notification.metadata?.unbannedBy || 'Quản trị viên';
+				return `Tài khoản của bạn đã được bỏ cấm bởi ${unbannedBy}`;
 			case 'profile_viewed':
 				return `${actorName} đã xem hồ sơ của bạn`;
 			case 'profile_updated':
@@ -108,9 +113,15 @@ export default function NotificationBell() {
 					: 'thông tin';
 				return `Hồ sơ của bạn đã được cập nhật: ${fieldsText}`;
 			case 'login_new_device':
-				const deviceInfo = notification.metadata?.deviceInfo || 'Thiết bị mới';
-				const ipAddress = notification.metadata?.ipAddress || 'IP không xác định';
-				return `Đăng nhập từ ${deviceInfo} (${ipAddress})`;
+				const deviceUserAgent = notification.metadata?.userAgent || 'Thiết bị mới';
+				const deviceIpAddress = notification.metadata?.ipAddress || 'IP không xác định';
+				// Extract browser name from user agent
+				const browserName = deviceUserAgent.includes('Chrome') ? 'Chrome' :
+					deviceUserAgent.includes('Firefox') ? 'Firefox' :
+					deviceUserAgent.includes('Safari') ? 'Safari' :
+					deviceUserAgent.includes('Edge') ? 'Edge' :
+					'Thiết bị mới';
+				return `Đăng nhập từ ${browserName} (${deviceIpAddress})`;
 			case 'password_changed':
 				const changeIp = notification.metadata?.ipAddress || 'IP không xác định';
 				return `Mật khẩu của bạn đã được thay đổi từ ${changeIp}`;
@@ -134,13 +145,16 @@ export default function NotificationBell() {
 				return `${termsTitle}: ${notification.metadata?.message || 'Điều khoản sử dụng đã được cập nhật'}`;
 			case 'image_reported':
 				const imageReportReason = notification.metadata?.reason || 'Lý do không xác định';
-				return `Ảnh "${imageTitle}" đã được báo cáo: ${imageReportReason}`;
+				const imageReportDescription = notification.metadata?.description ? ` - ${notification.metadata.description}` : '';
+				return `Ảnh "${imageTitle}" đã được báo cáo: ${imageReportReason}${imageReportDescription}`;
 			case 'collection_reported':
 				const collectionReportReason = notification.metadata?.reason || 'Lý do không xác định';
-				return `Bộ sưu tập "${collectionName}" đã được báo cáo: ${collectionReportReason}`;
+				const collectionReportDescription = notification.metadata?.description ? ` - ${notification.metadata.description}` : '';
+				return `Bộ sưu tập "${collectionName}" đã được báo cáo: ${collectionReportReason}${collectionReportDescription}`;
 			case 'user_reported':
 				const userReportReason = notification.metadata?.reason || 'Lý do không xác định';
-				return `Người dùng đã được báo cáo: ${userReportReason}`;
+				const userReportDescription = notification.metadata?.description ? ` - ${notification.metadata.description}` : '';
+				return `Người dùng đã được báo cáo: ${userReportReason}${userReportDescription}`;
 			case 'user_followed':
 				return `${actorName} đã bắt đầu theo dõi bạn`;
 			case 'user_unfollowed':
@@ -359,7 +373,12 @@ export default function NotificationBell() {
 			case 'account_warning':
 				return <AlertTriangle size={16} />;
 			case 'account_banned':
+			case 'user_banned_admin':
 				return <Ban size={16} />;
+			case 'user_unbanned_admin':
+				return <CheckCircle size={16} />;
+			case 'image_removed_admin':
+				return <Trash2 size={16} />;
 			case 'profile_viewed':
 				return <Eye size={16} />;
 			case 'profile_updated':

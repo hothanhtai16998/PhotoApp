@@ -196,15 +196,22 @@ export const updateCollection = async (req, res) => {
         const userId = req.user._id;
         const { name, description, isPublic, coverImage, tags } = req.body;
 
-        const collection = await Collection.findOne({
-            _id: collectionId,
-            createdBy: userId,
-        });
+        // Find collection and populate collaborators
+        const collection = await Collection.findById(collectionId)
+        .populate('collaborators.user');
 
         if (!collection) {
             return res.status(404).json({
                 success: false,
                 message: 'Collection not found',
+            });
+        }
+
+        // Check if user has permission to edit (owner or collaborator with edit/admin permission)
+        if (!hasPermission(collection, userId, 'edit')) {
+            return res.status(403).json({
+                success: false,
+                message: 'Bạn không có quyền chỉnh sửa bộ sưu tập này',
             });
         }
 
@@ -292,13 +299,38 @@ export const updateCollection = async (req, res) => {
                 );
             }
 
-            // Notify collaborators about collection updates (not the owner)
+            // Notify collaborators and owner about collection updates
+            // If owner updates, notify collaborators
+            // If collaborator updates, notify owner and other collaborators
             const collaborators = collection.collaborators || [];
-            const recipients = collaborators
-                .map(c => getUserId(c.user))
-                .filter(id => id && id !== userId.toString());
+            const notificationRecipients = new Set();
+            
+            const isOwner = collection.createdBy.toString() === userId.toString();
+            
+            if (isOwner) {
+                // Owner updated - notify all collaborators
+                collaborators.forEach(collab => {
+                    const collabUserId = getUserId(collab.user);
+                    if (collabUserId && collabUserId !== userId.toString()) {
+                        notificationRecipients.add(collabUserId);
+                    }
+                });
+            } else {
+                // Collaborator updated - notify owner and other collaborators
+                if (collection.createdBy.toString() !== userId.toString()) {
+                    notificationRecipients.add(collection.createdBy.toString());
+                }
+                
+                collaborators.forEach(collab => {
+                    const collabUserId = getUserId(collab.user);
+                    if (collabUserId && collabUserId !== userId.toString()) {
+                        notificationRecipients.add(collabUserId);
+                    }
+                });
+            }
 
-            if (recipients.length > 0) {
+            if (notificationRecipients.size > 0) {
+                const recipients = Array.from(notificationRecipients);
                 // Check if cover image was changed
                 const coverChanged = changes.some(c => c.field === 'coverImage');
                 const nameChanged = changes.some(c => c.field === 'name');

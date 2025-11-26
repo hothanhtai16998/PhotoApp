@@ -756,6 +756,7 @@ export const downloadImage = asyncHandler(async (req, res) => {
 
         // Create notification for image owner (if user is authenticated and different from owner)
         // Note: downloadImage is a public route, so req.user might not exist
+        // Create notification BEFORE streaming to ensure it's sent even if stream fails
         if (req.user?._id && image.uploadedBy) {
             const uploadedById = typeof image.uploadedBy === 'object' 
                 ? image.uploadedBy._id?.toString() 
@@ -764,7 +765,6 @@ export const downloadImage = asyncHandler(async (req, res) => {
             
             if (uploadedById && uploadedById !== userId) {
                 try {
-                    const Notification = (await import('../models/Notification.js')).default;
                     await Notification.create({
                         recipient: uploadedById,
                         type: 'image_downloaded',

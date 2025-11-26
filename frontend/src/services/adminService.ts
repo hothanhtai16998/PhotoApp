@@ -429,5 +429,17 @@ export const adminService = {
         });
         return res.data;
     },
+
+    createSystemAnnouncement: async (data: {
+        type: 'system_announcement' | 'feature_update' | 'maintenance_scheduled' | 'terms_updated';
+        title: string;
+        message: string;
+        recipientIds?: string[];
+    }): Promise<{ success: boolean; message: string; recipientCount: number }> => {
+        const res = await api.post('/admin/announcements', data, {
+            withCredentials: true,
+        });
+        return res.data;
+    },
 };
 

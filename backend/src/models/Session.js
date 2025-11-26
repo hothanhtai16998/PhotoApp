@@ -18,6 +18,19 @@ const sessionSchema = new mongoose.Schema(
             type: Date,
             required: true,
         },
+        userAgent: {
+            type: String,
+            // Store user agent for device detection
+        },
+        ipAddress: {
+            type: String,
+            // Store IP address for device detection
+        },
+        deviceFingerprint: {
+            type: String,
+            // Hash of userAgent + IP for device identification
+            index: true,
+        },
     },
     {
         timestamps: true,
