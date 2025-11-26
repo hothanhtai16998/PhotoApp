@@ -8,7 +8,7 @@
   right: 0;
   bottom: 0;
   background: rgba(77, 77, 77, 0.6);
-  z-index: 1000;
+  z-index: 2000; /* Above header (1500) and category nav (1499) */
   cursor: pointer;
   /* DISABLE ANIMATION TO TEST - might be causing flash */
   /* animation: fadeIn 0.2s ease; */
@@ -44,7 +44,7 @@
   width: 90%;
   max-width: 1800px;
   height: calc(100vh - 40px);
-  z-index: 1001;
+  z-index: 2001; /* Above overlay (2000), header (1500) and category nav (1499) */
   display: flex;
   flex-direction: column;
   background: #fff;

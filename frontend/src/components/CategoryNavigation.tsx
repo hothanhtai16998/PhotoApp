@@ -12,7 +12,10 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
   const location = useLocation()
   const [categories, setCategories] = useState<string[]>(['Tất cả'])
   const [headerHeight, setHeaderHeight] = useState(0)
+  const [isSticky, setIsSticky] = useState(false)
+  const [navHeight, setNavHeight] = useState(0)
   const categoryNavRef = useRef<HTMLDivElement>(null)
+  const initialNavTopRef = useRef<number | null>(null)
   const activeCategory = currentCategory || 'Tất cả'
 
   // Calculate header height for sticky positioning
@@ -61,6 +64,91 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
     }
   }, [])
 
+  // Store nav height for spacer - measure when not sticky
+  useEffect(() => {
+    if (categoryNavRef.current && !isSticky) {
+      const height = categoryNavRef.current.offsetHeight
+      if (height > 0) {
+        setNavHeight(height)
+      }
+    }
+  }, [categories, isSticky])
+
+  // Handle scroll to make category nav stick to header
+  useEffect(() => {
+    if (!categoryNavRef.current || headerHeight === 0) return
+    
+    const nav = categoryNavRef.current
+    let lastStickyState = false
+    
+    // Store initial nav position once
+    const storeInitialPosition = () => {
+      if (initialNavTopRef.current === null) {
+        const rect = nav.getBoundingClientRect()
+        const scrollY = window.scrollY || window.pageYOffset
+        initialNavTopRef.current = rect.top + scrollY
+      }
+    }
+    
+    const handleScroll = () => {
+      const scrollY = window.scrollY || window.pageYOffset
+      
+      // Store initial position on first scroll or if not stored
+      if (initialNavTopRef.current === null) {
+        storeInitialPosition()
+        if (initialNavTopRef.current === null) return
+      }
+      
+      // If at top, don't stick
+      if (scrollY === 0) {
+        if (lastStickyState !== false) {
+          setIsSticky(false)
+          lastStickyState = false
+        }
+        return
+      }
+      
+      // Calculate: when would the header (at top of viewport) reach the nav's original position?
+      // The nav's original top minus header height = scroll position where they meet
+      const scrollPositionWhereHeaderReachesNav = initialNavTopRef.current - headerHeight
+      
+      // Nav should stick only when we've scrolled past that point
+      const shouldStick = scrollY >= scrollPositionWhereHeaderReachesNav
+      
+      if (shouldStick !== lastStickyState) {
+        setIsSticky(shouldStick)
+        lastStickyState = shouldStick
+      }
+    }
+    
+    // Throttled scroll handler
+    let rafId: number | null = null
+    const throttledScroll = () => {
+      if (rafId) return
+      rafId = requestAnimationFrame(() => {
+        handleScroll()
+        rafId = null
+      })
+    }
+    
+    window.addEventListener('scroll', throttledScroll, { passive: true })
+    
+    // Initial setup
+    const initCheck = () => {
+      storeInitialPosition()
+      handleScroll()
+    }
+    
+    setTimeout(initCheck, 150)
+    
+    return () => {
+      window.removeEventListener('scroll', throttledScroll)
+      if (rafId) {
+        cancelAnimationFrame(rafId)
+      }
+    }
+  }, [headerHeight])
+
   // Fetch categories from backend
   useEffect(() => {
     const loadCategories = async () => {
@@ -103,26 +191,35 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
   }
 
   return (
-    <div
-      className="category-navigation-container"
-      ref={categoryNavRef}
-      style={{
-        top: `${headerHeight}px`
-      }}
-      onTouchMove={(e) => {
-        // Prevent scrolling in category navigation on mobile
-        if (window.innerWidth <= 768) {
-          e.preventDefault();
-        }
-      }}
-      onTouchStart={(e) => {
-        // Prevent scrolling in category navigation on mobile
-        if (window.innerWidth <= 768) {
-          e.stopPropagation();
-        }
-      }}
-    >
-      <div className="category-navigation-wrapper">
+    <>
+      {/* Spacer to prevent layout shift when sticky */}
+      {isSticky && navHeight > 0 && (
+        <div 
+          style={{ 
+            height: `${navHeight}px`,
+            flexShrink: 0,
+            pointerEvents: 'none'
+          }} 
+          aria-hidden="true"
+        />
+      )}
+      <div
+        className={`category-navigation-container ${isSticky ? 'is-sticky' : ''}`}
+        ref={categoryNavRef}
+        onTouchMove={(e) => {
+          // Prevent scrolling in category navigation on mobile
+          if (window.innerWidth <= 768) {
+            e.preventDefault();
+          }
+        }}
+        onTouchStart={(e) => {
+          // Prevent scrolling in category navigation on mobile
+          if (window.innerWidth <= 768) {
+            e.stopPropagation();
+          }
+        }}
+      >
+        <div className="category-navigation-wrapper">
         <nav 
           className="category-navigation"
           onTouchMove={(e) => {
@@ -144,6 +241,7 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
         </nav>
       </div>
     </div>
+    </>
   )
 })
 
