@@ -17,7 +17,7 @@
 	width: 100%;
   height: 5px;
   background: rgba(255, 255, 255, 0.15);
-  z-index: 10000;
+  z-index: 3; /* Same level as slide content */
   pointer-events: none;
   margin: 0;
   padding: 0;
@@ -401,7 +401,7 @@
   position: fixed;
   top: 20px;
   right: 20px;
-  z-index: 10001;
+  z-index: 10; /* Above slide content (3) but below upload modal (2000) */
 }
 
 .info-settings-button {

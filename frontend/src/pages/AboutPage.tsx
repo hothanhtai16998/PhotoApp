@@ -14,8 +14,8 @@ function AboutPage() {
         social: {
             linkedin: "https://linkedin.com/company/photoapp",
             github: "https://github.com/photoapp",
-            facebook: "https://facebook.com/photoapp",
-            twitter: "https://twitter.com/photoapp"
+            facebook: "https://www.facebook.com/dominhhung2003",
+            tiktok: "https://www.tiktok.com/@runtapchupanh?_r=1&_d=secCgYIASAHKAESPgo8CcNaTtIGK3YCOxlsy9ZE8XQCCg0%2BKdOX39i2rrLZzXsZHvN8IcPz1wc1odal1PBFmJ1pOysKCoAfiVZGGgA%3D&_svg=1&checksum=d4af0892724a5a3444770cbcead4ce81d1e1e7df1ba613d6a009c01d37c7956d&item_author_type=1&sec_uid=MS4wLjABAAAAF1E1KZIixKzT6AUFWtl7ol2e6UCPrznChrx74TWzjISsk7EBXbuDkMIaVaTiLiy3&sec_user_id=MS4wLjABAAAAF1E1KZIixKzT6AUFWtl7ol2e6UCPrznChrx74TWzjISsk7EBXbuDkMIaVaTiLiy3&share_app_id=1180&share_author_id=7122849835637031963&share_link_id=890DD61E-C177-4E91-A4B9-550251E5FA96&share_region=VN&share_scene=1&sharer_language=vi&social_share_type=4&source=h5_t&timestamp=1764128350&tt_from=copy&u_code=e30e992e2jm9i2&ug_btm=b8727%2Cb0&user_id=7122849835637031963&utm_campaign=client_share&utm_medium=ios&utm_source=copy"
         }
     };
 
@@ -71,9 +71,9 @@ function AboutPage() {
                                     </div>
                                     <div className="contact-details">
                                         <span className="contact-label">Website</span>
-                                        <a 
-                                            href={authorInfo.website} 
-                                            target="_blank" 
+                                        <a
+                                            href={authorInfo.website}
+                                            target="_blank"
                                             rel="noopener noreferrer"
                                             className="contact-value"
                                         >
@@ -93,7 +93,7 @@ function AboutPage() {
                             <h2 className="card-title">Mạng xã hội</h2>
                             <div className="social-links">
                                 {authorInfo.social.linkedin && (
-                                    <a 
+                                    <a
                                         href={authorInfo.social.linkedin}
                                         target="_blank"
                                         rel="noopener noreferrer"
@@ -105,7 +105,7 @@ function AboutPage() {
                                     </a>
                                 )}
                                 {authorInfo.social.github && (
-                                    <a 
+                                    <a
                                         href={authorInfo.social.github}
                                         target="_blank"
                                         rel="noopener noreferrer"
@@ -117,7 +117,7 @@ function AboutPage() {
                                     </a>
                                 )}
                                 {authorInfo.social.facebook && (
-                                    <a 
+                                    <a
                                         href={authorInfo.social.facebook}
                                         target="_blank"
                                         rel="noopener noreferrer"
@@ -128,16 +128,16 @@ function AboutPage() {
                                         <span>Facebook</span>
                                     </a>
                                 )}
-                                {authorInfo.social.twitter && (
-                                    <a 
-                                        href={authorInfo.social.twitter}
+                                {authorInfo.social.tiktok && (
+                                    <a
+                                        href={authorInfo.social.tiktok}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="social-link"
                                         aria-label="Twitter"
                                     >
                                         <Twitter size={24} />
-                                        <span>Twitter</span>
+                                        <span>Tiktok</span>
                                     </a>
                                 )}
                             </div>
