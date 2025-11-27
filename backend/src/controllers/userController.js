@@ -137,89 +137,147 @@ export const forgotPassword = asyncHandler(async (req, res) => { })
 
 export const changeInfo = asyncHandler(async (req, res) => {
     const userId = req.user._id;
-    const { firstName, lastName, email, bio, location, website, instagram, twitter, facebook } = req.body;
+    const { firstName, lastName, email, bio, location, website, instagram, twitter, facebook, phone } = req.body;
 
     // Get current user to check for existing avatar
     const currentUser = await User.findById(userId);
 
     const updateData = {};
+    const changedFields = [];
+
+    // Helper function to normalize values for comparison (treat empty string, null, undefined as the same)
+    const normalizeValue = (value) => {
+        if (value === null || value === undefined) return undefined;
+        const trimmed = String(value).trim();
+        return trimmed === '' ? undefined : trimmed;
+    };
 
     // Update displayName if firstName/lastName provided
-    if (firstName || lastName) {
+    if (firstName !== undefined || lastName !== undefined) {
         const firstNameValue = firstName?.trim() || '';
         const lastNameValue = lastName?.trim() || '';
-        updateData.displayName = `${firstNameValue} ${lastNameValue}`.trim();
-    }
-
-    // Update email if provided
-    if (email) {
-        // Prevent OAuth users from changing email (must match Google account)
-        if (currentUser.isOAuthUser) {
-            return res.status(403).json({
-                message: "Không thể thay đổi email đã liên kết với Google."
-            });
-        }
-
-        // Check if email is already taken by another user
-        const existingEmail = await User.findOne({
-            email: email.toLowerCase().trim(),
-            _id: { $ne: userId }
-        });
-
-        if (existingEmail) {
-            return res.status(409).json({
-                message: "Email đã tồn tại"
-            });
-        }
-        updateData.email = email.toLowerCase().trim();
-
-        // Create email_changed notification
-        try {
-            await Notification.create({
-                recipient: userId,
-                type: 'email_changed',
-                metadata: {
-                    oldEmail: currentUser.email,
-                    newEmail: email.toLowerCase().trim(),
-                    timestamp: new Date().toISOString(),
-                },
-            });
-        } catch (notifError) {
-            logger.error('Failed to create email changed notification:', notifError);
-            // Don't fail the email change if notification fails
+        const newDisplayName = `${firstNameValue} ${lastNameValue}`.trim();
+        if (newDisplayName !== currentUser.displayName) {
+            updateData.displayName = newDisplayName;
+            changedFields.push('displayName');
         }
     }
 
-    // Update bio if provided
+    // Update email if provided and changed
+    if (email !== undefined) {
+        const newEmail = email.toLowerCase().trim();
+        const oldEmail = (currentUser.email || '').toLowerCase().trim();
+        
+        // Only process if email actually changed
+        if (newEmail !== oldEmail) {
+            // Prevent OAuth users from changing email (must match Google account)
+            if (currentUser.isOAuthUser) {
+                return res.status(403).json({
+                    message: "Không thể thay đổi email đã liên kết với Google."
+                });
+            }
+
+            // Check if email is already taken by another user
+            const existingEmail = await User.findOne({
+                email: newEmail,
+                _id: { $ne: userId }
+            });
+
+            if (existingEmail) {
+                return res.status(409).json({
+                    message: "Email đã tồn tại"
+                });
+            }
+            updateData.email = newEmail;
+
+            // Create email_changed notification
+            try {
+                await Notification.create({
+                    recipient: userId,
+                    type: 'email_changed',
+                    metadata: {
+                        oldEmail: currentUser.email,
+                        newEmail: newEmail,
+                        timestamp: new Date().toISOString(),
+                    },
+                });
+            } catch (notifError) {
+                logger.error('Failed to create email changed notification:', notifError);
+                // Don't fail the email change if notification fails
+            }
+        }
+    }
+
+    // Update bio if provided and changed
     if (bio !== undefined) {
-        updateData.bio = bio.trim() || undefined;
+        const newBio = normalizeValue(bio);
+        const oldBio = normalizeValue(currentUser.bio);
+        if (newBio !== oldBio) {
+            updateData.bio = newBio;
+            changedFields.push('bio');
+        }
     }
 
-    // Update location if provided
+    // Update location if provided and changed
     if (location !== undefined) {
-        updateData.location = location.trim() || undefined;
+        const newLocation = normalizeValue(location);
+        const oldLocation = normalizeValue(currentUser.location);
+        if (newLocation !== oldLocation) {
+            updateData.location = newLocation;
+            changedFields.push('location');
+        }
     }
 
-    // Update website if provided
+    // Update phone if provided and changed
+    if (phone !== undefined) {
+        const newPhone = normalizeValue(phone);
+        const oldPhone = normalizeValue(currentUser.phone);
+        if (newPhone !== oldPhone) {
+            updateData.phone = newPhone;
+            changedFields.push('phone');
+        }
+    }
+
+    // Update website if provided and changed
     if (website !== undefined) {
-        const websiteValue = website.trim() || undefined;
+        let websiteValue = normalizeValue(website);
         // Ensure website has protocol if provided
         if (websiteValue && !websiteValue.startsWith('http://') && !websiteValue.startsWith('https://')) {
-            updateData.website = `https://${websiteValue}`;
-        } else {
+            websiteValue = `https://${websiteValue}`;
+        }
+        const oldWebsite = normalizeValue(currentUser.website);
+        if (websiteValue !== oldWebsite) {
             updateData.website = websiteValue;
+            changedFields.push('website');
         }
     }
 
-    // Update social links if provided
+    // Update social links if provided and changed
     if (instagram !== undefined) {
-        updateData.instagram = instagram.trim().replace(/^@/, '') || undefined; // Remove @ if present
+        const rawInstagram = instagram.trim().replace(/^@/, '');
+        const newInstagram = normalizeValue(rawInstagram);
+        const oldInstagram = normalizeValue(currentUser.instagram);
+        if (newInstagram !== oldInstagram) {
+            updateData.instagram = newInstagram;
+            changedFields.push('instagram');
+        }
     }
     if (twitter !== undefined) {
-        updateData.twitter = twitter.trim().replace(/^@/, '') || undefined; // Remove @ if present
+        const rawTwitter = twitter.trim().replace(/^@/, '');
+        const newTwitter = normalizeValue(rawTwitter);
+        const oldTwitter = normalizeValue(currentUser.twitter);
+        if (newTwitter !== oldTwitter) {
+            updateData.twitter = newTwitter;
+            changedFields.push('twitter');
+        }
     }
     if (facebook !== undefined) {
-        updateData.facebook = facebook.trim() || undefined;
+        const newFacebook = normalizeValue(facebook);
+        const oldFacebook = normalizeValue(currentUser.facebook);
+        if (newFacebook !== oldFacebook) {
+            updateData.facebook = newFacebook;
+            changedFields.push('facebook');
+        }
     }
 
     // Handle avatar upload if file is provided
@@ -274,14 +332,17 @@ export const changeInfo = asyncHandler(async (req, res) => {
 
     // Create profile_updated notification (user is notified of their own profile update)
     // This can be useful for security purposes (detecting unauthorized changes)
+    // Only notify if there are actual field changes (exclude avatarUrl/avatarId from notification)
     try {
-        const changedFields = Object.keys(updateData);
-        if (changedFields.length > 0) {
+        const userFacingFields = changedFields.filter(field => 
+            field !== 'avatarUrl' && field !== 'avatarId'
+        );
+        if (userFacingFields.length > 0) {
             await Notification.create({
                 recipient: userId,
                 type: 'profile_updated',
                 metadata: {
-                    changedFields: changedFields,
+                    changedFields: userFacingFields,
                     timestamp: new Date().toISOString(),
                 },
             });

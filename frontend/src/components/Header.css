@@ -33,17 +33,57 @@
 }
 
 /* Logo */
+.header-logo-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
 .header-logo {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-decoration: none;
   flex-shrink: 0;
-  white-space: nowrap;
+  transition: opacity 0.2s ease;
 }
 
 .header-logo:hover {
+  opacity: 0.85;
+}
+
+.header-logo-selector-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  color: #767676;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+}
+
+.header-logo-container:hover .header-logo-selector-btn {
+  opacity: 1;
+}
+
+@media (max-width: 768px) {
+  .header-logo-selector-btn {
+    opacity: 0.7;
+  }
+}
+
+.header-logo-selector-btn:hover {
+  background: #f5f5f5;
   color: #111;
+}
+
+.header-logo-selector-btn:active {
+  transform: scale(0.95);
 }
 
 /* Search Bar Container */

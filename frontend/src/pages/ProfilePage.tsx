@@ -597,8 +597,8 @@ function ProfilePage() {
                                 </div>
                             )}
 
-                            {/* Profile Completion - Only show for own profile */}
-                            {isOwnProfile && userStats && userStats.profileCompletion && (
+                            {/* Profile Completion - Only show for own profile and when not 100% */}
+                            {isOwnProfile && userStats && userStats.profileCompletion && userStats.profileCompletion.percentage < 100 && (
                                 <ProfileCompletion
                                     completion={userStats.profileCompletion}
                                     onEditProfile={handleEditProfile}

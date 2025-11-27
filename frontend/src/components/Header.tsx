@@ -1,14 +1,17 @@
 "use client"
 
-import { memo, useState, useRef } from "react"
+import { memo, useState, useRef, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Shield, Heart, Menu, X, User, LogOut, Info, MapPin } from "lucide-react"
+import { Shield, Heart, Menu, X, User, LogOut, Info, MapPin, Palette } from "lucide-react"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { useImageStore } from "@/stores/useImageStore"
 import UploadModal from "./UploadModal"
 import { SearchBar, type SearchBarRef } from "./SearchBar"
 import { Avatar } from "./Avatar"
 import NotificationBell from "./NotificationBell"
+import { Logo, type LogoStyle } from "./Logo"
+import { LogoSelector, getStoredLogoStyle } from "./LogoSelector"
+import { updateFavicon } from "@/utils/faviconUpdater"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,7 +27,26 @@ export const Header = memo(function Header() {
   const navigate = useNavigate()
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [logoStyle, setLogoStyle] = useState<LogoStyle>(getStoredLogoStyle())
+  const [logoSelectorOpen, setLogoSelectorOpen] = useState(false)
   const searchBarRef = useRef<SearchBarRef>(null)
+
+  useEffect(() => {
+    // Update favicon on initial load
+    updateFavicon(logoStyle)
+    
+    const handleLogoStyleChange = (event: CustomEvent) => {
+      const newStyle = event.detail as LogoStyle
+      setLogoStyle(newStyle)
+      updateFavicon(newStyle)
+    }
+
+    window.addEventListener('logoStyleChanged', handleLogoStyleChange as EventListener)
+    return () => {
+      window.removeEventListener('logoStyleChanged', handleLogoStyleChange as EventListener)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleLogoClick = () => {
     if (window.location.pathname !== '/') {
@@ -45,9 +67,19 @@ export const Header = memo(function Header() {
       <div className="header-top">
         <div className="header-container">
           {/* Logo */}
-          <Link to="/" className="header-logo" onClick={handleLogoClick}>
-            <span>PhotoApp</span>
-          </Link>
+          <div className="header-logo-container">
+            <Link to="/" className="header-logo" onClick={handleLogoClick}>
+              <Logo size={32} style={logoStyle} />
+            </Link>
+            <button
+              className="header-logo-selector-btn"
+              onClick={() => setLogoSelectorOpen(true)}
+              aria-label="Change logo style"
+              title="Change logo style"
+            >
+              <Palette size={14} />
+            </button>
+          </div>
 
           {/* Mobile Menu Button */}
           <button 
@@ -191,6 +223,11 @@ export const Header = memo(function Header() {
 
       {/* Upload Modal */}
       <UploadModal isOpen={uploadModalOpen} onClose={() => setUploadModalOpen(false)} />
+
+      {/* Logo Selector Modal */}
+      {logoSelectorOpen && (
+        <LogoSelector onClose={() => setLogoSelectorOpen(false)} />
+      )}
     </header>
   )
 })

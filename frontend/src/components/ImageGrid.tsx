@@ -291,7 +291,7 @@ const ImageGridItem = memo(({
 ImageGridItem.displayName = 'ImageGridItem';
 
 const ImageGrid = memo(() => {
-  const { images, loading, error, pagination, currentSearch, currentCategory, currentLocation, fetchImages, isUsingCache } = useImageStore();
+  const { images, loading, error, pagination, currentSearch, currentCategory, currentLocation, fetchImages } = useImageStore();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Load filters from localStorage - make it reactive (declare early to avoid TDZ issues)
@@ -822,7 +822,7 @@ const ImageGrid = memo(() => {
         </div>
       ) : (
         <div 
-          className={`masonry-grid ${isUsingCache ? 'no-animation' : ''}`}
+          className="masonry-grid"
           role="list" 
           aria-label="Danh sách ảnh"
           style={{ position: 'relative' }}

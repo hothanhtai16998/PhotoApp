@@ -16,17 +16,6 @@ export const useImageStore = create(
     currentCategory: undefined as string | undefined,
     currentLocation: undefined as string | undefined,
     deletedImageIds: [] as string[],
-    categoryCache: {} as Record<string, {
-      images: Image[];
-      pagination: {
-        page: number;
-        limit: number;
-        total: number;
-        pages: number;
-      } | null;
-      timestamp: number;
-    }>,
-    isUsingCache: false,
     uploadImage: async (data: UploadImageData) => {
       set((state) => {
         state.loading = true;
@@ -150,7 +139,6 @@ export const useImageStore = create(
     }) => {
       // Prevent concurrent requests - use atomic check-and-set to avoid race condition
       let shouldProceed = false;
-      let usedCache = false;
       
       set((state) => {
         // Atomic check: if already loading and not a refresh, skip
@@ -174,14 +162,7 @@ export const useImageStore = create(
         const locationChanged =
           params?.location !== undefined && params.location !== currentLocation;
 
-        // Check for cached category data (only for category-only changes, no search/location)
-        const cacheKey = params?.category || 'all';
-        const cachedData = state.categoryCache[cacheKey];
-        const hasCache = cachedData && cachedData.images && cachedData.images.length > 0;
-        const isCacheValid = hasCache && (Date.now() - cachedData.timestamp < 300000); // 5 minutes cache validity
-        const isCategoryOnlyChange = categoryChanged && !searchChanged && !locationChanged && !params?.search && !params?.location && !currentSearch && !currentLocation;
-
-        // If it's a new query (category/search/location changed or page 1), check cache first
+        // If it's a new query (category/search/location changed or page 1), clear images
         if (
           categoryChanged ||
           searchChanged ||
@@ -189,20 +170,8 @@ export const useImageStore = create(
           params?.page === 1 ||
           !params?.page
         ) {
-          // If we have valid cache for category-only changes, use it immediately
-          if (isCategoryOnlyChange && isCacheValid && !params?._refresh && (!params?.page || params.page === 1)) {
-            // Load from cache immediately - no flash!
-            state.images = cachedData.images.map(img => ({ ...img })); // Deep copy to avoid mutations
-            state.pagination = cachedData.pagination ? { ...cachedData.pagination } : null;
-            state.loading = false; // Don't show loading when cache is available
-            state.isUsingCache = true; // Mark that we're using cached data
-            usedCache = true;
-          } else {
-            // No cache or cache invalid - clear images
-            state.images = [];
-            state.pagination = null;
-            state.isUsingCache = false; // Not using cache
-          }
+          state.images = [];
+          state.pagination = null;
         }
       });
 
@@ -210,10 +179,6 @@ export const useImageStore = create(
       if (!shouldProceed) {
         return;
       }
-
-      // Check if cache was used (loading will be false if cache was used)
-      const currentState = useImageStore.getState();
-      const cacheWasUsed = !currentState.loading && usedCache;
 
       try {
         // Always use cache-busting on initial load, category change, or search change to ensure fresh data
@@ -358,17 +323,6 @@ export const useImageStore = create(
             ? null
             : response.pagination || null;
           state.loading = false;
-          state.isUsingCache = false; // No longer using cache after fresh data loads
-
-          // Update category cache if this is a category-only query (no search, no location, page 1)
-          if (isNewQuery && params?.category !== undefined && !params?.search && !params?.location && (!params?.page || params.page === 1)) {
-            const cacheKey = params.category || 'all';
-            state.categoryCache[cacheKey] = {
-              images: [...state.images], // Store current images after all processing
-              pagination: state.pagination ? { ...state.pagination } : null,
-              timestamp: Date.now()
-            };
-          }
         });
       } catch (error: unknown) {
         const message =
@@ -385,7 +339,6 @@ export const useImageStore = create(
         set((state) => {
           state.loading = false;
           state.error = message;
-          state.isUsingCache = false; // Reset flag on error
         });
         toast.error(message);
       }

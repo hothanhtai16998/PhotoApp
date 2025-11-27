@@ -19,6 +19,7 @@ type ProfileFormData = {
     email: string;
     username: string;
     location: string;
+    phone: string;
     personalSite: string;
     bio: string;
     interests: string;
@@ -64,6 +65,7 @@ function EditProfilePage() {
             email: user?.email || '',
             username: user?.username || '',
             location: '',
+            phone: '',
             personalSite: 'https://',
             bio: user?.bio || '',
             interests: '',
@@ -91,6 +93,7 @@ function EditProfilePage() {
             setValue('username', user.username || '');
             setValue('bio', user.bio || '');
             setValue('location', user.location || '');
+            setValue('phone', user.phone || '');
             setValue('personalSite', user.website || 'https://');
             setValue('instagram', user.instagram || '');
             setValue('twitter', user.twitter || '');
@@ -151,8 +154,9 @@ function EditProfilePage() {
             if (data.bio) {
                 formData.append('bio', data.bio);
             }
-            // Always send location, website, instagram, twitter to allow clearing fields
+            // Always send location, phone, website, instagram, twitter to allow clearing fields
             formData.append('location', data.location || '');
+            formData.append('phone', data.phone || '');
             const websiteValue = data.personalSite && data.personalSite !== 'https://' ? data.personalSite : '';
             formData.append('website', websiteValue);
             formData.append('instagram', data.instagram || '');
@@ -350,6 +354,10 @@ function EditProfilePage() {
                                     <div className="form-field">
                                         <Label htmlFor="location">Location</Label>
                                         <Input id="location" {...register('location')} placeholder="e.g., New York, USA" />
+                                    </div>
+                                    <div className="form-field">
+                                        <Label htmlFor="phone">Phone</Label>
+                                        <Input id="phone" {...register('phone')} type="tel" placeholder="e.g., +1 234 567 8900" />
                                     </div>
                                     <div className="form-field">
                                         <Label htmlFor="personalSite">Personal site/portfolio</Label>

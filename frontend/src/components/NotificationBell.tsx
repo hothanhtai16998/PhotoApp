@@ -12,6 +12,7 @@ export default function NotificationBell() {
 	const [notifications, setNotifications] = useState<Notification[]>([]);
 	const [unreadCount, setUnreadCount] = useState(0);
 	const [isOpen, setIsOpen] = useState(false);
+	const [loading, setLoading] = useState(true);
 	const [refreshing, setRefreshing] = useState(false);
 	const [hasNewNotification, setHasNewNotification] = useState(false);
 	const dropdownRef = useRef<HTMLDivElement>(null);
@@ -117,9 +118,27 @@ export default function NotificationBell() {
 				return `${actorName} đã xem hồ sơ của bạn`;
 			case 'profile_updated': {
 				const changedFields = notification.metadata?.changedFields || [];
-				const fieldsText = changedFields.length > 0 
-					? changedFields.join(', ')
-					: 'thông tin';
+				if (changedFields.length === 0) {
+					return 'Hồ sơ của bạn đã được cập nhật';
+				}
+				
+				// Map field names to user-friendly Vietnamese names
+				const fieldNames: Record<string, string> = {
+					displayName: 'tên hiển thị',
+					firstName: 'tên',
+					lastName: 'họ',
+					email: 'email',
+					bio: 'tiểu sử',
+					location: 'địa điểm',
+					phone: 'số điện thoại',
+					website: 'trang web',
+					instagram: 'Instagram',
+					twitter: 'Twitter',
+					facebook: 'Facebook',
+				};
+				
+				const translatedFields = changedFields.map(field => fieldNames[field] || field);
+				const fieldsText = translatedFields.join(', ');
 				return `Hồ sơ của bạn đã được cập nhật: ${fieldsText}`;
 			}
 			case 'login_new_device': {
@@ -218,6 +237,7 @@ export default function NotificationBell() {
 			if (showLoading) {
 				setRefreshing(false);
 			}
+			setLoading(false);
 		}
 	}, [accessToken, user]);
 

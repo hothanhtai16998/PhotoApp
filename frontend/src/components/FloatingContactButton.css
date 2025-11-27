@@ -12,6 +12,12 @@
   justify-content: center;
   padding: 20px;
   animation: fadeIn 0.2s ease;
+  /* Prevent layout shifts */
+  will-change: opacity;
+  /* Ensure overlay doesn't cause reflow */
+  overflow: auto;
+  /* Use contain to isolate layout */
+  contain: layout style paint;
 }
 
 @keyframes fadeIn {
@@ -32,16 +38,27 @@
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   animation: modalSlideIn 0.3s ease;
+  /* Prevent layout shifts - set min-height to prevent repositioning */
+  min-height: 200px;
+  /* Use transform for stable positioning */
+  position: relative;
+  /* Prevent content from causing layout shifts */
+  contain: layout style paint;
+  /* Ensure modal doesn't shift when content loads */
+  flex-shrink: 0;
+  /* Force GPU acceleration for smoother animation */
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 @keyframes modalSlideIn {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(20px) scale(0.95);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 

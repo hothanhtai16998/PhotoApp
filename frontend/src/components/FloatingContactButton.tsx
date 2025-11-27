@@ -111,7 +111,10 @@ function FloatingContactButton() {
 
             {isOpen && (
                 <div className="contact-modal-overlay" onClick={() => setIsOpen(false)}>
-                    <div className="contact-modal" onClick={(e) => e.stopPropagation()}>
+                    <div 
+                        className="contact-modal" 
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div className="contact-modal-header">
                             <h2 className="contact-modal-title">Thông tin liên hệ</h2>
                             <button

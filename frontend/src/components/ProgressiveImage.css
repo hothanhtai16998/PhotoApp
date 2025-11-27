@@ -10,7 +10,7 @@
   width: 100%;
   height: auto; /* Let height adjust based on aspect ratio */
   display: block;
-  transition: opacity 0.2s ease-in-out;
+  /* transition: opacity 0.2s ease-in-out; */ /* Disabled to prevent flashing when switching categories */
   image-rendering: -webkit-optimize-contrast; /* Better quality on WebKit browsers */
   image-rendering: high-quality; /* Better quality on modern browsers */
   image-rendering: auto; /* Fallback - smooth scaling for photos */

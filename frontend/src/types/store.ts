@@ -58,17 +58,6 @@ export interface ImageState {
 	currentCategory?: string;
 	currentLocation?: string;
 	deletedImageIds: string[]; // Track deleted image IDs to filter them out
-	categoryCache: Record<string, {
-		images: Image[];
-		pagination: {
-			page: number;
-			limit: number;
-			total: number;
-			pages: number;
-		} | null;
-		timestamp: number;
-	}>; // Cache for category images to prevent flashing
-	isUsingCache: boolean; // Flag to indicate if currently displaying cached data
 	uploadImage: (
 		data: UploadImageData
 	) => Promise<void>;
