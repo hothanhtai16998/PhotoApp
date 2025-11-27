@@ -157,10 +157,84 @@
   transform: translateY(30px);
   transition: opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  position: relative;
+  display: inline-block;
 }
 
 .main-slide.active .slide-title {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* Typewriter Effect */
+.main-slide.active .slide-title.typewriter {
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+  display: inline-block;
+  max-width: 0;
+  animation: typing 2.5s steps(40, end) 0.5s forwards;
+  transition: none; /* Override transition for typewriter */
+}
+
+/* Reset animation when slide is not active */
+.main-slide:not(.active) .slide-title.typewriter {
+  max-width: 0 !important;
+  animation: none;
+}
+
+.main-slide:not(.active) .slide-title.typewriter::after {
+  display: none;
+}
+
+/* Cursor pseudo-element */
+.main-slide.active .slide-title.typewriter::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: rgba(255, 255, 255, 0.75);
+  animation: 
+    blink-caret 0.75s step-end 0.5s 3.33 forwards,
+    hide-cursor 0.01s 2.8s forwards;
+  pointer-events: none;
+  display: block;
+}
+
+/* Typewriter animation - reveals text character by character */
+@keyframes typing {
+  from {
+    max-width: 0;
+  }
+  to {
+    max-width: 2000px; /* Large enough to fit any title */
+  }
+}
+
+/* Blinking cursor animation - runs only during typing */
+@keyframes blink-caret {
+  0%, 49.9% {
+    opacity: 1;
+  }
+  50%, 99.9% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Hide cursor completely after typing completes */
+@keyframes hide-cursor {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0;
+    width: 0;
+    display: none;
+  }
 }
 

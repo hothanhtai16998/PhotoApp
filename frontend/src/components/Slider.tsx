@@ -426,7 +426,12 @@ function Slider() {
                 />
               )}
               <div className="slide-content">
-                <h2 className="slide-title">{image.imageTitle}</h2>
+                <h2 
+                  key={`${image._id}-${index === currentSlide ? 'active' : 'inactive'}`}
+                  className="slide-title typewriter"
+                >
+                  {image.imageTitle}
+                </h2>
               </div>
             </div>
           );
