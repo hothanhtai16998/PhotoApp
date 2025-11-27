@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useUserStore } from '@/stores/useUserStore';
 import { collectionFavoriteService } from '@/services/collectionFavoriteService';
 import Header from '@/components/Header';
 import { Folder, Heart } from 'lucide-react';
@@ -10,7 +11,8 @@ import { toast } from 'sonner';
 import './FavoriteCollectionsPage.css';
 
 export default function FavoriteCollectionsPage() {
-	const { user, accessToken } = useAuthStore();
+	const { accessToken } = useAuthStore();
+	const { user } = useUserStore();
 	const navigate = useNavigate();
 	const [collections, setCollections] = useState<Collection[]>([]);
 	const [loading, setLoading] = useState(true);

@@ -1,26 +1,27 @@
 import { create } from 'zustand';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
+import { useUserStore } from '@/stores/useUserStore';
 import type { AuthState } from '@/types/store';
 import type { ApiErrorResponse, ValidationErrorResponse, HttpErrorResponse } from '@/types/errors';
 
-export const useAuthStore =
-	create<AuthState>((set, get) => ({
-		accessToken: null,
-		user: null,
-		loading: false,
-		isInitializing: true,
+export const useAuthStore = create<AuthState>((set, get) => ({
+	accessToken: null,
+	loading: false,
+	isInitializing: true,
 
-		setAccessToken: (accessToken) => {
-			set({ accessToken });
-		},
-		clearState: () => {
-			set({
-				accessToken: null,
-				user: null,
-				loading: false,
-			});
-		},
+	setAccessToken: (accessToken) => {
+		set({ accessToken });
+	},
+
+	clearAuth: () => {
+		set({
+			accessToken: null,
+			loading: false,
+		});
+		// Also clear user state
+		useUserStore.getState().clearUser();
+	},
 
 		signUp: async (
 			username,
@@ -73,14 +74,12 @@ export const useAuthStore =
 
 				// Set access token
 				if (response.accessToken) {
-					get().setAccessToken(
-						response.accessToken
-					);
+					get().setAccessToken(response.accessToken);
 				}
 
 				// Always fetch full user data with permissions from /users/me
 				// This ensures we have the latest user data including permissions
-				await get().fetchMe();
+				await useUserStore.getState().fetchMe();
 
 				toast.success(
 					'Chào mừng bạn quay lại 🎉'
@@ -121,11 +120,9 @@ export const useAuthStore =
 
 		signOut: async () => {
 			try {
-				get().clearState();
+				get().clearAuth();
 				await authService.signOut();
-				toast.success(
-					'Đăng xuất thành công!'
-				);
+				toast.success('Đăng xuất thành công!');
 			} catch {
 				// Don't show error toast on logout failure
 				// User is already logged out locally
@@ -133,42 +130,11 @@ export const useAuthStore =
 			}
 		},
 
-		fetchMe: async () => {
-			try {
-				set({ loading: true });
-				const user =
-					await authService.fetchMe();
-
-				set({ user });
-			} catch (error) {
-				// Only clear state if it's a 401/403 (unauthorized/forbidden)
-				// This means the user is actually not authenticated
-				const errorStatus = (error as HttpErrorResponse)?.response?.status;
-				
-				if (errorStatus === 401 || errorStatus === 403) {
-					// User is not authenticated, clear state
-					set({
-						user: null,
-						accessToken: null,
-					});
-				}
-				// For other errors (network, 500, etc.), keep existing user data
-				// Don't show error toast on fetchMe failure during initialization
-				// It's expected if user is not logged in
-			} finally {
-				set({ loading: false });
-			}
-		},
-
 		refresh: async () => {
 			try {
-				const {
-					user,
-					fetchMe,
-					setAccessToken,
-				} = get();
-				const accessToken =
-					await authService.refresh();
+				const { setAccessToken } = get();
+				const { user, fetchMe } = useUserStore.getState();
+				const accessToken = await authService.refresh();
 
 				setAccessToken(accessToken);
 
@@ -178,15 +144,10 @@ export const useAuthStore =
 			} catch (error: unknown) {
 				const errorStatus = (error as HttpErrorResponse)?.response?.status;
 				// Only show error if it's not a 401/403 (expected when not logged in)
-				if (
-					errorStatus !== 401 &&
-					errorStatus !== 403
-				) {
-					toast.error(
-						'Session hết hạn. Vui lòng đăng nhập lại.'
-					);
+				if (errorStatus !== 401 && errorStatus !== 403) {
+					toast.error('Session hết hạn. Vui lòng đăng nhập lại.');
 				}
-				get().clearState();
+				get().clearAuth();
 			}
 		},
 

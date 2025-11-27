@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback, useMemo, useRef, lazy, Suspense } from "react";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { imageService } from "@/services/imageService";
+import { useUserStore } from "@/stores/useUserStore";
+import { useProfileStore } from "@/stores/useProfileStore";
+import { useUserImageStore } from "@/stores/useUserImageStore";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,14 +13,10 @@ import ProgressiveImage from "@/components/ProgressiveImage";
 import api from "@/lib/axios";
 import axios from "axios";
 import { generateImageSlug, extractIdFromSlug } from "@/lib/utils";
-import { collectionService } from "@/services/collectionService";
-import type { Collection } from "@/types/collection";
 import { Folder, Eye } from "lucide-react";
 // Lazy load analytics dashboard - only needed when stats tab is active
 const UserAnalyticsDashboard = lazy(() => import("./components/UserAnalyticsDashboard").then(module => ({ default: module.UserAnalyticsDashboard })));
-import { followService } from "@/services/followService";
-import { userStatsService, type UserStats } from "@/services/userStatsService";
-import { userService, type PublicUser } from "@/services/userService";
+import { userStatsService } from "@/services/userStatsService";
 import { ProfileHeader } from "./components/ProfileHeader";
 import { ProfileTabs } from "./components/ProfileTabs";
 import { useRequestCancellationOnChange } from "@/hooks/useRequestCancellation";
@@ -28,11 +26,40 @@ import "./ProfilePage.css";
 type TabType = 'photos' | 'illustrations' | 'collections' | 'stats';
 
 function ProfilePage() {
-    const { user: currentUser } = useAuthStore();
+    const { user: currentUser } = useUserStore();
     const navigate = useNavigate();
     const params = useParams<{ username?: string; userId?: string }>();
     const [searchParams, setSearchParams] = useSearchParams();
     
+    // Profile store
+    const {
+        profileUser,
+        profileUserLoading,
+        followStats,
+        userStats,
+        collections,
+        collectionsLoading,
+        collectionsCount,
+        fetchProfileUser,
+        fetchFollowStats,
+        fetchUserStats,
+        fetchCollections,
+        clearProfile,
+    } = useProfileStore();
+
+    // User image store
+    const {
+        images,
+        loading,
+        photosCount,
+        illustrationsCount,
+        imageTypes,
+        fetchUserImages,
+        setImageType,
+        updateImage,
+        clearImages,
+    } = useUserImageStore();
+
     // Detect if we're on mobile - MOBILE ONLY check
     const [isMobile, setIsMobile] = useState(() => {
         if (typeof window === 'undefined') return false;
@@ -46,25 +73,11 @@ function ProfilePage() {
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
-    const [profileUser, setProfileUser] = useState<PublicUser | null>(null);
-    const [profileUserLoading, setProfileUserLoading] = useState(false);
+
     const [activeTab, setActiveTab] = useState<TabType>('photos');
-    const [images, setImages] = useState<Image[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [photosCount, setPhotosCount] = useState(0);
-    const [illustrationsCount, setIllustrationsCount] = useState(0);
-    const [collections, setCollections] = useState<Collection[]>([]);
-    const [collectionsLoading, setCollectionsLoading] = useState(false);
-    const [collectionsCount, setCollectionsCount] = useState(0);
-    const [followStats, setFollowStats] = useState({ followers: 0, following: 0, isFollowing: false });
-    const [userStats, setUserStats] = useState<UserStats | null>(null);
-    const [, setStatsLoading] = useState(false);
     const [isSwitchingProfile, setIsSwitchingProfile] = useState(false);
     // Track which user ID the current stats belong to
     const statsUserIdRef = useRef<string | undefined>(undefined);
-
-    // Track image aspect ratios (portrait vs landscape)
-    const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
     const processedImages = useRef<Set<string>>(new Set());
     const previousParams = useRef<string>('');
 
@@ -73,53 +86,17 @@ function ProfilePage() {
 
     // Fetch profile user data if viewing someone else's profile
     useEffect(() => {
-        const fetchProfileUser = async () => {
-            if (params.username) {
-                // Clear profileUser when username changes to prevent flashing old data
-                setProfileUser(null);
-                try {
-                    setProfileUserLoading(true);
-                    const userData = await userService.getUserByUsername(params.username, userLookupCancelSignal);
-                    setProfileUser(userData);
-                } catch (error) {
-                    // Ignore cancelled requests
-                    if (axios.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
-                        return;
-                    }
-                    console.error('Failed to fetch user:', error);
-                    toast.error('Không tìm thấy người dùng');
-                    navigate('/');
-                } finally {
-                    setProfileUserLoading(false);
-                }
-            } else if (params.userId) {
-                // Clear profileUser when userId changes to prevent flashing old data
-                setProfileUser(null);
-                try {
-                    setProfileUserLoading(true);
-                    const userData = await userService.getUserById(params.userId, userLookupCancelSignal);
-                    setProfileUser(userData);
-                } catch (error) {
-                    // Ignore cancelled requests
-                    if (axios.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
-                        return;
-                    }
-                    console.error('Failed to fetch user:', error);
-                    toast.error('Không tìm thấy người dùng');
-                    navigate('/');
-                } finally {
-                    setProfileUserLoading(false);
-                }
-            } else {
-                // Viewing own profile - clear profileUser
-                setProfileUser(null);
-                setProfileUserLoading(false);
+        const loadProfileUser = async () => {
+            try {
+                await fetchProfileUser(params.username, params.userId, userLookupCancelSignal);
+            } catch (error) {
+                // Error already handled in store, navigate away
+                navigate('/');
             }
         };
 
-        fetchProfileUser();
-
-    }, [params.username, params.userId, navigate, userLookupCancelSignal]);
+        loadProfileUser();
+    }, [params.username, params.userId, navigate, userLookupCancelSignal, fetchProfileUser]);
 
     // Determine which user's profile to display
     const displayUserId = useMemo(() => {
@@ -146,14 +123,8 @@ function ProfilePage() {
             statsUserIdRef.current = undefined;
 
             // Clear all profile-related state immediately when switching users
-            setImages([]);
-            setPhotosCount(0);
-            setIllustrationsCount(0);
-            setCollections([]);
-            setCollectionsCount(0);
-            setFollowStats({ followers: 0, following: 0, isFollowing: false });
-            setUserStats(null);
-            setImageTypes(new Map());
+            clearProfile();
+            clearImages();
             processedImages.current.clear();
         }
 
@@ -161,158 +132,81 @@ function ProfilePage() {
         if (!previousParams.current || previousParams.current !== paramsKey) {
             previousParams.current = paramsKey;
         }
-    }, [params.username, params.userId]);
+    }, [params.username, params.userId, clearProfile, clearImages]);
 
-    const fetchUserImages = useCallback(async (refresh = false, signal?: AbortSignal) => {
+    // Wrapper to handle race condition checks
+    const fetchUserImagesWrapper = useCallback(async (refresh = false, signal?: AbortSignal) => {
         if (!displayUserId) return;
         const currentUserId = displayUserId; // Capture at start of fetch
 
         try {
-            setLoading(true);
-            // Limit initial load to 30 images for faster first render
-            // More images can be loaded via pagination if needed
-            const response = await imageService.fetchUserImages(
-                displayUserId, 
-                { 
-                    page: 1, 
-                    limit: 30, // Load first 30 images only for initial render
-                    ...(refresh ? { _refresh: true } : {})
-                }, 
-                signal
-            );
-            const userImages = response.images || [];
-
-            // Only update if we're still on the same user (prevent race conditions)
-            if (displayUserId === currentUserId) {
-                setImages(userImages);
-
-                // Count photos and illustrations
-                const photos = userImages.filter(img => {
-                    const categoryName = typeof img.imageCategory === 'string'
-                        ? img.imageCategory
-                        : img.imageCategory?.name;
-                    return categoryName &&
-                        !categoryName.toLowerCase().includes('illustration') &&
-                        !categoryName.toLowerCase().includes('svg');
-                });
-                const illustrations = userImages.filter(img => {
-                    const categoryName = typeof img.imageCategory === 'string'
-                        ? img.imageCategory
-                        : img.imageCategory?.name;
-                    return categoryName &&
-                        (categoryName.toLowerCase().includes('illustration') ||
-                            categoryName.toLowerCase().includes('svg'));
-                });
-
-                setPhotosCount(photos.length);
-                setIllustrationsCount(illustrations.length);
-                // Update ref to track which user this data belongs to
-                if (!statsUserIdRef.current) {
-                    statsUserIdRef.current = displayUserId;
-                }
+            await fetchUserImages(displayUserId, refresh, signal);
+            // Update ref to track which user this data belongs to
+            if (displayUserId === currentUserId && !statsUserIdRef.current) {
+                statsUserIdRef.current = displayUserId;
             }
         } catch (error) {
-            // Ignore cancelled requests
-            if (axios.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
-                return;
-            }
-            console.error('Failed to fetch user images:', error);
-        } finally {
-            if (displayUserId === currentUserId) {
-                setLoading(false);
-            }
+            // Error already handled in store
         }
-    }, [displayUserId]);
+    }, [displayUserId, fetchUserImages]);
 
-    const fetchCollections = useCallback(async (signal?: AbortSignal) => {
+    // Wrapper to handle race condition checks and own profile check
+    const fetchCollectionsWrapper = useCallback(async (signal?: AbortSignal) => {
         if (!displayUserId) return;
         const currentUserId = displayUserId; // Capture at start of fetch
 
+        // For now, only fetch own collections. TODO: Add endpoint to fetch other users' collections
+        if (!isOwnProfile) {
+            return;
+        }
+
         try {
-            setCollectionsLoading(true);
-            // For now, only fetch own collections. TODO: Add endpoint to fetch other users' collections
-            if (!isOwnProfile) {
-                if (displayUserId === currentUserId) {
-                    setCollections([]);
-                    setCollectionsCount(0);
-                }
-                return;
-            }
-            const data = await collectionService.getUserCollections(signal);
-            // Only update if we're still on the same user
-            if (displayUserId === currentUserId) {
-                setCollections(data);
-                setCollectionsCount(data.length);
-                // Update ref to track which user this data belongs to
-                if (!statsUserIdRef.current) {
-                    statsUserIdRef.current = displayUserId;
-                }
+            await fetchCollections(displayUserId, signal);
+            // Update ref to track which user this data belongs to
+            if (displayUserId === currentUserId && !statsUserIdRef.current) {
+                statsUserIdRef.current = displayUserId;
             }
         } catch (error) {
-            // Ignore cancelled requests
-            if (axios.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
-                return;
-            }
-            console.error('Failed to fetch collections:', error);
-        } finally {
-            if (displayUserId === currentUserId) {
-                setCollectionsLoading(false);
-            }
+            // Error already handled in store
         }
-    }, [displayUserId, isOwnProfile]);
+    }, [displayUserId, isOwnProfile, fetchCollections]);
 
-    const fetchFollowStats = useCallback(async (signal?: AbortSignal) => {
+    // Wrapper to handle race condition checks
+    const fetchFollowStatsWrapper = useCallback(async (signal?: AbortSignal) => {
         if (!displayUserId) return;
         const currentUserId = displayUserId; // Capture at start of fetch
 
         try {
-            const response = await followService.getUserFollowStats(displayUserId, signal);
-            // Only update if we're still on the same user
-            if (displayUserId === currentUserId) {
-                setFollowStats(response.stats);
-                // Update ref to track which user this data belongs to
-                if (!statsUserIdRef.current) {
-                    statsUserIdRef.current = displayUserId;
-                }
+            await fetchFollowStats(displayUserId, signal);
+            // Update ref to track which user this data belongs to
+            if (displayUserId === currentUserId && !statsUserIdRef.current) {
+                statsUserIdRef.current = displayUserId;
             }
         } catch (error) {
-            // Ignore cancelled requests
-            if (axios.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
-                return;
-            }
-            console.error('Failed to fetch follow stats:', error);
+            // Error already handled in store
         }
-    }, [displayUserId]);
+    }, [displayUserId, fetchFollowStats]);
 
-    const fetchUserStats = useCallback(async (signal?: AbortSignal) => {
+    // Wrapper to handle race condition checks
+    const fetchUserStatsWrapper = useCallback(async (signal?: AbortSignal) => {
         if (!displayUserId) return;
         const currentUserId = displayUserId; // Capture at start of fetch
 
         try {
-            setStatsLoading(true);
-            const stats = await userStatsService.getUserStats(displayUserId, signal);
+            await fetchUserStats(displayUserId, signal);
             // Only update if we're still on the same user
             if (displayUserId === currentUserId) {
-                setUserStats(stats);
                 statsUserIdRef.current = displayUserId;
                 // Mark that we're done switching once stats are loaded
                 setIsSwitchingProfile(false);
             }
         } catch (error) {
-            // Ignore cancelled requests
-            if (axios.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
-                return;
-            }
-            console.error('Failed to fetch user stats:', error);
+            // Error already handled in store
             if (displayUserId === currentUserId) {
                 setIsSwitchingProfile(false);
             }
-        } finally {
-            if (displayUserId === currentUserId) {
-                setStatsLoading(false);
-            }
         }
-    }, [displayUserId]);
+    }, [displayUserId, fetchUserStats]);
 
     // Track profile view when component mounts (only once per session)
     useEffect(() => {
@@ -349,8 +243,8 @@ function ProfilePage() {
         // Only fetch essential data on initial load (images and follow stats for header)
         // Collections and stats will be lazy-loaded when their tabs are clicked
         Promise.all([
-            fetchUserImages(false, cancelSignal),
-            fetchFollowStats(cancelSignal),
+            fetchUserImagesWrapper(false, cancelSignal),
+            fetchFollowStatsWrapper(cancelSignal),
         ]).catch((error) => {
             // Ignore cancellation errors - these are expected when navigating away
             const isCanceled = axios.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED';
@@ -358,22 +252,21 @@ function ProfilePage() {
                 console.error('Error fetching profile data:', error);
             }
         });
-    }, [displayUserId, currentUser, navigate, fetchUserImages, fetchFollowStats, cancelSignal]);
+    }, [displayUserId, currentUser, navigate, fetchUserImagesWrapper, fetchFollowStatsWrapper, cancelSignal]);
 
     // Lazy-load collections only when collections tab is active
     useEffect(() => {
         if (activeTab === 'collections' && !collectionsLoading && collections.length === 0 && displayUserId) {
-            setCollectionsLoading(true);
-            fetchCollections(cancelSignal);
+            fetchCollectionsWrapper(cancelSignal);
         }
-    }, [activeTab, displayUserId, fetchCollections, cancelSignal, collectionsLoading, collections.length]);
+    }, [activeTab, displayUserId, fetchCollectionsWrapper, cancelSignal, collectionsLoading, collections.length]);
 
     // Lazy-load stats only when stats tab is active
     useEffect(() => {
         if (activeTab === 'stats' && !userStats && displayUserId) {
-            fetchUserStats(cancelSignal);
+            fetchUserStatsWrapper(cancelSignal);
         }
-    }, [activeTab, displayUserId, fetchUserStats, cancelSignal, userStats]);
+    }, [activeTab, displayUserId, fetchUserStatsWrapper, cancelSignal, userStats]);
 
     // Listen for refresh event after image upload
     useEffect(() => {
@@ -382,8 +275,10 @@ function ProfilePage() {
             // Use a small delay to ensure backend has processed the new image
             // Don't use cancelSignal for refresh - this is a manual refresh action
             setTimeout(() => {
-                fetchUserImages(true); // Pass true to enable cache-busting, no signal for manual refresh
-                fetchCollections(); // Also refresh collections, no signal for manual refresh
+                fetchUserImagesWrapper(true); // Pass true to enable cache-busting, no signal for manual refresh
+                if (isOwnProfile) {
+                    fetchCollectionsWrapper(); // Also refresh collections, no signal for manual refresh
+                }
             }, 500);
         };
 
@@ -391,7 +286,7 @@ function ProfilePage() {
         return () => {
             window.removeEventListener('refreshProfile', handleRefresh);
         };
-    }, [fetchUserImages, fetchCollections]);
+    }, [fetchUserImagesWrapper, fetchCollectionsWrapper, isOwnProfile]);
 
     const handleEditProfile = () => {
         navigate('/profile/edit');
@@ -492,29 +387,13 @@ function ProfilePage() {
         processedImages.current.add(imageId);
         const isPortrait = img.naturalHeight > img.naturalWidth;
         const imageType = isPortrait ? 'portrait' : 'landscape';
-
-        // Update state only if not already set (prevent unnecessary re-renders)
-        setImageTypes(prev => {
-            if (prev.has(imageId)) return prev;
-            const newMap = new Map(prev);
-            newMap.set(imageId, imageType);
-            return newMap;
-        });
-    }, [currentImageIds]);
+        setImageType(imageId, imageType);
+    }, [currentImageIds, setImageType]);
 
     // Update image in the state when stats change
     const handleImageUpdate = useCallback((updatedImage: Image) => {
-        // Update the image in the images array
-        setImages(prevImages => {
-            const index = prevImages.findIndex(img => img._id === updatedImage._id);
-            if (index !== -1) {
-                const newImages = [...prevImages];
-                newImages[index] = updatedImage;
-                return newImages;
-            }
-            return prevImages;
-        });
-    }, []);
+        updateImage(updatedImage._id, updatedImage);
+    }, [updateImage]);
 
     // Download image function - uses backend proxy to avoid CORS issues
     const handleDownloadImage = useCallback(async (image: Image, e: React.MouseEvent) => {

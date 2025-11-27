@@ -1,4 +1,4 @@
-import { useAuthStore } from '@/stores/useAuthStore';
+import { useUserStore } from '@/stores/useUserStore';
 import type { AdminRolePermissions } from '@/services/adminService';
 
 /**
@@ -6,7 +6,7 @@ import type { AdminRolePermissions } from '@/services/adminService';
  * Returns functions to check if user has specific permissions
  */
 export function usePermissions() {
-    const user = useAuthStore((state) => state.user);
+    const user = useUserStore((state) => state.user);
 
     /**
      * Check if user has a specific permission

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useUserStore } from '@/stores/useUserStore';
 import { useImageStore } from '@/stores/useImageStore';
 import { usePermissions } from '@/hooks/usePermissions';
 import { adminService, type DashboardStats, type User, type AdminImage, type AdminRole, type AdminRolePermissions } from '@/services/adminService';
@@ -52,7 +53,7 @@ const AdminTabLoader = () => (
 type TabType = 'dashboard' | 'analytics' | 'users' | 'images' | 'categories' | 'collections' | 'roles' | 'permissions' | 'favorites' | 'moderation' | 'logs' | 'settings';
 
 function AdminPage() {
-    const { user, fetchMe } = useAuthStore();
+    const { user, fetchMe } = useUserStore();
     const { removeImage } = useImageStore();
     const navigate = useNavigate();
     const { hasPermission, isSuperAdmin } = usePermissions();
@@ -186,7 +187,7 @@ function AdminPage() {
         
         const checkAdmin = async () => {
             // Get current user from store first
-            let currentUser = useAuthStore.getState().user;
+            let currentUser = useUserStore.getState().user;
             
             // Only fetch if we don't have user data or don't have permissions
             if (!currentUser || (!currentUser.permissions && currentUser.isAdmin === undefined)) {
@@ -195,11 +196,11 @@ function AdminPage() {
                     // Wait a bit for state to update
                     await new Promise(resolve => setTimeout(resolve, 100));
                     if (!isMounted) return;
-                    currentUser = useAuthStore.getState().user;
+                    currentUser = useUserStore.getState().user;
                 } catch (error) {
                     // If fetchMe fails, check if we have a user from before
                     if (!isMounted) return;
-                    currentUser = useAuthStore.getState().user;
+                    currentUser = useUserStore.getState().user;
                     if (!currentUser) {
                         console.error('AdminPage - Error fetching user:', error);
                         toast.error('Vui lòng đăng nhập lại.');

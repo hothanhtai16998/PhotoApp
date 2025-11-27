@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useUserStore } from "@/stores/useUserStore";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import { changePasswordSchema, type ProfileFormData, type ChangePasswordFormData
 import "./EditProfilePage.css";
 
 function EditProfilePage() {
-    const { user, fetchMe } = useAuthStore();
+    const { user, fetchMe } = useUserStore();
     const navigate = useNavigate();
     const [activeSection, setActiveSection] = useState('edit-profile');
     const [isSubmitting, setIsSubmitting] = useState(false);

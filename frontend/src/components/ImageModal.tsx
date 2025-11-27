@@ -14,7 +14,7 @@ import {
 import type { Image } from '@/types/image';
 import ProgressiveImage from './ProgressiveImage';
 import { imageService } from '@/services/imageService';
-import { useAuthStore } from '@/stores/useAuthStore';
+import { useUserStore } from '@/stores/useUserStore';
 import EditImageModal from './EditImageModal';
 import { useImageModal } from './image/hooks/useImageModal';
 import { useInfiniteScroll } from './image/hooks/useInfiniteScroll';
@@ -82,7 +82,7 @@ const ImageModal = ({
   const [showCollectionModal, setShowCollectionModal] = useState(false);
   const userInfoRef = useRef<HTMLDivElement>(null);
   const userProfileCardRef = useRef<HTMLDivElement>(null);
-  const { user } = useAuthStore();
+  const { user } = useUserStore();
   const navigate = useNavigate();
 
   // Image zoom functionality

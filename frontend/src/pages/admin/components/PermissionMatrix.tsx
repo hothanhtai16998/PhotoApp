@@ -1,14 +1,14 @@
 import { usePermissions } from '@/hooks/usePermissions';
 import { PermissionBadge } from './PermissionBadge';
 import { RoleBadge } from './PermissionBadge';
-import { useAuthStore } from '@/stores/useAuthStore';
+import { useUserStore } from '@/stores/useUserStore';
 
 /**
  * Permission matrix view showing all permissions and user's access
  */
 export function PermissionMatrix() {
     const { permissions, isSuperAdmin } = usePermissions();
-    const user = useAuthStore((state) => state.user);
+    const user = useUserStore((state) => state.user);
 
     // All available permissions grouped by category
     const permissionGroups = [

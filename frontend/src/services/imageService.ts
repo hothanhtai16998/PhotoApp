@@ -1,339 +1,43 @@
-import api, { get } from '@/lib/api';
-import type { UploadImageData } from '@/types/store';
-import type {
-  Image,
-  FetchImagesParams,
-  FetchImagesResponse,
-  PreUploadResponse,
-  FinalizeImageData,
-  FinalizeImageResponse,
-  IncrementViewResponse,
-  IncrementDownloadResponse,
-  FetchLocationsResponse,
-} from '@/types/image';
-import type { Coordinates } from '@/types/common';
+/**
+ * Image Service - Re-exports all image-related services for backward compatibility
+ *
+ * This file maintains backward compatibility by re-exporting all methods
+ * from the split services. New code should import from the specific services:
+ * - imageUploadService - upload operations
+ * - imageFetchService - fetch operations
+ * - imageUpdateService - update operations
+ * - imageStatsService - stats operations
+ */
+
+import { imageUploadService } from './imageUploadService';
+import { imageFetchService } from './imageFetchService';
+import { imageUpdateService } from './imageUpdateService';
+import { imageStatsService } from './imageStatsService';
 
 export const imageService = {
-  // Pre-upload: Upload image to S3 only (no database record)
-  preUploadImage: async (
-    imageFile: File,
-    onUploadProgress?: (progress: number) => void
-  ): Promise<PreUploadResponse> => {
-    const formData = new FormData();
-    formData.append('image', imageFile);
+  // Upload operations
+  preUploadImage: imageUploadService.preUploadImage,
+  finalizeImageUpload: imageUploadService.finalizeImageUpload,
+  uploadImage: imageUploadService.uploadImage,
+  createBulkUploadNotification: imageUploadService.createBulkUploadNotification,
 
-    const res = await api.post('/images/pre-upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      withCredentials: true,
-      timeout: 120000, // 2 minutes for uploads
-      onUploadProgress: (progressEvent) => {
-        if (onUploadProgress && progressEvent.total) {
-          // Calculate upload progress (0-100%)
-          const percentCompleted = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total
-          );
-          onUploadProgress(percentCompleted);
-        }
-      },
-    });
+  // Fetch operations
+  fetchImages: imageFetchService.fetchImages,
+  fetchUserImages: imageFetchService.fetchUserImages,
+  fetchLocations: imageFetchService.fetchLocations,
 
-    return res.data;
-  },
+  // Update operations
+  updateImage: imageUpdateService.updateImage,
+  updateImageWithFile: imageUpdateService.updateImageWithFile,
+  batchUpdateImages: imageUpdateService.batchUpdateImages,
 
-  // Finalize: Link metadata to pre-uploaded image and create database record
-  /**
-   * Create bulk upload notification
-   */
-  createBulkUploadNotification: async (
-    successCount: number,
-    totalCount: number,
-    failedCount?: number
-  ): Promise<void> => {
-    try {
-      await api.post(
-        '/images/bulk-upload-notification',
-        {
-          successCount,
-          totalCount,
-          failedCount: failedCount || 0,
-        },
-        {
-          withCredentials: true,
-        }
-      );
-    } catch (error) {
-      // Silently fail - don't interrupt upload flow if notification fails
-      console.error('Failed to create bulk upload notification:', error);
-    }
-  },
-
-  finalizeImageUpload: async (
-    data: FinalizeImageData
-  ): Promise<FinalizeImageResponse> => {
-    const res = await api.post('/images/finalize', data, {
-      withCredentials: true,
-      timeout: 30000, // 30 seconds should be enough for metadata save
-    });
-
-    return res.data;
-  },
-
-  // Legacy upload method (kept for backward compatibility)
-  uploadImage: async (
-    data: UploadImageData,
-    onUploadProgress?: (progress: number) => void
-  ) => {
-    const formData = new FormData();
-    formData.append('image', data.image);
-    formData.append('imageTitle', data.imageTitle);
-    formData.append('imageCategory', data.imageCategory);
-
-    if (data.location) {
-      formData.append('location', data.location);
-    }
-    if (data.coordinates) {
-      formData.append('coordinates', JSON.stringify(data.coordinates));
-    }
-    if (data.cameraModel) {
-      formData.append('cameraModel', data.cameraModel);
-    }
-
-    const res = await api.post('/images/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      withCredentials: true,
-      timeout: 120000, // 2 minutes for uploads
-      onUploadProgress: (progressEvent) => {
-        if (onUploadProgress && progressEvent.total) {
-          // Calculate HTTP upload progress (uploading file to our backend)
-          // Cap at 85% - the remaining 15% is for S3 upload and image processing on backend
-          const httpProgress = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total
-          );
-          // Show 0-85% during HTTP upload to backend
-          const percentCompleted = Math.min(85, httpProgress);
-          onUploadProgress(percentCompleted);
-        }
-      },
-    });
-
-    return res.data;
-  },
-
-  fetchImages: async (
-    params?: FetchImagesParams,
-    signal?: AbortSignal
-  ): Promise<FetchImagesResponse> => {
-    const queryParams = new URLSearchParams();
-
-    if (params?.page) {
-      queryParams.append('page', params.page.toString());
-    }
-    if (params?.limit) {
-      queryParams.append('limit', params.limit.toString());
-    }
-    if (params?.search) {
-      queryParams.append('search', params.search);
-    }
-    if (params?.category) {
-      queryParams.append('category', params.category);
-    }
-    if (params?.location) {
-      queryParams.append('location', params.location);
-    }
-    if (params?.color) {
-      queryParams.append('color', params.color);
-    }
-    if (params?.tag) {
-      queryParams.append('tag', params.tag);
-    }
-
-    // Add cache-busting timestamp if refresh is requested
-    if (params?._refresh) {
-      queryParams.append('_t', Date.now().toString());
-    }
-
-    const queryString = queryParams.toString();
-    const url = queryString ? `/images?${queryString}` : '/images';
-
-    const res = await get(url, {
-      withCredentials: true,
-      signal, // Pass abort signal for request cancellation
-      // Cache busting is handled by timestamp query parameter (_t)
-    });
-
-    // Handle both old format (just images array) and new format (with pagination)
-    const data = res.data as FetchImagesResponse | Image[];
-    if (Array.isArray(data)) {
-      return { images: data };
-    }
-    if (data.images) {
-      return data;
-    }
-    return { images: [] };
-  },
-
-  fetchUserImages: async (
-    userId: string,
-    params?: FetchImagesParams,
-    signal?: AbortSignal
-  ): Promise<FetchImagesResponse> => {
-    const queryParams = new URLSearchParams();
-
-    if (params?.page) {
-      queryParams.append('page', params.page.toString());
-    }
-    if (params?.limit) {
-      queryParams.append('limit', params.limit.toString());
-    }
-
-    // Add cache-busting timestamp if refresh is requested
-    if (params?._refresh) {
-      queryParams.append('_t', Date.now().toString());
-    }
-
-    const queryString = queryParams.toString();
-    const url = queryString
-      ? `/images/user/${userId}?${queryString}`
-      : `/images/user/${userId}`;
-
-    const res = await get(url, {
-      withCredentials: true,
-      signal, // Pass abort signal for request cancellation
-      // Cache busting is handled by timestamp query parameter (_t)
-    });
-
-    const data = res.data as FetchImagesResponse | Image[];
-    if (Array.isArray(data)) {
-      return { images: data };
-    }
-    if (data.images) {
-      return data;
-    }
-    return { images: [] };
-  },
-
-  incrementView: async (imageId: string): Promise<IncrementViewResponse> => {
-    const res = await api.patch(
-      `/images/${imageId}/view`,
-      {},
-      {
-        withCredentials: true,
-      }
-    );
-    return res.data;
-  },
-
-  incrementDownload: async (
-    imageId: string
-  ): Promise<IncrementDownloadResponse> => {
-    const res = await api.patch(
-      `/images/${imageId}/download`,
-      {},
-      {
-        withCredentials: true,
-      }
-    );
-    return res.data;
-  },
-
-  fetchLocations: async (forceRefresh = false): Promise<string[]> => {
-    // Simple cache to prevent duplicate requests
-    const cacheKey = 'imageLocationsCache';
-    if (!forceRefresh) {
-      const cached = sessionStorage.getItem(cacheKey);
-      if (cached) {
-        try {
-          const { data, timestamp } = JSON.parse(cached);
-          const now = Date.now();
-          if (now - timestamp < 5 * 60 * 1000) {
-            // 5 minutes cache
-            return data;
-          }
-        } catch {
-          // Invalid cache, continue to fetch
-        }
-      }
-    }
-
-    const res = await get<FetchLocationsResponse>('/images/locations', {
-      withCredentials: true,
-    });
-
-    const locations = res.data.locations || [];
-
-    // Update cache
-    sessionStorage.setItem(
-      cacheKey,
-      JSON.stringify({
-        data: locations,
-        timestamp: Date.now(),
-      })
-    );
-
-    return locations;
-  },
-
-  updateImage: async (
-    imageId: string,
-    data: {
-      imageTitle?: string;
-      location?: string;
-      coordinates?: Coordinates | null;
-      cameraModel?: string;
-      cameraMake?: string;
-      focalLength?: number;
-      aperture?: number;
-      shutterSpeed?: string;
-      iso?: number;
-      tags?: string[];
-    }
-  ): Promise<Image> => {
-    const res = await api.patch(`/images/${imageId}`, data, {
-      withCredentials: true,
-    });
-
-    return res.data.image;
-  },
-
-  updateImageWithFile: async (
-    imageId: string,
-    editedFile: File
-  ): Promise<Image> => {
-    const formData = new FormData();
-    formData.append('image', editedFile);
-
-    const res = await api.patch(`/images/${imageId}/replace`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      withCredentials: true,
-      timeout: 120000,
-    });
-
-    return res.data.image;
-  },
-
-  batchUpdateImages: async (
-    editedImages: Array<{ imageId: string; file: File }>
-  ): Promise<Image[]> => {
-    const formData = new FormData();
-    editedImages.forEach((item, index) => {
-      formData.append(`images[${index}][imageId]`, item.imageId);
-      formData.append(`images[${index}][file]`, item.file);
-    });
-
-    const res = await api.patch('/images/batch/replace', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      withCredentials: true,
-      timeout: 300000, // 5 minutes for batch operations
-    });
-
-    return res.data.images;
-  },
+  // Stats operations
+  incrementView: imageStatsService.incrementView,
+  incrementDownload: imageStatsService.incrementDownload,
 };
+
+// Re-export individual services for direct imports
+export { imageUploadService } from './imageUploadService';
+export { imageFetchService } from './imageFetchService';
+export { imageUpdateService } from './imageUpdateService';
+export { imageStatsService } from './imageStatsService';

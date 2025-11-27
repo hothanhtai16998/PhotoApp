@@ -2,19 +2,19 @@ import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '@/components/Header';
 import { collectionService } from '@/services/collectionService';
-import type { Collection } from '@/types/collection';
 import type { Image } from '@/types/image';
 import { toast } from 'sonner';
 import { generateImageSlug, extractIdFromSlug } from '@/lib/utils';
 import ImageModal from '@/components/ImageModal';
 import ProgressiveImage from '@/components/ProgressiveImage';
-import { useAuthStore } from '@/stores/useAuthStore';
+import { useUserStore } from '@/stores/useUserStore';
+import { useCollectionStore } from '@/stores/useCollectionStore';
+import { useCollectionImageStore } from '@/stores/useCollectionImageStore';
+import type { CollectionVersion } from '@/services/collectionVersionService';
 import { ImageIcon, Check, GripVertical, Square, CheckSquare2, Trash2, X, Download, Heart, History, RotateCcw, Clock } from 'lucide-react';
 import { CollectionShare } from '@/components/collection/CollectionShare';
 import CollectionCollaborators from './components/CollectionCollaborators';
 import ReportButton from '@/components/ReportButton';
-import { collectionFavoriteService } from '@/services/collectionFavoriteService';
-import { collectionVersionService, type CollectionVersion } from '@/services/collectionVersionService';
 import api from '@/lib/axios';
 import './CollectionDetailPage.css';
 
@@ -22,7 +22,47 @@ export default function CollectionDetailPage() {
 	const { collectionId } = useParams<{ collectionId: string }>();
 	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
-	const { user } = useAuthStore();
+	const { user } = useUserStore();
+
+	// Collection store
+	const {
+		collection,
+		loading,
+		isFavorited,
+		togglingFavorite,
+		versions,
+		loadingVersions,
+		updatingCover,
+		fetchCollection,
+		setCoverImage,
+		toggleFavorite,
+		fetchVersions,
+		restoreVersion,
+		clearCollection,
+	} = useCollectionStore();
+
+	// Collection image store
+	const {
+		images,
+		imageTypes,
+		draggedImageId,
+		dragOverImageId,
+		isReordering,
+		selectionMode,
+		selectedImageIds,
+		isBulkRemoving,
+		setImages,
+		updateImage,
+		setImageType,
+		setDraggedImageId,
+		setDragOverImageId,
+		reorderImages,
+		toggleSelectionMode,
+		toggleImageSelection,
+		selectAllImages,
+		deselectAllImages,
+		bulkRemoveImages,
+	} = useCollectionImageStore();
 
 	// Detect if we're on mobile - MOBILE ONLY check
 	const [isMobile, setIsMobile] = useState(() => {
@@ -37,36 +77,27 @@ export default function CollectionDetailPage() {
 		window.addEventListener('resize', handleResize);
 		return () => window.removeEventListener('resize', handleResize);
 	}, []);
-	const [collection, setCollection] = useState<Collection | null>(null);
-	const [loading, setLoading] = useState(true);
-	const [updatingCover, setUpdatingCover] = useState<string | null>(null);
-	const [draggedImageId, setDraggedImageId] = useState<string | null>(null);
-	const [dragOverImageId, setDragOverImageId] = useState<string | null>(null);
-	const [isReordering, setIsReordering] = useState(false);
-	const [selectionMode, setSelectionMode] = useState(false);
-	const [selectedImageIds, setSelectedImageIds] = useState<Set<string>>(new Set());
-	const [isBulkRemoving, setIsBulkRemoving] = useState(false);
-	const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
+
 	const processedImages = useRef<Set<string>>(new Set());
-	const [isFavorited, setIsFavorited] = useState(false);
-	const [togglingFavorite, setTogglingFavorite] = useState(false);
-	const [versions, setVersions] = useState<CollectionVersion[]>([]);
-	const [loadingVersions, setLoadingVersions] = useState(false);
 	const [showVersionHistory, setShowVersionHistory] = useState(false);
 	const [restoringVersion, setRestoringVersion] = useState<number | null>(null);
 
 	// Get selected image slug from URL
 	const imageSlugFromUrl = searchParams.get('image');
 
-	// Get images array
-	const images = useMemo(() => {
-		if (!collection) return [];
-		return Array.isArray(collection.images)
-			? collection.images.filter((img): img is Image => {
-				return typeof img === 'object' && img !== null && '_id' in img;
-			})
-			: [];
-	}, [collection]);
+	// Sync images from collection to image store
+	useEffect(() => {
+		if (collection) {
+			const imageArray = Array.isArray(collection.images)
+				? collection.images.filter((img): img is Image => {
+					return typeof img === 'object' && img !== null && '_id' in img;
+				})
+				: [];
+			setImages(imageArray);
+		} else {
+			setImages([]);
+		}
+	}, [collection, setImages]);
 
 	// MOBILE ONLY: If URL has ?image=slug on mobile, redirect to ImagePage
 	useEffect(() => {
@@ -115,34 +146,13 @@ export default function CollectionDetailPage() {
 		processedImages.current.add(imageId);
 		const isPortrait = img.naturalHeight > img.naturalWidth;
 		const imageType = isPortrait ? 'portrait' : 'landscape';
-
-		setImageTypes(prev => {
-			if (prev.has(imageId)) return prev;
-			const newMap = new Map(prev);
-			newMap.set(imageId, imageType);
-			return newMap;
-		});
-	}, [currentImageIds]);
+		setImageType(imageId, imageType);
+	}, [currentImageIds, setImageType]);
 
 	// Update image in the state when stats change
 	const handleImageUpdate = useCallback((updatedImage: Image) => {
-		setCollection(prev => {
-			if (!prev) return prev;
-			// Type guard: ensure images is Image[] before mapping
-			const imageArray = Array.isArray(prev.images)
-				? prev.images.filter((img): img is Image => typeof img === 'object' && img !== null && '_id' in img)
-				: [];
-
-			const updatedImages = imageArray.map(img =>
-				img._id === updatedImage._id ? updatedImage : img
-			);
-
-			return {
-				...prev,
-				images: updatedImages,
-			};
-		});
-	}, []);
+		updateImage(updatedImage._id, updatedImage);
+	}, [updateImage]);
 
 	// Check if user owns the collection
 	const isOwner = useMemo(() => {
@@ -190,7 +200,7 @@ export default function CollectionDetailPage() {
 				e.dataTransfer.effectAllowed = 'move';
 			}
 		}, 0);
-	}, [isOwner]);
+	}, [isOwner, setDraggedImageId]);
 
 	// Handle drag over
 	const handleDragOver = useCallback((imageId: string, e: React.DragEvent) => {
@@ -198,12 +208,12 @@ export default function CollectionDetailPage() {
 		e.preventDefault();
 		e.dataTransfer.dropEffect = 'move';
 		setDragOverImageId(imageId);
-	}, [isOwner, draggedImageId]);
+	}, [isOwner, draggedImageId, setDragOverImageId]);
 
 	// Handle drag leave
 	const handleDragLeave = useCallback(() => {
 		setDragOverImageId(null);
-	}, []);
+	}, [setDragOverImageId]);
 
 	// Handle drop
 	const handleDrop = useCallback(async (targetImageId: string, e: React.DragEvent) => {
@@ -234,83 +244,21 @@ export default function CollectionDetailPage() {
 		newOrder.splice(draggedIndex, 1);
 		newOrder.splice(targetIndex, 0, draggedImageId);
 
-		// Optimistically update UI
-		setCollection(prev => {
-			if (!prev) return prev;
-			const imageArray = Array.isArray(prev.images)
-				? prev.images.filter((img): img is Image => typeof img === 'object' && img !== null && '_id' in img)
-				: [];
-
-			const reorderedImages = newOrder.map(id =>
-				imageArray.find(img => img._id === id)
-			).filter((img): img is Image => img !== undefined);
-
-			return {
-				...prev,
-				images: reorderedImages,
-			};
-		});
-
 		setDraggedImageId(null);
 		setDragOverImageId(null);
 
-		// Save to backend
-		try {
-			setIsReordering(true);
-			const updatedCollection = await collectionService.reorderCollectionImages(
-				collectionId,
-				newOrder
-			);
-			setCollection(updatedCollection);
-			toast.success('Đã sắp xếp lại ảnh');
-		} catch (error: unknown) {
-			console.error('Failed to reorder images:', error);
-			const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-			toast.error(message || 'Không thể sắp xếp lại ảnh. Vui lòng thử lại.');
-			// Reload collection to revert optimistic update
-			const data = await collectionService.getCollectionById(collectionId);
-			setCollection(data);
-		} finally {
-			setIsReordering(false);
-		}
-	}, [isOwner, draggedImageId, collectionId, images]);
+		// Save to backend (store handles optimistic update and error handling)
+		await reorderImages(collectionId, newOrder);
+	}, [isOwner, draggedImageId, collectionId, images, setDraggedImageId, setDragOverImageId, reorderImages]);
 
 	// Handle drag end
 	const handleDragEnd = useCallback(() => {
 		setDraggedImageId(null);
 		setDragOverImageId(null);
-	}, []);
+	}, [setDraggedImageId, setDragOverImageId]);
 
-	// Toggle selection mode
-	const toggleSelectionMode = useCallback(() => {
-		setSelectionMode(prev => !prev);
-		if (selectionMode) {
-			setSelectedImageIds(new Set());
-		}
-	}, [selectionMode]);
-
-	// Toggle image selection
-	const toggleImageSelection = useCallback((imageId: string) => {
-		setSelectedImageIds(prev => {
-			const next = new Set(prev);
-			if (next.has(imageId)) {
-				next.delete(imageId);
-			} else {
-				next.add(imageId);
-			}
-			return next;
-		});
-	}, []);
-
-	// Select all images
-	const selectAllImages = useCallback(() => {
-		setSelectedImageIds(new Set(images.map(img => img._id)));
-	}, [images]);
-
-	// Deselect all images
-	const deselectAllImages = useCallback(() => {
-		setSelectedImageIds(new Set());
-	}, []);
+	// Note: toggleSelectionMode, toggleImageSelection, selectAllImages, deselectAllImages
+	// are now handled by useCollectionImageStore
 
 	// Handle bulk remove
 	const handleBulkRemove = useCallback(async () => {
@@ -321,30 +269,12 @@ export default function CollectionDetailPage() {
 			return;
 		}
 
-		try {
-			setIsBulkRemoving(true);
-			const imageIdsArray = Array.from(selectedImageIds);
+		const imageIdsArray = Array.from(selectedImageIds);
+		await bulkRemoveImages(collectionId, imageIdsArray);
 
-			// Remove images one by one (or we could add a bulk endpoint)
-			await Promise.all(
-				imageIdsArray.map(imageId =>
-					collectionService.removeImageFromCollection(collectionId, imageId)
-				)
-			);
-
-			// Reload collection
-			const updatedCollection = await collectionService.getCollectionById(collectionId);
-			setCollection(updatedCollection);
-			setSelectedImageIds(new Set());
-			setSelectionMode(false);
-			toast.success(`Đã xóa ${count} ảnh khỏi bộ sưu tập`);
-		} catch (error: unknown) {
-			console.error('Failed to remove images:', error);
-			toast.error('Không thể xóa ảnh. Vui lòng thử lại.');
-		} finally {
-			setIsBulkRemoving(false);
-		}
-	}, [collectionId, selectedImageIds]);
+		// Reload collection to sync with backend
+		await fetchCollection(collectionId);
+	}, [collectionId, selectedImageIds, bulkRemoveImages, fetchCollection]);
 
 	// Handle setting cover image
 	const handleSetCoverImage = useCallback(async (imageId: string, e: React.MouseEvent) => {
@@ -353,39 +283,16 @@ export default function CollectionDetailPage() {
 
 		if (!collectionId || !isOwner) return;
 
-		try {
-			setUpdatingCover(imageId);
-			const updatedCollection = await collectionService.updateCollection(collectionId, {
-				coverImage: imageId,
-			});
-
-			setCollection(updatedCollection);
-			toast.success('Đã đặt ảnh làm ảnh bìa');
-		} catch (error: unknown) {
-			console.error('Failed to set cover image:', error);
-			const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-			toast.error(message || 'Không thể đặt ảnh bìa. Vui lòng thử lại.');
-		} finally {
-			setUpdatingCover(null);
-		}
-	}, [collectionId, isOwner]);
+		await setCoverImage(collectionId, imageId);
+		// Reload collection to sync with backend
+		await fetchCollection(collectionId);
+	}, [collectionId, isOwner, setCoverImage, fetchCollection]);
 
 	// Handle toggle favorite
 	const handleToggleFavorite = useCallback(async () => {
-		if (!collectionId || togglingFavorite) return;
-
-		setTogglingFavorite(true);
-		try {
-			const response = await collectionFavoriteService.toggleFavorite(collectionId);
-			setIsFavorited(response.isFavorited);
-			toast.success(response.isFavorited ? 'Đã thêm vào yêu thích' : 'Đã xóa khỏi yêu thích');
-		} catch (error: unknown) {
-			console.error('Failed to toggle favorite:', error);
-			toast.error('Không thể cập nhật yêu thích. Vui lòng thử lại.');
-		} finally {
-			setTogglingFavorite(false);
-		}
-	}, [collectionId, togglingFavorite]);
+		if (!collectionId) return;
+		await toggleFavorite(collectionId);
+	}, [collectionId, toggleFavorite]);
 
 	// Handle download
 	const handleDownload = useCallback(async (image: Image, e: React.MouseEvent) => {
@@ -416,27 +323,12 @@ export default function CollectionDetailPage() {
 		}
 	}, []);
 
-	// Load version history
-	const fetchVersions = useCallback(async () => {
-		if (!collectionId) return;
-		setLoadingVersions(true);
-		try {
-			const versionsData = await collectionVersionService.getCollectionVersions(collectionId);
-			setVersions(versionsData);
-		} catch (error: unknown) {
-			console.error('Failed to load versions:', error);
-			toast.error('Không thể tải lịch sử phiên bản');
-		} finally {
-			setLoadingVersions(false);
-		}
-	}, [collectionId]);
-
 	// Load versions when collection is loaded and user can edit
 	useEffect(() => {
-		if (collection && canEdit) {
-			fetchVersions();
+		if (collection && canEdit && collectionId) {
+			fetchVersions(collectionId);
 		}
-	}, [collection, canEdit, fetchVersions]);
+	}, [collection, canEdit, collectionId, fetchVersions]);
 
 	// Handle restore version
 	const handleRestoreVersion = useCallback(async (versionNumber: number) => {
@@ -448,21 +340,15 @@ export default function CollectionDetailPage() {
 
 		setRestoringVersion(versionNumber);
 		try {
-			const restoredCollection = await collectionVersionService.restoreCollectionVersion(
-				collectionId,
-				versionNumber
-			);
-			setCollection(restoredCollection as unknown as Collection);
-			await fetchVersions(); // Reload versions
-			toast.success(`Đã khôi phục về phiên bản ${versionNumber}`);
-		} catch (error: unknown) {
-			console.error('Failed to restore version:', error);
-			const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-			toast.error(message || 'Không thể khôi phục phiên bản. Vui lòng thử lại.');
+			await restoreVersion(collectionId, versionNumber);
+			// Reload collection to sync with backend
+			await fetchCollection(collectionId);
+		} catch {
+			// Error already handled in store
 		} finally {
 			setRestoringVersion(null);
 		}
-	}, [collectionId, fetchVersions]);
+	}, [collectionId, restoreVersion, fetchCollection]);
 
 	// Format version change description
 	const getVersionChangeDescription = (version: CollectionVersion): string => {
@@ -544,30 +430,20 @@ export default function CollectionDetailPage() {
 
 		const loadCollection = async () => {
 			try {
-				setLoading(true);
-				const data = await collectionService.getCollectionById(collectionId);
-				setCollection(data);
-
-				// Check favorite status
-				if (collectionId) {
-					try {
-						const favoritesResponse = await collectionFavoriteService.checkFavorites([collectionId]);
-						setIsFavorited(favoritesResponse.favorites[collectionId] || false);
-					} catch (error) {
-						console.error('Failed to check favorite status:', error);
-					}
-				}
-			} catch (error: unknown) {
-				console.error('Failed to load collection:', error);
-				toast.error('Không thể tải bộ sưu tập');
+				await fetchCollection(collectionId);
+			} catch {
+				// Error already handled in store
 				navigate('/collections');
-			} finally {
-				setLoading(false);
 			}
 		};
 
 		loadCollection();
-	}, [collectionId, navigate]);
+
+		// Cleanup on unmount
+		return () => {
+			clearCollection();
+		};
+	}, [collectionId, navigate, fetchCollection, clearCollection]);
 
 	if (loading) {
 		return (
@@ -693,7 +569,10 @@ export default function CollectionDetailPage() {
 					<div className="collection-detail-collaborators-wrapper">
 						<CollectionCollaborators
 							collection={collection}
-							onCollectionUpdate={(updatedCollection) => setCollection(updatedCollection)}
+							onCollectionUpdate={async () => {
+								// Update collection in store
+								await fetchCollection(collectionId!);
+							}}
 							isOwner={isOwner}
 							userPermission={userPermission}
 						/>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { UserPlus, UserMinus, Loader2 } from 'lucide-react';
 import { followService } from '@/services/followService';
-import { useAuthStore } from '@/stores/useAuthStore';
+import { useUserStore } from '@/stores/useUserStore';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/utils';
 import './FollowButton.css';
@@ -24,7 +24,7 @@ export const FollowButton = ({
 	showIcon = true,
 	className = '',
 }: FollowButtonProps) => {
-	const { user: currentUser } = useAuthStore();
+	const { user: currentUser } = useUserStore();
 	const [isFollowing, setIsFollowing] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [actionLoading, setActionLoading] = useState(false);

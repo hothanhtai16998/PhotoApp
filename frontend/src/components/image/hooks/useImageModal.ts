@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import type { Image } from '@/types/image';
 import { favoriteService } from '@/services/favoriteService';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useUserStore } from '@/stores/useUserStore';
 import { toast } from 'sonner';
 import { useImageStats } from './useImageStats';
 import { useImagePreload } from './useImagePreload';
@@ -28,7 +29,8 @@ export const useImageModal = ({
   onDownload,
   onDownloadWithSize,
 }: UseImageModalProps) => {
-  const { accessToken, user } = useAuthStore();
+  const { accessToken } = useAuthStore();
+  const { user } = useUserStore();
   const [isTogglingFavorite, setIsTogglingFavorite] = useState<boolean>(false);
 
   // Memoize current image index to avoid recalculation

@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { favoriteService } from "@/services/favoriteService";
+import { useUserStore } from "@/stores/useUserStore";
+import { useFavoriteStore } from "@/stores/useFavoriteStore";
 import Header from "@/components/Header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Heart } from "lucide-react";
@@ -14,9 +15,22 @@ import { toast } from "sonner";
 import "./FavoritesPage.css";
 
 function FavoritesPage() {
-    const { user, accessToken } = useAuthStore();
+    const { accessToken } = useAuthStore();
+    const { user } = useUserStore();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
+    
+    // Favorite store
+    const {
+        images,
+        loading,
+        pagination,
+        currentPage,
+        imageTypes,
+        fetchFavorites,
+        setImageType,
+        updateImage,
+    } = useFavoriteStore();
     
     // Detect if we're on mobile - MOBILE ONLY check
     const [isMobile, setIsMobile] = useState(() => {
@@ -31,18 +45,7 @@ function FavoritesPage() {
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
-    const [images, setImages] = useState<Image[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [pagination, setPagination] = useState<{
-        page: number;
-        limit: number;
-        total: number;
-        pages: number;
-    } | null>(null);
-    const [currentPage, setCurrentPage] = useState(1);
-    
-    // Track image aspect ratios (portrait vs landscape)
-    const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
+
     const processedImages = useRef<Set<string>>(new Set());
     
     // Get selected image slug or ID from URL
@@ -98,28 +101,6 @@ function FavoritesPage() {
     // Get current image IDs for comparison
     const currentImageIds = useMemo(() => new Set(images.map(img => img._id)), [images]);
 
-    const fetchFavorites = useCallback(async (page = 1) => {
-        if (!accessToken || !user?._id) {
-            navigate('/signin');
-            return;
-        }
-
-        try {
-            setLoading(true);
-            const response = await favoriteService.getFavorites({
-                page,
-                limit: 20,
-            });
-            setImages(response.images || []);
-            setPagination(response.pagination || null);
-            setCurrentPage(page);
-        } catch (error) {
-            console.error('Failed to fetch favorites:', error);
-        } finally {
-            setLoading(false);
-        }
-    }, [accessToken, user, navigate]);
-
     useEffect(() => {
         if (!accessToken || !user?._id) {
             navigate('/signin');
@@ -137,29 +118,13 @@ function FavoritesPage() {
         processedImages.current.add(imageId);
         const isPortrait = img.naturalHeight > img.naturalWidth;
         const imageType = isPortrait ? 'portrait' : 'landscape';
-
-        // Update state only if not already set (prevent unnecessary re-renders)
-        setImageTypes(prev => {
-            if (prev.has(imageId)) return prev;
-            const newMap = new Map(prev);
-            newMap.set(imageId, imageType);
-            return newMap;
-        });
-    }, [currentImageIds]);
+        setImageType(imageId, imageType);
+    }, [currentImageIds, setImageType]);
 
     // Update image in the state when stats change
     const handleImageUpdate = useCallback((updatedImage: Image) => {
-        // Update the image in the images array
-        setImages(prevImages => {
-            const index = prevImages.findIndex(img => img._id === updatedImage._id);
-            if (index !== -1) {
-                const newImages = [...prevImages];
-                newImages[index] = updatedImage;
-                return newImages;
-            }
-            return prevImages;
-        });
-    }, []);
+        updateImage(updatedImage._id, updatedImage);
+    }, [updateImage]);
 
     // Download image function - uses backend proxy to avoid CORS issues
     const handleDownloadImage = useCallback(async (image: Image, e: React.MouseEvent) => {

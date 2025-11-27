@@ -3,7 +3,7 @@ import { Users, UserPlus, X, Mail, Crown, Edit, Eye, ChevronDown, ChevronUp, Sea
 import { collectionService } from '@/services/collectionService';
 import type { Collection } from '@/types/collection';
 import { toast } from 'sonner';
-import { useAuthStore } from '@/stores/useAuthStore';
+import { useUserStore } from '@/stores/useUserStore';
 import { userService, type UserSearchResult } from '@/services/userService';
 import './CollectionCollaborators.css';
 
@@ -28,7 +28,7 @@ export default function CollectionCollaborators({
 	isOwner,
 	userPermission,
 }: CollectionCollaboratorsProps) {
-	const { user: currentUser } = useAuthStore();
+	const { user: currentUser } = useUserStore();
 	const [showInviteModal, setShowInviteModal] = useState(false);
 	const [inviteEmail, setInviteEmail] = useState('');
 	const [invitePermission, setInvitePermission] = useState<'view' | 'edit' | 'admin'>('view');

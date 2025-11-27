@@ -1,0 +1,153 @@
+import { create } from 'zustand';
+import { immer } from 'zustand/middleware/immer';
+import { toast } from 'sonner';
+import axios from 'axios';
+import { userService, type PublicUser } from '@/services/userService';
+import { followService } from '@/services/followService';
+import { userStatsService, type UserStats } from '@/services/userStatsService';
+import { collectionService } from '@/services/collectionService';
+import type { ProfileState } from '@/types/store';
+import type { Collection } from '@/types/collection';
+
+export const useProfileStore = create(
+	immer<ProfileState>((set) => ({
+		profileUser: null,
+		profileUserLoading: false,
+		followStats: {
+			followers: 0,
+			following: 0,
+			isFollowing: false,
+		},
+		userStats: null,
+		collections: [],
+		collectionsLoading: false,
+		collectionsCount: 0,
+
+		fetchProfileUser: async (username?: string, userId?: string, signal?: AbortSignal) => {
+			if (username) {
+				set((state) => {
+					state.profileUser = null;
+					state.profileUserLoading = true;
+				});
+
+				try {
+					const userData = await userService.getUserByUsername(username, signal);
+					set((state) => {
+						state.profileUser = userData;
+						state.profileUserLoading = false;
+					});
+				} catch (error) {
+					// Ignore cancelled requests
+					if (axios.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
+						return;
+					}
+					console.error('Failed to fetch user:', error);
+					set((state) => {
+						state.profileUserLoading = false;
+					});
+					toast.error('Không tìm thấy người dùng');
+					throw error;
+				}
+			} else if (userId) {
+				set((state) => {
+					state.profileUser = null;
+					state.profileUserLoading = true;
+				});
+
+				try {
+					const userData = await userService.getUserById(userId, signal);
+					set((state) => {
+						state.profileUser = userData;
+						state.profileUserLoading = false;
+					});
+				} catch (error) {
+					// Ignore cancelled requests
+					if (axios.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
+						return;
+					}
+					console.error('Failed to fetch user:', error);
+					set((state) => {
+						state.profileUserLoading = false;
+					});
+					toast.error('Không tìm thấy người dùng');
+					throw error;
+				}
+			} else {
+				// Viewing own profile - clear profileUser
+				set((state) => {
+					state.profileUser = null;
+					state.profileUserLoading = false;
+				});
+			}
+		},
+
+		fetchFollowStats: async (userId: string, signal?: AbortSignal) => {
+			try {
+				const response = await followService.getUserFollowStats(userId, signal);
+				set((state) => {
+					state.followStats = response.stats;
+				});
+			} catch (error) {
+				// Ignore cancelled requests
+				if (axios.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
+					return;
+				}
+				console.error('Failed to fetch follow stats:', error);
+			}
+		},
+
+		fetchUserStats: async (userId: string, signal?: AbortSignal) => {
+			try {
+				const stats = await userStatsService.getUserStats(userId, signal);
+				set((state) => {
+					state.userStats = stats;
+				});
+			} catch (error) {
+				// Ignore cancelled requests
+				if (axios.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
+					return;
+				}
+				console.error('Failed to fetch user stats:', error);
+			}
+		},
+
+		fetchCollections: async (userId: string, signal?: AbortSignal) => {
+			set((state) => {
+				state.collectionsLoading = true;
+			});
+
+			try {
+				const data = await collectionService.getUserCollections(signal);
+				set((state) => {
+					state.collections = data;
+					state.collectionsCount = data.length;
+					state.collectionsLoading = false;
+				});
+			} catch (error) {
+				// Ignore cancelled requests
+				if (axios.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
+					return;
+				}
+				console.error('Failed to fetch collections:', error);
+				set((state) => {
+					state.collectionsLoading = false;
+				});
+			}
+		},
+
+		clearProfile: () => {
+			set((state) => {
+				state.profileUser = null;
+				state.followStats = {
+					followers: 0,
+					following: 0,
+					isFollowing: false,
+				};
+				state.userStats = null;
+				state.collections = [];
+				state.collectionsCount = 0;
+			});
+		},
+	}))
+);
+

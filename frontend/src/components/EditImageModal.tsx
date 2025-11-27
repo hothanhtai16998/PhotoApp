@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { X, MapPin, Camera, Image as ImageIcon, HelpCircle } from 'lucide-react';
 import type { Image } from '@/types/image';
 import { imageService } from '@/services/imageService';
-import { useAuthStore } from '@/stores/useAuthStore';
+import { useUserStore } from '@/stores/useUserStore';
 import { toast } from 'sonner';
 import { ImageEditor } from './image/ImageEditor';
 import { TagInput } from './ui/TagInput';
@@ -16,7 +16,7 @@ interface EditImageModalProps {
 }
 
 function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProps) {
-  const { user } = useAuthStore();
+  const { user } = useUserStore();
   const [activeTab, setActiveTab] = useState<'details' | 'tags' | 'exif' | 'edit'>('details');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showEditor, setShowEditor] = useState(false);

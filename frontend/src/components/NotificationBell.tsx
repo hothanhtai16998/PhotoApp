@@ -2,12 +2,14 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Bell, X, Check, CheckCheck, Trash2, Users, Image as ImageIcon, Shield, Folder, RefreshCw, Heart, Download, Share2, Upload, CheckCircle, XCircle, Loader2, Star, AlertTriangle, Ban, User, Eye, Key, Mail, Smartphone, LogIn, Megaphone, Wrench, FileText, Sparkles, Flag, UserPlus, UserMinus } from 'lucide-react';
 import { notificationService, type Notification } from '@/services/notificationService';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useUserStore } from '@/stores/useUserStore';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import './NotificationBell.css';
 
 export default function NotificationBell() {
-	const { accessToken, user } = useAuthStore();
+	const { accessToken } = useAuthStore();
+	const { user } = useUserStore();
 	const navigate = useNavigate();
 	const [notifications, setNotifications] = useState<Notification[]>([]);
 	const [unreadCount, setUnreadCount] = useState(0);

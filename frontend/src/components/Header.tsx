@@ -4,6 +4,7 @@ import { memo, useState, useRef, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Shield, Heart, Menu, X, User, LogOut, Info, Palette } from "lucide-react"
 import { useAuthStore } from "@/stores/useAuthStore"
+import { useUserStore } from "@/stores/useUserStore"
 import { useImageStore } from "@/stores/useImageStore"
 import UploadModal from "./UploadModal"
 import { SearchBar, type SearchBarRef } from "./SearchBar"
@@ -22,7 +23,8 @@ import {
 import './Header.css'
 
 export const Header = memo(function Header() {
-  const { accessToken, signOut, user } = useAuthStore()
+  const { accessToken, signOut } = useAuthStore()
+  const { user } = useUserStore()
   const { fetchImages } = useImageStore()
   const navigate = useNavigate()
   const [uploadModalOpen, setUploadModalOpen] = useState(false)

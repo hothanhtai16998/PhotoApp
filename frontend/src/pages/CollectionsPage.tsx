@@ -7,29 +7,50 @@ import type { Image } from '@/types/image';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/utils';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useCollectionsListStore } from '@/stores/useCollectionsListStore';
+import { useCollectionFavoriteStore } from '@/stores/useCollectionFavoriteStore';
 import { Folder, Plus, Trash2, Edit2, Eye, Copy, Lock, Unlock, Search, X, Filter, Heart, FileText } from 'lucide-react';
 import ProgressiveImage from '@/components/ProgressiveImage';
 import CollectionModal from '@/components/CollectionModal';
 import { CollectionShare } from '@/components/collection/CollectionShare';
-import { collectionFavoriteService } from '@/services/collectionFavoriteService';
 import { collectionTemplateService } from '@/services/collectionTemplateService';
 import './CollectionsPage.css';
 
 export default function CollectionsPage() {
 	const { accessToken } = useAuthStore();
 	const navigate = useNavigate();
-	const [collections, setCollections] = useState<Collection[]>([]);
-	const [filteredCollections, setFilteredCollections] = useState<Collection[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [deletingId, setDeletingId] = useState<string | null>(null);
+
+	// Collections list store
+	const {
+		collections,
+		filteredCollections,
+		loading,
+		deletingId,
+		searchQuery,
+		showPublicOnly,
+		sortBy,
+		selectedTag,
+		fetchCollections,
+		deleteCollection,
+		updateCollection,
+		setSearchQuery,
+		setShowPublicOnly,
+		setSortBy,
+		setSelectedTag,
+		clearFilters,
+		refreshCollections,
+	} = useCollectionsListStore();
+
+	// Collection favorite store
+	const {
+		favoriteStatuses,
+		togglingFavoriteId,
+		checkFavorites,
+		toggleFavorite,
+	} = useCollectionFavoriteStore();
+
 	const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
 	const [showEditModal, setShowEditModal] = useState(false);
-	const [searchQuery, setSearchQuery] = useState('');
-	const [showPublicOnly, setShowPublicOnly] = useState(false);
-	const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name' | 'images'>('newest');
-	const [selectedTag, setSelectedTag] = useState<string | null>(null);
-	const [favoriteStatuses, setFavoriteStatuses] = useState<Record<string, boolean>>({});
-	const [togglingFavoriteId, setTogglingFavoriteId] = useState<string | null>(null);
 	const [savingAsTemplate, setSavingAsTemplate] = useState<string | null>(null);
 
 	useEffect(() => {
@@ -41,31 +62,21 @@ export default function CollectionsPage() {
 
 		const loadCollections = async () => {
 			try {
-				setLoading(true);
-				const data = await collectionService.getUserCollections();
-				setCollections(data);
-				setFilteredCollections(data);
-
-				// Check favorite statuses
-				if (data.length > 0) {
-					const collectionIds = data.map(c => c._id).filter(Boolean) as string[];
-					try {
-						const favoritesResponse = await collectionFavoriteService.checkFavorites(collectionIds);
-						setFavoriteStatuses(favoritesResponse.favorites);
-					} catch (error) {
-						console.error('Failed to check favorite statuses:', error);
-					}
+				await fetchCollections();
+				// Check favorite statuses after collections are loaded
+				// Get collections from store state
+				const currentCollections = useCollectionsListStore.getState().collections;
+				if (currentCollections.length > 0) {
+					const collectionIds = currentCollections.map((c) => c._id).filter(Boolean) as string[];
+					await checkFavorites(collectionIds);
 				}
-			} catch (error: unknown) {
-				console.error('Failed to load collections:', error);
-				toast.error('Không thể tải danh sách bộ sưu tập');
-			} finally {
-				setLoading(false);
+			} catch (error) {
+				// Error already handled in store
 			}
 		};
 
 		loadCollections();
-	}, [accessToken, navigate]);
+	}, [accessToken, navigate, fetchCollections, checkFavorites]);
 
 	// Get all unique tags from collections
 	const allTags = useMemo(() => {
@@ -78,67 +89,14 @@ export default function CollectionsPage() {
 		return Array.from(tagSet).sort();
 	}, [collections]);
 
-	// Filter and sort collections
-	useEffect(() => {
-		let filtered = [...collections];
-
-		// Search filter
-		if (searchQuery.trim()) {
-			const query = searchQuery.toLowerCase().trim();
-			filtered = filtered.filter(collection => 
-				collection.name.toLowerCase().includes(query) ||
-				collection.description?.toLowerCase().includes(query) ||
-				collection.tags?.some(tag => tag.toLowerCase().includes(query))
-			);
-		}
-
-		// Tag filter
-		if (selectedTag) {
-			filtered = filtered.filter(collection => 
-				collection.tags?.includes(selectedTag)
-			);
-		}
-
-		// Public filter
-		if (showPublicOnly) {
-			filtered = filtered.filter(collection => collection.isPublic);
-		}
-
-		// Sort
-		filtered.sort((a, b) => {
-			switch (sortBy) {
-				case 'newest':
-					return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-				case 'oldest':
-					return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-				case 'name':
-					return a.name.localeCompare(b.name);
-				case 'images':
-					return (b.imageCount || 0) - (a.imageCount || 0);
-				default:
-					return 0;
-			}
-		});
-
-		setFilteredCollections(filtered);
-	}, [collections, searchQuery, showPublicOnly, sortBy, selectedTag]);
+	// Filtering and sorting is now handled in the store
 
 	const handleDeleteCollection = async (collectionId: string) => {
 		if (!confirm('Bạn có chắc chắn muốn xóa bộ sưu tập này?')) {
 			return;
 		}
 
-		setDeletingId(collectionId);
-		try {
-			await collectionService.deleteCollection(collectionId);
-			setCollections((prev) => prev.filter((c) => c._id !== collectionId));
-			toast.success('Đã xóa bộ sưu tập');
-		} catch (error: unknown) {
-			console.error('Failed to delete collection:', error);
-			toast.error('Không thể xóa bộ sưu tập. Vui lòng thử lại.');
-		} finally {
-			setDeletingId(null);
-		}
+		await deleteCollection(collectionId);
 	};
 
 	const handleCollectionClick = (collection: Collection) => {
@@ -153,15 +111,7 @@ export default function CollectionsPage() {
 
 	const handleCollectionUpdated = () => {
 		// Reload collections after update
-		const reloadCollections = async () => {
-			try {
-				const data = await collectionService.getUserCollections();
-				setCollections(data);
-			} catch (error: unknown) {
-				console.error('Failed to reload collections:', error);
-			}
-		};
-		reloadCollections();
+		refreshCollections();
 	};
 
 	const clearSearch = () => {
@@ -172,40 +122,23 @@ export default function CollectionsPage() {
 		e.stopPropagation();
 		if (!accessToken || !collection._id || togglingFavoriteId === collection._id) return;
 
-		setTogglingFavoriteId(collection._id);
-		try {
-			const response = await collectionFavoriteService.toggleFavorite(collection._id);
-			setFavoriteStatuses(prev => ({
-				...prev,
-				[collection._id]: response.isFavorited,
-			}));
-			toast.success(response.isFavorited ? 'Đã thêm vào yêu thích' : 'Đã xóa khỏi yêu thích');
-		} catch (error: unknown) {
-			console.error('Failed to toggle favorite:', error);
-			toast.error('Không thể cập nhật yêu thích. Vui lòng thử lại.');
-		} finally {
-			setTogglingFavoriteId(null);
-		}
+		await toggleFavorite(collection._id);
 	};
 
 
 	const handleTogglePublic = async (e: React.MouseEvent, collection: Collection) => {
 		e.stopPropagation();
 		try {
-			const updated = await collectionService.updateCollection(collection._id, {
+			await updateCollection(collection._id, {
 				isPublic: !collection.isPublic,
 			});
-			setCollections(prev => 
-				prev.map(c => c._id === collection._id ? updated : c)
-			);
 			toast.success(
-				updated.isPublic 
+				!collection.isPublic 
 					? 'Đã công khai bộ sưu tập' 
 					: 'Đã ẩn bộ sưu tập'
 			);
-		} catch (error: unknown) {
-			console.error('Failed to toggle public:', error);
-			toast.error('Không thể cập nhật. Vui lòng thử lại.');
+		} catch (error) {
+			// Error already handled in store
 		}
 	};
 
@@ -264,8 +197,7 @@ export default function CollectionsPage() {
 			}
 
 			// Reload collections
-			const data = await collectionService.getUserCollections();
-			setCollections(data);
+			await refreshCollections();
 			toast.success('Đã tạo bản sao bộ sưu tập');
 		} catch (error: unknown) {
 			console.error('Failed to duplicate collection:', error);
@@ -395,10 +327,9 @@ export default function CollectionsPage() {
 						{(searchQuery || showPublicOnly) && (
 							<button
 								className="collections-empty-btn"
-								onClick={() => {
-									setSearchQuery('');
-									setShowPublicOnly(false);
-								}}
+							onClick={() => {
+								clearFilters();
+							}}
 							>
 								Xóa bộ lọc
 							</button>

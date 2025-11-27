@@ -1,9 +1,11 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useUserStore } from '@/stores/useUserStore';
 import { useEffect } from 'react';
 
 export default function AdminRoute() {
-    const { user, fetchMe, isInitializing } = useAuthStore();
+    const { isInitializing } = useAuthStore();
+    const { user, fetchMe } = useUserStore();
 
     useEffect(() => {
         if (!user && !isInitializing) {
