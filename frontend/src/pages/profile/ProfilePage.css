@@ -153,6 +153,7 @@
 	grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 	gap: 16px;
 	margin: 24px 0;
+	width: 100%;
 }
 
 .profile-stat-card {
@@ -166,6 +167,8 @@
 	gap: 12px;
 	transition: all 0.2s ease;
 	text-align: left;
+	width: 100%;
+	min-width: 0;
 }
 
 .profile-stat-card:hover {

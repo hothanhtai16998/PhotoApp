@@ -11,7 +11,7 @@ import ProgressiveImage from '@/components/ProgressiveImage';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { ImageIcon, Check, GripVertical, Square, CheckSquare2, Trash2, X, Download, Heart, History, RotateCcw, Clock } from 'lucide-react';
 import { CollectionShare } from '@/components/collection/CollectionShare';
-import CollectionCollaborators from '@/components/collection/CollectionCollaborators';
+import CollectionCollaborators from './components/CollectionCollaborators';
 import ReportButton from '@/components/ReportButton';
 import { collectionFavoriteService } from '@/services/collectionFavoriteService';
 import { collectionVersionService, type CollectionVersion } from '@/services/collectionVersionService';

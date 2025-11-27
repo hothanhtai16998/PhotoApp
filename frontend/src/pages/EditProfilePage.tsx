@@ -314,7 +314,7 @@ function EditProfilePage() {
                                                 <Input id="lastName" {...register('lastName')} />
                                                 <div className="account-badge">
                                                     <CheckCircle2 size={16} />
-                                                    <span>Account Confirmed</span>
+                                                    <span>Checked</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -336,7 +336,7 @@ function EditProfilePage() {
                                         <div className="form-field">
                                             <Label htmlFor="username">Tên đăng nhập</Label>
                                             <Input id="username" {...register('username')} readOnly />
-                                            <p className="field-hint">(only letters, numbers, and underscores)</p>
+                                            <p className="field-hint">(chỉ được nhập ký tự và chữ số)</p>
                                             <p className="field-url">https://photoapp.com/@{watch('username') || user.username}</p>
                                         </div>
                                     </div>
@@ -350,13 +350,13 @@ function EditProfilePage() {
 
                                 {/* About Section */}
                                 <div className="form-section">
-                                    <h3 className="section-title">About</h3>
+                                    <h3 className="section-title">Giới thiệu</h3>
                                     <div className="form-field">
-                                        <Label htmlFor="location">Location</Label>
+                                        <Label htmlFor="location">Địa chỉ</Label>
                                         <Input id="location" {...register('location')} placeholder="e.g., New York, USA" />
                                     </div>
                                     <div className="form-field">
-                                        <Label htmlFor="phone">Phone</Label>
+                                        <Label htmlFor="phone">Số điện thoại</Label>
                                         <Input id="phone" {...register('phone')} type="tel" placeholder="e.g., +1 234 567 8900" />
                                     </div>
                                     <div className="form-field">
@@ -364,7 +364,7 @@ function EditProfilePage() {
                                         <Input id="personalSite" {...register('personalSite')} placeholder="https://" />
                                     </div>
                                     <div className="form-field">
-                                        <Label htmlFor="bio">Bio</Label>
+                                        <Label htmlFor="bio">Tiểu sử</Label>
                                         <textarea
                                             id="bio"
                                             {...register('bio')}
@@ -374,19 +374,14 @@ function EditProfilePage() {
                                         />
                                         <div className="char-counter">{bioCharCount}</div>
                                     </div>
-                                    <div className="form-field">
-                                        <Label htmlFor="interests">Interests (maximum 5)</Label>
-                                        <Input id="interests" {...register('interests')} placeholder="add a tag" />
-                                        <p className="field-hint">Your interests are generated from the types of photos you like, collect, and contribute.</p>
-                                    </div>
                                 </div>
 
                                 {/* Social Section */}
                                 <div className="form-section">
-                                    <h3 className="section-title">Social</h3>
+                                    <h3 className="section-title">Mạng xã hội</h3>
                                     <div className="form-row">
                                         <div className="form-field">
-                                            <Label htmlFor="instagram">Instagram username</Label>
+                                            <Label htmlFor="instagram">Tài khoản Instagram</Label>
                                             <div className="input-with-prefix">
                                                 <span className="input-prefix">@</span>
                                                 <Input id="instagram" {...register('instagram')} placeholder="username" />
@@ -394,7 +389,7 @@ function EditProfilePage() {
                                             <p className="field-hint">So that we can feature you on @photoapp</p>
                                         </div>
                                         <div className="form-field">
-                                            <Label htmlFor="twitter">X (Twitter) username</Label>
+                                            <Label htmlFor="twitter">Tài khoản X (Twitter)</Label>
                                             <div className="input-with-prefix">
                                                 <span className="input-prefix">@</span>
                                                 <Input id="twitter" {...register('twitter')} placeholder="username" />
@@ -404,19 +399,9 @@ function EditProfilePage() {
                                     </div>
                                 </div>
 
-                                {/* Donations Section */}
-                                <div className="form-section">
-                                    <h3 className="section-title">Donations</h3>
-                                    <div className="form-field">
-                                        <Label htmlFor="paypalEmail">PayPal email or username for donations</Label>
-                                        <Input id="paypalEmail" type="email" {...register('paypalEmail')} placeholder="name@domain.com" />
-                                        <p className="field-hint">Note: This email/username will be public</p>
-                                    </div>
-                                </div>
-
                                 {/* Messaging Section */}
                                 <div className="form-section">
-                                    <h3 className="section-title">Messaging</h3>
+                                    <h3 className="section-title">Tin nhắn</h3>
                                     <div className="checkbox-field">
                                         <input
                                             type="checkbox"
@@ -428,7 +413,7 @@ function EditProfilePage() {
                                             Display a 'Message' button on your profile
                                         </Label>
                                     </div>
-                                    <p className="field-hint">Messages will be sent to your email.</p>
+                                    <p className="field-hint">Tin nhắn sẽ được gửi tới email của bạn</p>
                                 </div>
 
                                 {/* Submit Button */}
@@ -442,10 +427,10 @@ function EditProfilePage() {
 
                         {activeSection === 'change-password' && !user?.isOAuthUser && (
                             <form onSubmit={handlePasswordSubmit(onPasswordSubmit)} className="change-password-form">
-                                <h1 className="form-title">Change password</h1>
+                                <h1 className="form-title">Mật khẩu hiện tại</h1>
 
                                 <div className="form-field">
-                                    <Label htmlFor="password">Current password</Label>
+                                    <Label htmlFor="password">Mật khẩu hiện tại</Label>
                                     <Input
                                         id="password"
                                         type="password"
@@ -458,7 +443,7 @@ function EditProfilePage() {
                                 </div>
 
                                 <div className="form-field">
-                                    <Label htmlFor="newPassword">Password</Label>
+                                    <Label htmlFor="newPassword">Mật khẩu mới</Label>
                                     <Input
                                         id="newPassword"
                                         type="password"
@@ -470,7 +455,7 @@ function EditProfilePage() {
                                 </div>
 
                                 <div className="form-field">
-                                    <Label htmlFor="newPasswordMatch">Password confirmation</Label>
+                                    <Label htmlFor="newPasswordMatch">Xác nhận mật khẩu</Label>
                                     <Input
                                         id="newPasswordMatch"
                                         type="password"
@@ -489,7 +474,7 @@ function EditProfilePage() {
 
                                 {passwordSuccess && (
                                     <div className="password-success-message">
-                                        Password changed successfully!
+                                        Mật khẩu thay đổi thành công!
                                     </div>
                                 )}
 

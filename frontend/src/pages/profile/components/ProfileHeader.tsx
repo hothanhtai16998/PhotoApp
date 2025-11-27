@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/Avatar";
-import { ProfileCompletion } from "@/components/ProfileCompletion";
+import { ProfileCompletion } from "./ProfileCompletion";
 import { Edit2, Star, XCircle, MapPin, Globe, Instagram, Twitter, Users, ImageIcon, Folder, Heart, Download, Eye as EyeIcon, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import type { PublicUser } from "@/services/userService";
