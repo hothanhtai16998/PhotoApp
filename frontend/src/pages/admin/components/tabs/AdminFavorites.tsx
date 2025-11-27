@@ -5,9 +5,24 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
 import { Trash2, Search } from 'lucide-react';
 
+interface Favorite {
+    _id: string;
+    user: {
+        _id: string;
+        displayName?: string;
+        username?: string;
+        email?: string;
+    };
+    image: {
+        _id: string;
+        imageTitle?: string;
+    };
+    createdAt: string;
+}
+
 export function AdminFavorites() {
     const { hasPermission, isSuperAdmin } = usePermissions();
-    const [favorites, setFavorites] = useState<unknown[]>([]);
+    const [favorites, setFavorites] = useState<Favorite[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
 
@@ -26,7 +41,7 @@ export function AdminFavorites() {
         try {
             setLoading(true);
             const data = await adminService.getAllFavorites({ page, limit: 20, search });
-            setFavorites(data.favorites);
+            setFavorites((data.favorites as Favorite[]) || []);
             setPagination(data.pagination);
         } catch (error: unknown) {
             const axiosError = error as { response?: { data?: { message?: string } } };

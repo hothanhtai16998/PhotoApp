@@ -43,14 +43,21 @@ export function AdminSettings() {
             setLoading(true);
             const data = await adminService.getSettings();
             if (data.settings) {
+                const settingsData = data.settings as {
+                    siteName?: string;
+                    siteDescription?: string;
+                    maxUploadSize?: number;
+                    allowedFileTypes?: string[] | string;
+                    maintenanceMode?: boolean;
+                };
                 setSettings({
-                    siteName: data.settings.siteName || 'PhotoApp',
-                    siteDescription: data.settings.siteDescription || '',
-                    maxUploadSize: data.settings.maxUploadSize || 10,
-                    allowedFileTypes: Array.isArray(data.settings.allowedFileTypes)
-                        ? data.settings.allowedFileTypes.join(',')
-                        : data.settings.allowedFileTypes || 'jpg,jpeg,png,webp',
-                    maintenanceMode: data.settings.maintenanceMode || false,
+                    siteName: (settingsData.siteName as string) || 'PhotoApp',
+                    siteDescription: (settingsData.siteDescription as string) || '',
+                    maxUploadSize: (settingsData.maxUploadSize as number) || 10,
+                    allowedFileTypes: Array.isArray(settingsData.allowedFileTypes)
+                        ? settingsData.allowedFileTypes.join(',')
+                        : (settingsData.allowedFileTypes as string) || 'jpg,jpeg,png,webp',
+                    maintenanceMode: (settingsData.maintenanceMode as boolean) || false,
                 });
             }
         } catch (error: unknown) {

@@ -84,11 +84,13 @@ export const FollowButton = ({
 		}
 	};
 
+	const buttonSize = size === 'md' ? 'default' : size;
+
 	if (loading) {
 		return (
 			<Button
 				variant={variant}
-				size={size}
+				size={buttonSize}
 				disabled
 				className={`follow-btn ${className}`}
 			>
@@ -100,7 +102,7 @@ export const FollowButton = ({
 	return (
 		<Button
 			variant={isFollowing ? 'outline' : variant}
-			size={size}
+			size={buttonSize}
 			onClick={handleFollow}
 			disabled={actionLoading}
 			className={`follow-btn ${isFollowing ? 'following' : ''} ${className}`}

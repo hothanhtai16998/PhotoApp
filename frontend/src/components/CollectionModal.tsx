@@ -205,7 +205,7 @@ export default function CollectionModal({
 
 			// Create from template if selected
 			if (selectedTemplate) {
-				newCollection = await collectionTemplateService.createCollectionFromTemplate(
+				const result = await collectionTemplateService.createCollectionFromTemplate(
 					selectedTemplate._id,
 					{
 						name: newCollectionName.trim(),
@@ -214,6 +214,7 @@ export default function CollectionModal({
 						tags: newCollectionTags.length > 0 ? newCollectionTags : undefined,
 					}
 				);
+				newCollection = result as unknown as Collection;
 			} else {
 				// Create normally
 				newCollection = await collectionService.createCollection({

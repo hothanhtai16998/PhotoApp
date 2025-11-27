@@ -7,7 +7,14 @@ import { Button } from '@/components/ui/button';
 
 export function AdminLogs() {
     const { hasPermission, isSuperAdmin } = usePermissions();
-    const [logs, setLogs] = useState<unknown[]>([]);
+    interface Log {
+        _id: string;
+        timestamp: string;
+        level?: string;
+        message: string;
+        userId?: string | { displayName?: string; username?: string };
+    }
+    const [logs, setLogs] = useState<Log[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
 
@@ -24,7 +31,7 @@ export function AdminLogs() {
         try {
             setLoading(true);
             const data = await adminService.getSystemLogs({ page, limit: 50, search });
-            setLogs(data.logs);
+            setLogs((data.logs as Log[]) || []);
         } catch (error: unknown) {
             const axiosError = error as { response?: { data?: { message?: string } } };
             toast.error(axiosError.response?.data?.message || 'Lỗi khi tải nhật ký');

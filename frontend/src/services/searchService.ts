@@ -34,7 +34,7 @@ export const searchService = {
         signal, // Pass abort signal for request cancellation
       });
 
-      return res.data.suggestions || [];
+      return (res.data as SearchSuggestionsResponse).suggestions || [];
     } catch (error) {
       // Ignore cancelled requests
       if ((error as { code?: string })?.code === 'ERR_CANCELED' || (error as { name?: string })?.name === 'CanceledError') {
@@ -54,7 +54,7 @@ export const searchService = {
         withCredentials: true,
       });
 
-      return res.data.popular || [];
+      return (res.data as PopularSearchesResponse).popular || [];
     } catch (error) {
       console.error('Failed to fetch popular searches:', error);
       return [];

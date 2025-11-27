@@ -4,12 +4,11 @@ import './countdown-timer.css';
 interface CountdownTimerProps {
   progress: number; // 0-100
   totalDuration: number; // in milliseconds (6200)
-  isPaused: boolean;
 }
 
-export function CountdownTimer({ progress, totalDuration, isPaused }: CountdownTimerProps) {
+export function CountdownTimer({ progress, totalDuration }: CountdownTimerProps) {
   const [seconds, setSeconds] = useState(6);
-  const [prevSeconds, setPrevSeconds] = useState(6);
+  const [, setPrevSeconds] = useState(6);
   const [isFlipping, setIsFlipping] = useState(false);
   const flipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevProgressRef = useRef(0);

@@ -198,7 +198,6 @@ const ImageModal = ({
     isModalImageLoaded,
     setIsModalImageLoaded,
     handleToggleFavorite,
-    handleDownload,
   } = useImageModal({
     image,
     images,
@@ -320,7 +319,7 @@ const ImageModal = ({
         // For scroll events, we need to check if it's the window/document scrolling
         // If it's not the modal content scrolling, prevent it
         const target = e.target as HTMLElement;
-        if (target === document || target === document.documentElement || target === document.body) {
+        if (target === document.documentElement || target === document.body) {
           // This is a body/document scroll - prevent it
           e.preventDefault();
           e.stopPropagation();
@@ -1246,14 +1245,6 @@ const ImageModal = ({
               <ImageModalShare image={image} />
               <ImageModalInfo
                 image={image}
-                onTagClick={(tag: string) => {
-                  // Navigate to homepage and search by tag
-                  onClose();
-                  navigate('/');
-                  setTimeout(() => {
-                    useImageStore.getState().fetchImages({ tag });
-                  }, 100);
-                }}
               />
               {user && user._id !== image.uploadedBy._id && (
                 <ReportButton

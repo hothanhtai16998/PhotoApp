@@ -188,7 +188,7 @@ export const ImageModalShare = memo(({ image }: ImageModalShareProps) => {
     const imageUrl = image.regularUrl || image.smallUrl || image.imageUrl;
     return shareService.generateEmbedCode(imageUrl, {
       width: embedWidth,
-      height: embedHeight,
+      height: embedHeight === 'auto' ? undefined : embedHeight,
       alt: image.imageTitle || 'Photo',
       linkUrl: shareUrl,
     });

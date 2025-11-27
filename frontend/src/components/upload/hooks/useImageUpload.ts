@@ -153,7 +153,7 @@ export const useImageUpload = ({ onSuccess }: UseImageUploadProps = {}) => {
           ...imgData,
           isUploading: false,
           uploadProgress: 0,
-          uploadError: error.message || 'Upload failed',
+          uploadError: (error as Error).message || 'Upload failed',
           preUploadData: null,
         };
       }

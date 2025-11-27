@@ -23,7 +23,9 @@ function getDailyRandomImages(images: Image[], count: number): Image[] {
   for (let i = shuffled.length - 1; i > 0; i--) {
     random = (random * 9301 + 49297) % 233280; // Linear congruential generator
     const j = Math.floor((random / 233280) * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    const temp = shuffled[i]!;
+    shuffled[i] = shuffled[j]!;
+    shuffled[j] = temp;
   }
 
   return shuffled.slice(0, count);
@@ -36,12 +38,12 @@ function Slider() {
   const [loading, setLoading] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
   const [autoPlayProgress, setAutoPlayProgress] = useState(0);
-  const autoPlayIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const autoPlayIntervalRef = useRef<number | null>(null);
+  const progressIntervalRef = useRef<number | null>(null);
   const progressStartTimeRef = useRef<number | null>(null);
   const pausedProgressRef = useRef<number>(0);
   const isAutoPlayChangeRef = useRef<boolean>(false);
-  const nextSlideRef = useRef<() => void>();
+  const nextSlideRef = useRef<(() => void) | undefined>(undefined);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
 
@@ -204,7 +206,7 @@ function Slider() {
       }, 10);
     };
 
-    let timeoutId: NodeJS.Timeout | null = null;
+    let timeoutId: number | null = null;
 
     if (startProgress > 0) {
       // Resume from pause - use setTimeout for the first slide change
@@ -280,7 +282,7 @@ function Slider() {
     if (images.length === 0) return [];
     const current = images[currentSlide];
     const next = images[(currentSlide + 1) % images.length];
-    return [current, next].filter((img): img is Image => img !== undefined);
+    return [current, next].filter((img): img is Image => img !== undefined) as Image[];
   };
 
 
@@ -302,12 +304,14 @@ function Slider() {
 
   // Touch gesture handlers for swipe
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (!e.touches[0]) return;
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStartX.current === null || touchStartY.current === null) return;
+    if (!e.changedTouches[0]) return;
 
     const touchEndX = e.changedTouches[0].clientX;
     const touchEndY = e.changedTouches[0].clientY;

@@ -4,8 +4,8 @@
  * Reduces number of HTTP requests and improves performance
  */
 
-interface BatchedRequest {
-	resolve: (value: unknown) => void;
+interface BatchedRequest<T = unknown> {
+	resolve: (value: T | PromiseLike<T>) => void;
 	reject: (error: unknown) => void;
 	url: string;
 	method: string;
@@ -17,7 +17,7 @@ const BATCH_WINDOW = 50; // 50ms window to collect requests
 const MAX_BATCH_SIZE = 10; // Maximum requests per batch
 
 // Store pending batches
-const pendingBatches = new Map<string, BatchedRequest[]>();
+const pendingBatches = new Map<string, BatchedRequest<unknown>[]>();
 let batchTimer: ReturnType<typeof setTimeout> | null = null;
 
 /**
@@ -51,7 +51,7 @@ export async function batchRequest<T>(
 
 		// Add request to batch
 		batch.push({
-			resolve,
+			resolve: resolve as (value: unknown) => void,
 			reject,
 			url,
 			method: 'GET',

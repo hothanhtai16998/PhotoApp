@@ -143,7 +143,7 @@ function UploadPage() {
                 if (fileInputRef.current) {
                     fileInputRef.current.value = '';
                 }
-                setValue('image', undefined);
+                setValue('image', null as unknown as FileList);
             }
         };
 

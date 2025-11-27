@@ -25,7 +25,7 @@ export const categoryService = {
     const res = await get('/categories', {
       withCredentials: true,
     });
-    const categories = res.data.categories || [];
+    const categories = (res.data as { categories?: Category[] }).categories || [];
 
     // Update cache
     categoriesCache = {
@@ -40,7 +40,7 @@ export const categoryService = {
     const res = await get('/categories/admin', {
       withCredentials: true,
     });
-    return res.data.categories || [];
+    return (res.data as { categories?: Category[] }).categories || [];
   },
 
   createCategory: async (data: {

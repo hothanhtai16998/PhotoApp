@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, memo } from 'react';
-import { ChevronDown, Download } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import type { Image } from '@/types/image';
 
 export type DownloadSize = 'small' | 'medium' | 'large' | 'original';
@@ -22,7 +22,7 @@ const SIZE_OPTIONS: SizeOption[] = [
   { value: 'original', label: 'Original', dimension: 'Full size' },
 ];
 
-export const DownloadSizeSelector = memo(({ image, onDownload }: DownloadSizeSelectorProps) => {
+export const DownloadSizeSelector = memo(({ onDownload }: DownloadSizeSelectorProps) => {
   const [showMenu, setShowMenu] = useState(false);
   const [positionBelow, setPositionBelow] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);

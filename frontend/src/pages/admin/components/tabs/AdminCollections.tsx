@@ -36,7 +36,7 @@ export function AdminCollections() {
                 limit: 20,
                 search: search.trim() || undefined,
             });
-            setCollections(data.collections);
+            setCollections((data.collections as Collection[]) || []);
             setPagination(data.pagination);
         } catch (error: unknown) {
             toast.error(getErrorMessage(error, 'Lỗi khi tải danh sách bộ sưu tập'));

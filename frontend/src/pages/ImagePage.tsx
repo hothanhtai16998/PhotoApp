@@ -97,7 +97,8 @@ function ImagePage() {
         }
       } catch (err: unknown) {
         console.error('Error fetching image:', err);
-        setError(err.response?.data?.message || 'Failed to load image');
+        const axiosError = err as { response?: { data?: { message?: string } } };
+        setError(axiosError.response?.data?.message || 'Failed to load image');
       } finally {
         setLoading(false);
       }

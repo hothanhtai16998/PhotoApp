@@ -17,7 +17,7 @@ export default function NotificationBell() {
 	const [hasNewNotification, setHasNewNotification] = useState(false);
 	const dropdownRef = useRef<HTMLDivElement>(null);
 	const bellButtonRef = useRef<HTMLButtonElement>(null);
-	const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+	const pollingIntervalRef = useRef<number | null>(null);
 	const previousUnreadCountRef = useRef(0);
 
 	// Get notification message helper
@@ -71,7 +71,7 @@ export default function NotificationBell() {
 				}
 			}
 			case 'collection_updated': {
-				const changes = notification.metadata?.changes || [];
+				const changes = (notification.metadata?.changes as string[]) || [];
 				const changeText = changes.length > 0 
 					? changes.join(', ')
 					: 'thông tin';
@@ -117,7 +117,7 @@ export default function NotificationBell() {
 			case 'profile_viewed':
 				return `${actorName} đã xem hồ sơ của bạn`;
 			case 'profile_updated': {
-				const changedFields = notification.metadata?.changedFields || [];
+				const changedFields = (notification.metadata?.changedFields as string[]) || [];
 				if (changedFields.length === 0) {
 					return 'Hồ sơ của bạn đã được cập nhật';
 				}
@@ -142,8 +142,8 @@ export default function NotificationBell() {
 				return `Hồ sơ của bạn đã được cập nhật: ${fieldsText}`;
 			}
 			case 'login_new_device': {
-				const deviceUserAgent = notification.metadata?.userAgent || 'Thiết bị mới';
-				const deviceIpAddress = notification.metadata?.ipAddress || 'IP không xác định';
+				const deviceUserAgent = (notification.metadata?.userAgent as string) || 'Thiết bị mới';
+				const deviceIpAddress = (notification.metadata?.ipAddress as string) || 'IP không xác định';
 				// Extract browser name from user agent
 				const browserName = deviceUserAgent.includes('Chrome') ? 'Chrome' :
 					deviceUserAgent.includes('Firefox') ? 'Firefox' :

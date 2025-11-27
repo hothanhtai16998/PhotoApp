@@ -72,7 +72,7 @@ export function useErrorHandler(options: ErrorHandlerOptions = {}) {
           if (apiError.response.headers) {
             // Convert Axios headers object to plain object
             Object.keys(apiError.response.headers).forEach((key) => {
-              const value = apiError.response.headers?.[key];
+              const value = apiError.response?.headers?.[key];
               if (typeof value === 'string') {
                 headers[key.toLowerCase()] = value;
                 headers[key] = value; // Also keep original case

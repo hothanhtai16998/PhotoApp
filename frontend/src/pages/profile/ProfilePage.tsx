@@ -9,6 +9,7 @@ import type { Image } from "@/types/image";
 import ImageModal from "@/components/ImageModal";
 import ProgressiveImage from "@/components/ProgressiveImage";
 import api from "@/lib/axios";
+import axios from "axios";
 import { generateImageSlug, extractIdFromSlug } from "@/lib/utils";
 import { collectionService } from "@/services/collectionService";
 import type { Collection } from "@/types/collection";
@@ -17,7 +18,6 @@ import { Folder, Eye } from "lucide-react";
 const UserAnalyticsDashboard = lazy(() => import("./components/UserAnalyticsDashboard").then(module => ({ default: module.UserAnalyticsDashboard })));
 import { followService } from "@/services/followService";
 import { userStatsService, type UserStats } from "@/services/userStatsService";
-import { ProfileCompletion } from "./components/ProfileCompletion";
 import { userService, type PublicUser } from "@/services/userService";
 import { ProfileHeader } from "./components/ProfileHeader";
 import { ProfileTabs } from "./components/ProfileTabs";
@@ -83,7 +83,7 @@ function ProfilePage() {
                     setProfileUser(userData);
                 } catch (error) {
                     // Ignore cancelled requests
-                    if (api.isCancel && api.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
+                    if (axios.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
                         return;
                     }
                     console.error('Failed to fetch user:', error);
@@ -101,7 +101,7 @@ function ProfilePage() {
                     setProfileUser(userData);
                 } catch (error) {
                     // Ignore cancelled requests
-                    if (api.isCancel && api.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
+                    if (axios.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
                         return;
                     }
                     console.error('Failed to fetch user:', error);
@@ -213,7 +213,7 @@ function ProfilePage() {
             }
         } catch (error) {
             // Ignore cancelled requests
-            if (api.isCancel && api.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
+            if (axios.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
                 return;
             }
             console.error('Failed to fetch user images:', error);
@@ -250,7 +250,7 @@ function ProfilePage() {
             }
         } catch (error) {
             // Ignore cancelled requests
-            if (api.isCancel && api.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
+            if (axios.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
                 return;
             }
             console.error('Failed to fetch collections:', error);
@@ -277,7 +277,7 @@ function ProfilePage() {
             }
         } catch (error) {
             // Ignore cancelled requests
-            if (api.isCancel && api.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
+            if (axios.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
                 return;
             }
             console.error('Failed to fetch follow stats:', error);
@@ -300,7 +300,7 @@ function ProfilePage() {
             }
         } catch (error) {
             // Ignore cancelled requests
-            if (api.isCancel && api.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
+            if (axios.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
                 return;
             }
             console.error('Failed to fetch user stats:', error);
@@ -353,7 +353,7 @@ function ProfilePage() {
             fetchFollowStats(cancelSignal),
         ]).catch((error) => {
             // Ignore cancellation errors - these are expected when navigating away
-            const isCanceled = (api.isCancel && api.isCancel(error)) || (error as { code?: string })?.code === 'ERR_CANCELED';
+            const isCanceled = axios.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED';
             if (!isCanceled) {
                 console.error('Error fetching profile data:', error);
             }
@@ -607,7 +607,7 @@ function ProfilePage() {
                 <div className="profile-container">
                     {/* Profile Header */}
                     <ProfileHeader
-                        displayUser={displayUser}
+                        displayUser={displayUser as PublicUser}
                         isOwnProfile={isOwnProfile}
                         userStats={userStats}
                         displayUserId={displayUserId}

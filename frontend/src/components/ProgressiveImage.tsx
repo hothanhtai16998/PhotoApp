@@ -473,7 +473,7 @@ const ProgressiveImage = memo(({
     }
   };
 
-  const { avif: currentAvifUrl, webp: currentWebpUrl } = getCurrentUrls();
+  const { webp: currentWebpUrl } = getCurrentUrls();
   const hasAvif = thumbnailAvifUrl || smallAvifUrl || regularAvifUrl || imageAvifUrl;
   
   // Determine sizes attribute based on context

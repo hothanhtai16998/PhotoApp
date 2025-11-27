@@ -43,7 +43,7 @@ export default function CollectionCollaborators({
 	const [searching, setSearching] = useState(false);
 	const [showSearchResults, setShowSearchResults] = useState(false);
 	const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null);
-	const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+	const searchTimeoutRef = useRef<number | null>(null);
 	const searchInputRef = useRef<HTMLInputElement>(null);
 	const searchResultsRef = useRef<HTMLDivElement>(null);
 	const abortControllerRef = useRef<AbortController | null>(null);
@@ -71,7 +71,7 @@ export default function CollectionCollaborators({
 		setSearching(true);
 		try {
 			// Use a smaller limit for faster response, with abort signal
-			const results = await userService.searchUsers(query, 10, currentAbortController.signal);
+			const results = await userService.searchUsers(query, 10);
 			
 			// Pre-compute existing collaborator emails once
 			const existingCollaboratorEmails = new Set(
@@ -81,8 +81,8 @@ export default function CollectionCollaborators({
 			);
 			
 			// Filter efficiently
-			const filteredResults = results.filter(
-				searchUser => 
+			const filteredResults = (results.users || []).filter(
+				(searchUser: { email: string }) => 
 					!existingCollaboratorEmails.has(searchUser.email) && 
 					searchUser.email !== currentUser?.email
 			);
@@ -92,8 +92,8 @@ export default function CollectionCollaborators({
 			setShowSearchResults(query.length >= 2);
 		} catch (error: unknown) {
 			// Ignore aborted requests
-			void error;
-			if (error?.name === 'AbortError' || error?.message === 'canceled') {
+			const err = error as { name?: string; message?: string };
+			if (err?.name === 'AbortError' || err?.message === 'canceled') {
 				return;
 			}
 			
@@ -199,7 +199,8 @@ export default function CollectionCollaborators({
 			setInvitePermission('view');
 		} catch (error: unknown) {
 			console.error('Failed to invite collaborator:', error);
-			toast.error(error.response?.data?.message || 'Không thể mời cộng tác viên. Vui lòng thử lại.');
+			const axiosError = error as { response?: { data?: { message?: string } } };
+			toast.error(axiosError.response?.data?.message || 'Không thể mời cộng tác viên. Vui lòng thử lại.');
 		} finally {
 			setInviting(false);
 		}
@@ -220,7 +221,8 @@ export default function CollectionCollaborators({
 			toast.success('Đã xóa cộng tác viên');
 		} catch (error: unknown) {
 			console.error('Failed to remove collaborator:', error);
-			toast.error(error.response?.data?.message || 'Không thể xóa cộng tác viên. Vui lòng thử lại.');
+			const axiosError = error as { response?: { data?: { message?: string } } };
+			toast.error(axiosError.response?.data?.message || 'Không thể xóa cộng tác viên. Vui lòng thử lại.');
 		} finally {
 			setRemovingCollaborator(null);
 		}
@@ -238,7 +240,8 @@ export default function CollectionCollaborators({
 			toast.success('Đã cập nhật quyền');
 		} catch (error: unknown) {
 			console.error('Failed to update permission:', error);
-			toast.error(error.response?.data?.message || 'Không thể cập nhật quyền. Vui lòng thử lại.');
+			const axiosError = error as { response?: { data?: { message?: string } } };
+			toast.error(axiosError.response?.data?.message || 'Không thể cập nhật quyền. Vui lòng thử lại.');
 		} finally {
 			setUpdatingPermission(null);
 		}
@@ -313,7 +316,7 @@ export default function CollectionCollaborators({
 					) : (
 						<div className="collection-collaborators-list">
 							{collaborators.map((collab, index) => {
-								const collaboratorUser = typeof collab.user === 'object' ? collab.user : null;
+								const collaboratorUser = typeof collab.user === 'object' && collab.user !== null ? collab.user : null;
 								if (!collaboratorUser) return null;
 
 								const isCurrentUser = collaboratorUser._id === currentUser?._id;
@@ -325,12 +328,12 @@ export default function CollectionCollaborators({
 											{collaboratorUser.avatarUrl ? (
 												<img
 													src={collaboratorUser.avatarUrl}
-													alt={collaboratorUser.displayName || collaboratorUser.username}
+													alt={collaboratorUser.displayName || collaboratorUser.username || ''}
 													className="collection-collaborator-avatar"
 												/>
 											) : (
 												<div className="collection-collaborator-avatar-placeholder">
-													{(collaboratorUser.displayName || collaboratorUser.username)[0].toUpperCase()}
+													{((collaboratorUser?.displayName || collaboratorUser?.username) || 'U')[0]?.toUpperCase() || 'U'}
 												</div>
 											)}
 											<div className="collection-collaborator-details">
@@ -464,12 +467,12 @@ export default function CollectionCollaborators({
 													{user.avatarUrl ? (
 														<img
 															src={user.avatarUrl}
-															alt={user.displayName || user.username}
+															alt={user.displayName || user.username || ''}
 															className="user-search-avatar"
 														/>
 													) : (
 														<div className="user-search-avatar-placeholder">
-															{(user.displayName || user.username)[0].toUpperCase()}
+															{((user?.displayName || user?.username) || 'U')[0]?.toUpperCase() || 'U'}
 														</div>
 													)}
 													<div className="user-search-info">

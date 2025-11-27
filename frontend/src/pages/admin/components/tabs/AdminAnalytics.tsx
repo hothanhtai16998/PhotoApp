@@ -90,7 +90,7 @@ export function AdminAnalytics() {
         try {
             setLoading(true);
             const data = await adminService.getAnalytics(days);
-            setAnalytics(data);
+            setAnalytics(data as unknown as AnalyticsData);
         } catch (error: unknown) {
             toast.error(getErrorMessage(error, 'Lỗi khi tải dữ liệu phân tích'));
         } finally {

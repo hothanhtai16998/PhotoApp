@@ -41,7 +41,10 @@ export interface Notification {
 		| 'collection_reported'
 		| 'user_reported'
 		| 'user_followed'
-		| 'user_unfollowed';
+		| 'user_unfollowed'
+		| 'image_removed_admin'
+		| 'user_banned_admin'
+		| 'user_unbanned_admin';
 	collection?: {
 		_id: string;
 		name: string;
@@ -66,6 +69,19 @@ export interface Notification {
 	metadata?: {
 		permission?: string;
 		collectionName?: string;
+		changes?: string[];
+		imageCount?: number;
+		deletedCount?: number;
+		addedCount?: number;
+		reason?: string;
+		bannedBy?: string;
+		unbannedBy?: string;
+		changedFields?: string[];
+		userAgent?: string;
+		ipAddress?: string;
+		successCount?: number;
+		failedCount?: number;
+		totalCount?: number;
 		[key: string]: unknown;
 	};
 	isRead: boolean;

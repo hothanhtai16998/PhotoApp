@@ -1,9 +1,9 @@
 import { Check, X, User, FileText, Phone, Image as ImageIcon, Folder } from 'lucide-react';
-import type { ProfileCompletion } from '@/services/userStatsService';
+import type { ProfileCompletion as ProfileCompletionData } from '@/services/userStatsService';
 import './ProfileCompletion.css';
 
 interface ProfileCompletionProps {
-  completion: ProfileCompletion;
+  completion: ProfileCompletionData;
   onEditProfile?: () => void;
 }
 

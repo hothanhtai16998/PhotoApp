@@ -7,7 +7,15 @@ import { CheckCircle, XCircle, Search } from 'lucide-react';
 
 export function AdminModeration() {
     const { hasPermission, isSuperAdmin } = usePermissions();
-    const [pendingContent, setPendingContent] = useState<unknown[]>([]);
+    interface PendingContentItem {
+        _id: string;
+        title?: string;
+        content?: string;
+        uploadedBy?: { displayName?: string; username?: string };
+        status?: string;
+        createdAt: string;
+    }
+    const [pendingContent, setPendingContent] = useState<PendingContentItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
 
@@ -24,7 +32,7 @@ export function AdminModeration() {
         try {
             setLoading(true);
             const data = await adminService.getPendingContent();
-            setPendingContent(data.content);
+            setPendingContent((data.content as PendingContentItem[]) || []);
         } catch (error: unknown) {
             const axiosError = error as { response?: { data?: { message?: string } } };
             toast.error(axiosError.response?.data?.message || 'Lỗi khi tải nội dung chờ duyệt');

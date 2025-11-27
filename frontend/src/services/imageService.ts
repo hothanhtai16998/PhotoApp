@@ -89,22 +89,32 @@ export const imageService = {
   /**
    * Create bulk upload notification
    */
-  createBulkUploadNotification: async (successCount: number, totalCount: number, failedCount?: number): Promise<void> => {
+  createBulkUploadNotification: async (
+    successCount: number,
+    totalCount: number,
+    failedCount?: number
+  ): Promise<void> => {
     try {
-      await api.post('/images/bulk-upload-notification', {
-        successCount,
-        totalCount,
-        failedCount: failedCount || 0,
-      }, {
-        withCredentials: true,
-      });
+      await api.post(
+        '/images/bulk-upload-notification',
+        {
+          successCount,
+          totalCount,
+          failedCount: failedCount || 0,
+        },
+        {
+          withCredentials: true,
+        }
+      );
     } catch (error) {
       // Silently fail - don't interrupt upload flow if notification fails
       console.error('Failed to create bulk upload notification:', error);
     }
   },
 
-  finalizeImageUpload: async (data: FinalizeImageData): Promise<{ message: string; image: Image }> => {
+  finalizeImageUpload: async (
+    data: FinalizeImageData
+  ): Promise<{ message: string; image: Image }> => {
     const res = await api.post('/images/finalize', data, {
       withCredentials: true,
       timeout: 30000, // 30 seconds should be enough for metadata save
@@ -201,10 +211,14 @@ export const imageService = {
     });
 
     // Handle both old format (just images array) and new format (with pagination)
-    if (res.data.images) {
-      return res.data;
+    const data = res.data as FetchImagesResponse | Image[];
+    if (Array.isArray(data)) {
+      return { images: data };
     }
-    return { images: res.data };
+    if (data.images) {
+      return data;
+    }
+    return { images: [] };
   },
 
   fetchUserImages: async (
@@ -239,10 +253,14 @@ export const imageService = {
       // Cache busting is handled by timestamp query parameter (_t)
     });
 
-    if (res.data.images) {
-      return res.data;
+    const data = res.data as FetchImagesResponse | Image[];
+    if (Array.isArray(data)) {
+      return { images: data };
     }
-    return { images: res.data };
+    if (data.images) {
+      return data;
+    }
+    return { images: [] };
   },
 
   incrementView: async (
@@ -294,7 +312,7 @@ export const imageService = {
       withCredentials: true,
     });
 
-    const locations = res.data.locations || [];
+    const locations = (res.data as { locations?: string[] }).locations || [];
 
     // Update cache
     sessionStorage.setItem(
@@ -337,17 +355,13 @@ export const imageService = {
     const formData = new FormData();
     formData.append('image', editedFile);
 
-    const res = await api.patch(
-      `/images/${imageId}/replace`,
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        withCredentials: true,
-        timeout: 120000,
-      }
-    );
+    const res = await api.patch(`/images/${imageId}/replace`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      withCredentials: true,
+      timeout: 120000,
+    });
 
     return res.data.image;
   },
@@ -361,17 +375,13 @@ export const imageService = {
       formData.append(`images[${index}][file]`, item.file);
     });
 
-    const res = await api.patch(
-      '/images/batch/replace',
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        withCredentials: true,
-        timeout: 300000, // 5 minutes for batch operations
-      }
-    );
+    const res = await api.patch('/images/batch/replace', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      withCredentials: true,
+      timeout: 300000, // 5 minutes for batch operations
+    });
 
     return res.data.images;
   },

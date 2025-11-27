@@ -61,8 +61,8 @@ function SignUpPage() {
         errorMessage: null,
     });
 
-    const emailCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const usernameCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const emailCheckTimeoutRef = useRef<number | null>(null);
+    const usernameCheckTimeoutRef = useRef<number | null>(null);
 
     // Username validation state
     const [usernameStatus, setUsernameStatus] = useState<{

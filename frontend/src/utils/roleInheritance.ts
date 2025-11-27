@@ -80,14 +80,14 @@ export const getInheritedFromRole = (
     role: 'super_admin' | 'admin' | 'moderator',
     permission: string
 ): 'moderator' | 'admin' | null => {
-    if (role === 'admin' && MODERATOR_PERMISSIONS.includes(permission)) {
+    if (role === 'admin' && MODERATOR_PERMISSIONS.includes(permission as typeof MODERATOR_PERMISSIONS[number])) {
         return 'moderator';
     }
     if (role === 'super_admin') {
-        if (MODERATOR_PERMISSIONS.includes(permission)) {
+        if (MODERATOR_PERMISSIONS.includes(permission as typeof MODERATOR_PERMISSIONS[number])) {
             return 'moderator';
         }
-        if (ADMIN_PERMISSIONS.includes(permission)) {
+        if (ADMIN_PERMISSIONS.includes(permission as typeof ADMIN_PERMISSIONS[number])) {
             return 'admin';
         }
     }

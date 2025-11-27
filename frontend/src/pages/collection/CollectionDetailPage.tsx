@@ -23,7 +23,7 @@ export default function CollectionDetailPage() {
 	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const { user } = useAuthStore();
-	
+
 	// Detect if we're on mobile - MOBILE ONLY check
 	const [isMobile, setIsMobile] = useState(() => {
 		if (typeof window === 'undefined') return false;
@@ -63,8 +63,8 @@ export default function CollectionDetailPage() {
 		if (!collection) return [];
 		return Array.isArray(collection.images)
 			? collection.images.filter((img): img is Image => {
-					return typeof img === 'object' && img !== null && '_id' in img;
-			  })
+				return typeof img === 'object' && img !== null && '_id' in img;
+			})
 			: [];
 	}, [collection]);
 
@@ -75,9 +75,9 @@ export default function CollectionDetailPage() {
 			sessionStorage.setItem('imagePage_fromGrid', 'true');
 			// Navigate to ImagePage with images state
 			navigate(`/photos/${imageSlugFromUrl}`, {
-				state: { 
+				state: {
 					images,
-					fromGrid: true 
+					fromGrid: true
 				},
 				replace: true // Replace current URL to avoid back button issues
 			});
@@ -95,10 +95,10 @@ export default function CollectionDetailPage() {
 		// Don't show modal on mobile
 		if (isMobile || window.innerWidth <= 768) return null;
 		if (!imageSlugFromUrl || images.length === 0) return null;
-		
+
 		const shortId = extractIdFromSlug(imageSlugFromUrl);
 		if (!shortId) return null;
-		
+
 		return images.find(img => {
 			const imgShortId = img._id.slice(-12);
 			return imgShortId === shortId;
@@ -129,14 +129,14 @@ export default function CollectionDetailPage() {
 		setCollection(prev => {
 			if (!prev) return prev;
 			// Type guard: ensure images is Image[] before mapping
-			const imageArray = Array.isArray(prev.images) 
+			const imageArray = Array.isArray(prev.images)
 				? prev.images.filter((img): img is Image => typeof img === 'object' && img !== null && '_id' in img)
 				: [];
-			
-			const updatedImages = imageArray.map(img => 
+
+			const updatedImages = imageArray.map(img =>
 				img._id === updatedImage._id ? updatedImage : img
 			);
-			
+
 			return {
 				...prev,
 				images: updatedImages,
@@ -147,8 +147,8 @@ export default function CollectionDetailPage() {
 	// Check if user owns the collection
 	const isOwner = useMemo(() => {
 		if (!collection || !user) return false;
-		const createdBy = typeof collection.createdBy === 'object' 
-			? collection.createdBy._id 
+		const createdBy = typeof collection.createdBy === 'object'
+			? collection.createdBy._id
 			: collection.createdBy;
 		return createdBy === user._id;
 	}, [collection, user]);
@@ -157,11 +157,11 @@ export default function CollectionDetailPage() {
 	const userPermission = useMemo(() => {
 		if (!collection || !user) return undefined;
 		if (isOwner) return 'admin' as const; // Owner has admin permissions
-		
+
 		const collaborator = collection.collaborators?.find(
 			collab => typeof collab.user === 'object' && collab.user._id === user._id
 		);
-		
+
 		return collaborator?.permission;
 	}, [collection, user, isOwner]);
 
@@ -173,8 +173,8 @@ export default function CollectionDetailPage() {
 	// Get current cover image ID
 	const coverImageId = useMemo(() => {
 		if (!collection || !collection.coverImage) return null;
-		return typeof collection.coverImage === 'object' 
-			? collection.coverImage._id 
+		return typeof collection.coverImage === 'object'
+			? collection.coverImage._id
 			: collection.coverImage;
 	}, [collection]);
 
@@ -208,7 +208,7 @@ export default function CollectionDetailPage() {
 	// Handle drop
 	const handleDrop = useCallback(async (targetImageId: string, e: React.DragEvent) => {
 		if (!isOwner || !draggedImageId || !collectionId) return;
-		
+
 		e.preventDefault();
 		e.stopPropagation();
 
@@ -237,11 +237,11 @@ export default function CollectionDetailPage() {
 		// Optimistically update UI
 		setCollection(prev => {
 			if (!prev) return prev;
-			const imageArray = Array.isArray(prev.images) 
+			const imageArray = Array.isArray(prev.images)
 				? prev.images.filter((img): img is Image => typeof img === 'object' && img !== null && '_id' in img)
 				: [];
-			
-			const reorderedImages = newOrder.map(id => 
+
+			const reorderedImages = newOrder.map(id =>
 				imageArray.find(img => img._id === id)
 			).filter((img): img is Image => img !== undefined);
 
@@ -265,7 +265,8 @@ export default function CollectionDetailPage() {
 			toast.success('Đã sắp xếp lại ảnh');
 		} catch (error: unknown) {
 			console.error('Failed to reorder images:', error);
-			toast.error(error.response?.data?.message || 'Không thể sắp xếp lại ảnh. Vui lòng thử lại.');
+			const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+			toast.error(message || 'Không thể sắp xếp lại ảnh. Vui lòng thử lại.');
 			// Reload collection to revert optimistic update
 			const data = await collectionService.getCollectionById(collectionId);
 			setCollection(data);
@@ -323,10 +324,10 @@ export default function CollectionDetailPage() {
 		try {
 			setIsBulkRemoving(true);
 			const imageIdsArray = Array.from(selectedImageIds);
-			
+
 			// Remove images one by one (or we could add a bulk endpoint)
 			await Promise.all(
-				imageIdsArray.map(imageId => 
+				imageIdsArray.map(imageId =>
 					collectionService.removeImageFromCollection(collectionId, imageId)
 				)
 			);
@@ -357,12 +358,13 @@ export default function CollectionDetailPage() {
 			const updatedCollection = await collectionService.updateCollection(collectionId, {
 				coverImage: imageId,
 			});
-			
+
 			setCollection(updatedCollection);
 			toast.success('Đã đặt ảnh làm ảnh bìa');
 		} catch (error: unknown) {
 			console.error('Failed to set cover image:', error);
-			toast.error(error.response?.data?.message || 'Không thể đặt ảnh bìa. Vui lòng thử lại.');
+			const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+			toast.error(message || 'Không thể đặt ảnh bìa. Vui lòng thử lại.');
 		} finally {
 			setUpdatingCover(null);
 		}
@@ -450,12 +452,13 @@ export default function CollectionDetailPage() {
 				collectionId,
 				versionNumber
 			);
-			setCollection(restoredCollection);
+			setCollection(restoredCollection as unknown as Collection);
 			await fetchVersions(); // Reload versions
 			toast.success(`Đã khôi phục về phiên bản ${versionNumber}`);
 		} catch (error: unknown) {
 			console.error('Failed to restore version:', error);
-			toast.error(error.response?.data?.message || 'Không thể khôi phục phiên bản. Vui lòng thử lại.');
+			const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+			toast.error(message || 'Không thể khôi phục phiên bản. Vui lòng thử lại.');
 		} finally {
 			setRestoringVersion(null);
 		}
@@ -501,32 +504,33 @@ export default function CollectionDetailPage() {
 
 		try {
 			toast.loading('Đang tạo file ZIP...', { id: 'export-collection' });
-			
+
 			const blob = await collectionService.exportCollection(collectionId);
 			const blobUrl = URL.createObjectURL(blob);
 			const link = document.createElement('a');
 			link.href = blobUrl;
-			
+
 			// Generate filename from collection name
 			const safeCollectionName = (collection.name || 'collection')
 				.replace(/[^a-z0-9]/gi, '_')
 				.toLowerCase()
 				.substring(0, 50);
 			link.download = `${safeCollectionName}_${Date.now()}.zip`;
-			
+
 			document.body.appendChild(link);
 			link.click();
 			document.body.removeChild(link);
-			
+
 			setTimeout(() => {
 				URL.revokeObjectURL(blobUrl);
 			}, 100);
-			
+
 			toast.success(`Đã xuất ${images.length} ảnh thành công`, { id: 'export-collection' });
 		} catch (error: unknown) {
 			console.error('Export failed:', error);
+			const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
 			toast.error(
-				error.response?.data?.message || 'Xuất bộ sưu tập thất bại. Vui lòng thử lại.',
+				message || 'Xuất bộ sưu tập thất bại. Vui lòng thử lại.',
 				{ id: 'export-collection' }
 			);
 		}
@@ -641,13 +645,13 @@ export default function CollectionDetailPage() {
 								{collection?.isPublic && (
 									<div onClick={(e) => e.stopPropagation()}>
 										<CollectionShare collection={collection} />
-									{user && user._id !== (typeof collection.createdBy === 'object' ? collection.createdBy._id : collection.createdBy) && (
-										<ReportButton
-											type="collection"
-											targetId={collection._id}
-											targetName={collection.name}
-										/>
-									)}
+										{user && user._id !== (typeof collection.createdBy === 'object' ? collection.createdBy._id : collection.createdBy) && (
+											<ReportButton
+												type="collection"
+												targetId={collection._id}
+												targetName={collection.name}
+											/>
+										)}
 									</div>
 								)}
 								{images.length > 0 && collection && (
@@ -821,7 +825,7 @@ export default function CollectionDetailPage() {
 								const isDragging = draggedImageId === image._id;
 								const isDragOver = dragOverImageId === image._id;
 								const isSelected = selectedImageIds.has(image._id);
-								
+
 								return (
 									<div
 										key={image._id}
@@ -846,22 +850,15 @@ export default function CollectionDetailPage() {
 												sessionStorage.setItem('imagePage_fromGrid', 'true');
 												// Pass images via state for navigation
 												navigate(`/photos/${slug}`, {
-													state: { 
+													state: {
 														images,
-														fromGrid: true 
+														fromGrid: true
 													}
 												});
 												return;
 											}
 
 											// DESKTOP: Use modal (existing behavior)
-											setSearchParams(prev => {
-												const newParams = new URLSearchParams(prev);
-												newParams.set('image', slug);
-												return newParams;
-											});
-										}}
-											// Update URL search params instead of navigating
 											setSearchParams(prev => {
 												const newParams = new URLSearchParams(prev);
 												newParams.set('image', slug);
@@ -890,7 +887,7 @@ export default function CollectionDetailPage() {
 										)}
 										{/* Selection Checkbox */}
 										{selectionMode && (
-											<div 
+											<div
 												className={`collection-image-checkbox ${isSelected ? 'checked' : ''}`}
 												onClick={(e) => {
 													e.stopPropagation();

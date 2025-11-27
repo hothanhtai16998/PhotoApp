@@ -70,6 +70,6 @@ export interface ImageState {
 		color?: string;
 		tag?: string;
 		_refresh?: boolean;
-	}) => Promise<void>;
+	}, signal?: AbortSignal) => Promise<void>;
 	removeImage: (imageId: string) => void;
 }

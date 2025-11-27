@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { collectionService } from '@/services/collectionService';
 import type { Collection } from '@/types/collection';
+import type { Image } from '@/types/image';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/utils';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -248,7 +249,7 @@ export default function CollectionsPage() {
 					.filter((img): img is string => typeof img === 'string')
 					.concat(
 						collection.images
-							.filter((img): img is { _id: string } => typeof img === 'object' && img !== null && '_id' in img)
+							.filter((img): img is Image => typeof img === 'object' && img !== null && '_id' in img)
 							.map(img => img._id)
 					);
 

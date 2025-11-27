@@ -36,7 +36,7 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
     updateHeaderHeight()
 
     // Update on window resize - debounce to prevent excessive updates
-    let resizeTimer: NodeJS.Timeout | null = null
+    let resizeTimer: number | null = null
     const handleResize = () => {
       if (resizeTimer) clearTimeout(resizeTimer)
       resizeTimer = setTimeout(updateHeaderHeight, 100)
