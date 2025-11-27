@@ -280,7 +280,7 @@ export const imageService = {
             // 5 minutes cache
             return data;
           }
-        } catch (e) {
+        } catch {
           // Invalid cache, continue to fetch
         }
       }

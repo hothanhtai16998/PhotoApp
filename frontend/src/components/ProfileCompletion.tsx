@@ -1,5 +1,4 @@
 import { Check, X, User, FileText, Phone, Image as ImageIcon, Folder } from 'lucide-react';
-import { Button } from './ui/button';
 import type { ProfileCompletion } from '@/services/userStatsService';
 import './ProfileCompletion.css';
 

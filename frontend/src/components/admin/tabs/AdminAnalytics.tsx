@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { adminService } from '@/services/adminService';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/utils';
 import { BarChart2, Calendar, ArrowUp, ArrowDown, MoreVertical } from 'lucide-react';
 import { AreaChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart } from 'recharts';
 
@@ -90,8 +91,8 @@ export function AdminAnalytics() {
             setLoading(true);
             const data = await adminService.getAnalytics(days);
             setAnalytics(data);
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi tải dữ liệu phân tích');
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error, 'Lỗi khi tải dữ liệu phân tích'));
         } finally {
             setLoading(false);
         }
@@ -101,14 +102,16 @@ export function AdminAnalytics() {
         try {
             const data = await adminService.getRealtimeAnalytics();
             setRealtimeData(data);
-        } catch (error: any) {
+        } catch (error: unknown) {
             // Silently fail for realtime data to avoid spamming errors
+            void error;
             console.error('Failed to load realtime data:', error);
         }
     };
 
     useEffect(() => {
         loadAnalytics();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [days]);
 
     // Load realtime data on mount and set up polling
@@ -206,7 +209,7 @@ export function AdminAnalytics() {
             const currentValue = dataMap.get(dateStr) || 0;
             // For month-over-month comparison, try to find the same date in previous month from current data
             // If not found in current data, try comparison map (which has previous period data)
-            let comparisonValue = dataMap.get(comparisonDateStr) || comparisonMap.get(comparisonDateStr) || 0;
+            const comparisonValue = dataMap.get(comparisonDateStr) || comparisonMap.get(comparisonDateStr) || 0;
             
             // Calculate percentage change
             const percentageChange = comparisonValue > 0 

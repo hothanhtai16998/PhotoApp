@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/utils';
 import { categoryService, type Category } from '@/services/categoryService';
 import { imageService, type PreUploadResponse, type FinalizeImageData } from '@/services/imageService';
 import { compressImage } from '@/utils/imageCompression';
@@ -89,8 +90,8 @@ export const useImageUpload = ({ onSuccess }: UseImageUploadProps = {}) => {
       );
 
       return result;
-    } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to upload image';
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, 'Failed to upload image');
       throw new Error(errorMessage);
     }
   }, []);
@@ -146,7 +147,7 @@ export const useImageUpload = ({ onSuccess }: UseImageUploadProps = {}) => {
         
         // Send final 100% update, then mark as not uploading
         onImageProgress?.(i, 100);
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Mark as failed
         updatedImagesData[i] = {
           ...imgData,

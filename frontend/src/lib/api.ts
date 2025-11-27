@@ -10,7 +10,7 @@ import type { AxiosRequestConfig, AxiosResponse } from 'axios';
 /**
  * Enhanced GET request with deduplication
  */
-export async function get<T = any>(
+export async function get<T = unknown>(
 	url: string,
 	config?: AxiosRequestConfig
 ): Promise<AxiosResponse<T>> {
@@ -25,9 +25,9 @@ export async function get<T = any>(
 /**
  * Enhanced POST request (no deduplication for mutations)
  */
-export async function post<T = any>(
+export async function post<T = unknown>(
 	url: string,
-	data?: any,
+	data?: unknown,
 	config?: AxiosRequestConfig
 ): Promise<AxiosResponse<T>> {
 	return api.post<T>(url, data, config);
@@ -36,9 +36,9 @@ export async function post<T = any>(
 /**
  * Enhanced PUT request (no deduplication for mutations)
  */
-export async function put<T = any>(
+export async function put<T = unknown>(
 	url: string,
-	data?: any,
+	data?: unknown,
 	config?: AxiosRequestConfig
 ): Promise<AxiosResponse<T>> {
 	return api.put<T>(url, data, config);
@@ -47,7 +47,7 @@ export async function put<T = any>(
 /**
  * Enhanced DELETE request (no deduplication for mutations)
  */
-export async function del<T = any>(
+export async function del<T = unknown>(
 	url: string,
 	config?: AxiosRequestConfig
 ): Promise<AxiosResponse<T>> {
@@ -57,9 +57,9 @@ export async function del<T = any>(
 /**
  * Enhanced PATCH request (no deduplication for mutations)
  */
-export async function patch<T = any>(
+export async function patch<T = unknown>(
 	url: string,
-	data?: any,
+	data?: unknown,
 	config?: AxiosRequestConfig
 ): Promise<AxiosResponse<T>> {
 	return api.patch<T>(url, data, config);

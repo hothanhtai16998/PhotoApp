@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Flag } from 'lucide-react';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/utils';
 import { reportService, type ReportType, type ReportReason } from '@/services/reportService';
 import './ReportButton.css';
 
@@ -47,9 +48,9 @@ export default function ReportButton({ type, targetId, targetName, className = '
             setShowModal(false);
             setReason('');
             setDescription('');
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Failed to submit report:', error);
-            toast.error(error.response?.data?.message || 'Không thể gửi báo cáo. Vui lòng thử lại.');
+            toast.error(getErrorMessage(error, 'Không thể gửi báo cáo. Vui lòng thử lại.'));
         } finally {
             setSubmitting(false);
         }

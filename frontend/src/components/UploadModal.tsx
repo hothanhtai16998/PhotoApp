@@ -61,14 +61,6 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
             !img.uploadError // No upload errors
         );
 
-    // Get upload status for user feedback
-    const uploadStatus = {
-        total: imagesData.length,
-        uploading: imagesData.filter(img => img.isUploading).length,
-        uploaded: imagesData.filter(img => img.preUploadData && !img.uploadError).length,
-        failed: imagesData.filter(img => img.uploadError).length,
-        needsUpload: imagesData.filter(img => !img.preUploadData && !img.isUploading && !img.uploadError).length,
-    };
 
     // Initialize imagesData when files are selected
     useEffect(() => {
@@ -193,6 +185,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                 uploadInProgressRef.current = false;
             }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [imagesData.length, preUploadAllImages]); // Only trigger when imagesData length changes (new files added)
 
     const handleDrag = (e: React.DragEvent) => {
@@ -364,15 +357,6 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
 
     if (!isOpen || !accessToken) return null;
 
-    // Check if any images are currently uploading (pre-upload phase)
-    const isPreUploading = imagesData.some(img => img.isUploading === true);
-    const preUploadingCount = imagesData.filter(img => img.isUploading === true).length;
-    const totalPreUploading = imagesData.length;
-    const overallPreUploadProgress = imagesData.length > 0
-        ? Math.round(
-            imagesData.reduce((sum, img) => sum + (img.uploadProgress || 0), 0) / imagesData.length
-          )
-        : 0;
 
 
     // Progress Screen (finalize phase)

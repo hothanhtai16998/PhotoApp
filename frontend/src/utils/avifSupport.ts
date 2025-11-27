@@ -5,18 +5,22 @@
 export async function detectAvifSupport(): Promise<boolean> {
 	// Check if already cached
 	if (typeof window !== 'undefined' && 'avifSupport' in window) {
-		return (window as any).avifSupport as boolean;
+		return (window as { avifSupport?: boolean }).avifSupport ?? false;
 	}
 
 	// Create a test image to check AVIF support
 	return new Promise((resolve) => {
 		const img = new Image();
 		img.onload = () => {
-			(window as any).avifSupport = true;
+			if (typeof window !== 'undefined') {
+				(window as { avifSupport?: boolean }).avifSupport = true;
+			}
 			resolve(true);
 		};
 		img.onerror = () => {
-			(window as any).avifSupport = false;
+			if (typeof window !== 'undefined') {
+				(window as { avifSupport?: boolean }).avifSupport = false;
+			}
 			resolve(false);
 		};
 		// Use a 1x1 AVIF test image (data URI)

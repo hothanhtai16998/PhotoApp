@@ -7,7 +7,7 @@ import { Trash2, Search } from 'lucide-react';
 
 export function AdminFavorites() {
     const { hasPermission, isSuperAdmin } = usePermissions();
-    const [favorites, setFavorites] = useState<any[]>([]);
+    const [favorites, setFavorites] = useState<unknown[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
 
@@ -38,6 +38,7 @@ export function AdminFavorites() {
 
     useEffect(() => {
         loadFavorites(1);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [search]);
 
     const handleDeleteFavorite = async (userId: string, imageId: string) => {

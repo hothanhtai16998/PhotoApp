@@ -86,6 +86,7 @@ export const useImagePreload = (image: Image): UseImagePreloadReturn => {
     // Set immediately (synchronous) to prevent flashing
     // Note: Linter warns about setState in useLayoutEffect, but this is intentional
     // to prevent visual flashing when changing images
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPlaceholderSrc(placeholder);
     setImageSrc(fullImage);
   }, [
@@ -124,6 +125,7 @@ export const useImagePreload = (image: Image): UseImagePreloadReturn => {
         modalImageCache.add(fullImage);
         // Set state synchronously to prevent flashing - this is intentional
         // Note: This triggers a linter warning, but it's necessary to prevent flashing
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setIsLoaded(true);
       } else {
         // Check cache asynchronously

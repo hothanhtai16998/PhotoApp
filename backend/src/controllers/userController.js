@@ -64,6 +64,11 @@ export const authMe = asyncHandler(async (req, res) => {
             avatarUrl: user.avatarUrl,
             bio: user.bio,
             phone: user.phone,
+            location: user.location,
+            website: user.website,
+            instagram: user.instagram,
+            twitter: user.twitter,
+            facebook: user.facebook,
             isOAuthUser: user.isOAuthUser,
             isAdmin: user.isAdmin || false,
             isSuperAdmin: user.isSuperAdmin || false,
@@ -132,7 +137,7 @@ export const forgotPassword = asyncHandler(async (req, res) => { })
 
 export const changeInfo = asyncHandler(async (req, res) => {
     const userId = req.user._id;
-    const { firstName, lastName, email, bio } = req.body;
+    const { firstName, lastName, email, bio, location, website, instagram, twitter, facebook } = req.body;
 
     // Get current user to check for existing avatar
     const currentUser = await User.findById(userId);
@@ -188,6 +193,33 @@ export const changeInfo = asyncHandler(async (req, res) => {
     // Update bio if provided
     if (bio !== undefined) {
         updateData.bio = bio.trim() || undefined;
+    }
+
+    // Update location if provided
+    if (location !== undefined) {
+        updateData.location = location.trim() || undefined;
+    }
+
+    // Update website if provided
+    if (website !== undefined) {
+        const websiteValue = website.trim() || undefined;
+        // Ensure website has protocol if provided
+        if (websiteValue && !websiteValue.startsWith('http://') && !websiteValue.startsWith('https://')) {
+            updateData.website = `https://${websiteValue}`;
+        } else {
+            updateData.website = websiteValue;
+        }
+    }
+
+    // Update social links if provided
+    if (instagram !== undefined) {
+        updateData.instagram = instagram.trim().replace(/^@/, '') || undefined; // Remove @ if present
+    }
+    if (twitter !== undefined) {
+        updateData.twitter = twitter.trim().replace(/^@/, '') || undefined; // Remove @ if present
+    }
+    if (facebook !== undefined) {
+        updateData.facebook = facebook.trim() || undefined;
     }
 
     // Handle avatar upload if file is provided
@@ -387,7 +419,7 @@ export const getUserByUsername = asyncHandler(async (req, res) => {
     const { username } = req.params;
     
     const user = await User.findOne({ username: username.toLowerCase() })
-        .select('username displayName avatarUrl bio createdAt')
+        .select('username displayName avatarUrl bio location website instagram twitter facebook createdAt')
         .lean();
     
     if (!user) {
@@ -403,6 +435,11 @@ export const getUserByUsername = asyncHandler(async (req, res) => {
             displayName: user.displayName,
             avatarUrl: user.avatarUrl || '',
             bio: user.bio || '',
+            location: user.location || '',
+            website: user.website || '',
+            instagram: user.instagram || '',
+            twitter: user.twitter || '',
+            facebook: user.facebook || '',
             createdAt: user.createdAt,
         },
     });
@@ -417,7 +454,7 @@ export const getUserById = asyncHandler(async (req, res) => {
     const { userId } = req.params;
     
     const user = await User.findById(userId)
-        .select('username displayName avatarUrl bio createdAt')
+        .select('username displayName avatarUrl bio location website instagram twitter facebook createdAt')
         .lean();
     
     if (!user) {
@@ -433,6 +470,11 @@ export const getUserById = asyncHandler(async (req, res) => {
             displayName: user.displayName,
             avatarUrl: user.avatarUrl || '',
             bio: user.bio || '',
+            location: user.location || '',
+            website: user.website || '',
+            instagram: user.instagram || '',
+            twitter: user.twitter || '',
+            facebook: user.facebook || '',
             createdAt: user.createdAt,
         },
     });

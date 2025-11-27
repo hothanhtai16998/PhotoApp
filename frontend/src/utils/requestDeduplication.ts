@@ -5,7 +5,7 @@
  */
 
 interface PendingRequest {
-	promise: Promise<any>;
+	promise: Promise<unknown>;
 	timestamp: number;
 }
 
@@ -20,7 +20,7 @@ const DEDUPLICATION_WINDOW = 1000; // 1 second window
  * @param data - Request data (for POST/PUT)
  * @returns Unique request key
  */
-function generateRequestKey(method: string, url: string, data?: any): string {
+function generateRequestKey(method: string, url: string, data?: unknown): string {
 	const dataStr = data ? JSON.stringify(data) : '';
 	return `${method}:${url}:${dataStr}`;
 }
@@ -38,7 +38,7 @@ export async function deduplicateRequest<T>(
 	method: string,
 	url: string,
 	requestFn: () => Promise<T>,
-	data?: any
+	data?: unknown
 ): Promise<T> {
 	const key = generateRequestKey(method, url, data);
 	const now = Date.now();

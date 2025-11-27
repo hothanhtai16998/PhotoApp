@@ -8,6 +8,11 @@ export interface User {
 	avatarUrl?: string;
 	bio?: string;
 	phone?: string;
+	location?: string;
+	website?: string;
+	instagram?: string;
+	twitter?: string;
+	facebook?: string;
 	isOAuthUser?: boolean;
 	isAdmin?: boolean;
 	isSuperAdmin?: boolean;

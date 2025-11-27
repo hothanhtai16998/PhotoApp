@@ -22,8 +22,8 @@ export interface CollectionVersion {
         type: 'created' | 'updated' | 'image_added' | 'image_removed' | 'reordered' | 'collaborator_added' | 'collaborator_removed' | 'permission_changed';
         description?: string;
         fieldChanged?: string;
-        oldValue?: any;
-        newValue?: any;
+        oldValue?: unknown;
+        newValue?: unknown;
         imageId?: string | { _id: string; thumbnailUrl?: string; imageTitle?: string };
         collaboratorId?: string | { _id: string; username: string; displayName: string; avatarUrl?: string };
     };
@@ -51,7 +51,7 @@ interface VersionResponse {
 interface RestoreResponse {
     success: boolean;
     message: string;
-    collection: any;
+    collection: Record<string, unknown>;
 }
 
 export const collectionVersionService = {
@@ -90,7 +90,7 @@ export const collectionVersionService = {
     restoreCollectionVersion: async (
         collectionId: string,
         versionNumber: number
-    ): Promise<any> => {
+    ): Promise<Record<string, unknown>> => {
         const response = await api.post<RestoreResponse>(
             `/collection-versions/collection/${collectionId}/version/${versionNumber}/restore`,
             {},
@@ -98,7 +98,7 @@ export const collectionVersionService = {
                 withCredentials: true,
             }
         );
-        return response.data.collection;
+        return response.data.collection as Record<string, unknown>;
     },
 };
 

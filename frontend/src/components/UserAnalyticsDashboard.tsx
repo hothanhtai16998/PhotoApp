@@ -5,11 +5,7 @@ import { Eye, Download, Image as ImageIcon, TrendingUp, MapPin, Folder } from 'l
 import { toast } from 'sonner';
 import './UserAnalyticsDashboard.css';
 
-interface UserAnalyticsDashboardProps {
-  userId?: string;
-}
-
-export const UserAnalyticsDashboard = ({}: UserAnalyticsDashboardProps) => {
+export const UserAnalyticsDashboard = () => {
   const [analytics, setAnalytics] = useState<UserAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(30);

@@ -11,7 +11,6 @@ interface UploadPreviewProps {
 
 export const UploadPreview = ({ imageData, index, totalImages, onRemove }: UploadPreviewProps) => {
   const isUploading = imageData.isUploading === true;
-  const uploadProgress = imageData.uploadProgress || 0;
   const uploadError = imageData.uploadError;
   const hasPreUploadData = !!imageData.preUploadData;
   const isUploaded = hasPreUploadData && !uploadError && !isUploading;

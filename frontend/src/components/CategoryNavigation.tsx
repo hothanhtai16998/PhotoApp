@@ -171,7 +171,7 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
         cancelAnimationFrame(rafId)
       }
     }
-  }, [headerHeight])
+  }, [headerHeight, isSticky])
 
   // Fetch categories from backend
   useEffect(() => {

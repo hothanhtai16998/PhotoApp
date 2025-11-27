@@ -4,6 +4,7 @@ import { collectionService } from '@/services/collectionService';
 import { collectionTemplateService, type CollectionTemplate } from '@/services/collectionTemplateService';
 import type { Collection } from '@/types/collection';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/utils';
 import './CollectionModal.css';
 
 interface CollectionModalProps {
@@ -41,7 +42,6 @@ export default function CollectionModal({
 		new Set()
 	);
 	const [templates, setTemplates] = useState<CollectionTemplate[]>([]);
-	const [loadingTemplates, setLoadingTemplates] = useState(false);
 	const [selectedTemplate, setSelectedTemplate] = useState<CollectionTemplate | null>(null);
 	const [showTemplates, setShowTemplates] = useState(false);
 
@@ -100,15 +100,12 @@ export default function CollectionModal({
 		if (!isOpen || isEditMode) return;
 
 		const loadTemplates = async () => {
-			setLoadingTemplates(true);
 			try {
 				const templatesData = await collectionTemplateService.getTemplates();
 				setTemplates(templatesData);
-			} catch (error: any) {
+			} catch (error: unknown) {
 				console.error('Failed to load templates:', error);
 				// Don't show error toast for templates, it's optional
-			} finally {
-				setLoadingTemplates(false);
 			}
 		};
 
@@ -140,7 +137,7 @@ export default function CollectionModal({
 					containingCollections.map((c) => c._id)
 				);
 				setCollectionsContainingImage(containingIds);
-			} catch (error: any) {
+			} catch (error: unknown) {
 				console.error('Failed to load collections:', error);
 				toast.error('Không thể tải danh sách bộ sưu tập');
 			} finally {
@@ -186,11 +183,10 @@ export default function CollectionModal({
 					toast.success('Đã thêm ảnh vào bộ sưu tập');
 				}
 				onCollectionUpdate?.();
-			} catch (error: any) {
+			} catch (error: unknown) {
 				console.error('Failed to toggle collection:', error);
 				toast.error(
-					error.response?.data?.message ||
-						'Không thể cập nhật bộ sưu tập. Vui lòng thử lại.'
+					getErrorMessage(error, 'Không thể cập nhật bộ sưu tập. Vui lòng thử lại.')
 				);
 			}
 		},
@@ -253,10 +249,10 @@ export default function CollectionModal({
 
 			toast.success('Đã tạo bộ sưu tập' + (imageId ? ' và thêm ảnh' : ''));
 			onCollectionUpdate?.();
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error('Failed to create collection:', error);
 			toast.error(
-				error.response?.data?.message || 'Không thể tạo bộ sưu tập. Vui lòng thử lại.'
+				getErrorMessage(error, 'Không thể tạo bộ sưu tập. Vui lòng thử lại.')
 			);
 		} finally {
 			setCreating(false);
@@ -289,10 +285,10 @@ export default function CollectionModal({
 			toast.success('Đã cập nhật bộ sưu tập');
 			onCollectionUpdate?.();
 			onClose();
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error('Failed to update collection:', error);
 			toast.error(
-				error.response?.data?.message || 'Không thể cập nhật bộ sưu tập. Vui lòng thử lại.'
+				getErrorMessage(error, 'Không thể cập nhật bộ sưu tập. Vui lòng thử lại.')
 			);
 		} finally {
 			setEditing(false);

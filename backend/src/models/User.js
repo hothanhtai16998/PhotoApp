@@ -89,9 +89,42 @@ const userSchema = new mongoose.Schema(
             type: String,
             maxlength: 500,
         },
-        // location: {
-        //     type: String,
-        // }
+        location: {
+            type: String,
+            trim: true,
+        },
+        website: {
+            type: String,
+            trim: true,
+            validate: {
+                validator: function(v) {
+                    if (!v) return true; // Allow empty
+                    // Basic URL validation
+                    try {
+                        new URL(v.startsWith('http') ? v : `https://${v}`);
+                        return true;
+                    } catch {
+                        return false;
+                    }
+                },
+                message: 'Website must be a valid URL'
+            }
+        },
+        instagram: {
+            type: String,
+            trim: true,
+            lowercase: true,
+        },
+        twitter: {
+            type: String,
+            trim: true,
+            lowercase: true,
+        },
+        facebook: {
+            type: String,
+            trim: true,
+            lowercase: true,
+        },
         // Enhanced Profile Statistics
         profileViews: {
             type: Number,

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Users, UserPlus, X, Mail, Crown, Edit, Eye, ChevronDown, ChevronUp, Search, Loader2 } from 'lucide-react';
 import { collectionService } from '@/services/collectionService';
-import type { Collection, CollectionCollaborator } from '@/types/collection';
+import type { Collection } from '@/types/collection';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { userService, type UserSearchResult } from '@/services/userService';
@@ -10,6 +10,7 @@ import './CollectionCollaborators.css';
 // Custom event to trigger notification refresh
 const NOTIFICATION_REFRESH_EVENT = 'notification:refresh';
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const triggerNotificationRefresh = () => {
 	window.dispatchEvent(new CustomEvent(NOTIFICATION_REFRESH_EVENT));
 };
@@ -50,11 +51,6 @@ export default function CollectionCollaborators({
 	// Check if user can manage collaborators (owner or admin)
 	const canManageCollaborators = isOwner || userPermission === 'admin';
 
-	// Get current user's collaborator info
-	const currentUserCollaborator = collection.collaborators?.find(
-		collab => typeof collab.user === 'object' && collab.user._id === currentUser?._id
-	);
-
 	// User search handler - optimized with caching
 	const handleSearch = useCallback(async (query: string) => {
 		if (!query || query.length < 2) {
@@ -94,8 +90,9 @@ export default function CollectionCollaborators({
 			setSearchResults(filteredResults);
 			// Always show dropdown if we have a query (even if no results, to show "no results" message)
 			setShowSearchResults(query.length >= 2);
-		} catch (error: any) {
+		} catch (error: unknown) {
 			// Ignore aborted requests
+			void error;
 			if (error?.name === 'AbortError' || error?.message === 'canceled') {
 				return;
 			}
@@ -200,7 +197,7 @@ export default function CollectionCollaborators({
 			setSearchQuery('');
 			setSelectedUser(null);
 			setInvitePermission('view');
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error('Failed to invite collaborator:', error);
 			toast.error(error.response?.data?.message || 'Không thể mời cộng tác viên. Vui lòng thử lại.');
 		} finally {
@@ -221,7 +218,7 @@ export default function CollectionCollaborators({
 			);
 			onCollectionUpdate(updatedCollection);
 			toast.success('Đã xóa cộng tác viên');
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error('Failed to remove collaborator:', error);
 			toast.error(error.response?.data?.message || 'Không thể xóa cộng tác viên. Vui lòng thử lại.');
 		} finally {
@@ -239,7 +236,7 @@ export default function CollectionCollaborators({
 			);
 			onCollectionUpdate(updatedCollection);
 			toast.success('Đã cập nhật quyền');
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error('Failed to update permission:', error);
 			toast.error(error.response?.data?.message || 'Không thể cập nhật quyền. Vui lòng thử lại.');
 		} finally {

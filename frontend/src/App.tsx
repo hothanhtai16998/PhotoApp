@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect } from "react";
+import { lazy, Suspense } from "react";
 import { Route, Routes } from "react-router";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AdminRoute from "./components/auth/AdminRoute";
@@ -22,9 +22,6 @@ const CollectionsPage = lazy(() => import("./pages/CollectionsPage"));
 const CollectionDetailPage = lazy(() => import("./pages/CollectionDetailPage"));
 const AboutPage = lazy(() => import("./pages/AboutPage"));
 const PlacesPage = lazy(() => import("./pages/PlacesPage"));
-const ImageFlashTestPage = lazy(() => import("./pages/ImageFlashTestPage"));
-const GridLayoutTestPage = lazy(() => import("./pages/GridLayoutTestPage"));
-const ImageTransitionTestPage = lazy(() => import("./pages/ImageTransitionTestPage"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -51,11 +48,6 @@ function App() {
         <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/places" element={<PlacesPage />} />
-        <Route path="/test-image-flash" element={<ImageFlashTestPage />} />
-        <Route path="/test-grid-layouts" element={<GridLayoutTestPage />} />
-        <Route path="/test-grid-layouts/:category" element={<GridLayoutTestPage />} />
-        <Route path="/image-transition-test" element={<ImageTransitionTestPage />} />
-        <Route path="/image-transition-test/:category" element={<ImageTransitionTestPage />} />
 
         {/**protected routes */}
         <Route element={<ProtectedRoute />}>
@@ -75,7 +67,7 @@ function App() {
           <Route path="/admin" element={<AdminPage />} />
         </Route>
       </Routes>
-      
+
       {/* Floating Contact Button - appears on all pages */}
       <FloatingContactButton />
     </Suspense>

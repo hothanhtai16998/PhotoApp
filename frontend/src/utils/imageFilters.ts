@@ -4,7 +4,7 @@ import type { SearchFilters } from '@/components/SearchFilters';
 /**
  * Filter images by orientation (portrait/landscape/square)
  */
-export const filterByOrientation = (_images: Image[], _orientation: SearchFilters['orientation']): Image[] => {
+export const filterByOrientation = (_images: Image[]): Image[] => {
   // This function is kept for API compatibility but actual filtering
   // is done in applyImageFilters using imageTypes map
   return _images;

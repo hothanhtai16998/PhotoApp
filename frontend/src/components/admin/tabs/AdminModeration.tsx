@@ -7,7 +7,7 @@ import { CheckCircle, XCircle, Search } from 'lucide-react';
 
 export function AdminModeration() {
     const { hasPermission, isSuperAdmin } = usePermissions();
-    const [pendingContent, setPendingContent] = useState<any[]>([]);
+    const [pendingContent, setPendingContent] = useState<unknown[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
 
@@ -17,6 +17,7 @@ export function AdminModeration() {
             return;
         }
         loadPendingContent();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const loadPendingContent = async () => {

@@ -458,6 +458,7 @@ const ImageGrid = memo(() => {
       setPrevImages([]);
       previousImagesRef.current = images;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentCategory, images, displayImages.length, loading]);
   
   // Clear processed images when image list changes significantly

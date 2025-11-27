@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 
 export function AdminLogs() {
     const { hasPermission, isSuperAdmin } = usePermissions();
-    const [logs, setLogs] = useState<any[]>([]);
+    const [logs, setLogs] = useState<unknown[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
 
@@ -17,6 +17,7 @@ export function AdminLogs() {
             return;
         }
         loadLogs();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const loadLogs = async (page = 1) => {
@@ -34,6 +35,7 @@ export function AdminLogs() {
 
     useEffect(() => {
         loadLogs(1);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [search]);
 
     if (loading) {

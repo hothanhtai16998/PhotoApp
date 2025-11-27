@@ -225,7 +225,7 @@ export default function CollectionDetailPage() {
 			);
 			setCollection(updatedCollection);
 			toast.success('Đã sắp xếp lại ảnh');
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error('Failed to reorder images:', error);
 			toast.error(error.response?.data?.message || 'Không thể sắp xếp lại ảnh. Vui lòng thử lại.');
 			// Reload collection to revert optimistic update
@@ -299,7 +299,7 @@ export default function CollectionDetailPage() {
 			setSelectedImageIds(new Set());
 			setSelectionMode(false);
 			toast.success(`Đã xóa ${count} ảnh khỏi bộ sưu tập`);
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error('Failed to remove images:', error);
 			toast.error('Không thể xóa ảnh. Vui lòng thử lại.');
 		} finally {
@@ -322,7 +322,7 @@ export default function CollectionDetailPage() {
 			
 			setCollection(updatedCollection);
 			toast.success('Đã đặt ảnh làm ảnh bìa');
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error('Failed to set cover image:', error);
 			toast.error(error.response?.data?.message || 'Không thể đặt ảnh bìa. Vui lòng thử lại.');
 		} finally {
@@ -339,7 +339,7 @@ export default function CollectionDetailPage() {
 			const response = await collectionFavoriteService.toggleFavorite(collectionId);
 			setIsFavorited(response.isFavorited);
 			toast.success(response.isFavorited ? 'Đã thêm vào yêu thích' : 'Đã xóa khỏi yêu thích');
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error('Failed to toggle favorite:', error);
 			toast.error('Không thể cập nhật yêu thích. Vui lòng thử lại.');
 		} finally {
@@ -383,7 +383,7 @@ export default function CollectionDetailPage() {
 		try {
 			const versionsData = await collectionVersionService.getCollectionVersions(collectionId);
 			setVersions(versionsData);
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error('Failed to load versions:', error);
 			toast.error('Không thể tải lịch sử phiên bản');
 		} finally {
@@ -415,7 +415,7 @@ export default function CollectionDetailPage() {
 			setCollection(restoredCollection);
 			await fetchVersions(); // Reload versions
 			toast.success(`Đã khôi phục về phiên bản ${versionNumber}`);
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error('Failed to restore version:', error);
 			toast.error(error.response?.data?.message || 'Không thể khôi phục phiên bản. Vui lòng thử lại.');
 		} finally {
@@ -485,7 +485,7 @@ export default function CollectionDetailPage() {
 			}, 100);
 			
 			toast.success(`Đã xuất ${images.length} ảnh thành công`, { id: 'export-collection' });
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error('Export failed:', error);
 			toast.error(
 				error.response?.data?.message || 'Xuất bộ sưu tập thất bại. Vui lòng thử lại.',
@@ -515,7 +515,7 @@ export default function CollectionDetailPage() {
 						console.error('Failed to check favorite status:', error);
 					}
 				}
-			} catch (error: any) {
+			} catch (error: unknown) {
 				console.error('Failed to load collection:', error);
 				toast.error('Không thể tải bộ sưu tập');
 				navigate('/collections');

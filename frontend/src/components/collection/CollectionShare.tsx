@@ -164,7 +164,7 @@ export const CollectionShare = memo(({ collection }: CollectionShareProps) => {
 			collectionService.trackCollectionShare(collection._id);
 			toast.success('Đã sao chép liên kết vào clipboard');
 			setShowShareMenu(false);
-		} catch (error) {
+		} catch {
 			// Fallback for older browsers
 			const textArea = document.createElement('textarea');
 			textArea.value = shareUrl;

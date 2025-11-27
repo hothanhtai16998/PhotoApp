@@ -4,6 +4,7 @@ import { UserPlus, UserMinus, Loader2 } from 'lucide-react';
 import { followService } from '@/services/followService';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/utils';
 import './FollowButton.css';
 
 interface FollowButtonProps {
@@ -27,11 +28,6 @@ export const FollowButton = ({
 	const [isFollowing, setIsFollowing] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [actionLoading, setActionLoading] = useState(false);
-
-	// Don't show button if user is viewing their own profile
-	if (!currentUser || currentUser._id === userId) {
-		return null;
-	}
 
 	useEffect(() => {
 		const fetchFollowStatus = async () => {
@@ -60,6 +56,11 @@ export const FollowButton = ({
 		}
 	}, [userId, currentUser?._id]);
 
+	// Don't show button if user is viewing their own profile
+	if (!currentUser || currentUser._id === userId) {
+		return null;
+	}
+
 	const handleFollow = async () => {
 		if (actionLoading) return;
 
@@ -74,9 +75,9 @@ export const FollowButton = ({
 				setIsFollowing(true);
 				toast.success(`Đã theo dõi ${userDisplayName || 'người dùng'}`);
 			}
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error('Follow action failed:', error);
-			const message = error?.response?.data?.message || 'Có lỗi xảy ra. Vui lòng thử lại.';
+			const message = getErrorMessage(error, 'Có lỗi xảy ra. Vui lòng thử lại.');
 			toast.error(message);
 		} finally {
 			setActionLoading(false);

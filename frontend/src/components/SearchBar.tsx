@@ -139,7 +139,7 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
     if (currentSearch && currentSearch !== searchQuery) {
       setSearchQuery(currentSearch)
     }
-  }, [currentSearch])
+  }, [currentSearch, searchQuery])
 
   // Save to search history
   const saveToHistory = useCallback((query: string) => {
@@ -376,7 +376,7 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
     setShowSuggestions(true)
   }
 
-  const handleBlur = (_e: React.FocusEvent) => {
+  const handleBlur = () => {
     // Delay to allow clicking on suggestions
     setTimeout(() => {
       if (!suggestionsRef.current?.contains(document.activeElement)) {

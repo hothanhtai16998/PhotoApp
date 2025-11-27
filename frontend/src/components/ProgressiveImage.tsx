@@ -119,7 +119,7 @@ const ProgressiveImage = memo(({
         // Add to global cache for future use
         globalLoadedImages.add(testUrl);
       }
-    } catch (e) {
+    } catch {
       // Ignore errors in cache check
     }
   }
@@ -318,6 +318,7 @@ const ProgressiveImage = memo(({
     return () => {
       observer.disconnect();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveThumbnail, effectiveSmall, onLoad]);
 
   const handleLoad = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {

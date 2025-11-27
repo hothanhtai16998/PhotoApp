@@ -84,7 +84,7 @@ export const collectionTemplateService = {
     createCollectionFromTemplate: async (
         templateId: string,
         data?: CreateCollectionFromTemplateData
-    ): Promise<any> => {
+    ): Promise<Record<string, unknown>> => {
         const response = await api.post(`/collection-templates/${templateId}/collections`, data || {}, {
             withCredentials: true,
         });

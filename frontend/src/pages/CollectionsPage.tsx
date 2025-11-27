@@ -4,8 +4,9 @@ import Header from '@/components/Header';
 import { collectionService } from '@/services/collectionService';
 import type { Collection } from '@/types/collection';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/utils';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { Folder, Plus, Trash2, Edit2, Eye, Share2, Copy, Lock, Unlock, ExternalLink, Search, X, Filter, Heart, FileText } from 'lucide-react';
+import { Folder, Plus, Trash2, Edit2, Eye, Copy, Lock, Unlock, Search, X, Filter, Heart, FileText } from 'lucide-react';
 import ProgressiveImage from '@/components/ProgressiveImage';
 import CollectionModal from '@/components/CollectionModal';
 import { CollectionShare } from '@/components/collection/CollectionShare';
@@ -54,7 +55,7 @@ export default function CollectionsPage() {
 						console.error('Failed to check favorite statuses:', error);
 					}
 				}
-			} catch (error: any) {
+			} catch (error: unknown) {
 				console.error('Failed to load collections:', error);
 				toast.error('Không thể tải danh sách bộ sưu tập');
 			} finally {
@@ -131,7 +132,7 @@ export default function CollectionsPage() {
 			await collectionService.deleteCollection(collectionId);
 			setCollections((prev) => prev.filter((c) => c._id !== collectionId));
 			toast.success('Đã xóa bộ sưu tập');
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error('Failed to delete collection:', error);
 			toast.error('Không thể xóa bộ sưu tập. Vui lòng thử lại.');
 		} finally {
@@ -155,7 +156,7 @@ export default function CollectionsPage() {
 			try {
 				const data = await collectionService.getUserCollections();
 				setCollections(data);
-			} catch (error: any) {
+			} catch (error: unknown) {
 				console.error('Failed to reload collections:', error);
 			}
 		};
@@ -178,7 +179,7 @@ export default function CollectionsPage() {
 				[collection._id]: response.isFavorited,
 			}));
 			toast.success(response.isFavorited ? 'Đã thêm vào yêu thích' : 'Đã xóa khỏi yêu thích');
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error('Failed to toggle favorite:', error);
 			toast.error('Không thể cập nhật yêu thích. Vui lòng thử lại.');
 		} finally {
@@ -186,11 +187,6 @@ export default function CollectionsPage() {
 		}
 	};
 
-	const handleShareCollection = async (e: React.MouseEvent, collection: Collection) => {
-		e.stopPropagation();
-		// This will be handled by CollectionShare component
-		// Keep this for backward compatibility but it's now handled in the share menu
-	};
 
 	const handleTogglePublic = async (e: React.MouseEvent, collection: Collection) => {
 		e.stopPropagation();
@@ -206,7 +202,7 @@ export default function CollectionsPage() {
 					? 'Đã công khai bộ sưu tập' 
 					: 'Đã ẩn bộ sưu tập'
 			);
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error('Failed to toggle public:', error);
 			toast.error('Không thể cập nhật. Vui lòng thử lại.');
 		}
@@ -225,9 +221,9 @@ export default function CollectionsPage() {
 				templateName: templateName.trim(),
 			});
 			toast.success('Đã lưu bộ sưu tập thành mẫu');
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error('Failed to save as template:', error);
-			toast.error(error.response?.data?.message || 'Không thể lưu mẫu. Vui lòng thử lại.');
+			toast.error(getErrorMessage(error, 'Không thể lưu mẫu. Vui lòng thử lại.'));
 		} finally {
 			setSavingAsTemplate(null);
 		}
@@ -270,7 +266,7 @@ export default function CollectionsPage() {
 			const data = await collectionService.getUserCollections();
 			setCollections(data);
 			toast.success('Đã tạo bản sao bộ sưu tập');
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error('Failed to duplicate collection:', error);
 			toast.error('Không thể tạo bản sao. Vui lòng thử lại.');
 		}

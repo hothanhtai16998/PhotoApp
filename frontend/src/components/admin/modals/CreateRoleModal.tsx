@@ -30,6 +30,7 @@ export function CreateRoleModal({ users, onClose, onSave }: CreateRoleModalProps
     // Apply inheritance when role changes
     useEffect(() => {
         const inheritedPerms = getInheritedPermissions(role);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setPermissions(prev => {
             const updated = { ...prev };
             // Set all inherited permissions to true

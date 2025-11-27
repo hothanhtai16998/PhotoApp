@@ -64,7 +64,7 @@ export const reportService = {
     getUserReports: async (params?: {
         page?: number;
         limit?: number;
-    }): Promise<{ reports: Report[]; pagination: any }> => {
+    }): Promise<{ reports: Report[]; pagination: Record<string, unknown> }> => {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
         if (params?.limit) queryParams.append('limit', params.limit.toString());
@@ -92,7 +92,7 @@ export const reportService = {
         type?: string;
         page?: number;
         limit?: number;
-    }): Promise<{ reports: Report[]; pagination: any }> => {
+    }): Promise<{ reports: Report[]; pagination: Record<string, unknown> }> => {
         const queryParams = new URLSearchParams();
         if (params?.status) queryParams.append('status', params.status);
         if (params?.type) queryParams.append('type', params.type);

@@ -14,6 +14,11 @@ export interface PublicUser {
 	displayName: string;
 	avatarUrl?: string;
 	bio?: string;
+	location?: string;
+	website?: string;
+	instagram?: string;
+	twitter?: string;
+	facebook?: string;
 	createdAt: string;
 }
 

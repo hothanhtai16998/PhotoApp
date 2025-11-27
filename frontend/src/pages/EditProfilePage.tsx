@@ -75,7 +75,7 @@ function EditProfilePage() {
     });
 
     const bioText = watch('bio') || '';
-    const bioCharCount = 250 - bioText.length;
+    const bioCharCount = 500 - bioText.length;
 
     useEffect(() => {
         if (!user) {
@@ -90,6 +90,10 @@ function EditProfilePage() {
             setValue('email', user.email || '');
             setValue('username', user.username || '');
             setValue('bio', user.bio || '');
+            setValue('location', user.location || '');
+            setValue('personalSite', user.website || 'https://');
+            setValue('instagram', user.instagram || '');
+            setValue('twitter', user.twitter || '');
         }
     }, [user, navigate, setValue]);
 
@@ -147,6 +151,12 @@ function EditProfilePage() {
             if (data.bio) {
                 formData.append('bio', data.bio);
             }
+            // Always send location, website, instagram, twitter to allow clearing fields
+            formData.append('location', data.location || '');
+            const websiteValue = data.personalSite && data.personalSite !== 'https://' ? data.personalSite : '';
+            formData.append('website', websiteValue);
+            formData.append('instagram', data.instagram || '');
+            formData.append('twitter', data.twitter || '');
 
             // Add avatar if selected
             if (selectedAvatar) {
@@ -351,7 +361,7 @@ function EditProfilePage() {
                                             id="bio"
                                             {...register('bio')}
                                             className="bio-textarea"
-                                            maxLength={250}
+                                            maxLength={500}
                                             placeholder="Tell us about yourself..."
                                         />
                                         <div className="char-counter">{bioCharCount}</div>

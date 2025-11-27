@@ -213,6 +213,7 @@ export const useImageZoom = ({
   // Constrain pan to image bounds
   useEffect(() => {
     if (!containerRef.current || !imageRef.current || zoom <= 1) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPan({ x: 0, y: 0 });
       return;
     }

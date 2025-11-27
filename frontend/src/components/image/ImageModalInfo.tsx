@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, memo } from 'react';
+import { useState, useRef, useEffect, memo, useMemo } from 'react';
 import { Info } from 'lucide-react';
 import { ImageModalChart } from './ImageModalChart';
 import type { Image } from '@/types/image';
@@ -6,10 +6,9 @@ import './ImageModalInfo.css';
 
 interface ImageModalInfoProps {
   image: Image;
-  onTagClick?: (tag: string) => void;
 }
 
-export const ImageModalInfo = memo(({ image, onTagClick }: ImageModalInfoProps) => {
+export const ImageModalInfo = memo(({ image }: ImageModalInfoProps) => {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'views' | 'downloads'>('views');
   const [positionBelow, setPositionBelow] = useState(false);
@@ -66,6 +65,15 @@ export const ImageModalInfo = memo(({ image, onTagClick }: ImageModalInfoProps) 
     };
   }, [showInfoModal]);
 
+  // Calculate days ago using useMemo to avoid calling Date.now() during render
+  const daysAgoText = useMemo(() => {
+    const now = new Date().getTime();
+    const daysAgo = Math.floor((now - new Date(image.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+    if (daysAgo === 0) return 'hôm nay';
+    if (daysAgo === 1) return '1 ngày trước';
+    return `${daysAgo} ngày trước`;
+  }, [image.createdAt]);
+
   // Close info modal when clicking outside
   useEffect(() => {
     if (!showInfoModal) return;
@@ -116,12 +124,7 @@ export const ImageModalInfo = memo(({ image, onTagClick }: ImageModalInfoProps) 
             </div>
             <div className="info-modal-content">
               <div className="info-published">
-                Đã đăng vào {(() => {
-                  const daysAgo = Math.floor((Date.now() - new Date(image.createdAt).getTime()) / (1000 * 60 * 60 * 24));
-                  if (daysAgo === 0) return 'hôm nay';
-                  if (daysAgo === 1) return '1 ngày trước';
-                  return `${daysAgo} ngày trước`;
-                })()}
+                Đã đăng vào {daysAgoText}
               </div>
 
               {/* Chart Container */}

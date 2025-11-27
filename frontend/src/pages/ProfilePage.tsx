@@ -15,7 +15,7 @@ import api from "@/lib/axios";
 import { generateImageSlug, extractIdFromSlug } from "@/lib/utils";
 import { collectionService } from "@/services/collectionService";
 import type { Collection } from "@/types/collection";
-import { Folder, Eye, Image as ImageIcon, Heart, Download, Users, UserPlus, Eye as EyeIcon } from "lucide-react";
+import { Folder, Eye, Image as ImageIcon, Heart, Download, Users, UserPlus, Eye as EyeIcon, MapPin, Globe, Instagram, Twitter } from "lucide-react";
 import { UserAnalyticsDashboard } from "@/components/UserAnalyticsDashboard";
 import { followService } from "@/services/followService";
 import { userStatsService, type UserStats } from "@/services/userStatsService";
@@ -42,7 +42,7 @@ function ProfilePage() {
     const [collectionsCount, setCollectionsCount] = useState(0);
     const [followStats, setFollowStats] = useState({ followers: 0, following: 0, isFollowing: false });
     const [userStats, setUserStats] = useState<UserStats | null>(null);
-    const [statsLoading, setStatsLoading] = useState(false);
+    const [, setStatsLoading] = useState(false);
     
     // Track image aspect ratios (portrait vs landscape)
     const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
@@ -82,6 +82,7 @@ function ProfilePage() {
         };
 
         fetchProfileUser();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [params.username, params.userId, navigate]);
 
     // Determine which user's profile to display
@@ -451,6 +452,65 @@ function ProfilePage() {
                             <p className="profile-description">
                                 {displayUser.bio || `Tải xuống miễn phí những bức ảnh chất lượng cao đẹp mắt được tuyển chọn bởi ${displayUser.displayName || displayUser.username}.`}
                             </p>
+                            
+                            {/* Location */}
+                            {displayUser.location && (
+                                <div className="profile-location">
+                                    <MapPin size={16} />
+                                    <span>{displayUser.location}</span>
+                                </div>
+                            )}
+
+                            {/* Social Links */}
+                            {(displayUser.website || displayUser.instagram || displayUser.twitter || displayUser.facebook) && (
+                                <div className="profile-social-links">
+                                    {displayUser.website && (
+                                        <a
+                                            href={displayUser.website.startsWith('http') ? displayUser.website : `https://${displayUser.website}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="social-link"
+                                            title="Website"
+                                        >
+                                            <Globe size={18} />
+                                        </a>
+                                    )}
+                                    {displayUser.instagram && (
+                                        <a
+                                            href={`https://instagram.com/${displayUser.instagram.replace(/^@/, '')}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="social-link"
+                                            title={`@${displayUser.instagram}`}
+                                        >
+                                            <Instagram size={18} />
+                                        </a>
+                                    )}
+                                    {displayUser.twitter && (
+                                        <a
+                                            href={`https://twitter.com/${displayUser.twitter.replace(/^@/, '')}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="social-link"
+                                            title={`@${displayUser.twitter}`}
+                                        >
+                                            <Twitter size={18} />
+                                        </a>
+                                    )}
+                                    {displayUser.facebook && (
+                                        <a
+                                            href={`https://facebook.com/${displayUser.facebook}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="social-link"
+                                            title={displayUser.facebook}
+                                        >
+                                            <Users size={18} />
+                                        </a>
+                                    )}
+                                </div>
+                            )}
+
                             {/* Profile Completion */}
                             {userStats && userStats.profileCompletion && (
                                 <ProfileCompletion

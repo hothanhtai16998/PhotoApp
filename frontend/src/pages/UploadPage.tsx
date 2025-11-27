@@ -8,9 +8,10 @@ import { Label } from '@/components/ui/label';
 import { useImageStore } from '@/stores/useImageStore';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
-import { Upload, TrendingUp, X } from 'lucide-react';
+import { Upload, TrendingUp } from 'lucide-react';
 import type { Image } from '@/types/image';
 import { compressImage } from '@/utils/imageCompression';
+import { getErrorMessage } from '@/lib/utils';
 import { toast } from 'sonner';
 import { imageService, type PreUploadResponse, type FinalizeImageData } from '@/services/imageService';
 import './UploadPage.css';
@@ -131,9 +132,9 @@ function UploadPage() {
                 setUploadProgress(100);
                 setIsUploading(false);
                 toast.success('Ảnh đã tải lên thành công! Bạn có thể gửi bây giờ.');
-            } catch (error: any) {
+            } catch (error: unknown) {
                 console.error('Upload error:', error);
-                const errorMessage = error?.response?.data?.message || error?.message || 'Failed to upload image. Please try again.';
+                const errorMessage = getErrorMessage(error, 'Failed to upload image. Please try again.');
                 setUploadError(errorMessage);
                 setIsUploading(false);
                 setUploadProgress(0);
@@ -142,7 +143,7 @@ function UploadPage() {
                 if (fileInputRef.current) {
                     fileInputRef.current.value = '';
                 }
-                setValue('image', undefined as any);
+                setValue('image', undefined);
             }
         };
 
@@ -186,9 +187,9 @@ function UploadPage() {
             
             toast.success('Tải ảnh lên thành công!');
             navigate('/');
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Finalize error:', error);
-            const errorMessage = error?.response?.data?.message || error?.message || 'Failed to finalize upload. Please try again.';
+            const errorMessage = getErrorMessage(error, 'Failed to finalize upload. Please try again.');
             toast.error(errorMessage);
         } finally {
             setIsFinalizing(false);

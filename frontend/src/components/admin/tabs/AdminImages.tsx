@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Search, Trash2, CheckCircle, XCircle, Flag } from 'lucide-react';
 import { adminService } from '@/services/adminService';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/utils';
 import type { AdminImage } from '@/services/adminService';
 import { PermissionButton } from '../PermissionButton';
 
@@ -35,8 +36,8 @@ export function AdminImages({
             await adminService.moderateImage(imageId, status, notes || undefined);
             toast.success(`Đã ${status === 'approved' ? 'phê duyệt' : status === 'rejected' ? 'từ chối' : 'đánh dấu'} ảnh`);
             onImageUpdated?.();
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi kiểm duyệt ảnh');
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error, 'Lỗi khi kiểm duyệt ảnh'));
         }
     };
     return (

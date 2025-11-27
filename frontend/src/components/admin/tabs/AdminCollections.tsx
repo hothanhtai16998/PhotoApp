@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { adminService } from '@/services/adminService';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, Trash2, FolderDot } from 'lucide-react';
@@ -37,8 +38,8 @@ export function AdminCollections() {
             });
             setCollections(data.collections);
             setPagination(data.pagination);
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi tải danh sách bộ sưu tập');
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error, 'Lỗi khi tải danh sách bộ sưu tập'));
         } finally {
             setLoading(false);
         }
@@ -46,6 +47,7 @@ export function AdminCollections() {
 
     useEffect(() => {
         loadCollections(1);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [search]);
 
     const handleDelete = async (collectionId: string, name: string) => {
@@ -57,8 +59,8 @@ export function AdminCollections() {
             await adminService.deleteCollection(collectionId);
             toast.success('Xóa bộ sưu tập thành công');
             loadCollections(pagination.page);
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi xóa bộ sưu tập');
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error, 'Lỗi khi xóa bộ sưu tập'));
         }
     };
 
@@ -69,8 +71,8 @@ export function AdminCollections() {
             });
             toast.success(`Bộ sưu tập đã được ${!collection.isPublic ? 'công khai' : 'ẩn'}`);
             loadCollections(pagination.page);
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi cập nhật bộ sưu tập');
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error, 'Lỗi khi cập nhật bộ sưu tập'));
         }
     };
 

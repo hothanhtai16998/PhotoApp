@@ -12,7 +12,6 @@ export default function NotificationBell() {
 	const [notifications, setNotifications] = useState<Notification[]>([]);
 	const [unreadCount, setUnreadCount] = useState(0);
 	const [isOpen, setIsOpen] = useState(false);
-	const [loading, setLoading] = useState(false);
 	const [refreshing, setRefreshing] = useState(false);
 	const [hasNewNotification, setHasNewNotification] = useState(false);
 	const dropdownRef = useRef<HTMLDivElement>(null);
@@ -28,7 +27,7 @@ export default function NotificationBell() {
 		const imageTitle = notification.image?.imageTitle || 'ảnh của bạn';
 
 		switch (notification.type) {
-			case 'collection_invited':
+			case 'collection_invited': {
 				const permission = notification.metadata?.permission;
 				const permissionText =
 					permission === 'admin'
@@ -37,6 +36,7 @@ export default function NotificationBell() {
 						? 'chỉnh sửa'
 						: 'xem';
 				return `${actorName} đã mời bạn tham gia bộ sưu tập "${collectionName}" với quyền ${permissionText}`;
+			}
 			case 'collection_image_added':
 				return `${actorName} đã thêm ảnh vào bộ sưu tập "${collectionName}"`;
 			case 'collection_image_removed':
@@ -59,7 +59,7 @@ export default function NotificationBell() {
 				return `Tải lên ảnh "${notification.metadata?.imageTitle || 'của bạn'}" thất bại: ${notification.metadata?.error || 'Lỗi không xác định'}`;
 			case 'upload_processing':
 				return `Đã xử lý ảnh: nén và tạo thumbnail thành công`;
-			case 'bulk_upload_completed':
+			case 'bulk_upload_completed': {
 				const successCount = notification.metadata?.successCount || 0;
 				const totalCount = notification.metadata?.totalCount || 0;
 				const failedCount = notification.metadata?.failedCount || 0;
@@ -68,51 +68,61 @@ export default function NotificationBell() {
 				} else {
 					return `Đã tải lên ${successCount}/${totalCount} ảnh (${failedCount} thất bại)`;
 				}
-			case 'collection_updated':
+			}
+			case 'collection_updated': {
 				const changes = notification.metadata?.changes || [];
 				const changeText = changes.length > 0 
 					? changes.join(', ')
 					: 'thông tin';
 				return `${actorName} đã cập nhật ${changeText} của bộ sưu tập "${collectionName}"`;
+			}
 			case 'collection_cover_changed':
 				return `${actorName} đã thay đổi ảnh bìa của bộ sưu tập "${collectionName}"`;
-			case 'collection_reordered':
+			case 'collection_reordered': {
 				const imageCount = notification.metadata?.imageCount || 0;
 				return `${actorName} đã sắp xếp lại ${imageCount} ảnh trong bộ sưu tập "${collectionName}"`;
-			case 'bulk_delete_completed':
+			}
+			case 'bulk_delete_completed': {
 				const deletedCount = notification.metadata?.deletedCount || 0;
 				return `Đã xóa thành công ${deletedCount} ảnh`;
-			case 'bulk_add_to_collection':
+			}
+			case 'bulk_add_to_collection': {
 				const addedCount = notification.metadata?.addedCount || 0;
 				return `Đã thêm ${addedCount} ảnh vào bộ sưu tập "${collectionName}"`;
+			}
 			case 'image_featured':
 				return `Ảnh "${imageTitle}" đã được đưa lên trang chủ`;
 			case 'image_removed':
-			case 'image_removed_admin':
+			case 'image_removed_admin': {
 				const reason = notification.metadata?.reason || 'Lý do không xác định';
 				return `Ảnh "${imageTitle}" đã bị xóa bởi quản trị viên: ${reason}`;
+			}
 			case 'account_verified':
 				return `Tài khoản của bạn đã được xác minh`;
-			case 'account_warning':
+			case 'account_warning': {
 				const warningReason = notification.metadata?.reason || 'Vi phạm quy tắc';
 				return `Cảnh báo: ${warningReason}`;
+			}
 			case 'account_banned':
-			case 'user_banned_admin':
+			case 'user_banned_admin': {
 				const banReason = notification.metadata?.reason || 'Vi phạm quy tắc';
 				const bannedBy = notification.metadata?.bannedBy || 'Quản trị viên';
 				return `Tài khoản của bạn đã bị cấm bởi ${bannedBy}: ${banReason}`;
-			case 'user_unbanned_admin':
+			}
+			case 'user_unbanned_admin': {
 				const unbannedBy = notification.metadata?.unbannedBy || 'Quản trị viên';
 				return `Tài khoản của bạn đã được bỏ cấm bởi ${unbannedBy}`;
+			}
 			case 'profile_viewed':
 				return `${actorName} đã xem hồ sơ của bạn`;
-			case 'profile_updated':
+			case 'profile_updated': {
 				const changedFields = notification.metadata?.changedFields || [];
 				const fieldsText = changedFields.length > 0 
 					? changedFields.join(', ')
 					: 'thông tin';
 				return `Hồ sơ của bạn đã được cập nhật: ${fieldsText}`;
-			case 'login_new_device':
+			}
+			case 'login_new_device': {
 				const deviceUserAgent = notification.metadata?.userAgent || 'Thiết bị mới';
 				const deviceIpAddress = notification.metadata?.ipAddress || 'IP không xác định';
 				// Extract browser name from user agent
@@ -122,39 +132,49 @@ export default function NotificationBell() {
 					deviceUserAgent.includes('Edge') ? 'Edge' :
 					'Thiết bị mới';
 				return `Đăng nhập từ ${browserName} (${deviceIpAddress})`;
-			case 'password_changed':
+			}
+			case 'password_changed': {
 				const changeIp = notification.metadata?.ipAddress || 'IP không xác định';
 				return `Mật khẩu của bạn đã được thay đổi từ ${changeIp}`;
-			case 'email_changed':
+			}
+			case 'email_changed': {
 				const oldEmail = notification.metadata?.oldEmail || 'Email cũ';
 				const newEmail = notification.metadata?.newEmail || 'Email mới';
 				return `Email đã được thay đổi từ ${oldEmail} sang ${newEmail}`;
+			}
 			case 'two_factor_enabled':
 				return `Xác thực hai yếu tố đã được bật cho tài khoản của bạn`;
-			case 'system_announcement':
+			case 'system_announcement': {
 				const announcementTitle = notification.metadata?.title || 'Thông báo hệ thống';
 				return `${announcementTitle}: ${notification.metadata?.message || 'Bạn có thông báo mới'}`;
-			case 'feature_update':
+			}
+			case 'feature_update': {
 				const featureTitle = notification.metadata?.title || 'Tính năng mới';
 				return `${featureTitle}: ${notification.metadata?.message || 'Có tính năng mới được cập nhật'}`;
-			case 'maintenance_scheduled':
+			}
+			case 'maintenance_scheduled': {
 				const maintenanceTitle = notification.metadata?.title || 'Bảo trì hệ thống';
 				return `${maintenanceTitle}: ${notification.metadata?.message || 'Hệ thống sẽ được bảo trì'}`;
-			case 'terms_updated':
+			}
+			case 'terms_updated': {
 				const termsTitle = notification.metadata?.title || 'Cập nhật điều khoản';
 				return `${termsTitle}: ${notification.metadata?.message || 'Điều khoản sử dụng đã được cập nhật'}`;
-			case 'image_reported':
+			}
+			case 'image_reported': {
 				const imageReportReason = notification.metadata?.reason || 'Lý do không xác định';
 				const imageReportDescription = notification.metadata?.description ? ` - ${notification.metadata.description}` : '';
 				return `Ảnh "${imageTitle}" đã được báo cáo: ${imageReportReason}${imageReportDescription}`;
-			case 'collection_reported':
+			}
+			case 'collection_reported': {
 				const collectionReportReason = notification.metadata?.reason || 'Lý do không xác định';
 				const collectionReportDescription = notification.metadata?.description ? ` - ${notification.metadata.description}` : '';
 				return `Bộ sưu tập "${collectionName}" đã được báo cáo: ${collectionReportReason}${collectionReportDescription}`;
-			case 'user_reported':
+			}
+			case 'user_reported': {
 				const userReportReason = notification.metadata?.reason || 'Lý do không xác định';
 				const userReportDescription = notification.metadata?.description ? ` - ${notification.metadata.description}` : '';
 				return `Người dùng đã được báo cáo: ${userReportReason}${userReportDescription}`;
+			}
 			case 'user_followed':
 				return `${actorName} đã bắt đầu theo dõi bạn`;
 			case 'user_unfollowed':

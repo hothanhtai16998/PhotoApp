@@ -35,6 +35,7 @@ export function AdminSettings() {
             return;
         }
         loadSettings();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const loadSettings = async () => {
@@ -216,7 +217,7 @@ export function AdminSettings() {
                             <Label>Loại thông báo</Label>
                             <select
                                 value={announcementData.type}
-                                onChange={(e) => setAnnouncementData({ ...announcementData, type: e.target.value as any })}
+                                onChange={(e) => setAnnouncementData({ ...announcementData, type: e.target.value as 'system_announcement' | 'feature_update' | 'maintenance_scheduled' | 'terms_updated' })}
                                 style={{
                                     width: '100%',
                                     padding: '0.5rem',

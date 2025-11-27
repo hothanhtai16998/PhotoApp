@@ -95,7 +95,7 @@ function ImagePage() {
         } else {
           setError('Image not found');
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error fetching image:', err);
         setError(err.response?.data?.message || 'Failed to load image');
       } finally {

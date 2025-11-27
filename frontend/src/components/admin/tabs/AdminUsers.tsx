@@ -4,6 +4,7 @@ import { Search, Edit2, Trash2, Ban, Unlock } from 'lucide-react';
 import { UserEditModal } from '../modals';
 import { adminService } from '@/services/adminService';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/utils';
 import type { User } from '@/services/adminService';
 import type { User as AuthUser } from '@/types/user';
 import { PermissionButton } from '../PermissionButton';
@@ -47,8 +48,8 @@ export function AdminUsers({
             await adminService.banUser(user._id, reason || undefined);
             toast.success(`Đã cấm người dùng ${user.username}`);
             onUserUpdated?.();
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi cấm người dùng');
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error, 'Lỗi khi cấm người dùng'));
         }
     };
 
@@ -59,8 +60,8 @@ export function AdminUsers({
             await adminService.unbanUser(user._id);
             toast.success(`Đã bỏ cấm người dùng ${user.username}`);
             onUserUpdated?.();
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi bỏ cấm người dùng');
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error, 'Lỗi khi bỏ cấm người dùng'));
         }
     };
     return (

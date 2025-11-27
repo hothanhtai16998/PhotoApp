@@ -40,6 +40,7 @@ export const useVirtualScroll = <T>(
     if (!container) return;
 
     // Initial calculation
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     updateVisibleRange();
 
     // Listen to scroll events

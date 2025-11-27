@@ -94,7 +94,9 @@ class ErrorTracker {
   /**
    * Add breadcrumb for debugging
    */
-  addBreadcrumb(message: string, category: string = 'default', _level: 'info' | 'warning' | 'error' = 'info', data?: Record<string, unknown>) {
+  addBreadcrumb(message: string, category: string = 'default', _level: 'info' | 'warning' | 'error' = 'info', data?: Record<string, unknown>): void {
+    // _level parameter is kept for API compatibility but not currently used
+    void _level;
     if (!this.enabled) {
       console.debug(`[Breadcrumb] [${category}]`, message, data);
       return;

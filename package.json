@@ -25,5 +25,8 @@
   "bugs": {
     "url": "https://github.com/hothanhtai16998/AppPhoto/issues"
   },
-  "homepage": "https://github.com/hothanhtai16998/AppPhoto#readme"
+  "homepage": "https://github.com/hothanhtai16998/AppPhoto#readme",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
 }

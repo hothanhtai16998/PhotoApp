@@ -321,9 +321,9 @@ export async function searchLocations(
 		for (const searchQuery of searchQueries) {
 			if (searchQuery.length < 2) continue;
 
-			let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&accept-language=${lang}&addressdetails=1&limit=10&dedupe=1&countrycodes=vn`;
+			const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&accept-language=${lang}&addressdetails=1&limit=10&dedupe=1&countrycodes=vn`;
 
-			let response = await fetch(url, {
+			const response = await fetch(url, {
 				method: 'GET',
 				headers: {
 					'User-Agent': 'PhotoAppWeb/1.0',

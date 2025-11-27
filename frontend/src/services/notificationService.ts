@@ -66,7 +66,7 @@ export interface Notification {
 	metadata?: {
 		permission?: string;
 		collectionName?: string;
-		[key: string]: any;
+		[key: string]: unknown;
 	};
 	isRead: boolean;
 	readAt?: string;

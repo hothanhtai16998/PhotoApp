@@ -5,11 +5,11 @@
  */
 
 interface BatchedRequest {
-	resolve: (value: any) => void;
-	reject: (error: any) => void;
+	resolve: (value: unknown) => void;
+	reject: (error: unknown) => void;
 	url: string;
 	method: string;
-	data?: any;
+	data?: unknown;
 }
 
 // Batch configuration

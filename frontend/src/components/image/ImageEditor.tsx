@@ -75,6 +75,8 @@ export const ImageEditor = ({ imageUrl, imageTitle, onSave, onCancel }: ImageEdi
   const [activeTool, setActiveTool] = useState<'filters' | 'crop' | 'watermark' | 'transform' | 'draw'>('filters');
   const [isProcessing, setIsProcessing] = useState(false);
   const [originalImageLoaded, setOriginalImageLoaded] = useState(false);
+  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [cropOverlayStyle, setCropOverlayStyle] = useState<React.CSSProperties | null>(null);
   
   // Undo/Redo system
   const [editHistory, setEditHistory] = useState<EditState[]>([]);
@@ -203,6 +205,7 @@ export const ImageEditor = ({ imageUrl, imageTitle, onSave, onCancel }: ImageEdi
     img.crossOrigin = 'anonymous';
     img.onload = () => {
       imageRef.current = img;
+      setImageDimensions({ width: img.width, height: img.height });
       setOriginalImageLoaded(true);
       
       // Initialize history with original state
@@ -264,10 +267,139 @@ export const ImageEditor = ({ imageUrl, imageTitle, onSave, onCancel }: ImageEdi
         }
       }
       
-      drawImage();
+      // drawImage will be called after it's declared via useEffect below
     };
     img.src = imageUrl;
   }, [imageUrl, imageTitle]);
+
+  // Calculate crop overlay style when crop or canvas changes
+  useEffect(() => {
+    if (activeTool === 'crop' && crop && crop.width > 0 && crop.height > 0 && canvasRef.current) {
+      const canvas = canvasRef.current;
+      const canvasRect = canvas.getBoundingClientRect();
+      const scaleX = canvasRect.width / canvas.width;
+      const scaleY = canvasRect.height / canvas.height;
+      setCropOverlayStyle({
+        position: 'absolute',
+        left: `${crop.x * scaleX}px`,
+        top: `${crop.y * scaleY}px`,
+        width: `${crop.width * scaleX}px`,
+        height: `${crop.height * scaleY}px`,
+        pointerEvents: 'none',
+      });
+    } else {
+      setCropOverlayStyle(null);
+    }
+  }, [activeTool, crop]);
+
+  // Apply advanced filters using pixel manipulation
+  const applyAdvancedFilters = useCallback((
+    ctx: CanvasRenderingContext2D,
+    canvas: HTMLCanvasElement,
+    filters: FilterSettings
+  ) => {
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+
+    // Apply sharpen (unsharp mask)
+    if (filters.sharpen > 0) {
+      const sharpenAmount = filters.sharpen / 100;
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
+      const tempCtx = tempCanvas.getContext('2d');
+      if (tempCtx) {
+        tempCtx.putImageData(imageData, 0, 0);
+        tempCtx.filter = `blur(1px)`;
+        tempCtx.drawImage(canvas, 0, 0);
+        const blurredData = tempCtx.getImageData(0, 0, canvas.width, canvas.height).data;
+        
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const br = blurredData[i];
+          const bg = blurredData[i + 1];
+          const bb = blurredData[i + 2];
+          if (r !== undefined && g !== undefined && b !== undefined && br !== undefined && bg !== undefined && bb !== undefined) {
+            data[i] = Math.min(255, Math.max(0, r + (r - br) * sharpenAmount));
+            data[i + 1] = Math.min(255, Math.max(0, g + (g - bg) * sharpenAmount));
+            data[i + 2] = Math.min(255, Math.max(0, b + (b - bb) * sharpenAmount));
+          }
+        }
+      }
+    }
+
+    // Apply color temperature
+    if (filters.colorTemperature !== 0) {
+      const temp = filters.colorTemperature / 100;
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const b = data[i + 2];
+        if (r !== undefined && b !== undefined) {
+          if (temp > 0) {
+            // Warm (increase red, decrease blue)
+            data[i] = Math.min(255, r + temp * 20);
+            data[i + 2] = Math.max(0, b - temp * 20);
+          } else {
+            // Cool (decrease red, increase blue)
+            data[i] = Math.max(0, r + temp * 20);
+            data[i + 2] = Math.min(255, b - temp * 20);
+          }
+        }
+      }
+    }
+
+    // Apply vintage effect (warm sepia with slight desaturation)
+    if (filters.vintage > 0) {
+      const vintageAmount = filters.vintage / 100;
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        
+        if (r !== undefined && g !== undefined && b !== undefined) {
+          // Vintage sepia formula
+          const tr = (r * 0.393 + g * 0.769 + b * 0.189) * vintageAmount + r * (1 - vintageAmount);
+          const tg = (r * 0.349 + g * 0.686 + b * 0.168) * vintageAmount + g * (1 - vintageAmount);
+          const tb = (r * 0.272 + g * 0.534 + b * 0.131) * vintageAmount + b * (1 - vintageAmount);
+        
+          // Slight desaturation
+          const gray = tr * 0.299 + tg * 0.587 + tb * 0.114;
+          data[i] = tr * (1 - vintageAmount * 0.3) + gray * (vintageAmount * 0.3);
+          data[i + 1] = tg * (1 - vintageAmount * 0.3) + gray * (vintageAmount * 0.3);
+          data[i + 2] = tb * (1 - vintageAmount * 0.3) + gray * (vintageAmount * 0.3);
+        }
+      }
+    }
+
+    // Apply vignette
+    if (filters.vignette > 0) {
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const maxDistance = Math.sqrt(centerX * centerX + centerY * centerY);
+      const vignetteAmount = filters.vignette / 100;
+
+      for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+          const distance = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+          const darkness = (distance / maxDistance) * vignetteAmount;
+          const i = (y * canvas.width + x) * 4;
+          
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          if (r !== undefined && g !== undefined && b !== undefined) {
+            data[i] = Math.max(0, r * (1 - darkness));
+            data[i + 1] = Math.max(0, g * (1 - darkness));
+            data[i + 2] = Math.max(0, b * (1 - darkness));
+          }
+        }
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+  }, []);
 
   // Draw image with all edits applied
   const drawImage = useCallback(() => {
@@ -580,6 +712,7 @@ export const ImageEditor = ({ imageUrl, imageTitle, onSave, onCancel }: ImageEdi
         ctx.restore();
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, crop, watermark, transform, drawings, currentDrawing]);
 
   // Save state to history when edits change
@@ -699,121 +832,12 @@ export const ImageEditor = ({ imageUrl, imageTitle, onSave, onCancel }: ImageEdi
     setPresets(savedPresets);
   }, []);
 
-  // Apply advanced filters using pixel manipulation
-  const applyAdvancedFilters = useCallback((
-    ctx: CanvasRenderingContext2D,
-    canvas: HTMLCanvasElement,
-    filters: FilterSettings
-  ) => {
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-
-    // Apply sharpen (unsharp mask)
-    if (filters.sharpen > 0) {
-      const sharpenAmount = filters.sharpen / 100;
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = canvas.width;
-      tempCanvas.height = canvas.height;
-      const tempCtx = tempCanvas.getContext('2d');
-      if (tempCtx) {
-        tempCtx.putImageData(imageData, 0, 0);
-        tempCtx.filter = `blur(1px)`;
-        tempCtx.drawImage(canvas, 0, 0);
-        const blurredData = tempCtx.getImageData(0, 0, canvas.width, canvas.height).data;
-        
-        for (let i = 0; i < data.length; i += 4) {
-          const r = data[i];
-          const g = data[i + 1];
-          const b = data[i + 2];
-          const br = blurredData[i];
-          const bg = blurredData[i + 1];
-          const bb = blurredData[i + 2];
-          if (r !== undefined && g !== undefined && b !== undefined && br !== undefined && bg !== undefined && bb !== undefined) {
-            data[i] = Math.min(255, Math.max(0, r + (r - br) * sharpenAmount));
-            data[i + 1] = Math.min(255, Math.max(0, g + (g - bg) * sharpenAmount));
-            data[i + 2] = Math.min(255, Math.max(0, b + (b - bb) * sharpenAmount));
-          }
-        }
-      }
-    }
-
-    // Apply color temperature
-    if (filters.colorTemperature !== 0) {
-      const temp = filters.colorTemperature / 100;
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const b = data[i + 2];
-        if (r !== undefined && b !== undefined) {
-          if (temp > 0) {
-            // Warm (increase red, decrease blue)
-            data[i] = Math.min(255, r + temp * 20);
-            data[i + 2] = Math.max(0, b - temp * 20);
-          } else {
-            // Cool (decrease red, increase blue)
-            data[i] = Math.max(0, r + temp * 20);
-            data[i + 2] = Math.min(255, b - temp * 20);
-          }
-        }
-      }
-    }
-
-    // Apply vintage effect (warm sepia with slight desaturation)
-    if (filters.vintage > 0) {
-      const vintageAmount = filters.vintage / 100;
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
-        
-        if (r !== undefined && g !== undefined && b !== undefined) {
-          // Vintage sepia formula
-          const tr = (r * 0.393 + g * 0.769 + b * 0.189) * vintageAmount + r * (1 - vintageAmount);
-          const tg = (r * 0.349 + g * 0.686 + b * 0.168) * vintageAmount + g * (1 - vintageAmount);
-          const tb = (r * 0.272 + g * 0.534 + b * 0.131) * vintageAmount + b * (1 - vintageAmount);
-        
-          // Slight desaturation
-          const gray = tr * 0.299 + tg * 0.587 + tb * 0.114;
-          data[i] = tr * (1 - vintageAmount * 0.3) + gray * (vintageAmount * 0.3);
-          data[i + 1] = tg * (1 - vintageAmount * 0.3) + gray * (vintageAmount * 0.3);
-          data[i + 2] = tb * (1 - vintageAmount * 0.3) + gray * (vintageAmount * 0.3);
-        }
-      }
-    }
-
-    // Apply vignette
-    if (filters.vignette > 0) {
-      const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2;
-      const maxDistance = Math.sqrt(centerX * centerX + centerY * centerY);
-      const vignetteAmount = filters.vignette / 100;
-
-      for (let y = 0; y < canvas.height; y++) {
-        for (let x = 0; x < canvas.width; x++) {
-          const distance = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
-          const darkness = (distance / maxDistance) * vignetteAmount;
-          const i = (y * canvas.width + x) * 4;
-          
-          const r = data[i];
-          const g = data[i + 1];
-          const b = data[i + 2];
-          if (r !== undefined && g !== undefined && b !== undefined) {
-            data[i] = Math.max(0, r * (1 - darkness));
-            data[i + 1] = Math.max(0, g * (1 - darkness));
-            data[i + 2] = Math.max(0, b * (1 - darkness));
-          }
-        }
-      }
-    }
-
-    ctx.putImageData(imageData, 0, 0);
-  }, []);
-
-  // Redraw when settings change
+  // Redraw when settings change or image loads
   useEffect(() => {
     if (originalImageLoaded) {
       drawImage();
     }
-  }, [filters, crop, watermark, originalImageLoaded, drawImage]);
+  }, [filters, crop, watermark, originalImageLoaded, drawImage, imageUrl, imageTitle]);
 
   // Handle crop start
   const handleCropStart = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -1364,26 +1388,11 @@ export const ImageEditor = ({ imageUrl, imageTitle, onSave, onCancel }: ImageEdi
             ) : (
               <div style={{ position: 'relative', display: 'inline-block' }}>
                 <canvas ref={canvasRef} className="image-editor-canvas" />
-              {activeTool === 'crop' && crop && crop.width > 0 && crop.height > 0 && canvasRef.current && (
-                (() => {
-                  const canvas = canvasRef.current;
-                  const canvasRect = canvas.getBoundingClientRect();
-                  const scaleX = canvasRect.width / canvas.width;
-                  const scaleY = canvasRect.height / canvas.height;
-                  return (
-                    <div
-                      className="image-editor-crop-overlay"
-                      style={{
-                        position: 'absolute',
-                        left: `${crop.x * scaleX}px`,
-                        top: `${crop.y * scaleY}px`,
-                        width: `${crop.width * scaleX}px`,
-                        height: `${crop.height * scaleY}px`,
-                        pointerEvents: 'none',
-                      }}
-                    />
-                  );
-                })()
+              {activeTool === 'crop' && crop && crop.width > 0 && crop.height > 0 && cropOverlayStyle && (
+                <div
+                  className="image-editor-crop-overlay"
+                  style={cropOverlayStyle}
+                />
               )}
               </div>
             )}
@@ -1802,19 +1811,19 @@ export const ImageEditor = ({ imageUrl, imageTitle, onSave, onCancel }: ImageEdi
                       <span>Giữ tỷ lệ</span>
                     </label>
                   </div>
-                  {imageRef.current && (
+                  {imageDimensions && (
                     <>
                       <div className="image-editor-input">
                         <label>Chiều rộng (px)</label>
                         <input
                           type="number"
                           min="1"
-                          value={transform.width || imageRef.current.width}
+                          value={transform.width || imageDimensions.width}
                           onChange={(e) => {
                             const value = e.target.value ? parseInt(e.target.value) : null;
                             setTransform({ ...transform, width: value });
                           }}
-                          placeholder={imageRef.current.width.toString()}
+                          placeholder={imageDimensions.width.toString()}
                         />
                       </div>
                       <div className="image-editor-input">
@@ -1822,12 +1831,12 @@ export const ImageEditor = ({ imageUrl, imageTitle, onSave, onCancel }: ImageEdi
                         <input
                           type="number"
                           min="1"
-                          value={transform.height || imageRef.current.height}
+                          value={transform.height || imageDimensions.height}
                           onChange={(e) => {
                             const value = e.target.value ? parseInt(e.target.value) : null;
                             setTransform({ ...transform, height: value });
                           }}
-                          placeholder={imageRef.current.height.toString()}
+                          placeholder={imageDimensions.height.toString()}
                         />
                       </div>
                       <div className="image-editor-button-group">

@@ -63,6 +63,7 @@ export function useBatchedFavoriteCheck(imageId: string | undefined): boolean {
 
   useEffect(() => {
     if (!accessToken || !imageId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsFavorited(false);
       validImageIdRef.current = null;
       return;

@@ -79,3 +79,18 @@ export function extractIdFromSlug(slug: string): string {
   const parts = slug.split('-');
   return parts[parts.length - 1] || '';
 }
+
+/**
+ * Extract error message from unknown error type
+ * Handles both standard Error objects and Axios errors
+ */
+export function getErrorMessage(error: unknown, defaultMessage: string = 'An error occurred'): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'object' && error !== null) {
+    const axiosError = error as { response?: { data?: { message?: string } }; message?: string };
+    return axiosError.response?.data?.message || axiosError.message || defaultMessage;
+  }
+  return defaultMessage;
+}
