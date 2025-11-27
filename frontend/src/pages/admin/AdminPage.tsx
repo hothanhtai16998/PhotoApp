@@ -26,18 +26,18 @@ import { Skeleton } from '@/components/ui/skeleton';
 import './AdminPage.css';
 
 // Lazy load admin tab components to reduce initial bundle size
-const AdminDashboard = lazy(() => import('@/components/admin/tabs/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
-const AdminAnalytics = lazy(() => import('@/components/admin/tabs/AdminAnalytics').then(m => ({ default: m.AdminAnalytics })));
-const AdminUsers = lazy(() => import('@/components/admin/tabs/AdminUsers').then(m => ({ default: m.AdminUsers })));
-const AdminImages = lazy(() => import('@/components/admin/tabs/AdminImages').then(m => ({ default: m.AdminImages })));
-const AdminCategories = lazy(() => import('@/components/admin/tabs/AdminCategories').then(m => ({ default: m.AdminCategories })));
-const AdminCollections = lazy(() => import('@/components/admin/tabs/AdminCollections').then(m => ({ default: m.AdminCollections })));
-const AdminRoles = lazy(() => import('@/components/admin/tabs/AdminRoles').then(m => ({ default: m.AdminRoles })));
-const AdminFavorites = lazy(() => import('@/components/admin/tabs/AdminFavorites').then(m => ({ default: m.AdminFavorites })));
-const AdminModeration = lazy(() => import('@/components/admin/tabs/AdminModeration').then(m => ({ default: m.AdminModeration })));
-const AdminLogs = lazy(() => import('@/components/admin/tabs/AdminLogs').then(m => ({ default: m.AdminLogs })));
-const AdminSettings = lazy(() => import('@/components/admin/tabs/AdminSettings').then(m => ({ default: m.AdminSettings })));
-const PermissionMatrix = lazy(() => import('@/components/admin/PermissionMatrix').then(m => ({ default: m.PermissionMatrix })));
+const AdminDashboard = lazy(() => import('./components/tabs/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const AdminAnalytics = lazy(() => import('./components/tabs/AdminAnalytics').then(m => ({ default: m.AdminAnalytics })));
+const AdminUsers = lazy(() => import('./components/tabs/AdminUsers').then(m => ({ default: m.AdminUsers })));
+const AdminImages = lazy(() => import('./components/tabs/AdminImages').then(m => ({ default: m.AdminImages })));
+const AdminCategories = lazy(() => import('./components/tabs/AdminCategories').then(m => ({ default: m.AdminCategories })));
+const AdminCollections = lazy(() => import('./components/tabs/AdminCollections').then(m => ({ default: m.AdminCollections })));
+const AdminRoles = lazy(() => import('./components/tabs/AdminRoles').then(m => ({ default: m.AdminRoles })));
+const AdminFavorites = lazy(() => import('./components/tabs/AdminFavorites').then(m => ({ default: m.AdminFavorites })));
+const AdminModeration = lazy(() => import('./components/tabs/AdminModeration').then(m => ({ default: m.AdminModeration })));
+const AdminLogs = lazy(() => import('./components/tabs/AdminLogs').then(m => ({ default: m.AdminLogs })));
+const AdminSettings = lazy(() => import('./components/tabs/AdminSettings').then(m => ({ default: m.AdminSettings })));
+const PermissionMatrix = lazy(() => import('./components/PermissionMatrix').then(m => ({ default: m.PermissionMatrix })));
 
 // Loading fallback for admin tabs
 const AdminTabLoader = () => (

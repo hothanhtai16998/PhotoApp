@@ -12,14 +12,14 @@ const SignInPage = lazy(() => import("./pages/SignInPage"));
 const SignUpPage = lazy(() => import("./pages/SignUpPage"));
 const GoogleCallbackPage = lazy(() => import("./pages/GoogleCallbackPage"));
 const EditProfilePage = lazy(() => import("./pages/EditProfilePage"));
-const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const ProfilePage = lazy(() => import("./pages/profile/ProfilePage"));
 const UploadPage = lazy(() => import("./pages/UploadPage"));
-const AdminPage = lazy(() => import("./pages/AdminPage"));
+const AdminPage = lazy(() => import("./pages/admin/AdminPage"));
 const FavoritesPage = lazy(() => import("./pages/FavoritesPage"));
 const FavoriteCollectionsPage = lazy(() => import("./pages/FavoriteCollectionsPage"));
 const ImagePage = lazy(() => import("./pages/ImagePage"));
 const CollectionsPage = lazy(() => import("./pages/CollectionsPage"));
-const CollectionDetailPage = lazy(() => import("./pages/CollectionDetailPage"));
+const CollectionDetailPage = lazy(() => import("./pages/collection/CollectionDetailPage"));
 const AboutPage = lazy(() => import("./pages/AboutPage"));
 
 // Loading fallback component

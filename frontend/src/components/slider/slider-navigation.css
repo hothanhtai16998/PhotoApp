@@ -1,0 +1,132 @@
+/* Navigation Arrows - Base Styles */
+.carousel-nav-arrow {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  flex-shrink: 0;
+}
+
+.carousel-nav-arrow:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #fff;
+  transform: scale(1.1);
+}
+
+/* Bottom Carousel */
+.bottom-carousel-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 40px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 20px;
+}
+
+.bottom-carousel {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.bottom-slide {
+  width: 200px;
+  height: 120px;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+  flex-shrink: 0;
+  background: #1a1a1a;
+}
+
+.bottom-slide-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+  pointer-events: none;
+  transition: transform 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+/* Holographic card effect - ::before pseudo-element for shimmer */
+.bottom-slide::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.6s ease;
+  transform: rotate(0deg) translateY(-100%);
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Holographic effect on hover */
+.bottom-slide:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.5), 0 0 40px rgba(138, 43, 226, 0.3),
+    0 0 60px rgba(255, 20, 147, 0.2);
+}
+
+.bottom-slide:hover::before {
+  opacity: 1;
+  transform: rotate(45deg) translateY(100%);
+}
+
+.bottom-slide:hover .bottom-slide-image {
+  transform: scale(1.02);
+}
+
+/* Hide the 8 zone divs (not needed for holographic effect) */
+.hover-3d > div:not(.bottom-slide-image) {
+  display: none;
+}
+
+/* Active thumbnail indicator */
+.bottom-slide.active-thumbnail {
+  border: 3px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+.bottom-slide.active-thumbnail .bottom-slide-image {
+  opacity: 1;
+}
+
+.bottom-slide:not(.active-thumbnail) .bottom-slide-image {
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+/* Bottom Navigation Arrows */
+.carousel-nav-arrow.bottom-nav {
+  position: static;
+  transform: none;
+  width: 50px;
+  height: 50px;
+  margin: 0;
+}
+
