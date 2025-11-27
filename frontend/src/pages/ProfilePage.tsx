@@ -46,7 +46,7 @@ function ProfilePage() {
     const [isSwitchingProfile, setIsSwitchingProfile] = useState(false);
     // Track which user ID the current stats belong to
     const statsUserIdRef = useRef<string | undefined>(undefined);
-    
+
     // Track image aspect ratios (portrait vs landscape)
     const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
     const processedImages = useRef<Set<string>>(new Set());
@@ -91,7 +91,7 @@ function ProfilePage() {
         };
 
         fetchProfileUser();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+
     }, [params.username, params.userId, navigate]);
 
     // Determine which user's profile to display
@@ -109,15 +109,15 @@ function ProfilePage() {
     useEffect(() => {
         // Create a unique key from params to detect changes
         const paramsKey = `${params.username || ''}-${params.userId || ''}`;
-        
+
         // Only reset if params actually changed (not on initial mount)
         if (previousParams.current && previousParams.current !== paramsKey) {
             // Mark that we're switching profiles
             setIsSwitchingProfile(true);
-            
+
             // Clear the stats user ID ref so old data won't be shown
             statsUserIdRef.current = undefined;
-            
+
             // Clear all profile-related state immediately when switching users
             setImages([]);
             setPhotosCount(0);
@@ -129,7 +129,7 @@ function ProfilePage() {
             setImageTypes(new Map());
             processedImages.current.clear();
         }
-        
+
         // Update the ref for next comparison (on initial mount, this will be set)
         if (!previousParams.current || previousParams.current !== paramsKey) {
             previousParams.current = paramsKey;
@@ -144,23 +144,23 @@ function ProfilePage() {
             setLoading(true);
             const response = await imageService.fetchUserImages(displayUserId, refresh ? { _refresh: true } : undefined);
             const userImages = response.images || [];
-            
+
             // Only update if we're still on the same user (prevent race conditions)
             if (displayUserId === currentUserId) {
                 setImages(userImages);
 
                 // Count photos and illustrations
                 const photos = userImages.filter(img => {
-                    const categoryName = typeof img.imageCategory === 'string' 
-                        ? img.imageCategory 
+                    const categoryName = typeof img.imageCategory === 'string'
+                        ? img.imageCategory
                         : img.imageCategory?.name;
                     return categoryName &&
                         !categoryName.toLowerCase().includes('illustration') &&
                         !categoryName.toLowerCase().includes('svg');
                 });
                 const illustrations = userImages.filter(img => {
-                    const categoryName = typeof img.imageCategory === 'string' 
-                        ? img.imageCategory 
+                    const categoryName = typeof img.imageCategory === 'string'
+                        ? img.imageCategory
                         : img.imageCategory?.name;
                     return categoryName &&
                         (categoryName.toLowerCase().includes('illustration') ||
@@ -264,7 +264,7 @@ function ProfilePage() {
     // Track profile view when component mounts (only once per session)
     useEffect(() => {
         if (!displayUserId || !currentUser?._id) return;
-        
+
         // Only track views for other users' profiles
         if (!isOwnProfile) {
             const hasTrackedView = sessionStorage.getItem(`profile_view_${displayUserId}_${currentUser._id}`);
@@ -329,8 +329,8 @@ function ProfilePage() {
     const displayImages = useMemo(() => {
         if (activeTab === 'photos') {
             return images.filter(img => {
-                const categoryName = typeof img.imageCategory === 'string' 
-                    ? img.imageCategory 
+                const categoryName = typeof img.imageCategory === 'string'
+                    ? img.imageCategory
                     : img.imageCategory?.name;
                 return categoryName &&
                     !categoryName.toLowerCase().includes('illustration') &&
@@ -338,8 +338,8 @@ function ProfilePage() {
             });
         } else if (activeTab === 'illustrations') {
             return images.filter(img => {
-                const categoryName = typeof img.imageCategory === 'string' 
-                    ? img.imageCategory 
+                const categoryName = typeof img.imageCategory === 'string'
+                    ? img.imageCategory
                     : img.imageCategory?.name;
                 return categoryName &&
                     (categoryName.toLowerCase().includes('illustration') ||
@@ -351,14 +351,14 @@ function ProfilePage() {
 
     // Get selected image slug or ID from URL
     const imageParamFromUrl = searchParams.get('image');
-    
+
     // Find selected image from URL (supports both slug format and legacy ID format)
     const selectedImage = useMemo(() => {
         if (!imageParamFromUrl) return null;
-        
+
         // Check if it's a MongoDB ObjectId (24 hex characters) - legacy format
         const isObjectId = /^[0-9a-fA-F]{24}$/.test(imageParamFromUrl);
-        
+
         if (isObjectId) {
             // Legacy format: direct ID match
             return displayImages.find(img => img._id === imageParamFromUrl) || null;
@@ -366,7 +366,7 @@ function ProfilePage() {
             // New format: slug with short ID
             const shortId = extractIdFromSlug(imageParamFromUrl);
             if (!shortId) return null;
-            
+
             // Find image by matching the last 12 characters of ID
             return displayImages.find(img => {
                 const imgShortId = img._id.slice(-12);
@@ -538,7 +538,7 @@ function ProfilePage() {
                             <p className="profile-description">
                                 {displayUser.bio || `Tải xuống miễn phí những bức ảnh chất lượng cao đẹp mắt được tuyển chọn bởi ${displayUser.displayName || displayUser.username}.`}
                             </p>
-                            
+
                             {/* Location */}
                             {displayUser.location && (
                                 <div className="profile-location">
@@ -607,7 +607,7 @@ function ProfilePage() {
 
                             {/* Visual Stats Cards */}
                             <div className="profile-stats-grid" key={displayUserId || 'no-user'}>
-                                <button 
+                                <button
                                     className="profile-stat-card"
                                     onClick={() => setActiveTab('photos')}
                                 >
@@ -621,7 +621,7 @@ function ProfilePage() {
                                         <span className="stat-card-label">Ảnh</span>
                                     </div>
                                 </button>
-                                <button 
+                                <button
                                     className="profile-stat-card"
                                     onClick={() => setActiveTab('collections')}
                                 >
@@ -637,7 +637,7 @@ function ProfilePage() {
                                 </button>
                                 {!isSwitchingProfile && userStats && statsUserIdRef.current === displayUserId && (
                                     <>
-                                        <button 
+                                        <button
                                             className="profile-stat-card"
                                             title="Total likes received on your images"
                                         >
@@ -649,7 +649,7 @@ function ProfilePage() {
                                                 <span className="stat-card-label">Lượt thích</span>
                                             </div>
                                         </button>
-                                        <button 
+                                        <button
                                             className="profile-stat-card"
                                             title="Total downloads of your images"
                                         >
@@ -663,7 +663,7 @@ function ProfilePage() {
                                         </button>
                                         {/* Profile views - Only show for own profile */}
                                         {isOwnProfile && userStats.profileViews > 0 && (
-                                            <button 
+                                            <button
                                                 className="profile-stat-card"
                                                 title="Lượt xem hồ sơ"
                                             >
@@ -678,7 +678,7 @@ function ProfilePage() {
                                         )}
                                     </>
                                 )}
-                                <button 
+                                <button
                                     className="profile-stat-card"
                                     onClick={() => {
                                         // TODO: Show followers list modal
@@ -695,7 +695,7 @@ function ProfilePage() {
                                         <span className="stat-card-label">Người theo dõi</span>
                                     </div>
                                 </button>
-                                <button 
+                                <button
                                     className="profile-stat-card"
                                     onClick={() => {
                                         // TODO: Show following list modal
@@ -850,7 +850,7 @@ function ProfilePage() {
                                     {collections.map((collection) => {
                                         const coverImage =
                                             collection.coverImage &&
-                                            typeof collection.coverImage === 'object'
+                                                typeof collection.coverImage === 'object'
                                                 ? collection.coverImage
                                                 : null;
 

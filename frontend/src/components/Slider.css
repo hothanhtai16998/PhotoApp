@@ -12,31 +12,285 @@
 /* Auto-play progress indicator */
 .autoplay-progress {
   position: absolute;
-	bottom: 0;
-	left: 0;
-	width: 100%;
-  height: 5px;
-  background: rgba(255, 255, 255, 0.15);
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.2);
   z-index: 3; /* Same level as slide content */
   pointer-events: none;
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   overflow: hidden;
+  backdrop-filter: blur(4px);
+}
+
+/* ============================================
+   PROGRESS BAR STYLE OPTIONS
+   Uncomment the style you want to use
+   ============================================ */
+
+/* OPTION 1: Gradient with Glow (Current - Logo Colors) */
+.autoplay-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+  transition: none;
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.6), 0 0 20px rgba(139, 92, 246, 0.4),
+    0 0 30px rgba(236, 72, 153, 0.3);
+  border-radius: 0;
+  will-change: width;
+  box-sizing: border-box;
+  display: block;
+  transform: translateZ(0);
+  position: relative;
+  overflow: hidden;
+}
+
+.autoplay-progress-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 100%
+  );
+  animation: shimmer 2s infinite;
+  transform: translateX(-100%);
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+*/
+
+/* OPTION 2: Neon Cyan (Uncomment to use)
+.autoplay-progress {
+  background: rgba(0, 0, 0, 0.3);
+  height: 3px;
+}
+
+.autoplay-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #00f0ff 0%, #00d4ff 100%);
+  box-shadow: 0 0 10px #00f0ff, 
+              0 0 20px #00d4ff,
+              0 0 30px rgba(0, 240, 255, 0.5);
+  border-radius: 0;
+  will-change: width;
+  transform: translateZ(0);
+}
+*/
+
+/* OPTION 3: Fire/Orange Gradient (Uncomment to use)
+.autoplay-progress {
+  background: rgba(0, 0, 0, 0.25);
+  height: 5px;
+}
+
+.autoplay-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #ff6b35 0%, #f7931e 50%, #ffd23f 100%);
+  box-shadow: 0 0 15px rgba(255, 107, 53, 0.8),
+              0 0 25px rgba(247, 147, 30, 0.6);
+  border-radius: 0;
+  will-change: width;
+  transform: translateZ(0);
+}
+*/
+
+/* OPTION 4: Minimalist White with Border (Uncomment to use)
+.autoplay-progress {
+  background: transparent;
+  height: 2px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .autoplay-progress-bar {
   height: 100%;
   width: 0%;
   background: #fff;
-  transition: none;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
   border-radius: 0;
   will-change: width;
-  box-sizing: border-box;
-  display: block;
-  transform: translateZ(0); /* Force hardware acceleration for smoother animation */
+  transform: translateZ(0);
 }
+*/
+
+/* OPTION 5: Pulsing Glow Effect (Uncomment to use)
+.autoplay-progress {
+  background: rgba(0, 0, 0, 0.3);
+  height: 4px;
+}
+
+.autoplay-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: #06b6d4;
+  box-shadow: 0 0 10px #06b6d4,
+              0 0 20px #06b6d4,
+              0 0 30px #06b6d4;
+  border-radius: 0;
+  will-change: width;
+  transform: translateZ(0);
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px #06b6d4,
+                0 0 20px #06b6d4,
+                0 0 30px #06b6d4;
+  }
+  50% {
+    box-shadow: 0 0 15px #06b6d4,
+                0 0 30px #06b6d4,
+                0 0 45px #06b6d4;
+  }
+}
+*/
+
+/* OPTION 6: Rainbow Gradient (Uncomment to use)
+.autoplay-progress {
+  background: rgba(0, 0, 0, 0.2);
+  height: 4px;
+}
+
+.autoplay-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, 
+    #ff0000 0%, 
+    #ff7f00 16.66%, 
+    #ffff00 33.33%, 
+    #00ff00 50%, 
+    #0000ff 66.66%, 
+    #4b0082 83.33%, 
+    #9400d3 100%);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+  border-radius: 0;
+  will-change: width;
+  transform: translateZ(0);
+  animation: rainbow-shift 3s linear infinite;
+}
+
+@keyframes rainbow-shift {
+  0% {
+    filter: hue-rotate(0deg);
+  }
+  100% {
+    filter: hue-rotate(360deg);
+  }
+}
+*/
+
+/* OPTION 7: Dotted/Pattern Style (Uncomment to use)
+.autoplay-progress {
+  background: rgba(0, 0, 0, 0.2);
+  height: 6px;
+}
+
+.autoplay-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: repeating-linear-gradient(
+    90deg,
+    #fff 0px,
+    #fff 8px,
+    transparent 8px,
+    transparent 16px
+  );
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+  border-radius: 0;
+  will-change: width;
+  transform: translateZ(0);
+  animation: dots-move 1s linear infinite;
+}
+
+@keyframes dots-move {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 16px 0;
+  }
+}
+*/
+
+/* OPTION 8: Glassmorphism Style (Uncomment to use)
+.autoplay-progress {
+  background: rgba(255, 255, 255, 0.05);
+  height: 3px;
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.autoplay-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, 
+    rgba(255, 255, 255, 0.3) 0%, 
+    rgba(255, 255, 255, 0.6) 100%);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+  border-radius: 0;
+  will-change: width;
+  transform: translateZ(0);
+}
+*/
+
+/* OPTION 9: Split Color (Half White, Half Accent) (Uncomment to use)
+.autoplay-progress {
+  background: rgba(0, 0, 0, 0.2);
+  height: 4px;
+}
+
+.autoplay-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, 
+    #fff 0%, 
+    #fff 50%, 
+    #6366f1 50%, 
+    #6366f1 100%);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+  border-radius: 0;
+  will-change: width;
+  transform: translateZ(0);
+}
+*/
+
+/* OPTION 10: Thick with Rounded Ends (Uncomment to use)
+.autoplay-progress {
+  background: rgba(0, 0, 0, 0.2);
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.autoplay-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.6);
+  border-radius: 3px;
+  will-change: width;
+  transform: translateZ(0);
+}
+*/
 
 
 .loading-state {
@@ -95,11 +349,11 @@
   left: 0;
   width: 100%;
   height: 100%;
-	opacity: 0;
+  opacity: 0;
   transform: scale(1.1);
   transition: opacity 0.8s ease-in-out, transform 0.8s ease-in-out;
   z-index: 1;
-	visibility: hidden;
+  visibility: hidden;
 }
 
 .main-slide.split-screen-mode .main-image-layer {
@@ -109,11 +363,11 @@
 
 /* Blurred background layer for Option 1 - fills black space only */
 .blur-background-layer {
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   filter: blur(50px) brightness(0.6);
   transform: scale(1.2);
   z-index: 0;
@@ -139,31 +393,30 @@
 
 /* Main image layer for Option 1 - separate bright layer */
 .main-image-layer {
-	position: absolute;
+  position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   z-index: 1;
-	pointer-events: none;
+  pointer-events: none;
 }
 
 /* Ensure main slide content is above blurred layer */
 .main-slide .slide-content {
-	position: relative;
+  position: relative;
   z-index: 3;
 }
 
 .main-slide.active {
-		opacity: 1;
+  opacity: 1;
   transform: scale(1);
   z-index: 2;
   visibility: visible;
 }
 
-
 .slide-content {
-	position: relative;
+  position: relative;
   z-index: 2;
   display: flex;
   flex-direction: column;
@@ -177,19 +430,19 @@
 
 .slide-title {
   font-size: 120px;
-	font-weight: 700;
+  font-weight: 700;
   margin: 0;
   letter-spacing: -3px;
   line-height: 1.1;
-	text-transform: none;
-	opacity: 0;
+  text-transform: none;
+  opacity: 0;
   transform: translateY(30px);
   transition: opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .main-slide.active .slide-title {
-	opacity: 1;
+  opacity: 1;
   transform: translateY(0);
 }
 
@@ -215,7 +468,6 @@
   border-color: #fff;
   transform: scale(1.1);
 }
-
 
 /* Bottom Carousel */
 .bottom-carousel-container {
@@ -256,7 +508,7 @@
   border-radius: 12px;
   pointer-events: none;
   transition: transform 0.3s ease;
-	position: relative;
+  position: relative;
   z-index: 1;
 }
 
@@ -284,9 +536,8 @@
 /* Holographic effect on hover */
 .bottom-slide:hover {
   transform: scale(1.05);
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.5),
-              0 0 40px rgba(138, 43, 226, 0.3),
-              0 0 60px rgba(255, 20, 147, 0.2);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.5), 0 0 40px rgba(138, 43, 226, 0.3),
+    0 0 60px rgba(255, 20, 147, 0.2);
 }
 
 .bottom-slide:hover::before {
@@ -310,7 +561,7 @@
 }
 
 .bottom-slide.active-thumbnail .bottom-slide-image {
-		opacity: 1;
+  opacity: 1;
 }
 
 .bottom-slide:not(.active-thumbnail) .bottom-slide-image {
@@ -327,13 +578,11 @@
   margin: 0;
 }
 
-
 /* Responsive Design */
 @media (max-width: 1024px) {
   .slide-title {
     font-size: 80px;
   }
-
 
   .bottom-slide {
     width: 160px;
@@ -393,7 +642,6 @@
     width: 120px;
     height: 70px;
   }
-
 }
 
 /* Info Settings Button */
@@ -406,21 +654,21 @@
 
 .info-settings-button {
   background: rgba(255, 255, 255, 0.1);
-	border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
   padding: 10px;
-	cursor: pointer;
+  cursor: pointer;
   color: #fff;
   display: flex;
-	align-items: center;
-	justify-content: center;
+  align-items: center;
+  justify-content: center;
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
 }
 
 .info-settings-button:hover {
   background: rgba(255, 255, 255, 0.2);
-	border-color: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .info-settings-dropdown {
@@ -460,7 +708,12 @@
   left: 0;
   right: 0;
   padding: 40px 60px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 50%, transparent 100%);
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.8) 0%,
+    rgba(0, 0, 0, 0.4) 50%,
+    transparent 100%
+  );
 }
 
 .info-bottom-overlay .slide-title {
@@ -468,9 +721,9 @@
 }
 
 .info-details {
-	display: flex;
+  display: flex;
   flex-direction: column;
-	gap: 8px;
+  gap: 8px;
 }
 
 .info-item {
@@ -491,7 +744,7 @@
 
 /* Option 2: Expandable Panel */
 .info-expandable {
-	position: absolute;
+  position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
@@ -502,7 +755,11 @@
 }
 
 .info-expandable:hover {
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.5) 100%);
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.9) 0%,
+    rgba(0, 0, 0, 0.5) 100%
+  );
 }
 
 .info-expanded {
@@ -515,20 +772,20 @@
 
 @keyframes slideUp {
   from {
-		opacity: 0;
+    opacity: 0;
     transform: translateY(10px);
-	}
+  }
   to {
-		opacity: 1;
+    opacity: 1;
     transform: translateY(0);
   }
 }
 
 /* Option 3: Side Panel */
 .info-side-panel {
-	position: absolute;
-	left: 0;
-	top: 0;
+  position: absolute;
+  left: 0;
+  top: 0;
   bottom: 0;
   width: 350px;
   background: rgba(0, 0, 0, 0.85);
@@ -557,8 +814,8 @@
 
 .side-panel-content .info-label {
   font-size: 12px;
-	text-transform: uppercase;
-	letter-spacing: 1px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
   opacity: 0.6;
 }
 
@@ -583,7 +840,7 @@
 
 /* Option 4: Floating Card */
 .info-floating-card {
-	position: absolute;
+  position: absolute;
   bottom: 40px;
   right: 40px;
   z-index: 10;
@@ -647,7 +904,7 @@
 .info-corner-badge {
   position: absolute;
   top: 40px;
-		left: 40px;
+  left: 40px;
   z-index: 10;
 }
 
@@ -676,7 +933,7 @@
   color: #fff;
   padding: 12px 20px;
   border-radius: 8px;
-		font-size: 18px;
+  font-size: 18px;
   font-weight: 600;
   margin: 0;
   text-transform: none;
@@ -724,7 +981,7 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-		color: #fff;
+  color: #fff;
   font-size: 18px;
 }
 
@@ -785,7 +1042,7 @@
 
 .animated-text-container {
   display: flex;
-		flex-direction: column;
+  flex-direction: column;
   gap: 16px;
 }
 
@@ -801,7 +1058,7 @@
 }
 
 .animated-item {
-		color: #fff;
+  color: #fff;
   font-size: 20px;
   opacity: 0;
   transform: translateX(-30px);
@@ -834,8 +1091,8 @@
 .bottom-sheet-toggle {
   position: absolute;
   bottom: 0;
-		left: 50%;
-		transform: translateX(-50%);
+  left: 50%;
+  transform: translateX(-50%);
   background: rgba(0, 0, 0, 0.8);
   color: #fff;
   border: none;
@@ -890,7 +1147,7 @@
 .sheet-label {
   font-size: 12px;
   text-transform: uppercase;
-		letter-spacing: 1px;
+  letter-spacing: 1px;
   color: rgba(255, 255, 255, 0.6);
   font-weight: 600;
 }
@@ -931,7 +1188,7 @@
   background: rgba(0, 0, 0, 0.9);
   backdrop-filter: blur(10px);
   padding: 60px 50px;
-		display: flex;
+  display: flex;
   flex-direction: column;
   justify-content: center;
   border-left: 1px solid rgba(255, 255, 255, 0.1);
@@ -954,22 +1211,22 @@
 
 .split-item {
   display: flex;
-		flex-direction: column;
+  flex-direction: column;
   gap: 8px;
 }
 
 .split-label {
   font-size: 11px;
-		text-transform: uppercase;
+  text-transform: uppercase;
   letter-spacing: 2px;
   color: rgba(255, 255, 255, 0.5);
-		font-weight: 600;
+  font-weight: 600;
   margin-bottom: 4px;
 }
 
 .split-value {
   font-size: 18px;
-		color: #fff;
+  color: #fff;
   font-weight: 500;
 }
 
@@ -1007,7 +1264,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-		color: #fff;
+  color: #fff;
   font-size: 14px;
   font-weight: 500;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
@@ -1015,12 +1272,24 @@
   opacity: 0;
 }
 
-.floating-tag:nth-child(1) { animation-delay: 0.1s; }
-.floating-tag:nth-child(2) { animation-delay: 0.2s; }
-.floating-tag:nth-child(3) { animation-delay: 0.3s; }
-.floating-tag:nth-child(4) { animation-delay: 0.4s; }
-.floating-tag:nth-child(5) { animation-delay: 0.5s; }
-.floating-tag:nth-child(6) { animation-delay: 0.6s; }
+.floating-tag:nth-child(1) {
+  animation-delay: 0.1s;
+}
+.floating-tag:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.floating-tag:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.floating-tag:nth-child(4) {
+  animation-delay: 0.4s;
+}
+.floating-tag:nth-child(5) {
+  animation-delay: 0.5s;
+}
+.floating-tag:nth-child(6) {
+  animation-delay: 0.6s;
+}
 
 @keyframes floatIn {
   from {
@@ -1063,7 +1332,12 @@
   right: 0;
   z-index: 10;
   padding: 80px 60px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.7) 60%, transparent 100%);
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.95) 0%,
+    rgba(0, 0, 0, 0.7) 60%,
+    transparent 100%
+  );
 }
 
 .typography-content {
@@ -1083,7 +1357,7 @@
 }
 
 .typography-meta {
-		display: flex;
+  display: flex;
   gap: 32px;
   flex-wrap: wrap;
 }
