@@ -1,7 +1,12 @@
 /* Responsive Design */
 @media (max-width: 1024px) {
   .slide-title {
-    font-size: 80px;
+    font-size: 40px;
+  }
+
+  .slide-content {
+    bottom: 25px;
+    left: 25px;
   }
 
   .bottom-slide {
@@ -12,8 +17,13 @@
 
 @media (max-width: 768px) {
   .slide-title {
-    font-size: 56px;
-    letter-spacing: -2px;
+    font-size: 32px;
+    letter-spacing: -0.5px;
+  }
+
+  .slide-content {
+    bottom: 20px;
+    left: 20px;
   }
 
   .carousel-nav-arrow {
@@ -55,7 +65,12 @@
 
 @media (max-width: 480px) {
   .slide-title {
-    font-size: 40px;
+    font-size: 24px;
+  }
+
+  .slide-content {
+    bottom: 16px;
+    left: 16px;
   }
 
   .bottom-slide {
@@ -63,4 +78,3 @@
     height: 70px;
   }
 }
-

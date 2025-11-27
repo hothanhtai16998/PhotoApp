@@ -9,14 +9,14 @@ function getDailyRandomImages(images: Image[], count: number): Image[] {
   // Use date as seed for consistent daily selection
   const today = new Date();
   const dateString = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
-  
+
   // Simple hash function to convert date string to number
   let seed = 0;
   for (let i = 0; i < dateString.length; i++) {
     seed = ((seed << 5) - seed) + dateString.charCodeAt(i);
     seed = seed & seed; // Convert to 32bit integer
   }
-  
+
   // Shuffle array using seed
   const shuffled = [...images];
   let random = seed;
@@ -25,7 +25,7 @@ function getDailyRandomImages(images: Image[], count: number): Image[] {
     const j = Math.floor((random / 233280) * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
-  
+
   return shuffled.slice(0, count);
 }
 
@@ -44,6 +44,7 @@ function Slider() {
   const nextSlideRef = useRef<() => void>();
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
+  const animationStartTimeRef = useRef<Map<number, number>>(new Map());
 
   // Fetch all images and select 10 random ones for today
   useEffect(() => {
@@ -55,13 +56,13 @@ function Slider() {
         let page = 1;
         let hasMore = true;
         const maxPages = 10; // Limit to 10 pages (1000 images max) to avoid infinite loops
-        
+
         while (hasMore && page <= maxPages) {
           const response = await imageService.fetchImages({
             limit: 100, // Maximum allowed by API
             page: page,
           });
-          
+
           if (response.images && response.images.length > 0) {
             allImages.push(...response.images);
             // Check if there are more pages
@@ -76,7 +77,7 @@ function Slider() {
             hasMore = false;
           }
         }
-        
+
         if (allImages.length > 0) {
           // Get 10 random images for today
           const dailyImages = getDailyRandomImages(allImages, 10);
@@ -183,7 +184,7 @@ function Slider() {
     // Auto-play interval - change slide every 6.2 seconds
     // Calculate delay based on remaining time if resuming from pause
     const remainingTime = 6200 - (startProgress / 100) * 6200;
-    
+
     const scheduleNextSlide = () => {
       setAutoPlayProgress(100); // Ensure it reaches 100% before changing
       isAutoPlayChangeRef.current = true; // Mark as auto-play change
@@ -204,7 +205,7 @@ function Slider() {
     };
 
     let timeoutId: NodeJS.Timeout | null = null;
-    
+
     if (startProgress > 0) {
       // Resume from pause - use setTimeout for the first slide change
       timeoutId = setTimeout(() => {
@@ -259,6 +260,21 @@ function Slider() {
     return () => window.removeEventListener("keydown", handleKeyPress);
   }, [prevSlide, nextSlide, goToSlide, images.length]);
 
+  // Track animation start time for each slide
+  useEffect(() => {
+    animationStartTimeRef.current.set(currentSlide, Date.now());
+
+    // Clear animation attribute after animation completes (8s)
+    const timeout = setTimeout(() => {
+      const slideElements = document.querySelectorAll(`[data-slide-index="${currentSlide}"] .slide-title.typewriter`);
+      slideElements.forEach(el => {
+        el.removeAttribute('data-animation-started');
+      });
+      animationStartTimeRef.current.delete(currentSlide);
+    }, 8000);
+
+    return () => clearTimeout(timeout);
+  }, [currentSlide]);
 
   // Get best image URL
   const getImageUrl = (image: Image | null): string | null => {
@@ -307,12 +323,12 @@ function Slider() {
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStartX.current === null || touchStartY.current === null) return;
-    
+
     const touchEndX = e.changedTouches[0].clientX;
     const touchEndY = e.changedTouches[0].clientY;
     const diffX = touchStartX.current - touchEndX;
     const diffY = touchStartY.current - touchEndY;
-    
+
     // Only trigger if horizontal swipe is greater than vertical (to avoid conflicts with scrolling)
     if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
       if (diffX > 0) {
@@ -321,7 +337,7 @@ function Slider() {
         prevSlide(); // Swipe right = previous
       }
     }
-    
+
     touchStartX.current = null;
     touchStartY.current = null;
   };
@@ -329,14 +345,14 @@ function Slider() {
   // Preload next 2-3 images
   useEffect(() => {
     if (images.length === 0) return;
-    
+
     const preloadImages = () => {
       for (let i = 1; i <= 3; i++) {
         const nextIndex = (currentSlide + i) % images.length;
         const image = images[nextIndex];
         if (!image) continue;
-        
-        const imageUrl = 
+
+        const imageUrl =
           image.regularAvifUrl ||
           image.regularUrl ||
           image.imageAvifUrl ||
@@ -344,14 +360,14 @@ function Slider() {
           image.smallUrl ||
           image.thumbnailUrl ||
           null;
-        
+
         if (imageUrl) {
           const img = new window.Image();
           img.src = imageUrl;
         }
       }
     };
-    
+
     preloadImages();
   }, [currentSlide, images]);
 
@@ -376,7 +392,7 @@ function Slider() {
 
 
   return (
-    <div 
+    <div
       className="tripzo-page"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
@@ -384,8 +400,8 @@ function Slider() {
       {/* Auto-play progress bar */}
       {images.length > 0 && (
         <div className="autoplay-progress" style={{ opacity: isHovered ? 0.5 : 1 }}>
-          <div 
-            className="autoplay-progress-bar" 
+          <div
+            className="autoplay-progress-bar"
             style={{ width: `${autoPlayProgress}%` }}
           />
         </div>
@@ -395,12 +411,13 @@ function Slider() {
       <div className="main-carousel-container">
         {images.map((image, index) => {
           const imageUrl = getImageUrl(image);
-          
+
           return (
             <div
               key={image._id}
               className={`main-slide ${index === currentSlide ? "active" : ""}`}
               style={{ backgroundColor: '#1a1a1a' }}
+              data-slide-index={index}
             >
               {/* Blurred background layer */}
               {imageUrl && (
@@ -426,9 +443,10 @@ function Slider() {
                 />
               )}
               <div className="slide-content">
-                <h2 
+                <h2
                   key={`${image._id}-${index === currentSlide ? 'active' : 'inactive'}`}
                   className="slide-title typewriter"
+                  data-animation-started={index === currentSlide || animationStartTimeRef.current.has(index) ? 'true' : undefined}
                 >
                   {image.imageTitle}
                 </h2>
@@ -453,7 +471,7 @@ function Slider() {
             const thumbnailUrl = getThumbnailUrl(image);
             const slideIndex = index === 0 ? currentSlide : (currentSlide + 1) % images.length;
             const isActive = index === 0; // First thumbnail is always the current slide
-            
+
             return (
               <div
                 key={image._id}
