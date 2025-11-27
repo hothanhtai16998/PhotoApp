@@ -35,6 +35,7 @@
 		"noImplicitThis": true,
 		"alwaysStrict": true,
 		"noUncheckedIndexedAccess": true,
+		"noImplicitReturns": true,
 
 		//shad-cn
 		"baseUrl": ".",

@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef, lazy, Suspense } from "react";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
-import { useAuthStore } from "@/stores/useAuthStore";
 import { useUserStore } from "@/stores/useUserStore";
 import { useProfileStore } from "@/stores/useProfileStore";
 import { useUserImageStore } from "@/stores/useUserImageStore";
@@ -236,9 +235,6 @@ function ProfilePage() {
         }
 
         if (!displayUserId) return;
-
-        // Show loading state immediately (optimistic loading)
-        setLoading(true);
 
         // Only fetch essential data on initial load (images and follow stats for header)
         // Collections and stats will be lazy-loaded when their tabs are clicked
@@ -477,7 +473,23 @@ function ProfilePage() {
         );
     }
 
-    const displayUser = profileUser || currentUser;
+    const displayUser = profileUser || (currentUser ? {
+        _id: currentUser._id,
+        username: currentUser.username,
+        displayName: currentUser.displayName || currentUser.username,
+        avatarUrl: currentUser.avatarUrl,
+        bio: currentUser.bio,
+        location: currentUser.location,
+        website: currentUser.website,
+        instagram: currentUser.instagram,
+        twitter: currentUser.twitter,
+        facebook: currentUser.facebook,
+        createdAt: currentUser.createdAt || new Date().toISOString(),
+    } : null);
+
+    if (!displayUser) {
+        return null;
+    }
 
     return (
         <>
@@ -486,7 +498,7 @@ function ProfilePage() {
                 <div className="profile-container">
                     {/* Profile Header */}
                     <ProfileHeader
-                        displayUser={displayUser as PublicUser}
+                        displayUser={displayUser}
                         isOwnProfile={isOwnProfile}
                         userStats={userStats}
                         displayUserId={displayUserId}

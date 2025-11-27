@@ -3,7 +3,6 @@ import { immer } from 'zustand/middleware/immer';
 import { favoriteService } from '@/services/favoriteService';
 import type { FavoriteState } from '@/types/store';
 import type { Image } from '@/types/image';
-import type { Pagination } from '@/types/common';
 
 export const useFavoriteStore = create(
 	immer<FavoriteState>((set) => ({

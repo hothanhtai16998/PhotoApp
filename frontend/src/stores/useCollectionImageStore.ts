@@ -7,7 +7,7 @@ import type { Image } from '@/types/image';
 import type { ApiErrorResponse } from '@/types/errors';
 
 export const useCollectionImageStore = create(
-	immer<CollectionImageState>((set, get) => ({
+	immer<CollectionImageState>((set) => ({
 		images: [],
 		imageTypes: new Map<string, 'portrait' | 'landscape'>(),
 		draggedImageId: null,

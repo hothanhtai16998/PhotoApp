@@ -8,6 +8,8 @@
     "build": "tsc -b && vite build",
     "build:analyze": "tsc -b && vite build && echo Bundle analysis complete! Open dist/stats.html in your browser",
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "type-check": "tsc --noEmit",
     "preview": "vite preview",
     "perf:lighthouse": "npm run build && node scripts/run-lighthouse.js",
     "perf:test": "node scripts/run-performance-tests.js",

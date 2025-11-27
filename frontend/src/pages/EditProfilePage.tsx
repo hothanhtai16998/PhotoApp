@@ -1,55 +1,37 @@
-import { useEffect, useState, useRef } from "react";
-import { useForm } from 'react-hook-form';
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useUserStore } from "@/stores/useUserStore";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useUserStore } from "@/stores/useUserStore";
 import Header from "@/components/Header";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { CheckCircle2 } from "lucide-react";
-import { userService } from "@/services/userService";
-import { toast } from "sonner";
-import { changePasswordSchema, type ProfileFormData, type ChangePasswordFormData } from "@/types/forms";
+import { useProfileEdit } from "./profile/hooks/useProfileEdit";
+import { ProfileForm } from "./profile/components/ProfileForm";
+import { PasswordForm } from "./profile/components/PasswordForm";
 import "./EditProfilePage.css";
 
 function EditProfilePage() {
-    const { user, fetchMe } = useUserStore();
+    const { user } = useUserStore();
     const navigate = useNavigate();
     const [activeSection, setActiveSection] = useState('edit-profile');
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [passwordError, setPasswordError] = useState<string | null>(null);
-    const [passwordSuccess, setPasswordSuccess] = useState(false);
-    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-    const [selectedAvatar, setSelectedAvatar] = useState<File | null>(null);
-    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Split displayName into firstName and lastName
-    const nameParts = user?.displayName?.split(' ') || [];
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts.slice(1).join(' ') || '';
-
-    const { register, handleSubmit, setValue, watch } = useForm<ProfileFormData>({
-        defaultValues: {
-            firstName,
-            lastName,
-            email: user?.email || '',
-            username: user?.username || '',
-            location: '',
-            phone: '',
-            personalSite: 'https://',
-            bio: user?.bio || '',
-            interests: '',
-            instagram: '',
-            twitter: '',
-            paypalEmail: '',
-            showMessageButton: true,
-        }
-    });
-
-    const bioText = watch('bio') || '';
-    const bioCharCount = 500 - bioText.length;
+    const {
+        isSubmitting,
+        passwordError,
+        passwordSuccess,
+        avatarPreview,
+        isUploadingAvatar,
+        fileInputRef,
+        register,
+        handleSubmit,
+        setValue,
+        watch,
+        bioCharCount,
+        registerPassword,
+        handlePasswordSubmit,
+        passwordErrors,
+        handleAvatarChange,
+        handleAvatarButtonClick,
+        onSubmit,
+        onPasswordSubmit,
+    } = useProfileEdit();
 
     useEffect(() => {
         if (!user) {
@@ -71,118 +53,6 @@ function EditProfilePage() {
             setValue('twitter', user.twitter || '');
         }
     }, [user, navigate, setValue]);
-
-    // Change password form
-    const {
-        register: registerPassword,
-        handleSubmit: handlePasswordSubmit,
-        formState: { errors: passwordErrors },
-        reset: resetPasswordForm
-    } = useForm<ChangePasswordFormData>({
-        resolver: zodResolver(changePasswordSchema),
-    });
-
-    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            // Validate file type
-            if (!file.type.startsWith('image/')) {
-                toast.error('Please select an image file');
-                return;
-            }
-
-            // Validate file size (10MB)
-            if (file.size > 10 * 1024 * 1024) {
-                toast.error('Image size must be less than 10MB');
-                return;
-            }
-
-            setSelectedAvatar(file);
-
-            // Create preview
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setAvatarPreview(reader.result as string);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const handleAvatarButtonClick = () => {
-        fileInputRef.current?.click();
-    };
-
-    const onSubmit = async (data: ProfileFormData) => {
-        setIsSubmitting(true);
-        setIsUploadingAvatar(!!selectedAvatar);
-
-        try {
-            const formData = new FormData();
-
-            // Add text fields
-            formData.append('firstName', data.firstName);
-            formData.append('lastName', data.lastName);
-            formData.append('email', data.email);
-            if (data.bio) {
-                formData.append('bio', data.bio);
-            }
-            // Always send location, phone, website, instagram, twitter to allow clearing fields
-            formData.append('location', data.location || '');
-            formData.append('phone', data.phone || '');
-            const websiteValue = data.personalSite && data.personalSite !== 'https://' ? data.personalSite : '';
-            formData.append('website', websiteValue);
-            formData.append('instagram', data.instagram || '');
-            formData.append('twitter', data.twitter || '');
-
-            // Add avatar if selected
-            if (selectedAvatar) {
-                formData.append('avatar', selectedAvatar);
-            }
-
-            await userService.updateProfile(formData);
-
-            // Refresh user data
-            await fetchMe();
-
-            // Clear avatar preview and selection
-            setAvatarPreview(null);
-            setSelectedAvatar(null);
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-            }
-
-            toast.success('Cập nhật thông tin thành công');
-        } catch (error: unknown) {
-            const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Failed to update profile. Please try again.";
-            toast.error(errorMessage);
-        } finally {
-            setIsSubmitting(false);
-            setIsUploadingAvatar(false);
-        }
-    };
-
-    const onPasswordSubmit = async (data: ChangePasswordFormData) => {
-        setIsSubmitting(true);
-        setPasswordError(null);
-        setPasswordSuccess(false);
-
-        try {
-            await userService.changePassword(
-                data.password,
-                data.newPassword,
-                data.newPasswordMatch
-            );
-            setPasswordSuccess(true);
-            resetPasswordForm();
-            // Clear success message after 3 seconds
-            setTimeout(() => setPasswordSuccess(false), 3000);
-        } catch (error: unknown) {
-            const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Failed to change password. Please try again.";
-            setPasswordError(errorMessage);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
 
     if (!user) {
         return null;
@@ -228,239 +98,32 @@ function EditProfilePage() {
                     {/* Right Main Content */}
                     <div className="profile-main-content">
                         {activeSection === 'edit-profile' && (
-                            <form onSubmit={handleSubmit(onSubmit)} className="profile-form">
-                                <h1 className="form-title">Chỉnh sửa thông tin</h1>
-
-                                {/* Profile Image Section */}
-                                <div className="profile-image-section">
-                                    <div className="profile-image-container">
-                                        <div className="profile-image-wrapper">
-                                            {avatarPreview ? (
-                                                <img src={avatarPreview} alt="Preview" className="profile-image" />
-                                            ) : user.avatarUrl ? (
-                                                <img src={user.avatarUrl} alt={user.displayName} className="profile-image" />
-                                            ) : (
-                                                <div className="profile-image-placeholder">
-                                                    {user.displayName?.charAt(0).toUpperCase() || user.username?.charAt(0).toUpperCase()}
-                                                </div>
-                                            )}
-                                            {isUploadingAvatar && (
-                                                <div className="image-upload-overlay">
-                                                    <div className="upload-spinner"></div>
-                                                    <p className="upload-text">Đang tải...</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <input
-                                            ref={fileInputRef}
-                                            type="file"
-                                            accept="image/*"
-                                            capture="user"
-                                            onChange={handleAvatarChange}
-                                            style={{ display: 'none' }}
-                                            disabled={user?.isOAuthUser}
-                                        />
-                                        <button
-                                            type="button"
-                                            className="change-image-btn"
-                                            onClick={handleAvatarButtonClick}
-                                            disabled={isUploadingAvatar || user?.isOAuthUser}
-                                            style={user?.isOAuthUser ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
-                                        >
-                                            Đổi ảnh đại diện
-                                        </button>
-                                        {user?.isOAuthUser && (
-                                            <p className="field-hint" style={{ fontSize: '0.8125rem', color: '#767676', marginTop: '8px', textAlign: 'center' }}>
-                                                Ảnh thuộc tài khoản Google (không thể thay đổi)
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    <div className="profile-basic-info">
-                                        <div className="form-row">
-                                            <div className="form-field">
-                                                <Label htmlFor="firstName">Họ</Label>
-                                                <Input id="firstName" {...register('firstName')} />
-                                            </div>
-                                            <div className="form-field">
-                                                <Label htmlFor="lastName">Tên</Label>
-                                                <Input id="lastName" {...register('lastName')} />
-                                                <div className="account-badge">
-                                                    <CheckCircle2 size={16} />
-                                                    <span>Checked</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="form-field">
-                                            <Label htmlFor="email">Email</Label>
-                                            <Input
-                                                id="email"
-                                                type="email"
-                                                {...register('email')}
-                                                readOnly={user?.isOAuthUser}
-                                                className={user?.isOAuthUser ? 'readonly-field' : ''}
-                                            />
-                                            {user?.isOAuthUser && (
-                                                <p className="field-hint" style={{ fontSize: '0.8125rem', color: '#767676', marginTop: '4px' }}>
-                                                    Email thuộc tài khoản Google (không thể thay Đổi)
-                                                </p>
-                                            )}
-                                        </div>
-                                        <div className="form-field">
-                                            <Label htmlFor="username">Tên đăng nhập</Label>
-                                            <Input id="username" {...register('username')} readOnly />
-                                            <p className="field-hint">(chỉ được nhập ký tự và chữ số)</p>
-                                            <p className="field-url">https://photoapp.com/@{watch('username') || user.username}</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Badge Section */}
-                                <div className="form-section">
-                                    <h3 className="section-title">Badge</h3>
-                                    <p className="empty-badge-message">Bạn chưa có huy hiệu nào :(</p>
-                                </div>
-
-                                {/* About Section */}
-                                <div className="form-section">
-                                    <h3 className="section-title">Giới thiệu</h3>
-                                    <div className="form-field">
-                                        <Label htmlFor="location">Địa chỉ</Label>
-                                        <Input id="location" {...register('location')} placeholder="e.g., New York, USA" />
-                                    </div>
-                                    <div className="form-field">
-                                        <Label htmlFor="phone">Số điện thoại</Label>
-                                        <Input id="phone" {...register('phone')} type="tel" placeholder="e.g., +1 234 567 8900" />
-                                    </div>
-                                    <div className="form-field">
-                                        <Label htmlFor="personalSite">Personal site/portfolio</Label>
-                                        <Input id="personalSite" {...register('personalSite')} placeholder="https://" />
-                                    </div>
-                                    <div className="form-field">
-                                        <Label htmlFor="bio">Tiểu sử</Label>
-                                        <textarea
-                                            id="bio"
-                                            {...register('bio')}
-                                            className="bio-textarea"
-                                            maxLength={500}
-                                            placeholder="Tell us about yourself..."
-                                        />
-                                        <div className="char-counter">{bioCharCount}</div>
-                                    </div>
-                                </div>
-
-                                {/* Social Section */}
-                                <div className="form-section">
-                                    <h3 className="section-title">Mạng xã hội</h3>
-                                    <div className="form-row">
-                                        <div className="form-field">
-                                            <Label htmlFor="instagram">Tài khoản Instagram</Label>
-                                            <div className="input-with-prefix">
-                                                <span className="input-prefix">@</span>
-                                                <Input id="instagram" {...register('instagram')} placeholder="username" />
-                                            </div>
-                                            <p className="field-hint">So that we can feature you on @photoapp</p>
-                                        </div>
-                                        <div className="form-field">
-                                            <Label htmlFor="twitter">Tài khoản X (Twitter)</Label>
-                                            <div className="input-with-prefix">
-                                                <span className="input-prefix">@</span>
-                                                <Input id="twitter" {...register('twitter')} placeholder="username" />
-                                            </div>
-                                            <p className="field-hint">So that we can feature you on @photoapp</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Messaging Section */}
-                                <div className="form-section">
-                                    <h3 className="section-title">Tin nhắn</h3>
-                                    <div className="checkbox-field">
-                                        <input
-                                            type="checkbox"
-                                            id="showMessageButton"
-                                            {...register('showMessageButton')}
-                                            className="checkbox-input"
-                                        />
-                                        <Label htmlFor="showMessageButton" className="checkbox-label">
-                                            Display a 'Message' button on your profile
-                                        </Label>
-                                    </div>
-                                    <p className="field-hint">Tin nhắn sẽ được gửi tới email của bạn</p>
-                                </div>
-
-                                {/* Submit Button */}
-                                <div className="form-actions">
-                                    <Button type="submit" disabled={isSubmitting} className="update-btn">
-                                        {isSubmitting ? 'Updating...' : 'Update account'}
-                                    </Button>
-                                </div>
-                            </form>
+                            <ProfileForm
+                                user={user}
+                                avatarPreview={avatarPreview}
+                                isUploadingAvatar={isUploadingAvatar}
+                                fileInputRef={fileInputRef}
+                                bioCharCount={bioCharCount}
+                                register={register}
+                                handleSubmit={handleSubmit}
+                                watch={watch}
+                                handleAvatarChange={handleAvatarChange}
+                                handleAvatarButtonClick={handleAvatarButtonClick}
+                                onSubmit={onSubmit}
+                                isSubmitting={isSubmitting}
+                            />
                         )}
 
                         {activeSection === 'change-password' && !user?.isOAuthUser && (
-                            <form onSubmit={handlePasswordSubmit(onPasswordSubmit)} className="change-password-form">
-                                <h1 className="form-title">Mật khẩu hiện tại</h1>
-
-                                <div className="form-field">
-                                    <Label htmlFor="password">Mật khẩu hiện tại</Label>
-                                    <Input
-                                        id="password"
-                                        type="password"
-                                        {...registerPassword('password')}
-                                        autoFocus
-                                    />
-                                    {passwordErrors.password && (
-                                        <p className="field-error">{passwordErrors.password.message}</p>
-                                    )}
-                                </div>
-
-                                <div className="form-field">
-                                    <Label htmlFor="newPassword">Mật khẩu mới</Label>
-                                    <Input
-                                        id="newPassword"
-                                        type="password"
-                                        {...registerPassword('newPassword')}
-                                    />
-                                    {passwordErrors.newPassword && (
-                                        <p className="field-error">{passwordErrors.newPassword.message}</p>
-                                    )}
-                                </div>
-
-                                <div className="form-field">
-                                    <Label htmlFor="newPasswordMatch">Xác nhận mật khẩu</Label>
-                                    <Input
-                                        id="newPasswordMatch"
-                                        type="password"
-                                        {...registerPassword('newPasswordMatch')}
-                                    />
-                                    {passwordErrors.newPasswordMatch && (
-                                        <p className="field-error">{passwordErrors.newPasswordMatch.message}</p>
-                                    )}
-                                </div>
-
-                                {passwordError && (
-                                    <div className="password-error-message">
-                                        {passwordError}
-                                    </div>
-                                )}
-
-                                {passwordSuccess && (
-                                    <div className="password-success-message">
-                                        Mật khẩu thay đổi thành công!
-                                    </div>
-                                )}
-
-                                <div className="form-actions">
-                                    <Button
-                                        type="submit"
-                                        disabled={isSubmitting}
-                                        className="update-btn"
-                                    >
-                                        {isSubmitting ? 'Changing...' : 'Change password'}
-                                    </Button>
-                                </div>
-                            </form>
+                            <PasswordForm
+                                register={registerPassword}
+                                handleSubmit={handlePasswordSubmit}
+                                errors={passwordErrors}
+                                onSubmit={onPasswordSubmit}
+                                isSubmitting={isSubmitting}
+                                passwordError={passwordError}
+                                passwordSuccess={passwordSuccess}
+                            />
                         )}
 
                         {activeSection !== 'edit-profile' && activeSection !== 'change-password' && (

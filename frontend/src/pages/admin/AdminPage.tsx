@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/stores/useAuthStore';
 import { useUserStore } from '@/stores/useUserStore';
 import { useImageStore } from '@/stores/useImageStore';
 import { usePermissions } from '@/hooks/usePermissions';

@@ -1,0 +1,228 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { toast } from 'sonner';
+import type { ImageData } from './useImageUpload';
+
+interface UseUploadModalStateProps {
+  preUploadAllImages: (imagesData: ImageData[], onProgress?: (index: number, progress: number) => void) => Promise<ImageData[]>;
+}
+
+export const useUploadModalState = ({ preUploadAllImages }: UseUploadModalStateProps) => {
+  const [dragActive, setDragActive] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [imagesData, setImagesData] = useState<ImageData[]>([]);
+  const [showTooltip, setShowTooltip] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadInProgressRef = useRef(false);
+
+  // Initialize imagesData when files are selected
+  useEffect(() => {
+    if (selectedFiles.length > 0) {
+      setImagesData(prev => {
+        // Initialize or update imagesData array
+        const newImagesData: ImageData[] = selectedFiles.map((file, index) => {
+          // If image data already exists for this file at this index, keep it; otherwise create new
+          if (prev[index] && prev[index].file === file) {
+            return prev[index];
+          }
+          return {
+            file,
+            title: '',
+            category: '',
+            location: '',
+            coordinates: undefined,
+            cameraModel: '',
+            tags: [],
+            errors: {},
+            preUploadData: null,
+            uploadProgress: 0,
+            isUploading: false,
+            uploadError: null,
+          };
+        });
+        return newImagesData;
+      });
+    } else {
+      setImagesData([]);
+    }
+  }, [selectedFiles]);
+
+  // Auto-start pre-upload when imagesData is initialized with files
+  useEffect(() => {
+    if (imagesData.length > 0 && preUploadAllImages && !uploadInProgressRef.current) {
+      // Check if any images need to be uploaded
+      const needsUpload = imagesData.some(img => !img.preUploadData && !img.isUploading && !img.uploadError);
+      
+      if (needsUpload) {
+        // Prevent duplicate upload attempts
+        uploadInProgressRef.current = true;
+        
+        // Set isUploading immediately for all images that need upload
+        const updatedImagesData = imagesData.map(img => {
+          if (!img.preUploadData && !img.isUploading && !img.uploadError) {
+            return {
+              ...img,
+              isUploading: true,
+              uploadProgress: 0,
+            };
+          }
+          return img;
+        });
+        
+        // Update state first to show overlay immediately
+        setImagesData(updatedImagesData);
+        
+        // Then start pre-uploading
+        setTimeout(() => {
+          preUploadAllImages(updatedImagesData, (index, progress) => {
+            // Update progress in real-time (0-100%)
+            // Keep isUploading true until we get preUploadData (upload truly complete)
+            setImagesData(prev => {
+              const updated = [...prev];
+              if (updated[index]) {
+                updated[index] = {
+                  ...updated[index], // Preserve all existing fields
+                  uploadProgress: Math.min(100, Math.max(0, progress)), // Clamp between 0-100
+                  // Keep isUploading true during progress updates
+                  // It will be set to false only when preUploadData is received
+                  isUploading: true,
+                };
+              }
+              return updated;
+            });
+          }).then((finalImagesData) => {
+            // Merge upload results with existing form data to preserve user input
+            setImagesData(prev => {
+              return finalImagesData.map((finalImg, index) => {
+                const existingImg = prev[index];
+                if (!existingImg) return finalImg;
+                
+                // Preserve all form fields from existing data (user input takes priority)
+                return {
+                  ...finalImg, // Upload results (preUploadData, uploadProgress, isUploading, uploadError)
+                  // Always preserve form fields from existing data if they exist
+                  title: existingImg.title.trim() ? existingImg.title : finalImg.title,
+                  category: existingImg.category.trim() ? existingImg.category : finalImg.category,
+                  location: existingImg.location.trim() ? existingImg.location : finalImg.location,
+                  coordinates: existingImg.coordinates || finalImg.coordinates,
+                  cameraModel: existingImg.cameraModel.trim() ? existingImg.cameraModel : finalImg.cameraModel,
+                  tags: existingImg.tags && existingImg.tags.length > 0 ? existingImg.tags : finalImg.tags,
+                  errors: existingImg.errors || finalImg.errors,
+                };
+              });
+            });
+            
+            // Check if all uploads succeeded
+            const allSucceeded = finalImagesData.every(img => img.preUploadData && !img.uploadError);
+            if (allSucceeded) {
+              toast.success('Tất cả ảnh đã tải lên thành công! Bạn có thể gửi bây giờ.');
+            } else {
+              const failedCount = finalImagesData.filter(img => img.uploadError).length;
+              if (failedCount > 0) {
+                toast.error(`${failedCount} ảnh tải lên thất bại. Vui lòng thử lại.`);
+              }
+            }
+          }).catch((error) => {
+            console.error('Failed to pre-upload images:', error);
+            toast.error('Lỗi tải ảnh lên. Vui lòng thử lại.');
+          }).finally(() => {
+            // Reset upload flag when done
+            uploadInProgressRef.current = false;
+          });
+        }, 50); // Small delay to ensure state update is processed
+      } else {
+        // No upload needed, reset flag
+        uploadInProgressRef.current = false;
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [imagesData.length, preUploadAllImages]); // Only trigger when imagesData length changes (new files added)
+
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const files = Array.from(e.dataTransfer.files);
+      setSelectedFiles(files);
+    }
+  }, []);
+
+  const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const files = Array.from(e.target.files);
+      setSelectedFiles(files);
+    }
+  }, []);
+
+  // Update image data when form fields change
+  const updateImageData = useCallback((index: number, field: 'title' | 'category' | 'location' | 'cameraModel' | 'tags', value: string | string[]) => {
+    setImagesData(prev => {
+      const updated = [...prev];
+      const current = updated[index];
+      if (!current) return updated;
+      const newErrors = { ...current.errors };
+      if (field === 'title') {
+        newErrors.title = undefined;
+      } else if (field === 'category') {
+        newErrors.category = undefined;
+      }
+      updated[index] = {
+        ...current,
+        [field]: value,
+        errors: newErrors
+      };
+      return updated;
+    });
+  }, []);
+
+  // Update coordinates for an image
+  const updateImageCoordinates = useCallback((index: number, coordinates: { latitude: number; longitude: number } | undefined) => {
+    setImagesData(prev => {
+      const updated = [...prev];
+      const current = updated[index];
+      if (!current) return updated;
+      updated[index] = {
+        ...current,
+        coordinates,
+      };
+      return updated;
+    });
+  }, []);
+
+  const resetState = useCallback(() => {
+    setSelectedFiles([]);
+    setImagesData([]);
+    setDragActive(false);
+    setShowTooltip(false);
+    uploadInProgressRef.current = false;
+  }, []);
+
+  return {
+    dragActive,
+    selectedFiles,
+    setSelectedFiles,
+    imagesData,
+    setImagesData,
+    showTooltip,
+    setShowTooltip,
+    fileInputRef,
+    handleDrag,
+    handleDrop,
+    handleFileInput,
+    updateImageData,
+    updateImageCoordinates,
+    resetState,
+  };
+};
+

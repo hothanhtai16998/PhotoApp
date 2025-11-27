@@ -17,7 +17,7 @@ interface ImageModalHeaderProps {
   handleViewProfile: (e: React.MouseEvent) => void;
   handleOpenCollection: () => void;
   onClose: () => void;
-  modalContentRef: React.RefObject<HTMLDivElement>;
+  modalContentRef: React.RefObject<HTMLDivElement | null>;
   onImageSelect: (image: Image) => void;
 }
 

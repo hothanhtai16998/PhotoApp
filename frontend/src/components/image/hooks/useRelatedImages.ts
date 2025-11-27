@@ -5,7 +5,7 @@ import { useInfiniteScroll } from './useInfiniteScroll';
 interface UseRelatedImagesProps {
   image: Image;
   images: Image[];
-  modalContentRef: React.RefObject<HTMLDivElement>;
+  modalContentRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export const useRelatedImages = ({

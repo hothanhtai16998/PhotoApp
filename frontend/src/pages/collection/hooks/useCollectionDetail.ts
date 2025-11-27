@@ -2,7 +2,6 @@ import { useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useUserStore } from '@/stores/useUserStore';
 import { useCollectionStore } from '@/stores/useCollectionStore';
-import type { Collection } from '@/types/collection';
 
 export const useCollectionDetail = () => {
   const { collectionId } = useParams<{ collectionId: string }>();

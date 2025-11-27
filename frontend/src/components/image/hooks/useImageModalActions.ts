@@ -5,7 +5,7 @@ import { imageService } from '@/services/imageService';
 import { useUserStore } from '@/stores/useUserStore';
 import api from '@/lib/api';
 import { toast } from 'sonner';
-import { DownloadSizeSelector, type DownloadSize } from '../DownloadSizeSelector';
+import type { DownloadSize } from '../DownloadSizeSelector';
 
 interface UseImageModalActionsProps {
   image: Image;

@@ -163,6 +163,7 @@ export interface CollectionsListState {
 	setSelectedTag: (tag: string | null) => void;
 	clearFilters: () => void;
 	refreshCollections: () => Promise<void>;
+	applyFilters: (collectionsToFilter: Collection[]) => void;
 }
 
 export interface CollectionFavoriteState {

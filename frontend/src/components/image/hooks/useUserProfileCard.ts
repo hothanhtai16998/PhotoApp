@@ -4,7 +4,7 @@ import { imageService } from '@/services/imageService';
 
 interface UseUserProfileCardProps {
   image: Image;
-  modalContentRef: React.RefObject<HTMLDivElement>;
+  modalContentRef: React.RefObject<HTMLDivElement | null>;
   onImageSelect: (image: Image) => void;
 }
 

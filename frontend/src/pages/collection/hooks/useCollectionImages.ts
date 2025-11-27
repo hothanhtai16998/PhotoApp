@@ -52,7 +52,7 @@ export const useCollectionImages = ({
   useEffect(() => {
     if (collection) {
       const imageArray = Array.isArray(collection.images)
-        ? collection.images.filter((img): img is Image => {
+        ? collection.images.filter((img: unknown): img is Image => {
           return typeof img === 'object' && img !== null && '_id' in img;
         })
         : [];

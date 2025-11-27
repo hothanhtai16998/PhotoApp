@@ -157,7 +157,7 @@ api.interceptors.response.use(
 			} catch (refreshError) {
 				useAuthStore
 					.getState()
-					.clearState();
+					.clearAuth();
 				return Promise.reject(
 					refreshError
 				);

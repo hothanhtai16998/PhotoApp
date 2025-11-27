@@ -11,8 +11,8 @@ interface ImageModalRelatedProps {
   processedImages: React.MutableRefObject<Set<string>>;
   onImageSelect: (image: Image) => void;
   onImageLoad: (imageId: string, img: HTMLImageElement) => void;
-  modalContentRef: React.RefObject<HTMLDivElement>;
-  loadMoreRef: React.RefObject<HTMLDivElement>;
+  modalContentRef: React.RefObject<HTMLDivElement | null>;
+  loadMoreRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export const ImageModalRelated = ({

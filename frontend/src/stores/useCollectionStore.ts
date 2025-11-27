@@ -3,7 +3,7 @@ import { immer } from 'zustand/middleware/immer';
 import { toast } from 'sonner';
 import { collectionService } from '@/services/collectionService';
 import { collectionFavoriteService } from '@/services/collectionFavoriteService';
-import { collectionVersionService, type CollectionVersion } from '@/services/collectionVersionService';
+import { collectionVersionService } from '@/services/collectionVersionService';
 import type { CollectionState } from '@/types/store';
 import type { Collection } from '@/types/collection';
 import type { ApiErrorResponse } from '@/types/errors';

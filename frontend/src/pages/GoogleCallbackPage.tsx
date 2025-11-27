@@ -1,11 +1,13 @@
 import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useUserStore } from "@/stores/useUserStore";
 
 function GoogleCallbackPage() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const { setAccessToken, fetchMe } = useAuthStore();
+    const { setAccessToken } = useAuthStore();
+    const { fetchMe } = useUserStore();
 
     useEffect(() => {
         const token = searchParams.get('token');

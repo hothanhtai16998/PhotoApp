@@ -2,12 +2,11 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { toast } from 'sonner';
 import axios from 'axios';
-import { userService, type PublicUser } from '@/services/userService';
+import { userService } from '@/services/userService';
 import { followService } from '@/services/followService';
-import { userStatsService, type UserStats } from '@/services/userStatsService';
+import { userStatsService } from '@/services/userStatsService';
 import { collectionService } from '@/services/collectionService';
 import type { ProfileState } from '@/types/store';
-import type { Collection } from '@/types/collection';
 
 export const useProfileStore = create(
 	immer<ProfileState>((set) => ({
@@ -111,7 +110,7 @@ export const useProfileStore = create(
 			}
 		},
 
-		fetchCollections: async (userId: string, signal?: AbortSignal) => {
+		fetchCollections: async (_userId: string, signal?: AbortSignal) => {
 			set((state) => {
 				state.collectionsLoading = true;
 			});
