@@ -43,15 +43,21 @@ function ProfilePage() {
     const [followStats, setFollowStats] = useState({ followers: 0, following: 0, isFollowing: false });
     const [userStats, setUserStats] = useState<UserStats | null>(null);
     const [, setStatsLoading] = useState(false);
+    const [isSwitchingProfile, setIsSwitchingProfile] = useState(false);
+    // Track which user ID the current stats belong to
+    const statsUserIdRef = useRef<string | undefined>(undefined);
     
     // Track image aspect ratios (portrait vs landscape)
     const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
     const processedImages = useRef<Set<string>>(new Set());
+    const previousParams = useRef<string>('');
 
     // Fetch profile user data if viewing someone else's profile
     useEffect(() => {
         const fetchProfileUser = async () => {
-            if (params.username && !profileUser) {
+            if (params.username) {
+                // Clear profileUser when username changes to prevent flashing old data
+                setProfileUser(null);
                 try {
                     setProfileUserLoading(true);
                     const userData = await userService.getUserByUsername(params.username);
@@ -63,7 +69,9 @@ function ProfilePage() {
                 } finally {
                     setProfileUserLoading(false);
                 }
-            } else if (params.userId && !profileUser) {
+            } else if (params.userId) {
+                // Clear profileUser when userId changes to prevent flashing old data
+                setProfileUser(null);
                 try {
                     setProfileUserLoading(true);
                     const userData = await userService.getUserById(params.userId);
@@ -75,9 +83,10 @@ function ProfilePage() {
                 } finally {
                     setProfileUserLoading(false);
                 }
-            } else if (!params.username && !params.userId) {
-                // Viewing own profile
+            } else {
+                // Viewing own profile - clear profileUser
                 setProfileUser(null);
+                setProfileUserLoading(false);
             }
         };
 
@@ -96,69 +105,131 @@ function ProfilePage() {
         return displayUserId === currentUser?._id;
     }, [displayUserId, currentUser?._id]);
 
+    // Reset all state immediately when params change to prevent flashing old data
+    useEffect(() => {
+        // Create a unique key from params to detect changes
+        const paramsKey = `${params.username || ''}-${params.userId || ''}`;
+        
+        // Only reset if params actually changed (not on initial mount)
+        if (previousParams.current && previousParams.current !== paramsKey) {
+            // Mark that we're switching profiles
+            setIsSwitchingProfile(true);
+            
+            // Clear the stats user ID ref so old data won't be shown
+            statsUserIdRef.current = undefined;
+            
+            // Clear all profile-related state immediately when switching users
+            setImages([]);
+            setPhotosCount(0);
+            setIllustrationsCount(0);
+            setCollections([]);
+            setCollectionsCount(0);
+            setFollowStats({ followers: 0, following: 0, isFollowing: false });
+            setUserStats(null);
+            setImageTypes(new Map());
+            processedImages.current.clear();
+        }
+        
+        // Update the ref for next comparison (on initial mount, this will be set)
+        if (!previousParams.current || previousParams.current !== paramsKey) {
+            previousParams.current = paramsKey;
+        }
+    }, [params.username, params.userId]);
+
     const fetchUserImages = useCallback(async (refresh = false) => {
         if (!displayUserId) return;
+        const currentUserId = displayUserId; // Capture at start of fetch
 
         try {
             setLoading(true);
             const response = await imageService.fetchUserImages(displayUserId, refresh ? { _refresh: true } : undefined);
             const userImages = response.images || [];
-            setImages(userImages);
+            
+            // Only update if we're still on the same user (prevent race conditions)
+            if (displayUserId === currentUserId) {
+                setImages(userImages);
 
-            // Count photos and illustrations
-            const photos = userImages.filter(img => {
-                const categoryName = typeof img.imageCategory === 'string' 
-                    ? img.imageCategory 
-                    : img.imageCategory?.name;
-                return categoryName &&
-                    !categoryName.toLowerCase().includes('illustration') &&
-                    !categoryName.toLowerCase().includes('svg');
-            });
-            const illustrations = userImages.filter(img => {
-                const categoryName = typeof img.imageCategory === 'string' 
-                    ? img.imageCategory 
-                    : img.imageCategory?.name;
-                return categoryName &&
-                    (categoryName.toLowerCase().includes('illustration') ||
-                        categoryName.toLowerCase().includes('svg'));
-            });
+                // Count photos and illustrations
+                const photos = userImages.filter(img => {
+                    const categoryName = typeof img.imageCategory === 'string' 
+                        ? img.imageCategory 
+                        : img.imageCategory?.name;
+                    return categoryName &&
+                        !categoryName.toLowerCase().includes('illustration') &&
+                        !categoryName.toLowerCase().includes('svg');
+                });
+                const illustrations = userImages.filter(img => {
+                    const categoryName = typeof img.imageCategory === 'string' 
+                        ? img.imageCategory 
+                        : img.imageCategory?.name;
+                    return categoryName &&
+                        (categoryName.toLowerCase().includes('illustration') ||
+                            categoryName.toLowerCase().includes('svg'));
+                });
 
-            setPhotosCount(photos.length);
-            setIllustrationsCount(illustrations.length);
+                setPhotosCount(photos.length);
+                setIllustrationsCount(illustrations.length);
+                // Update ref to track which user this data belongs to
+                if (!statsUserIdRef.current) {
+                    statsUserIdRef.current = displayUserId;
+                }
+            }
         } catch (error) {
             console.error('Failed to fetch user images:', error);
         } finally {
-            setLoading(false);
+            if (displayUserId === currentUserId) {
+                setLoading(false);
+            }
         }
     }, [displayUserId]);
 
     const fetchCollections = useCallback(async () => {
         if (!displayUserId) return;
+        const currentUserId = displayUserId; // Capture at start of fetch
 
         try {
             setCollectionsLoading(true);
             // For now, only fetch own collections. TODO: Add endpoint to fetch other users' collections
             if (!isOwnProfile) {
-                setCollections([]);
-                setCollectionsCount(0);
+                if (displayUserId === currentUserId) {
+                    setCollections([]);
+                    setCollectionsCount(0);
+                }
                 return;
             }
             const data = await collectionService.getUserCollections();
-            setCollections(data);
-            setCollectionsCount(data.length);
+            // Only update if we're still on the same user
+            if (displayUserId === currentUserId) {
+                setCollections(data);
+                setCollectionsCount(data.length);
+                // Update ref to track which user this data belongs to
+                if (!statsUserIdRef.current) {
+                    statsUserIdRef.current = displayUserId;
+                }
+            }
         } catch (error) {
             console.error('Failed to fetch collections:', error);
         } finally {
-            setCollectionsLoading(false);
+            if (displayUserId === currentUserId) {
+                setCollectionsLoading(false);
+            }
         }
     }, [displayUserId, isOwnProfile]);
 
     const fetchFollowStats = useCallback(async () => {
         if (!displayUserId) return;
+        const currentUserId = displayUserId; // Capture at start of fetch
 
         try {
             const response = await followService.getUserFollowStats(displayUserId);
-            setFollowStats(response.stats);
+            // Only update if we're still on the same user
+            if (displayUserId === currentUserId) {
+                setFollowStats(response.stats);
+                // Update ref to track which user this data belongs to
+                if (!statsUserIdRef.current) {
+                    statsUserIdRef.current = displayUserId;
+                }
+            }
         } catch (error) {
             console.error('Failed to fetch follow stats:', error);
         }
@@ -166,15 +237,27 @@ function ProfilePage() {
 
     const fetchUserStats = useCallback(async () => {
         if (!displayUserId) return;
+        const currentUserId = displayUserId; // Capture at start of fetch
 
         try {
             setStatsLoading(true);
             const stats = await userStatsService.getUserStats(displayUserId);
-            setUserStats(stats);
+            // Only update if we're still on the same user
+            if (displayUserId === currentUserId) {
+                setUserStats(stats);
+                statsUserIdRef.current = displayUserId;
+                // Mark that we're done switching once stats are loaded
+                setIsSwitchingProfile(false);
+            }
         } catch (error) {
             console.error('Failed to fetch user stats:', error);
+            if (displayUserId === currentUserId) {
+                setIsSwitchingProfile(false);
+            }
         } finally {
-            setStatsLoading(false);
+            if (displayUserId === currentUserId) {
+                setStatsLoading(false);
+            }
         }
     }, [displayUserId]);
 
@@ -204,6 +287,7 @@ function ProfilePage() {
 
         if (!displayUserId) return;
 
+        // Fetch new data (state is already reset by the reset effect above)
         fetchUserImages();
         fetchCollections();
         fetchFollowStats();
@@ -428,26 +512,28 @@ function ProfilePage() {
                         <div className="profile-info">
                             <div className="profile-name-section">
                                 <h1 className="profile-name">{displayUser.displayName || displayUser.username}</h1>
-                                <div className="profile-actions">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={handleEditProfile}
-                                        className="edit-profile-btn"
-                                    >
-                                        <Edit2 size={16} />
-                                        Chỉnh sửa hồ sơ
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={handleEditPins}
-                                        className="edit-pins-btn"
-                                    >
-                                        <Star size={16} />
-                                        Chỉnh sửa ghim
-                                    </Button>
-                                </div>
+                                {isOwnProfile && (
+                                    <div className="profile-actions">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleEditProfile}
+                                            className="edit-profile-btn"
+                                        >
+                                            <Edit2 size={16} />
+                                            Chỉnh sửa hồ sơ
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleEditPins}
+                                            className="edit-pins-btn"
+                                        >
+                                            <Star size={16} />
+                                            Chỉnh sửa ghim
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                             <p className="profile-description">
                                 {displayUser.bio || `Tải xuống miễn phí những bức ảnh chất lượng cao đẹp mắt được tuyển chọn bởi ${displayUser.displayName || displayUser.username}.`}
@@ -511,8 +597,8 @@ function ProfilePage() {
                                 </div>
                             )}
 
-                            {/* Profile Completion */}
-                            {userStats && userStats.profileCompletion && (
+                            {/* Profile Completion - Only show for own profile */}
+                            {isOwnProfile && userStats && userStats.profileCompletion && (
                                 <ProfileCompletion
                                     completion={userStats.profileCompletion}
                                     onEditProfile={handleEditProfile}
@@ -520,7 +606,7 @@ function ProfilePage() {
                             )}
 
                             {/* Visual Stats Cards */}
-                            <div className="profile-stats-grid">
+                            <div className="profile-stats-grid" key={displayUserId || 'no-user'}>
                                 <button 
                                     className="profile-stat-card"
                                     onClick={() => setActiveTab('photos')}
@@ -529,7 +615,9 @@ function ProfilePage() {
                                         <ImageIcon size={20} color="#0369a1" />
                                     </div>
                                     <div className="stat-card-content">
-                                        <span className="stat-card-value">{photosCount}</span>
+                                        <span className="stat-card-value">
+                                            {(isSwitchingProfile || statsUserIdRef.current !== displayUserId) ? '-' : photosCount}
+                                        </span>
                                         <span className="stat-card-label">Ảnh</span>
                                     </div>
                                 </button>
@@ -541,11 +629,13 @@ function ProfilePage() {
                                         <Folder size={20} color="#d97706" />
                                     </div>
                                     <div className="stat-card-content">
-                                        <span className="stat-card-value">{collectionsCount}</span>
+                                        <span className="stat-card-value">
+                                            {(isSwitchingProfile || statsUserIdRef.current !== displayUserId) ? '-' : collectionsCount}
+                                        </span>
                                         <span className="stat-card-label">Bộ sưu tập</span>
                                     </div>
                                 </button>
-                                {userStats && (
+                                {!isSwitchingProfile && userStats && statsUserIdRef.current === displayUserId && (
                                     <>
                                         <button 
                                             className="profile-stat-card"
@@ -599,7 +689,9 @@ function ProfilePage() {
                                         <Users size={20} color="#7c3aed" />
                                     </div>
                                     <div className="stat-card-content">
-                                        <span className="stat-card-value">{followStats.followers}</span>
+                                        <span className="stat-card-value">
+                                            {(isSwitchingProfile || statsUserIdRef.current !== displayUserId) ? '-' : followStats.followers}
+                                        </span>
                                         <span className="stat-card-label">Người theo dõi</span>
                                     </div>
                                 </button>
@@ -614,21 +706,25 @@ function ProfilePage() {
                                         <UserPlus size={20} color="#d97706" />
                                     </div>
                                     <div className="stat-card-content">
-                                        <span className="stat-card-value">{followStats.following}</span>
+                                        <span className="stat-card-value">
+                                            {(isSwitchingProfile || statsUserIdRef.current !== displayUserId) ? '-' : followStats.following}
+                                        </span>
                                         <span className="stat-card-label">Đang theo dõi</span>
                                     </div>
                                 </button>
                             </div>
-                            <div className="profile-availability">
-                                <XCircle size={16} />
-                                <span>Không sẵn sàng nhận việc</span>
-                                <button
-                                    className="availability-update-link"
-                                    onClick={handleUpdateAvailability}
-                                >
-                                    Cập nhật
-                                </button>
-                            </div>
+                            {isOwnProfile && (
+                                <div className="profile-availability">
+                                    <XCircle size={16} />
+                                    <span>Không sẵn sàng nhận việc</span>
+                                    <button
+                                        className="availability-update-link"
+                                        onClick={handleUpdateAvailability}
+                                    >
+                                        Cập nhật
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
 

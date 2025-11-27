@@ -4,8 +4,8 @@
 	"description": "",
 	"main": "src/server.js",
 	"scripts": {
-		"dev": "nodemon src/server.js",
-		"start": "node src/server.js",
+		"dev": "nodemon --exec \"node --no-deprecation src/server.js\"",
+		"start": "node --no-deprecation src/server.js",
 		"make:admin": "node src/utils/makeAdmin.js",
 		"make:superadmin": "node src/utils/makeSuperAdmin.js",
 		"migrate:cloudfront": "node src/migrations/migrateToCloudFront.js",
