@@ -6,12 +6,20 @@ import {
     refreshToken,
     googleAuth,
     googleCallback,
+    checkEmailAvailability,
+    checkUsernameAvailability,
 } from '../controllers/authController.js';
 import { authLimiter } from '../middlewares/rateLimiter.js';
 import { validateSignUp, validateSignIn } from '../middlewares/validationMiddleware.js';
 import { env } from '../libs/env.js';
 
 const router = express.Router();
+
+// Check email availability (for real-time validation)
+router.get('/check-email', authLimiter, checkEmailAvailability);
+
+// Check username availability (for real-time validation)
+router.get('/check-username', authLimiter, checkUsernameAvailability);
 
 // Apply strict rate limiting and validation to auth endpoints
 router.post('/signup', authLimiter, validateSignUp, signUp);

@@ -62,4 +62,20 @@ export const authService = {
 		);
 		return res.data.accessToken;
 	},
+
+	checkEmailAvailability: async (email: string) => {
+		const res = await api.get(
+			`/auth/check-email?email=${encodeURIComponent(email)}`,
+			{ withCredentials: true }
+		);
+		return res.data;
+	},
+
+	checkUsernameAvailability: async (username: string) => {
+		const res = await api.get(
+			`/auth/check-username?username=${encodeURIComponent(username)}`,
+			{ withCredentials: true }
+		);
+		return res.data;
+	},
 };

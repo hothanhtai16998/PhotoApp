@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Mail, Phone, MapPin, Globe, Linkedin, Github, Facebook, Twitter, X, Instagram } from "lucide-react";
 import "./FloatingContactButton.css";
 
@@ -28,6 +29,7 @@ const authorInfo = {
 };
 
 function FloatingContactButton() {
+    const location = useLocation();
     const [isOpen, setIsOpen] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
     const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -55,6 +57,14 @@ function FloatingContactButton() {
             clearTimeout(initTimeout);
         };
     }, []);
+
+    // Hide contact button on signin and signup pages
+    // Must be after all hooks to follow Rules of Hooks
+    const isAuthPage = location.pathname === '/signin' || location.pathname === '/signup';
+    
+    if (isAuthPage) {
+        return null;
+    }
 
     const handleMouseEnter = () => {
         setIsHovered(true);

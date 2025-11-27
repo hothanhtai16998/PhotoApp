@@ -173,48 +173,56 @@ export function ProfileHeader({
                             <span className="stat-card-label">Bộ sưu tập</span>
                         </div>
                     </button>
-                    {!isSwitchingProfile && userStats && statsUserIdRef.current === displayUserId && (
-                        <>
-                            <button
-                                className="profile-stat-card"
-                                title="Total likes received on your images"
-                            >
-                                <div className="stat-card-icon" style={{ backgroundColor: '#fce7f3' }}>
-                                    <Heart size={20} color="#be185d" />
-                                </div>
-                                <div className="stat-card-content">
-                                    <span className="stat-card-value">{userStats.totalFavorites.toLocaleString()}</span>
-                                    <span className="stat-card-label">Lượt thích</span>
-                                </div>
-                            </button>
-                            <button
-                                className="profile-stat-card"
-                                title="Total downloads of your images"
-                            >
-                                <div className="stat-card-icon" style={{ backgroundColor: '#d1fae5' }}>
-                                    <Download size={20} color="#059669" />
-                                </div>
-                                <div className="stat-card-content">
-                                    <span className="stat-card-value">{userStats.totalDownloads.toLocaleString()}</span>
-                                    <span className="stat-card-label">Lượt tải</span>
-                                </div>
-                            </button>
-                            {/* Profile views - Only show for own profile */}
-                            {isOwnProfile && userStats.profileViews > 0 && (
-                                <button
-                                    className="profile-stat-card"
-                                    title="Lượt xem hồ sơ"
-                                >
-                                    <div className="stat-card-icon" style={{ backgroundColor: '#e0e7ff' }}>
-                                        <EyeIcon size={20} color="#4f46e5" />
-                                    </div>
-                                    <div className="stat-card-content">
-                                        <span className="stat-card-value">{userStats.profileViews.toLocaleString()}</span>
-                                        <span className="stat-card-label">Lượt xem</span>
-                                    </div>
-                                </button>
-                            )}
-                        </>
+                    <button
+                        className="profile-stat-card"
+                        title="Total likes received on your images"
+                    >
+                        <div className="stat-card-icon" style={{ backgroundColor: '#fce7f3' }}>
+                            <Heart size={20} color="#be185d" />
+                        </div>
+                        <div className="stat-card-content">
+                            <span className="stat-card-value">
+                                {(isSwitchingProfile || !userStats || statsUserIdRef.current !== displayUserId) 
+                                    ? '-' 
+                                    : userStats.totalFavorites.toLocaleString()}
+                            </span>
+                            <span className="stat-card-label">Lượt thích</span>
+                        </div>
+                    </button>
+                    <button
+                        className="profile-stat-card"
+                        title="Total downloads of your images"
+                    >
+                        <div className="stat-card-icon" style={{ backgroundColor: '#d1fae5' }}>
+                            <Download size={20} color="#059669" />
+                        </div>
+                        <div className="stat-card-content">
+                            <span className="stat-card-value">
+                                {(isSwitchingProfile || !userStats || statsUserIdRef.current !== displayUserId) 
+                                    ? '-' 
+                                    : userStats.totalDownloads.toLocaleString()}
+                            </span>
+                            <span className="stat-card-label">Lượt tải</span>
+                        </div>
+                    </button>
+                    {/* Profile views - Only show for own profile, but always render the card */}
+                    {isOwnProfile && (
+                        <button
+                            className="profile-stat-card"
+                            title="Lượt xem hồ sơ"
+                        >
+                            <div className="stat-card-icon" style={{ backgroundColor: '#e0e7ff' }}>
+                                <EyeIcon size={20} color="#4f46e5" />
+                            </div>
+                            <div className="stat-card-content">
+                                <span className="stat-card-value">
+                                    {(isSwitchingProfile || !userStats || statsUserIdRef.current !== displayUserId || userStats.profileViews === 0)
+                                        ? '-' 
+                                        : userStats.profileViews.toLocaleString()}
+                                </span>
+                                <span className="stat-card-label">Lượt xem</span>
+                            </div>
+                        </button>
                     )}
                     <button
                         className="profile-stat-card"

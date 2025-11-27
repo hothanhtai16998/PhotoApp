@@ -17,6 +17,54 @@ const GOOGLE_CLIENT_SECRET = env.GOOGLE_CLIENT_SECRET || '';
 // In production, GOOGLE_REDIRECT_URI must be explicitly set in environment variables
 const GOOGLE_REDIRECT_URI = env.GOOGLE_REDIRECT_URI;
 
+// Check if email is available
+export const checkEmailAvailability = asyncHandler(async (req, res) => {
+    const { email } = req.query;
+    
+    if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+    }
+    
+    const normalizedEmail = email.toLowerCase().trim();
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    
+    if (existingUser) {
+        if (existingUser.isOAuthUser) {
+            return res.status(409).json({ 
+                available: false,
+                message: "Email này đã đăng ký với tài khoản Google, xin vui lòng đăng nhập bằng Google."
+            });
+        }
+        return res.status(409).json({ 
+            available: false,
+            message: "Email đã tồn tại"
+        });
+    }
+    
+    return res.status(200).json({ available: true });
+});
+
+// Check if username is available
+export const checkUsernameAvailability = asyncHandler(async (req, res) => {
+    const { username } = req.query;
+    
+    if (!username) {
+        return res.status(400).json({ message: "Username is required" });
+    }
+    
+    const normalizedUsername = username.toLowerCase().trim();
+    const existingUser = await User.findOne({ username: normalizedUsername });
+    
+    if (existingUser) {
+        return res.status(409).json({ 
+            available: false,
+            message: "Tên tài khoản đã tồn tại"
+        });
+    }
+    
+    return res.status(200).json({ available: true });
+});
+
 export const signUp = asyncHandler(async (req, res) => {
     const { username, password, email, firstName, lastName, phone, bio } = req.body;
 

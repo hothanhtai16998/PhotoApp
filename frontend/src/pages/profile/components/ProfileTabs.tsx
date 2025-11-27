@@ -1,3 +1,5 @@
+import { Camera, Palette, Folder, BarChart3 } from "lucide-react";
+
 type TabType = 'photos' | 'illustrations' | 'collections' | 'stats';
 
 interface ProfileTabsProps {
@@ -21,7 +23,7 @@ export function ProfileTabs({
                 className={`profile-tab ${activeTab === 'photos' ? 'active' : ''}`}
                 onClick={() => onTabChange('photos')}
             >
-                <span className="tab-icon">📷</span>
+                <Camera size={18} className="tab-icon" />
                 <span className="tab-label">Ảnh</span>
                 <span className="tab-count">{photosCount}</span>
             </button>
@@ -29,7 +31,7 @@ export function ProfileTabs({
                 className={`profile-tab ${activeTab === 'illustrations' ? 'active' : ''}`}
                 onClick={() => onTabChange('illustrations')}
             >
-                <span className="tab-icon">✏️</span>
+                <Palette size={18} className="tab-icon" />
                 <span className="tab-label">Minh họa</span>
                 <span className="tab-count">{illustrationsCount}</span>
             </button>
@@ -37,7 +39,7 @@ export function ProfileTabs({
                 className={`profile-tab ${activeTab === 'collections' ? 'active' : ''}`}
                 onClick={() => onTabChange('collections')}
             >
-                <span className="tab-icon">📁</span>
+                <Folder size={18} className="tab-icon" />
                 <span className="tab-label">Collections</span>
                 <span className="tab-count">{collectionsCount}</span>
             </button>
@@ -45,7 +47,7 @@ export function ProfileTabs({
                 className={`profile-tab ${activeTab === 'stats' ? 'active' : ''}`}
                 onClick={() => onTabChange('stats')}
             >
-                <span className="tab-icon">📊</span>
+                <BarChart3 size={18} className="tab-icon" />
                 <span className="tab-label">Thống kê</span>
             </button>
         </div>

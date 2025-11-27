@@ -202,7 +202,9 @@
 	gap: 12px;
 }
 
-.password-input-wrapper {
+.password-input-wrapper,
+.email-input-wrapper,
+.username-input-wrapper {
 	position: relative;
 }
 
@@ -269,6 +271,91 @@
 	font-size: 0.875rem;
 	color: #dc2626;
 	margin: 0;
+}
+
+/* Password Requirements Box */
+.password-requirements {
+	margin-top: 12px;
+	padding: 16px;
+	background: #fff;
+	border: 2px solid #dc2626;
+	border-radius: 6px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.requirement-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 0.875rem;
+}
+
+.requirement-icon {
+	flex-shrink: 0;
+	width: 16px;
+	height: 16px;
+}
+
+.check-icon {
+	color: #059669;
+}
+
+.x-icon {
+	color: #dc2626;
+}
+
+.requirement-text {
+	color: #111;
+	line-height: 1.4;
+}
+
+.requirement-item.valid .requirement-text {
+	color: #059669;
+}
+
+.requirement-item.invalid .requirement-text {
+	color: #111;
+}
+
+/* Email and Username Status Icons */
+.email-status-icon,
+.username-status-icon {
+	position: absolute;
+	right: 12px;
+	top: 50%;
+	transform: translateY(-50%);
+	pointer-events: none;
+	flex-shrink: 0;
+}
+
+.valid-icon {
+	color: #059669;
+}
+
+.error-icon {
+	color: #dc2626;
+}
+
+.form-group input.valid {
+	border-color: #059669;
+	padding-right: 40px;
+}
+
+.form-group input.error {
+	border-color: #dc2626;
+	padding-right: 40px;
+}
+
+.error-link {
+	color: #0066cc;
+	text-decoration: underline;
+	transition: color 0.2s ease;
+}
+
+.error-link:hover {
+	color: #0052a3;
 }
 
 .continue-btn {

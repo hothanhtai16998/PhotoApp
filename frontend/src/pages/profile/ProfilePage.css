@@ -313,6 +313,9 @@
 
 .tab-icon {
 	font-size: 1.125rem;
+	width: 18px;
+	height: 18px;
+	flex-shrink: 0;
 }
 
 .tab-label {
@@ -336,7 +339,7 @@
 /* Mobile Responsive for Stats Grid */
 @media (max-width: 768px) {
 	.profile-stats-grid {
-		grid-template-columns: repeat(2, 1fr);
+		grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
 		gap: 12px;
 		margin: 16px 0;
 	}
@@ -345,6 +348,7 @@
 		padding: 14px;
 		gap: 10px;
 		min-height: 60px; /* Increased touch target */
+		width: 100%;
 	}
 
 	.stat-card-icon {
@@ -396,13 +400,14 @@
 
 @media (max-width: 480px) {
 	.profile-stats-grid {
-		grid-template-columns: 1fr;
+		grid-template-columns: repeat(2, 1fr);
 		gap: 10px;
 	}
 
 	.profile-stat-card {
 		padding: 16px;
 		min-height: 64px; /* Even larger touch target for small screens */
+		width: 100%;
 	}
 
 	.stat-card-icon {
