@@ -15,6 +15,10 @@ interface ProgressiveImageProps {
   className?: string;
   onLoad?: (img: HTMLImageElement) => void;
   onError?: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void;
+  /** Whether to load this image eagerly (for above-the-fold images) */
+  eager?: boolean;
+  /** Fetch priority: 'high' for critical images, 'low' for below-the-fold */
+  fetchPriority?: 'high' | 'low' | 'auto';
 }
 
 /**
@@ -87,6 +91,8 @@ const ProgressiveImage = memo(({
   className = '',
   onLoad,
   onError,
+  eager = false,
+  fetchPriority = 'auto',
 }: ProgressiveImageProps) => {
   // Generate URLs on-the-fly if not provided (for old images)
   const effectiveThumbnail = thumbnailUrl || generateThumbnailUrl(src);
@@ -278,6 +284,14 @@ const ProgressiveImage = memo(({
       }
     };
 
+    // If eager loading is requested, load immediately
+    if (eager && !preloadedRef.current) {
+      preloadedRef.current = true;
+      setShouldLoadEagerly(true);
+      loadSmallImage();
+      return;
+    }
+
     // Check if already in viewport
     const rect = containerRef.current.getBoundingClientRect();
     const isInViewport = rect.top < window.innerHeight + 200 && rect.bottom > -200;
@@ -292,6 +306,12 @@ const ProgressiveImage = memo(({
       });
       return;
     }
+
+    // Optimize rootMargin based on connection speed
+    // Use larger margin for fast connections, smaller for slow
+    const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+    const isSlowConnection = connection && (connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g');
+    const rootMargin = isSlowConnection ? '100px' : '300px'; // Smaller margin for slow connections
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -309,7 +329,7 @@ const ProgressiveImage = memo(({
         });
       },
       {
-        rootMargin: '300px', // Start loading 300px before image enters viewport
+        rootMargin, // Adaptive margin based on connection speed
       }
     );
 
@@ -437,8 +457,9 @@ const ProgressiveImage = memo(({
             className={finalClassName}
             onLoad={handleLoad}
             onError={handleError}
-            loading={shouldLoadEagerly || isActuallyCached ? 'eager' : 'lazy'}
+            loading={eager || shouldLoadEagerly || isActuallyCached ? 'eager' : 'lazy'}
             decoding="async"
+            fetchPriority={eager ? (fetchPriority === 'auto' ? 'high' : fetchPriority) : (fetchPriority === 'auto' ? 'low' : fetchPriority)}
             crossOrigin="anonymous"
             style={
               skipTransition || isActuallyCached
@@ -466,8 +487,9 @@ const ProgressiveImage = memo(({
           className={finalClassName}
           onLoad={handleLoad}
           onError={handleError}
-          loading={shouldLoadEagerly || isActuallyCached ? 'eager' : 'lazy'}
+          loading={eager || shouldLoadEagerly || isActuallyCached ? 'eager' : 'lazy'}
           decoding="async"
+          fetchPriority={eager ? (fetchPriority === 'auto' ? 'high' : fetchPriority) : (fetchPriority === 'auto' ? 'low' : fetchPriority)}
           crossOrigin="anonymous"
           style={
             skipTransition || isActuallyCached

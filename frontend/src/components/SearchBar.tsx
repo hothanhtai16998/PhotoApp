@@ -3,10 +3,12 @@
 import { useState, useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { Search, X, Clock, TrendingUp, MapPin } from "lucide-react"
+import axios from "axios"
 import { useImageStore } from "@/stores/useImageStore"
 import { categoryService, type Category } from "@/services/categoryService"
 import { imageService } from "@/services/imageService"
 import { searchService, type SearchSuggestion } from "@/services/searchService"
+import { useRequestCancellationOnChange } from "@/hooks/useRequestCancellation"
 import SearchFilters, { type SearchFilters as SearchFiltersType } from "./SearchFilters"
 import './SearchBar.css'
 
@@ -101,6 +103,9 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
     loadSuggestions()
   }, [])
 
+  // Cancel previous requests when search query changes
+  const cancelSignal = useRequestCancellationOnChange([searchQuery]);
+
   // Fetch API suggestions when user types (debounced)
   useEffect(() => {
     if (suggestionsDebounceRef.current) {
@@ -113,9 +118,14 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
       setLoadingSuggestions(true)
       suggestionsDebounceRef.current = setTimeout(async () => {
         try {
-          const apiResults = await searchService.getSuggestions(query, 10)
+          // Pass cancellation signal to cancel if query changes
+          const apiResults = await searchService.getSuggestions(query, 10, cancelSignal)
           setApiSuggestions(apiResults)
         } catch (error) {
+          // Ignore cancelled requests
+          if (axios.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
+            return; // Silently ignore
+          }
           console.error('Failed to fetch API suggestions:', error)
           setApiSuggestions([])
         } finally {
@@ -132,14 +142,15 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
         clearTimeout(suggestionsDebounceRef.current)
       }
     }
-  }, [searchQuery])
+  }, [searchQuery, cancelSignal])
 
-  // Sync with current search from store
+  // Sync with current search from store (only when not actively typing)
   useEffect(() => {
-    if (currentSearch && currentSearch !== searchQuery) {
+    // Only sync if user is not currently focused on input to avoid overwriting their typing
+    if (currentSearch && currentSearch !== searchQuery && !isFocused) {
       setSearchQuery(currentSearch)
     }
-  }, [currentSearch, searchQuery])
+  }, [currentSearch, searchQuery, isFocused])
 
   // Save to search history
   const saveToHistory = useCallback((query: string) => {
@@ -376,10 +387,28 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
     setShowSuggestions(true)
   }
 
-  const handleBlur = () => {
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     // Delay to allow clicking on suggestions
+    // The relatedTarget is where focus is moving to
+    const relatedTarget = e.relatedTarget as HTMLElement | null;
+    
+    // If clicking on a suggestion, refocus input immediately
+    if (relatedTarget && suggestionsRef.current?.contains(relatedTarget)) {
+      // Keep input focused
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 0);
+      return;
+    }
+    
+    // Otherwise, close suggestions after a delay
     setTimeout(() => {
-      if (!suggestionsRef.current?.contains(document.activeElement)) {
+      const currentActiveElement = document.activeElement;
+      const isStillInSuggestions = suggestionsRef.current?.contains(currentActiveElement);
+      const isStillInInput = inputRef.current === currentActiveElement;
+      
+      // Only close if focus is truly outside both input and suggestions
+      if (!isStillInSuggestions && !isStillInInput) {
         setIsFocused(false)
         setShowSuggestions(false)
         setSelectedIndex(-1)
@@ -412,9 +441,24 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
           placeholder="Tìm kiếm ảnh, minh họa..."
           value={searchQuery}
           onChange={(e) => {
-            setSearchQuery(e.target.value)
-            setShowSuggestions(true)
-            setSelectedIndex(-1)
+            // Get the new value immediately
+            const newValue = e.target.value;
+            // Update state immediately - this should never be blocked
+            setSearchQuery(newValue);
+            setShowSuggestions(true);
+            setSelectedIndex(-1);
+            setIsFocused(true);
+            // Ensure input stays focused
+            if (document.activeElement !== e.target) {
+              (e.target as HTMLInputElement).focus();
+            }
+          }}
+          onInput={(e) => {
+            // Backup handler in case onChange is blocked
+            const newValue = (e.target as HTMLInputElement).value;
+            if (newValue !== searchQuery) {
+              setSearchQuery(newValue);
+            }
           }}
           onFocus={handleFocus}
           onBlur={handleBlur}
@@ -424,6 +468,7 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
           aria-describedby="search-description"
           aria-expanded={showSuggestions}
           aria-autocomplete="list"
+          autoComplete="off"
         />
         <span id="search-description" className="sr-only">
           Nhập từ khóa để tìm kiếm ảnh. Sử dụng phím mũi tên để điều hướng, Enter để chọn, Escape để đóng.
@@ -544,7 +589,20 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
                         key={`${suggestionValue}-${index}`}
                         type="button"
                         className={`suggestion-item ${selectedIndex === index ? 'selected' : ''}`}
-                        onClick={() => handleSearch(suggestion)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleSearch(suggestion);
+                        }}
+                        onMouseDown={(e) => {
+                          // Prevent input blur when clicking suggestion
+                          // This allows the click to register while keeping input focused
+                          e.preventDefault();
+                          // Immediately refocus input to prevent blur
+                          setTimeout(() => {
+                            inputRef.current?.focus();
+                          }, 0);
+                        }}
                         role="option"
                         aria-selected={selectedIndex === index}
                       >

@@ -27,6 +27,21 @@ const getCsrfTokenFromCookie = (): string | null => {
 	return null;
 };
 
+// Request interceptors (order matters - cancellation check first, then auth)
+// Handle request cancellation (AbortController)
+api.interceptors.request.use(
+	(config) => {
+		// If signal is provided and already aborted, reject immediately
+		if (config.signal?.aborted) {
+			return Promise.reject(new axios.Cancel('Request was cancelled'));
+		}
+		return config;
+	},
+	(error) => {
+		return Promise.reject(error);
+	}
+);
+
 // Attach access token and CSRF token to request headers
 api.interceptors.request.use(
 	(

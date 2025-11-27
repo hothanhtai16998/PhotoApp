@@ -16,6 +16,7 @@ import { favoriteService } from '@/services/favoriteService';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { applyImageFilters } from '@/utils/imageFilters';
 import { useBatchedFavoriteCheck } from '@/hooks/useBatchedFavoriteCheck';
+import { useRequestCancellationOnChange } from '@/hooks/useRequestCancellation';
 import './ImageGrid.css';
 
 // Memoized image item component to prevent unnecessary re-renders
@@ -28,7 +29,8 @@ const ImageGridItem = memo(({
   onImageLoad,
   currentImageIds,
   processedImages,
-  isFadingOut = false
+  isFadingOut = false,
+  eager = false
 }: {
   image: Image;
   imageType: 'portrait' | 'landscape';
@@ -39,6 +41,7 @@ const ImageGridItem = memo(({
   currentImageIds: Set<string>;
   processedImages: React.MutableRefObject<Set<string>>;
   isFadingOut?: boolean;
+  eager?: boolean;
 }) => {
   const hasUserInfo = image.uploadedBy && (image.uploadedBy.displayName || image.uploadedBy.username);
   const { accessToken } = useAuthStore();
@@ -149,6 +152,7 @@ const ImageGridItem = memo(({
       className={`masonry-item ${imageType} ${isFadingOut ? 'fading-out' : ''}`}
       role="listitem"
       aria-label={`Ảnh: ${image.imageTitle || 'Không có tiêu đề'}`}
+      data-image-id={image._id}
       style={{
         gridRow: `span ${gridRowSpan}`,
       }}
@@ -201,6 +205,8 @@ const ImageGridItem = memo(({
           imageAvifUrl={image.imageAvifUrl}
           alt={image.imageTitle || 'Photo'}
           onLoad={handleImageLoad}
+          eager={eager}
+          fetchPriority={eager ? 'high' : 'auto'}
         />
         <div
           className="masonry-overlay"
@@ -293,6 +299,9 @@ ImageGridItem.displayName = 'ImageGridItem';
 const ImageGrid = memo(() => {
   const { images, loading, error, pagination, currentSearch, currentCategory, currentLocation, fetchImages } = useImageStore();
   const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Cancel requests when search/category/location changes
+  const cancelSignal = useRequestCancellationOnChange([currentSearch, currentCategory, currentLocation]);
 
   // Load filters from localStorage - make it reactive (declare early to avoid TDZ issues)
   const [filters, setFilters] = useState(() => {
@@ -347,7 +356,7 @@ const ImageGrid = memo(() => {
     if (images.length === 0 && !loading) {
       fetchImages({
         color: filters.color !== 'all' ? filters.color : undefined,
-      });
+      }, cancelSignal);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -366,8 +375,8 @@ const ImageGrid = memo(() => {
       category: currentCategory,
       location: currentLocation,
       color: filters.color !== 'all' ? filters.color : undefined,
-    });
-  }, [pagination, loading, currentSearch, currentCategory, currentLocation, filters.color, fetchImages]);
+    }, cancelSignal);
+  }, [pagination, loading, currentSearch, currentCategory, currentLocation, filters.color, fetchImages, cancelSignal]);
 
   const { loadMoreRef } = useInfiniteScroll({
     hasMore: pagination ? pagination.page < pagination.pages : false,
@@ -534,54 +543,71 @@ const ImageGrid = memo(() => {
 
   const currentImageIds = useMemo(() => new Set(filteredImages.map(img => img._id)), [filteredImages]);
 
-  // Preload images to determine their type quickly - viewport-aware optimization
+  // IntersectionObserver-based preloading for image type detection
+  // Only preload images that are approaching the viewport
   useEffect(() => {
     if (images.length === 0) return;
 
-    // Only preload images that are in or near the viewport
-    // This reduces initial load time and memory usage
-    const viewportBuffer = 3; // Number of images to preload outside viewport
-    const batchSize = 10;
-    
-    // Get images that need processing
-    const imagesToProcess = images.filter(img => 
-      !imageTypes.has(img._id) && 
-      !preloadQueue.current.has(img._id) && 
-      (img.thumbnailUrl || img.smallUrl || img.imageUrl)
-    );
+    // Limit concurrent preloads to avoid overwhelming the browser
+    const MAX_CONCURRENT_PRELOADS = 5;
+    let activePreloads = 0;
+    const pendingPreloads = new Set<string>(); // Track images being preloaded
+    const preloadQueue: Array<Image> = []; // Queue for images waiting to be preloaded
 
-    // For initial load, only preload first batch (visible images)
-    // For subsequent loads, use IntersectionObserver to preload on-demand
-    const imagesToPreload = imagesToProcess.slice(0, batchSize);
-    
-    imagesToPreload.forEach(img => {
-      preloadQueue.current.add(img._id);
-      
+    // Function to preload a single image to detect its type
+    const preloadImage = (img: Image) => {
+      if (activePreloads >= MAX_CONCURRENT_PRELOADS) {
+        // Add to queue if not already there
+        if (!preloadQueue.includes(img) && !pendingPreloads.has(img._id)) {
+          preloadQueue.push(img);
+        }
+        return;
+      }
+
+      if (imageTypes.has(img._id) || pendingPreloads.has(img._id)) {
+        return; // Already processed or in progress
+      }
+
+      activePreloads++;
+      pendingPreloads.add(img._id);
+
       const testImg = new Image();
       testImg.crossOrigin = 'anonymous';
-      
+
+      const cleanup = () => {
+        activePreloads--;
+        pendingPreloads.delete(img._id);
+        // Process next in queue
+        if (preloadQueue.length > 0 && activePreloads < MAX_CONCURRENT_PRELOADS) {
+          const next = preloadQueue.shift();
+          if (next && !imageTypes.has(next._id) && !pendingPreloads.has(next._id)) {
+            preloadImage(next);
+          }
+        }
+      };
+
       testImg.onload = () => {
         const aspectRatio = testImg.naturalWidth / testImg.naturalHeight;
         const isPortrait = testImg.naturalHeight > testImg.naturalWidth;
         const imageType = isPortrait ? 'portrait' : 'landscape';
-        
+
         setImageTypes(prev => {
           if (prev.has(img._id)) return prev;
           const newMap = new Map(prev);
           newMap.set(img._id, imageType);
           return newMap;
         });
-        
+
         setImageAspectRatios(prev => {
           if (prev.has(img._id)) return prev;
           const newMap = new Map(prev);
           newMap.set(img._id, aspectRatio);
           return newMap;
         });
-        
-        preloadQueue.current.delete(img._id);
+
+        cleanup();
       };
-      
+
       testImg.onerror = () => {
         // If image fails to load, default to landscape
         setImageTypes(prev => {
@@ -590,20 +616,79 @@ const ImageGrid = memo(() => {
           newMap.set(img._id, 'landscape');
           return newMap;
         });
-        
+
         setImageAspectRatios(prev => {
           if (prev.has(img._id)) return prev;
           const newMap = new Map(prev);
           newMap.set(img._id, 1.5); // Default landscape aspect ratio
           return newMap;
         });
-        
-        preloadQueue.current.delete(img._id);
+
+        cleanup();
       };
-      
+
       // Use thumbnail or small URL for faster detection
       testImg.src = img.thumbnailUrl || img.smallUrl || img.imageUrl;
+    };
+
+    // Find all image grid items that need type detection
+    const imageElements = document.querySelectorAll('[data-image-id]');
+    const observers: IntersectionObserver[] = [];
+
+    // Optimize rootMargin based on connection speed
+    const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+    const isSlowConnection = connection && (connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g');
+    const rootMargin = isSlowConnection ? '200px' : '400px'; // Preload 200-400px before viewport
+
+    imageElements.forEach((element) => {
+      const imageId = element.getAttribute('data-image-id');
+      if (!imageId) return;
+
+      const img = images.find(i => i._id === imageId);
+      if (!img) return;
+
+      // Skip if already processed
+      if (imageTypes.has(img._id)) return;
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              // Image is approaching viewport, preload it
+              if (!imageTypes.has(img._id) && !pendingPreloads.has(img._id)) {
+                preloadImage(img);
+              }
+              // Disconnect after first intersection (one-time check)
+              observer.disconnect();
+            }
+          });
+        },
+        {
+          rootMargin,
+          threshold: 0.01, // Trigger when 1% visible
+        }
+      );
+
+      observer.observe(element);
+      observers.push(observer);
     });
+
+    // Preload first 12 images immediately (above the fold)
+    // These are critical for initial render
+    const eagerImages = images.slice(0, 12).filter(img => 
+      !imageTypes.has(img._id) && 
+      !pendingPreloads.has(img._id) &&
+      (img.thumbnailUrl || img.smallUrl || img.imageUrl)
+    );
+
+    eagerImages.forEach(img => {
+      preloadImage(img);
+    });
+
+    // Cleanup
+    return () => {
+      observers.forEach(observer => observer.disconnect());
+    };
   }, [images, imageTypes]);
 
   // Determine image type when it loads - memoized to prevent recreation
@@ -862,7 +947,7 @@ const ImageGrid = memo(() => {
           })()}
           
           {/* Show current images */}
-          {filteredImages.length > 0 ? filteredImages.map((image) => {
+          {filteredImages.length > 0 ? filteredImages.map((image, index) => {
             // Get image type and aspect ratio
             const imageType = imageTypes.get(image._id);
             const aspectRatio = imageAspectRatios.get(image._id);
@@ -872,12 +957,17 @@ const ImageGrid = memo(() => {
             // Use 'landscape' as default but ensure consistent sizing
             const displayType = imageType || 'landscape';
             
+            // Load first 12 images eagerly (above the fold + buffer)
+            // This improves LCP (Largest Contentful Paint) for initial view
+            const isEager = index < 12;
+            
             return (
               <ImageGridItem
                 key={image._id}
                 image={image}
                 imageType={displayType}
                 aspectRatio={aspectRatio}
+                eager={isEager}
                 onSelect={(img) => {
                   // Set flag to indicate we're opening from grid (not refresh)
                   sessionStorage.setItem('imagePage_fromGrid', 'true');

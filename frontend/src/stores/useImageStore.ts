@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { toast } from 'sonner';
+import axios from 'axios';
 import { imageService } from '@/services/imageService';
 import type { ImageState, UploadImageData } from '@/types/store';
 import type { Image } from '@/types/image';
@@ -136,7 +137,7 @@ export const useImageStore = create(
       color?: string;
       tag?: string;
       _refresh?: boolean;
-    }) => {
+    }, signal?: AbortSignal) => {
       // Prevent concurrent requests - use atomic check-and-set to avoid race condition
       let shouldProceed = false;
       
@@ -201,7 +202,7 @@ export const useImageStore = create(
             : params;
 
         // Color filter is already included in params if provided
-        const response = await imageService.fetchImages(fetchParams);
+        const response = await imageService.fetchImages(fetchParams, signal);
         set((state) => {
           // Handle both array response and object with images property
           const newImagesRaw = Array.isArray(response)
@@ -325,6 +326,15 @@ export const useImageStore = create(
           state.loading = false;
         });
       } catch (error: unknown) {
+        // Ignore cancelled requests (user navigated away or changed filters)
+        if (axios.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
+          // Silently ignore cancelled requests
+          set((state) => {
+            state.loading = false;
+          });
+          return;
+        }
+
         const message =
           (
             error as {
