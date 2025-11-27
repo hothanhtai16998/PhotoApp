@@ -33,7 +33,7 @@ import {
     updateSettings,
     getCacheStats,
     createSystemAnnouncement,
-} from '../controllers/adminController.js';
+} from '../controllers/admin/index.js';
 import { protectedRoute } from '../middlewares/authMiddleware.js';
 import { adminRoute } from '../middlewares/adminMiddleware.js';
 import { requireSuperAdmin, requirePermission } from '../middlewares/permissionMiddleware.js';

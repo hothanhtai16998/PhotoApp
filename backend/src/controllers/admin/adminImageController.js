@@ -1,0 +1,273 @@
+import Image from '../../models/Image.js';
+import Category from '../../models/Category.js';
+import User from '../../models/User.js';
+import Notification from '../../models/Notification.js';
+import { asyncHandler } from '../../middlewares/asyncHandler.js';
+import { logger } from '../../utils/logger.js';
+import { deleteImageFromS3 } from '../../libs/s3.js';
+import { clearCache } from '../../middlewares/cacheMiddleware.js';
+
+// Image Management
+export const getAllImagesAdmin = asyncHandler(async (req, res) => {
+    // Permission check is handled by requirePermission('viewImages') middleware
+
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 20), 100);
+    const skip = (page - 1) * limit;
+    const search = req.query.search?.trim();
+    const category = req.query.category?.trim();
+    const userId = req.query.userId?.trim();
+
+    const query = {};
+
+    if (search) {
+        query.$or = [
+            { imageTitle: { $regex: search, $options: 'i' } },
+            { location: { $regex: search, $options: 'i' } },
+        ];
+    }
+
+    if (category) {
+        // Find category by name (case-insensitive)
+        const categoryDoc = await Category.findOne({
+            name: { $regex: new RegExp(`^${category}$`, 'i') },
+            isActive: true,
+        });
+        if (categoryDoc) {
+            // Strictly match only this category ID
+            query.imageCategory = categoryDoc._id;
+        } else {
+            // If category not found, return empty results
+            return res.status(200).json({
+                images: [],
+                pagination: {
+                    page,
+                    limit,
+                    total: 0,
+                    pages: 0,
+                },
+            });
+        }
+    }
+    // Always ensure imageCategory exists and is not null (even when no category filter)
+    // This prevents images with invalid/null categories from appearing
+    if (!query.imageCategory) {
+        query.imageCategory = { $exists: true, $ne: null };
+    }
+
+    if (userId) {
+        query.uploadedBy = userId;
+    }
+
+    const [imagesRaw, total] = await Promise.all([
+        Image.find(query)
+            .populate('uploadedBy', 'username displayName email')
+            .populate('imageCategory', 'name description')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean(),
+        Image.countDocuments(query),
+    ]);
+
+    // Handle images with invalid or missing category references
+    let images = imagesRaw.map(img => ({
+        ...img,
+        // Ensure imageCategory is either an object with name or null
+        imageCategory: (img.imageCategory && typeof img.imageCategory === 'object' && img.imageCategory.name)
+            ? img.imageCategory
+            : null
+    }));
+
+    // Additional validation: If category filter was applied, ensure populated category name matches
+    // This catches any edge cases where ObjectId might match but category name doesn't
+    // This is a safety net to ensure images only appear in their correct category
+    if (category) {
+        images = images.filter(img => {
+            if (!img.imageCategory || typeof img.imageCategory !== 'object' || !img.imageCategory.name) {
+                return false; // Filter out images with invalid categories
+            }
+            // Case-insensitive match to ensure exact category match
+            return img.imageCategory.name.toLowerCase() === category.toLowerCase();
+        });
+    }
+
+    res.status(200).json({
+        images,
+        pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit),
+        },
+    });
+});
+
+export const deleteImage = asyncHandler(async (req, res) => {
+    const { imageId } = req.params;
+
+    // Permission check is handled by requirePermission('deleteImages') middleware
+
+    const image = await Image.findById(imageId);
+
+    if (!image) {
+        return res.status(404).json({
+            message: 'Không tìm thấy ảnh',
+        });
+    }
+
+    // Delete from S3
+    try {
+        await deleteImageFromS3(image.publicId, 'photo-app-images');
+    } catch (error) {
+        logger.warn(`Lỗi không thể xoá ảnh ${image.publicId} từ S3:`, error);
+    }
+
+    // Remove image from all users' favorites
+    await User.updateMany(
+        { favorites: imageId },
+        { $pull: { favorites: imageId } }
+    );
+
+    // Create image_removed_admin notification for image owner
+    if (image.uploadedBy) {
+        try {
+            await Notification.create({
+                recipient: image.uploadedBy,
+                type: 'image_removed_admin',
+                image: imageId,
+                actor: req.user._id,
+                metadata: {
+                    imageTitle: image.imageTitle,
+                    reason: 'Removed by admin',
+                },
+            });
+        } catch (notifError) {
+            logger.error('Failed to create image removed notification:', notifError);
+            // Don't fail the deletion if notification fails
+        }
+    }
+
+    // Delete from database
+    await Image.findByIdAndDelete(imageId);
+
+    // Clear ALL cache entries for images endpoint (including all query variations)
+    // This ensures deleted image doesn't appear in any cached responses
+    clearCache('/api/images');
+
+    res.status(200).json({
+        message: 'Xoá ảnh thành công',
+    });
+});
+
+// Update image (location, title, etc.)
+export const updateImage = asyncHandler(async (req, res) => {
+    const { imageId } = req.params;
+    const { location, coordinates, imageTitle, cameraModel } = req.body;
+
+    // Permission check is handled by requirePermission('editImages') middleware
+
+    const image = await Image.findById(imageId);
+
+    if (!image) {
+        return res.status(404).json({
+            message: 'Không tìm thấy ảnh',
+        });
+    }
+
+    // Build update object
+    const updateData = {};
+
+    if (location !== undefined) {
+        updateData.location = location?.trim() || null;
+    }
+
+    if (coordinates !== undefined) {
+        // Parse and validate coordinates if provided
+        let parsedCoordinates;
+        if (coordinates) {
+            try {
+                parsedCoordinates = typeof coordinates === 'string' ? JSON.parse(coordinates) : coordinates;
+                if (parsedCoordinates.latitude && parsedCoordinates.longitude) {
+                    const lat = parseFloat(parsedCoordinates.latitude);
+                    const lng = parseFloat(parsedCoordinates.longitude);
+                    if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                        updateData.coordinates = { latitude: lat, longitude: lng };
+                    }
+                }
+            } catch (error) {
+                logger.warn('Invalid coordinates format:', error);
+            }
+        } else {
+            updateData.coordinates = null;
+        }
+    }
+
+    if (imageTitle !== undefined) {
+        updateData.imageTitle = imageTitle?.trim() || image.imageTitle;
+    }
+
+    if (cameraModel !== undefined) {
+        updateData.cameraModel = cameraModel?.trim() || null;
+    }
+
+    // Update image
+    const updatedImage = await Image.findByIdAndUpdate(
+        imageId,
+        { $set: updateData },
+        { new: true, runValidators: true }
+    )
+        .populate('uploadedBy', 'username displayName avatarUrl')
+        .populate('imageCategory', 'name description')
+        .lean();
+
+    // Clear cache for images endpoint
+    clearCache('/api/images');
+
+    res.status(200).json({
+        message: 'Cập nhật ảnh thành công',
+        image: updatedImage,
+    });
+});
+
+// Moderate Image
+export const moderateImage = asyncHandler(async (req, res) => {
+    const { imageId } = req.params;
+    const { status, notes } = req.body; // status: 'approved', 'rejected', 'flagged'
+
+    // Permission check is handled by requirePermission('moderateImages') middleware
+
+    if (!['approved', 'rejected', 'flagged'].includes(status)) {
+        return res.status(400).json({
+            message: 'Trạng thái kiểm duyệt không hợp lệ. Phải là: approved, rejected, hoặc flagged',
+        });
+    }
+
+    const image = await Image.findById(imageId);
+
+    if (!image) {
+        return res.status(404).json({
+            message: 'Không tìm thấy ảnh',
+        });
+    }
+
+    // Update moderation status
+    image.isModerated = true;
+    image.moderationStatus = status;
+    image.moderatedAt = new Date();
+    image.moderatedBy = req.user._id;
+    image.moderationNotes = notes?.trim() || undefined;
+    await image.save();
+
+    res.status(200).json({
+        message: 'Kiểm duyệt ảnh thành công',
+        image: {
+            _id: image._id,
+            imageTitle: image.imageTitle,
+            moderationStatus: image.moderationStatus,
+            moderatedAt: image.moderatedAt,
+            moderationNotes: image.moderationNotes,
+        },
+    });
+});
+

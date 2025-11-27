@@ -11,7 +11,7 @@ import cors from 'cors';
 import compression from 'compression';
 import imageRoute from './routes/imageRoute.js';
 import adminRoute from './routes/adminRoute.js';
-import { trackPageView } from './controllers/adminController.js';
+import { trackPageView } from './controllers/admin/index.js';
 import { asyncHandler } from './middlewares/asyncHandler.js';
 import categoryRoute from './routes/categoryRoute.js';
 import favoriteRoute from './routes/favoriteRoute.js';
