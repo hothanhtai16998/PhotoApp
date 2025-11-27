@@ -255,10 +255,94 @@
   display: none; /* Chrome, Safari, Opera */
 }
 
+/* Author Banner - Mobile page mode (like Unsplash) */
+.image-modal-author-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #fff;
+  border-bottom: 1px solid #e5e5e5;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.modal-author-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.modal-author-banner-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 @media (max-width: 768px) {
+  /* Hide modal header on mobile (always hide on mobile, show author banner instead) */
+  .image-modal .image-modal-header {
+    display: none;
+  }
+
+  /* Position imageModal below header + search bar on mobile */
+  .image-modal {
+    top: calc(
+      var(--header-height, 56px) + 55px
+    ) !important; /* Header (56px) + Search bar (55px) */
+  }
+}
+
+/* Desktop: Hide author banner when modal header is shown (modal mode) */
+@media (min-width: 769px) {
+  .image-modal:not(.image-modal-page) .image-modal-author-banner {
+    display: none;
+  }
+
+  /* Author banner styling for desktop page mode */
+  .image-modal.image-modal-page .image-modal-author-banner {
+    padding: 16px 24px;
+    border-bottom: 1px solid #e5e5e5;
+  }
+
+  .image-modal.image-modal-page .modal-author-banner-left {
+    gap: 12px;
+  }
+
+  .image-modal.image-modal-page .image-modal-author-banner .modal-user-avatar,
+  .image-modal.image-modal-page
+    .image-modal-author-banner
+    .modal-user-avatar-placeholder {
+    width: 40px;
+    height: 40px;
+  }
+
+  .image-modal.image-modal-page .image-modal-author-banner .modal-user-name {
+    font-size: 1rem;
+  }
+
+  .image-modal.image-modal-page .image-modal-author-banner .modal-user-status {
+    font-size: 0.875rem;
+  }
+
+  .modal-author-banner-right {
+    gap: 6px;
+  }
+
+  .modal-author-banner-right .modal-action-btn {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+  }
+
   .image-modal-content {
     padding-bottom: 12px;
-    padding-top: 0 !important; /* Remove top padding for compact layout */
   }
 }
 
@@ -356,16 +440,13 @@
 
 @media (max-width: 768px) {
   .modal-zoom-controls {
-    bottom: 12px !important; /* Better positioning */
-    padding: 8px 12px !important;
-    gap: 6px !important;
+    bottom: 16px;
+    padding: 6px 10px;
   }
 
   .modal-zoom-btn {
-    width: 40px !important; /* Better touch target */
-    height: 40px !important;
-    min-width: 40px !important;
-    min-height: 40px !important;
+    width: 32px;
+    height: 32px;
   }
 
   .modal-zoom-level {
@@ -877,24 +958,20 @@
   transform: translateY(-1px);
 }
 
-/* Responsive Modal - MOBILE ONLY */
+/* Responsive Modal */
 @media (max-width: 768px) {
   .image-modal {
-    width: 100% !important;
-    max-width: none !important;
-    border-radius: 0 !important;
-    top: 0 !important;
-    left: 0 !important;
-    transform: none !important;
-    height: 100vh !important;
-    margin: 0 !important;
+    width: 100%;
+    max-width: none;
+    border-radius: 0;
+    top: 0;
+    height: 100vh;
   }
 
   .image-modal-header {
-    padding: 8px 12px !important;
+    padding: 4px 12px;
     flex-shrink: 0;
     min-height: 48px;
-    margin-bottom: 0 !important; /* Remove gap after header */
   }
 
   .modal-header-left {
@@ -913,11 +990,6 @@
 
   .modal-user-status {
     font-size: 0.75rem;
-  }
-
-  /* MOBILE ONLY: Compact spacing - Author section (Rectangle 2) right after header */
-  .modal-header-left.clickable-user-info {
-    margin-bottom: 0;
   }
 
   .modal-header-right {
@@ -941,20 +1013,12 @@
     display: none;
   }
 
-  /* MOBILE ONLY: Compact spacing - Image info (Rectangle 5) right after image */
   .image-modal-footer {
     flex-wrap: wrap;
-    padding: 12px 16px !important; /* Compact padding */
+    padding: 4px 12px;
     gap: 8px;
     flex-shrink: 0;
     min-height: auto;
-    margin-top: 0 !important; /* No gap after image */
-    border-top: none !important; /* Remove border for seamless flow */
-  }
-
-  .modal-footer-btn {
-    min-height: 44px !important; /* Better touch target */
-    padding: 12px 14px !important;
   }
 
   .modal-footer-left {
@@ -1011,56 +1075,48 @@
     background: #e5e5e5;
   }
 
-  /* MOBILE ONLY: Compact spacing - Image container (Rectangle 4) right after author */
   .modal-main-image-container {
     min-height: auto !important;
     height: auto !important;
     padding: 0 !important;
     margin: 0 !important;
-    margin-top: 0 !important; /* No gap after author section */
     display: block;
-  }
-
-  /* MOBILE ONLY: Landscape images - fill width, no white space */
-  .modal-image.landscape {
-    width: 100% !important;
-    max-width: 100% !important;
-    height: auto !important;
-    max-height: 50vh !important; /* Limit height to prevent taking full screen */
-    object-fit: cover !important; /* Fill space, eliminate white space */
-    object-position: center !important;
-    display: block;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  /* MOBILE ONLY: Portrait images - reasonable height, not full screen */
-  .modal-image.portrait {
-    width: 100% !important;
-    max-width: 100% !important;
-    height: auto !important;
-    max-height: 60vh !important; /* Limit height, don't take full screen */
-    object-fit: contain !important;
-    display: block;
-    margin: 0 !important;
-    padding: 0 !important;
   }
 
   .modal-image {
     width: 100% !important;
     max-width: 100% !important;
     height: auto !important;
-    max-height: 55vh !important; /* Default reasonable height */
+    max-height: calc(100vh - 80px) !important;
     object-fit: contain;
     display: block;
     margin: 0 !important;
     padding: 0 !important;
   }
 
-  /* MOBILE ONLY: Space (Rectangle 6) - Small margin before related images */
+  /* Landscape images - fill width to make them larger */
+  .modal-image.landscape {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: calc(100vh - 60px) !important;
+    object-fit: contain;
+    display: block;
+  }
+
+  /* Portrait images - maintain aspect ratio */
+  .modal-image.portrait {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: calc(100vh - 80px) !important;
+    object-fit: contain;
+    display: block;
+  }
+
   .modal-related-images {
-    margin-top: 32px !important; /* Small margin for spacing (Rectangle 6) */
-    padding-top: 0 !important; /* Remove extra padding */
+    margin-top: 24px;
+    padding-top: 24px;
     padding-left: 16px;
     padding-right: 16px;
   }
@@ -1086,72 +1142,52 @@
 
 @media (max-width: 480px) {
   .image-modal-header {
-    padding: 8px 10px !important; /* Consistent padding */
+    padding: 6px 12px;
     flex-shrink: 0;
-    min-height: 44px !important; /* Better touch target */
-  }
-
-  .modal-close-btn {
-    top: 6px !important;
-    right: 6px !important;
-    width: 40px !important;
-    height: 40px !important;
   }
 
   .modal-main-image-container {
     min-height: auto !important;
     height: auto !important;
-    padding: 0 !important; /* No padding for compact layout */
-    margin: 0 !important;
-    margin-top: 0 !important;
-    display: block !important;
-  }
-
-  /* MOBILE ONLY: Landscape images - fill width, no white space, reasonable height */
-  .modal-image.landscape {
-    width: 100% !important;
-    max-width: 100% !important;
-    height: auto !important;
-    max-height: 50vh !important; /* Limit height, don't take full screen */
-    object-fit: cover !important; /* Fill space, eliminate white space */
-    object-position: center !important;
-    display: block !important;
-    margin: 0 !important;
     padding: 0 !important;
-  }
-
-  /* MOBILE ONLY: Portrait images - reasonable height, not full screen */
-  .modal-image.portrait {
-    width: 100% !important;
-    max-width: 100% !important;
-    height: auto !important;
-    max-height: 60vh !important; /* Limit height, don't take full screen */
-    object-fit: contain !important;
-    display: block !important;
     margin: 0 !important;
-    padding: 0 !important;
+    display: block;
   }
 
   .modal-image {
     width: 100% !important;
     max-width: 100% !important;
     height: auto !important;
-    max-height: 55vh !important; /* Default reasonable height */
-    object-fit: contain !important;
-    display: block !important;
+    max-height: calc(100vh - 70px) !important;
+    object-fit: contain;
+    display: block;
     margin: 0 !important;
     padding: 0 !important;
   }
 
-  .image-modal-footer {
-    padding: 12px 10px !important; /* Better padding */
-    flex-shrink: 0;
-    gap: 12px !important;
+  /* Landscape images - fill width to make them larger */
+  .modal-image.landscape {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: calc(100vh - 50px) !important;
+    object-fit: contain;
+    display: block;
   }
 
-  .modal-footer-btn {
-    min-height: 44px !important; /* Better touch target */
-    padding: 12px 14px !important;
+  /* Portrait images - maintain aspect ratio */
+  .modal-image.portrait {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: calc(100vh - 70px) !important;
+    object-fit: contain;
+    display: block;
+  }
+
+  .image-modal-footer {
+    padding: 6px 12px;
+    flex-shrink: 0;
   }
 
   .modal-footer-left-stats {
@@ -2075,26 +2111,12 @@
   background: #333;
 }
 
-/* Responsive User Profile Card - MOBILE ONLY */
+/* Responsive User Profile Card */
 @media (max-width: 768px) {
   .user-profile-card {
-    width: calc(100vw - 24px) !important; /* Less margin */
-    max-width: 90vw !important; /* Better max width */
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    max-height: 80vh !important; /* Prevent overflow */
-    overflow-y: auto !important; /* Allow scrolling if needed */
-  }
-
-  .user-profile-card-header {
-    padding: 12px !important; /* Reduced padding */
-  }
-
-  .user-profile-card-images {
-    gap: 8px !important; /* Smaller gap */
-  }
-
-  .user-profile-card-image-item {
-    width: calc(33.333% - 6px) !important; /* Better sizing */
+    width: calc(100vw - 40px);
+    max-width: 320px;
+    left: 50%;
+    transform: translateX(-50%);
   }
 }

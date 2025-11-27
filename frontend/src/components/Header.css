@@ -540,9 +540,8 @@
   }
 
   .search-bar-container {
-    /* Search bar will be positioned below header via SearchBar.css */
-    position: absolute;
-    visibility: hidden; /* Hide but keep in layout for now */
+    /* Search bar positioning handled by SearchBar.css - it's in normal flow on mobile */
+    /* Keep it visible, SearchBar.css will position it correctly */
   }
 
   .header-actions {

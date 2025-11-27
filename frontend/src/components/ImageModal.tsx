@@ -59,6 +59,20 @@ const ImageModal = ({
   renderAsPage = false,
 }: ImageModalProps) => {
   const modalContentRef = useRef<HTMLDivElement>(null);
+  
+  // Detect mobile to show author banner on mobile regardless of renderAsPage
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth <= 768;
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [relatedImagesLimit, setRelatedImagesLimit] = useState(12);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showUserProfileCard, setShowUserProfileCard] = useState(false);
@@ -678,133 +692,277 @@ const ImageModal = ({
           }
         }}
       >
-        {/* Modal Header */}
-        <div className="image-modal-header">
-          {/* Left: User Info */}
-          <div
-            className="modal-header-left clickable-user-info"
-            ref={userInfoRef}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-            onClick={() => {
-              if (image.uploadedBy?.username) {
-                navigate(`/profile/${image.uploadedBy.username}`);
-                onClose(); // Close modal when navigating to profile
-              } else if (image.uploadedBy?._id) {
-                navigate(`/profile/user/${image.uploadedBy._id}`);
-                onClose();
-              }
-            }}
-            style={{ position: 'relative', cursor: 'pointer', willChange: 'opacity' }}
-            title="Xem hồ sơ"
-          >
-            <Avatar
-              user={image.uploadedBy}
-              size={40}
-              className="modal-user-avatar"
-              fallbackClassName="modal-user-avatar-placeholder"
-            />
-            <div className="modal-user-info">
-              <div
-                className="modal-user-name hoverable"
-                style={{ cursor: 'pointer' }}
-              >
-                {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}
-                <CheckCircle2 className="verified-badge" size={16} />
-              </div>
-              <div className="modal-user-status">Sẵn sàng nhận việc</div>
-            </div>
-
-            {/* User Profile Card */}
-            {showUserProfileCard && (
-              <div
-                ref={userProfileCardRef}
-                className={`user-profile-card ${isClosingProfileCard ? 'closing' : ''}`}
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
-              >
-                <div className="user-profile-card-header">
-                  <div className="user-profile-card-avatar-section">
-                    <Avatar
-                      user={image.uploadedBy}
-                      size={48}
-                      className="user-profile-card-avatar"
-                      fallbackClassName="user-profile-card-avatar-placeholder"
-                    />
-                    <div className="user-profile-card-name-section">
-                      <div className="user-profile-card-name">
-                        {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}
-                      </div>
-                      <div className="user-profile-card-username">{image.uploadedBy.username}</div>
-                    </div>
-                  </div>
-                  {user && user._id !== image.uploadedBy._id && (
-                    <div className="user-profile-card-follow">
-                      <FollowButton
-                        userId={image.uploadedBy._id}
-                        userDisplayName={image.uploadedBy.displayName || image.uploadedBy.username}
-                        variant="default"
-                        size="sm"
-                      />
-                    </div>
-                  )}
+        {/* Modal Header - Desktop only (show on desktop modal mode, hide on mobile) */}
+        {!isMobile && !renderAsPage && (
+          <div className="image-modal-header">
+            {/* Left: User Info */}
+            <div
+              className="modal-header-left clickable-user-info"
+              ref={userInfoRef}
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
+              onClick={() => {
+                if (image.uploadedBy?.username) {
+                  navigate(`/profile/${image.uploadedBy.username}`);
+                  onClose(); // Close modal when navigating to profile
+                } else if (image.uploadedBy?._id) {
+                  navigate(`/profile/user/${image.uploadedBy._id}`);
+                  onClose();
+                }
+              }}
+              style={{ position: 'relative', cursor: 'pointer', willChange: 'opacity' }}
+              title="Xem hồ sơ"
+            >
+              <Avatar
+                user={image.uploadedBy}
+                size={40}
+                className="modal-user-avatar"
+                fallbackClassName="modal-user-avatar-placeholder"
+              />
+              <div className="modal-user-info">
+                <div
+                  className="modal-user-name hoverable"
+                  style={{ cursor: 'pointer' }}
+                >
+                  {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}
+                  <CheckCircle2 className="verified-badge" size={16} />
                 </div>
+                <div className="modal-user-status">Sẵn sàng nhận việc</div>
+              </div>
 
-                {isLoadingUserImages && userImages.length === 0 ? (
-                  <div className="user-profile-card-loading">
-                    <div className="loading-spinner-small" />
-                  </div>
-                ) : userImages.length > 0 ? (
-                  <div className="user-profile-card-images">
-                    {userImages.map((userImage) => (
-                      <div
-                        key={userImage._id}
-                        className="user-profile-card-image-item"
-                        onClick={() => {
-                          setShowUserProfileCard(false);
-                          onImageSelect(userImage);
-                          // Scroll to top instantly to show the new image (like Unsplash)
-                          if (modalContentRef.current) {
-                            modalContentRef.current.scrollTo({ top: 0, behavior: 'auto' });
-                          }
-                        }}
-                      >
-                        <img
-                          src={userImage.thumbnailUrl || userImage.smallUrl || userImage.imageUrl}
-                          alt={userImage.imageTitle || 'Photo'}
-                          loading="lazy"
+              {/* User Profile Card */}
+              {showUserProfileCard && (
+                <div
+                  ref={userProfileCardRef}
+                  className={`user-profile-card ${isClosingProfileCard ? 'closing' : ''}`}
+                  onMouseEnter={handleMouseEnter}
+                  onMouseLeave={handleMouseLeave}
+                >
+                  <div className="user-profile-card-header">
+                    <div className="user-profile-card-avatar-section">
+                      <Avatar
+                        user={image.uploadedBy}
+                        size={48}
+                        className="user-profile-card-avatar"
+                        fallbackClassName="user-profile-card-avatar-placeholder"
+                      />
+                      <div className="user-profile-card-name-section">
+                        <div className="user-profile-card-name">
+                          {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}
+                        </div>
+                        <div className="user-profile-card-username">{image.uploadedBy.username}</div>
+                      </div>
+                    </div>
+                    {user && user._id !== image.uploadedBy._id && (
+                      <div className="user-profile-card-follow">
+                        <FollowButton
+                          userId={image.uploadedBy._id}
+                          userDisplayName={image.uploadedBy.displayName || image.uploadedBy.username}
+                          variant="default"
+                          size="sm"
                         />
                       </div>
-                    ))}
+                    )}
                   </div>
-                ) : null}
 
-                <button
-                  className="user-profile-card-view-btn"
-                  onClick={handleViewProfile}
-                >
-                  Xem hồ sơ
-                </button>
-              </div>
-            )}
+                  {isLoadingUserImages && userImages.length === 0 ? (
+                    <div className="user-profile-card-loading">
+                      <div className="loading-spinner-small" />
+                    </div>
+                  ) : userImages.length > 0 ? (
+                    <div className="user-profile-card-images">
+                      {userImages.map((userImage) => (
+                        <div
+                          key={userImage._id}
+                          className="user-profile-card-image-item"
+                          onClick={() => {
+                            setShowUserProfileCard(false);
+                            onImageSelect(userImage);
+                            // Scroll to top instantly to show the new image (like Unsplash)
+                            if (modalContentRef.current) {
+                              modalContentRef.current.scrollTo({ top: 0, behavior: 'auto' });
+                            }
+                          }}
+                        >
+                          <img
+                            src={userImage.thumbnailUrl || userImage.smallUrl || userImage.imageUrl}
+                            alt={userImage.imageTitle || 'Photo'}
+                            loading="lazy"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  <button
+                    className="user-profile-card-view-btn"
+                    onClick={handleViewProfile}
+                  >
+                    Xem hồ sơ
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Right: Download Button and Close Button */}
+            <div className="modal-header-right">
+              <DownloadSizeSelector
+                image={image}
+                onDownload={handleDownloadWithSize}
+              />
+              <button
+                className="modal-close-btn-header"
+                onClick={onClose}
+                title="Đóng (Esc)"
+                aria-label="Đóng"
+              >
+                <X size={20} />
+              </button>
+            </div>
           </div>
+        )}
 
-          {/* Right: Download Button and Close Button */}
-          <div className="modal-header-right">
-            <DownloadSizeSelector
-              image={image}
-              onDownload={handleDownloadWithSize}
-            />
-            <button
-              className="modal-close-btn-header"
-              onClick={onClose}
-              title="Đóng (Esc)"
-              aria-label="Đóng"
+        {/* Author Banner - Mobile always, Desktop when in page mode (like Unsplash) */}
+        {(isMobile || renderAsPage) && (
+          <div className="image-modal-author-banner">
+            <div
+              className="modal-author-banner-left clickable-user-info"
+              ref={userInfoRef}
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
+              onClick={() => {
+                if (image.uploadedBy?.username) {
+                  navigate(`/profile/${image.uploadedBy.username}`);
+                  onClose();
+                } else if (image.uploadedBy?._id) {
+                  navigate(`/profile/user/${image.uploadedBy._id}`);
+                  onClose();
+                }
+              }}
+              style={{ position: 'relative', cursor: 'pointer', willChange: 'opacity' }}
+              title="Xem hồ sơ"
             >
-              <X size={20} />
-            </button>
+              <Avatar
+                user={image.uploadedBy}
+                size={40}
+                className="modal-user-avatar"
+                fallbackClassName="modal-user-avatar-placeholder"
+              />
+              <div className="modal-user-info">
+                <div
+                  className="modal-user-name hoverable"
+                  style={{ cursor: 'pointer' }}
+                >
+                  {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}
+                  <CheckCircle2 className="verified-badge" size={16} />
+                </div>
+                <div className="modal-user-status">Sẵn sàng nhận việc</div>
+              </div>
+
+              {/* User Profile Card */}
+              {showUserProfileCard && (
+                <div
+                  ref={userProfileCardRef}
+                  className={`user-profile-card ${isClosingProfileCard ? 'closing' : ''}`}
+                  onMouseEnter={handleMouseEnter}
+                  onMouseLeave={handleMouseLeave}
+                >
+                  <div className="user-profile-card-header">
+                    <div className="user-profile-card-avatar-section">
+                      <Avatar
+                        user={image.uploadedBy}
+                        size={48}
+                        className="user-profile-card-avatar"
+                        fallbackClassName="user-profile-card-avatar-placeholder"
+                      />
+                      <div className="user-profile-card-name-section">
+                        <div className="user-profile-card-name">
+                          {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}
+                        </div>
+                        <div className="user-profile-card-username">{image.uploadedBy.username}</div>
+                      </div>
+                    </div>
+                    {user && user._id !== image.uploadedBy._id && (
+                      <div className="user-profile-card-follow">
+                        <FollowButton
+                          userId={image.uploadedBy._id}
+                          userDisplayName={image.uploadedBy.displayName || image.uploadedBy.username}
+                          variant="default"
+                          size="sm"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {isLoadingUserImages && userImages.length === 0 ? (
+                    <div className="user-profile-card-loading">
+                      <div className="loading-spinner-small" />
+                    </div>
+                  ) : userImages.length > 0 ? (
+                    <div className="user-profile-card-images">
+                      {userImages.map((userImage) => (
+                        <div
+                          key={userImage._id}
+                          className="user-profile-card-image-item"
+                          onClick={() => {
+                            setShowUserProfileCard(false);
+                            onImageSelect(userImage);
+                            if (modalContentRef.current) {
+                              modalContentRef.current.scrollTo({ top: 0, behavior: 'auto' });
+                            }
+                          }}
+                        >
+                          <img
+                            src={userImage.thumbnailUrl || userImage.smallUrl || userImage.imageUrl}
+                            alt={userImage.imageTitle || 'Photo'}
+                            loading="lazy"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  <button
+                    className="user-profile-card-view-btn"
+                    onClick={handleViewProfile}
+                  >
+                    Xem hồ sơ
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-author-banner-right">
+              <button
+                className="modal-action-btn"
+                onClick={() => {
+                  // Toggle favorite
+                  handleToggleFavorite();
+                }}
+                title={isFavorited ? 'Bỏ yêu thích' : 'Yêu thích'}
+                aria-label={isFavorited ? 'Bỏ yêu thích' : 'Yêu thích'}
+              >
+                <Heart
+                  size={20}
+                  fill={isFavorited ? 'currentColor' : 'none'}
+                  className={isFavorited ? 'favorite-icon-filled' : ''}
+                />
+              </button>
+              <button
+                className="modal-action-btn"
+                onClick={() => setShowCollectionModal(true)}
+                title="Thêm vào bộ sưu tập"
+                aria-label="Thêm vào bộ sưu tập"
+              >
+                <FolderPlus size={20} />
+              </button>
+              <DownloadSizeSelector
+                image={image}
+                onDownload={handleDownloadWithSize}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Modal Image Content - Scrollable */}
         <div
