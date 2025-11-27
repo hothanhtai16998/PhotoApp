@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
 import type { AuthState } from '@/types/store';
+import type { ApiErrorResponse, ValidationErrorResponse, HttpErrorResponse } from '@/types/errors';
 
 export const useAuthStore =
 	create<AuthState>((set, get) => ({
@@ -49,15 +50,7 @@ export const useAuthStore =
 				);
 			} catch (error: unknown) {
 				const message =
-					(
-						error as {
-							response?: {
-								data?: {
-									message?: string;
-								};
-							};
-						}
-					)?.response?.data?.message ||
+					(error as ApiErrorResponse)?.response?.data?.message ||
 					'Đăng ký thất bại. Vui lòng thử lại.';
 				toast.error(message);
 			} finally {
@@ -93,17 +86,7 @@ export const useAuthStore =
 					'Chào mừng bạn quay lại 🎉'
 				);
 			} catch (error: unknown) {
-				const errorResponse = error as {
-					response?: {
-						data?: {
-							message?: string;
-							errors?: Array<{
-								msg?: string;
-								message?: string;
-							}>;
-						};
-					};
-				};
+				const errorResponse = error as ValidationErrorResponse;
 
 				// Handle validation errors (express-validator format)
 				if (
@@ -113,10 +96,7 @@ export const useAuthStore =
 					const validationErrors =
 						errorResponse.response.data.errors
 							.map(
-								(err: {
-									msg?: string;
-									message?: string;
-								}) =>
+								(err) =>
 									err.msg ||
 									err.message ||
 									'Validation failed'
@@ -163,13 +143,7 @@ export const useAuthStore =
 			} catch (error) {
 				// Only clear state if it's a 401/403 (unauthorized/forbidden)
 				// This means the user is actually not authenticated
-				const errorStatus = (
-					error as {
-						response?: {
-							status?: number;
-						};
-					}
-				)?.response?.status;
+				const errorStatus = (error as HttpErrorResponse)?.response?.status;
 				
 				if (errorStatus === 401 || errorStatus === 403) {
 					// User is not authenticated, clear state
@@ -202,13 +176,7 @@ export const useAuthStore =
 					await fetchMe();
 				}
 			} catch (error: unknown) {
-				const errorStatus = (
-					error as {
-						response?: {
-							status?: number;
-						};
-					}
-				)?.response?.status;
+				const errorStatus = (error as HttpErrorResponse)?.response?.status;
 				// Only show error if it's not a 401/403 (expected when not logged in)
 				if (
 					errorStatus !== 401 &&

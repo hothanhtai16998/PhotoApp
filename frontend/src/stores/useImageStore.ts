@@ -4,7 +4,8 @@ import { toast } from 'sonner';
 import axios from 'axios';
 import { imageService } from '@/services/imageService';
 import type { ImageState, UploadImageData } from '@/types/store';
-import type { Image } from '@/types/image';
+import type { Image, FetchImagesParams } from '@/types/image';
+import type { AxiosErrorResponse, ApiErrorResponse } from '@/types/errors';
 
 export const useImageStore = create(
   immer<ImageState>((set) => ({
@@ -94,16 +95,7 @@ export const useImageStore = create(
           progressInterval = null;
         }
 
-        const axiosError = error as {
-          response?: {
-            data?: {
-              message?: string;
-            };
-            status?: number;
-          };
-          code?: string;
-          message?: string;
-        };
+        const axiosError = error as AxiosErrorResponse;
 
         // Handle timeout errors specifically
         let message = 'Failed to upload image. Please try again.';
@@ -128,16 +120,7 @@ export const useImageStore = create(
         toast.error(message);
       }
     },
-    fetchImages: async (params?: {
-      page?: number;
-      limit?: number;
-      search?: string;
-      category?: string;
-      location?: string;
-      color?: string;
-      tag?: string;
-      _refresh?: boolean;
-    }, signal?: AbortSignal) => {
+    fetchImages: async (params?: FetchImagesParams, signal?: AbortSignal) => {
       // Prevent concurrent requests - use atomic check-and-set to avoid race condition
       let shouldProceed = false;
       
@@ -340,15 +323,7 @@ export const useImageStore = create(
         }
 
         const message =
-          (
-            error as {
-              response?: {
-                data?: {
-                  message?: string;
-                };
-              };
-            }
-          )?.response?.data?.message ||
+          (error as ApiErrorResponse)?.response?.data?.message ||
           'Failed to fetch images. Please try again.';
         set((state) => {
           state.loading = false;
