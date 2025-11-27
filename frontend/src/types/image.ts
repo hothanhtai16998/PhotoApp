@@ -46,3 +46,77 @@ export interface Image {
   createdAt: string;
   updatedAt: string;
 }
+
+// API Request/Response Types
+export interface FetchImagesParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  category?: string;
+  location?: string;
+  color?: string;
+  tag?: string;
+  _refresh?: boolean;
+}
+
+export interface FetchImagesResponse {
+  images: Image[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+export interface PreUploadResponse {
+  message: string;
+  uploadId: string;
+  publicId: string;
+  imageUrl: string;
+  thumbnailUrl: string;
+  smallUrl: string;
+  regularUrl: string;
+  imageAvifUrl: string;
+  thumbnailAvifUrl: string;
+  smallAvifUrl: string;
+  regularAvifUrl: string;
+}
+
+export interface FinalizeImageData {
+  uploadId: string;
+  publicId: string;
+  imageUrl: string;
+  thumbnailUrl: string;
+  smallUrl: string;
+  regularUrl: string;
+  imageAvifUrl: string;
+  thumbnailAvifUrl: string;
+  smallAvifUrl: string;
+  regularAvifUrl: string;
+  imageTitle: string;
+  imageCategory: string;
+  location?: string;
+  coordinates?: { latitude: number; longitude: number };
+  cameraModel?: string;
+  tags?: string[];
+}
+
+export interface FinalizeImageResponse {
+  message: string;
+  image: Image;
+}
+
+export interface IncrementViewResponse {
+  views: number;
+  dailyViews: Record<string, number>;
+}
+
+export interface IncrementDownloadResponse {
+  downloads: number;
+  dailyDownloads: Record<string, number>;
+}
+
+export interface FetchLocationsResponse {
+  locations: string[];
+}

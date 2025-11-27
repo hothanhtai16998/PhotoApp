@@ -1,27 +1,8 @@
 import api from '@/lib/axios';
-import type { Image } from '@/types/image';
+import type { FavoriteResponse, FavoritesCheckResponse, FavoritesListResponse } from '@/types/favorite';
 
-export interface FavoriteResponse {
-	success: boolean;
-	isFavorited: boolean;
-	message: string;
-}
-
-export interface FavoritesCheckResponse {
-	success: boolean;
-	favorites: Record<string, boolean>;
-}
-
-export interface FavoritesListResponse {
-	success: boolean;
-	images: Image[];
-	pagination: {
-		page: number;
-		limit: number;
-		total: number;
-		pages: number;
-	};
-}
+// Re-export for backward compatibility
+export type { FavoriteResponse, FavoritesCheckResponse, FavoritesListResponse } from '@/types/favorite';
 
 export const favoriteService = {
 	/**

@@ -1,19 +1,8 @@
 import { get } from '@/lib/api';
+import type { SearchSuggestion, SearchSuggestionsResponse, PopularSearchesResponse } from '@/types/search';
 
-export interface SearchSuggestion {
-  type: 'title' | 'tag' | 'location' | 'category';
-  text: string;
-  query: string;
-}
-
-export interface SearchSuggestionsResponse {
-  suggestions: SearchSuggestion[];
-  query?: string;
-}
-
-export interface PopularSearchesResponse {
-  popular: SearchSuggestion[];
-}
+// Re-export for backward compatibility
+export type { SearchSuggestion, SearchSuggestionsResponse, PopularSearchesResponse } from '@/types/search';
 
 export const searchService = {
   /**

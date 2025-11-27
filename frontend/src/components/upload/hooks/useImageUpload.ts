@@ -2,7 +2,8 @@ import { useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/utils';
 import { categoryService, type Category } from '@/services/categoryService';
-import { imageService, type PreUploadResponse, type FinalizeImageData } from '@/services/imageService';
+import { imageService } from '@/services/imageService';
+import type { PreUploadResponse, FinalizeImageData } from '@/types/image';
 import { compressImage } from '@/utils/imageCompression';
 
 export interface ImageData {

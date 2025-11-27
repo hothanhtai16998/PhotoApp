@@ -1,4 +1,5 @@
 import api from '@/lib/axios';
+import type { Collection } from '@/types/collection';
 
 export interface CollectionVersion {
     _id: string;
@@ -48,12 +49,6 @@ interface VersionResponse {
     version: CollectionVersion;
 }
 
-interface RestoreResponse {
-    success: boolean;
-    message: string;
-    collection: Record<string, unknown>;
-}
-
 export const collectionVersionService = {
     /**
      * Get version history for a collection
@@ -90,15 +85,15 @@ export const collectionVersionService = {
     restoreCollectionVersion: async (
         collectionId: string,
         versionNumber: number
-    ): Promise<Record<string, unknown>> => {
-        const response = await api.post<RestoreResponse>(
+    ): Promise<Collection> => {
+        const response = await api.post<{ collection: Collection }>(
             `/collection-versions/collection/${collectionId}/version/${versionNumber}/restore`,
             {},
             {
                 withCredentials: true,
             }
         );
-        return response.data.collection as Record<string, unknown>;
+        return response.data.collection as Collection;
     },
 };
 

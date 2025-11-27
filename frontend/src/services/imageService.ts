@@ -1,60 +1,15 @@
 import api, { get } from '@/lib/api';
 import type { UploadImageData } from '@/types/store';
-
-interface FetchImagesParams {
-  page?: number;
-  limit?: number;
-  search?: string;
-  category?: string;
-  location?: string;
-  color?: string;
-  tag?: string;
-}
-
-import type { Image } from '@/types/image';
-
-interface FetchImagesResponse {
-  images: Image[];
-  pagination?: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-  };
-}
-
-export interface PreUploadResponse {
-  message: string;
-  uploadId: string;
-  publicId: string;
-  imageUrl: string;
-  thumbnailUrl: string;
-  smallUrl: string;
-  regularUrl: string;
-  imageAvifUrl: string;
-  thumbnailAvifUrl: string;
-  smallAvifUrl: string;
-  regularAvifUrl: string;
-}
-
-export interface FinalizeImageData {
-  uploadId: string;
-  publicId: string;
-  imageUrl: string;
-  thumbnailUrl: string;
-  smallUrl: string;
-  regularUrl: string;
-  imageAvifUrl: string;
-  thumbnailAvifUrl: string;
-  smallAvifUrl: string;
-  regularAvifUrl: string;
-  imageTitle: string;
-  imageCategory: string;
-  location?: string;
-  coordinates?: { latitude: number; longitude: number };
-  cameraModel?: string;
-  tags?: string[];
-}
+import type {
+  Image,
+  FetchImagesParams,
+  FetchImagesResponse,
+  PreUploadResponse,
+  FinalizeImageData,
+  FinalizeImageResponse,
+  IncrementViewResponse,
+  IncrementDownloadResponse,
+} from '@/types/image';
 
 export const imageService = {
   // Pre-upload: Upload image to S3 only (no database record)
@@ -114,7 +69,7 @@ export const imageService = {
 
   finalizeImageUpload: async (
     data: FinalizeImageData
-  ): Promise<{ message: string; image: Image }> => {
+  ): Promise<FinalizeImageResponse> => {
     const res = await api.post('/images/finalize', data, {
       withCredentials: true,
       timeout: 30000, // 30 seconds should be enough for metadata save
@@ -167,9 +122,7 @@ export const imageService = {
   },
 
   fetchImages: async (
-    params?: FetchImagesParams & {
-      _refresh?: boolean;
-    },
+    params?: FetchImagesParams,
     signal?: AbortSignal
   ): Promise<FetchImagesResponse> => {
     const queryParams = new URLSearchParams();
@@ -223,9 +176,7 @@ export const imageService = {
 
   fetchUserImages: async (
     userId: string,
-    params?: FetchImagesParams & {
-      _refresh?: boolean;
-    },
+    params?: FetchImagesParams,
     signal?: AbortSignal
   ): Promise<FetchImagesResponse> => {
     const queryParams = new URLSearchParams();
@@ -265,7 +216,7 @@ export const imageService = {
 
   incrementView: async (
     imageId: string
-  ): Promise<{ views: number; dailyViews: Record<string, number> }> => {
+  ): Promise<IncrementViewResponse> => {
     const res = await api.patch(
       `/images/${imageId}/view`,
       {},
@@ -278,7 +229,7 @@ export const imageService = {
 
   incrementDownload: async (
     imageId: string
-  ): Promise<{ downloads: number; dailyDownloads: Record<string, number> }> => {
+  ): Promise<IncrementDownloadResponse> => {
     const res = await api.patch(
       `/images/${imageId}/download`,
       {},

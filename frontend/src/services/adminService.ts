@@ -1,4 +1,5 @@
 import api from '@/lib/axios';
+import type { AnalyticsData } from '@/types/admin';
 
 export interface DashboardStats {
     stats: {
@@ -276,7 +277,7 @@ export const adminService = {
     },
 
     // Analytics
-    getAnalytics: async (days?: number): Promise<Record<string, unknown>> => {
+    getAnalytics: async (days?: number): Promise<AnalyticsData> => {
         const queryParams = new URLSearchParams();
         if (days) queryParams.append('days', days.toString());
         const queryString = queryParams.toString();

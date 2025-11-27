@@ -184,8 +184,10 @@ export const useImageStore = create(
       try {
         // Always use cache-busting on initial load, category change, or search change to ensure fresh data
         // This prevents deleted images or wrong category images from appearing due to browser cache
-        const currentCategory = useImageStore.getState().currentCategory;
-        const currentSearch = useImageStore.getState().currentSearch;
+        // Get current state from the store state (already set above) instead of getState() to avoid stale reads
+        const state = useImageStore.getState();
+        const currentCategory = state.currentCategory;
+        const currentSearch = state.currentSearch;
         const categoryChanged =
           params?.category !== undefined && params.category !== currentCategory;
         const searchChanged =
@@ -210,8 +212,10 @@ export const useImageStore = create(
             : response.images || [];
 
           // Filter out deleted images from the response
+          // Use Set for O(1) lookup instead of O(n) array includes
+          const deletedIdsSet = new Set(state.deletedImageIds);
           const newImages = newImagesRaw.filter(
-            (img: Image) => !state.deletedImageIds.includes(img._id)
+            (img: Image) => !deletedIdsSet.has(img._id)
           );
 
           // Merge strategy: If it's a new search/category/location, replace. Otherwise, append for pagination
@@ -358,6 +362,12 @@ export const useImageStore = create(
         // Add to deleted IDs array so it's filtered out in future fetches
         if (!state.deletedImageIds.includes(imageId)) {
           state.deletedImageIds.push(imageId);
+        }
+
+        // Prevent memory leak: limit deletedImageIds array size to last 1000 deletions
+        // This is sufficient for filtering while preventing unbounded growth
+        if (state.deletedImageIds.length > 1000) {
+          state.deletedImageIds = state.deletedImageIds.slice(-1000);
         }
 
         const beforeCount = state.images.length;

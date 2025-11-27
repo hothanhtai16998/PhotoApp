@@ -13,7 +13,8 @@ import type { Image } from '@/types/image';
 import { compressImage } from '@/utils/imageCompression';
 import { getErrorMessage } from '@/lib/utils';
 import { toast } from 'sonner';
-import { imageService, type PreUploadResponse, type FinalizeImageData } from '@/services/imageService';
+import { imageService } from '@/services/imageService';
+import type { PreUploadResponse, FinalizeImageData } from '@/types/image';
 import './UploadPage.css';
 
 const uploadSchema = z.object({

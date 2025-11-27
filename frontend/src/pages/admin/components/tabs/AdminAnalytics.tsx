@@ -4,71 +4,7 @@ import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/utils';
 import { BarChart2, Calendar, ArrowUp, ArrowDown, MoreVertical } from 'lucide-react';
 import { AreaChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart } from 'recharts';
-
-interface AnalyticsData {
-    period: {
-        days: number;
-        startDate: string;
-        endDate: string;
-    };
-    users: {
-        total: number;
-        new: number;
-        banned: number;
-    };
-    images: {
-        total: number;
-        new: number;
-        moderated: number;
-        pendingModeration: number;
-        approved: number;
-        rejected: number;
-        flagged: number;
-    };
-    categories: Array<{
-        _id: string;
-        name: string;
-        count: number;
-    }>;
-    dailyUploads: Array<{
-        _id: string;
-        count: number;
-    }>;
-    dailyUsers: Array<{
-        _id: string;
-        count: number;
-    }>;
-    dailyUsersComparison?: Array<{
-        _id: string;
-        count: number;
-    }>;
-    dailyPending: Array<{
-        _id: string;
-        count: number;
-    }>;
-    dailyPendingComparison?: Array<{
-        _id: string;
-        count: number;
-    }>;
-    dailyApproved: Array<{
-        _id: string;
-        count: number;
-    }>;
-    dailyApprovedComparison?: Array<{
-        _id: string;
-        count: number;
-    }>;
-    dailyUploadsComparison?: Array<{
-        _id: string;
-        count: number;
-    }>;
-    topUploaders: Array<{
-        userId: string;
-        username: string;
-        displayName: string;
-        uploadCount: number;
-    }>;
-}
+import type { AnalyticsData } from '@/types/admin';
 
 interface RealtimeData {
     usersOnline: number;
@@ -90,7 +26,7 @@ export function AdminAnalytics() {
         try {
             setLoading(true);
             const data = await adminService.getAnalytics(days);
-            setAnalytics(data as unknown as AnalyticsData);
+            setAnalytics(data);
         } catch (error: unknown) {
             toast.error(getErrorMessage(error, 'Lỗi khi tải dữ liệu phân tích'));
         } finally {
@@ -771,7 +707,7 @@ export function AdminAnalytics() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {analytics.topUploaders.map((uploader, index) => (
+                                        {analytics.topUploaders?.map((uploader, index) => (
                                             <tr key={uploader.userId}>
                                                 <td>{index + 1}</td>
                                                 <td>{uploader.username}</td>
@@ -825,8 +761,8 @@ export function AdminAnalytics() {
                     Top người tải lên ({days} ngày gần nhất)
                 </h2>
                 <div className="admin-top-uploaders">
-                    {analytics.topUploaders.map((uploader, index) => {
-                        const maxCount = analytics.topUploaders[0]?.uploadCount || 1;
+                    {analytics.topUploaders?.map((uploader, index) => {
+                        const maxCount = analytics.topUploaders?.[0]?.uploadCount || 1;
                         const percentage = (uploader.uploadCount / maxCount) * 100;
                         const medalColors = ['#FFD700', '#C0C0C0', '#CD7F32'];
                         const medalColor = medalColors[index] || '#6B7280';

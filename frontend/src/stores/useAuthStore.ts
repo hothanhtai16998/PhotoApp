@@ -107,12 +107,8 @@ export const useAuthStore =
 
 				// Handle validation errors (express-validator format)
 				if (
-					errorResponse.response?.data
-						?.errors &&
-					Array.isArray(
-						errorResponse.response.data
-							.errors
-					)
+					errorResponse.response?.data?.errors &&
+					Array.isArray(errorResponse.response.data.errors)
 				) {
 					const validationErrors =
 						errorResponse.response.data.errors

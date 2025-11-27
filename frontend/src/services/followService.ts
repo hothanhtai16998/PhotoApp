@@ -1,53 +1,29 @@
 import api from '@/lib/axios';
+import type {
+	FollowStatus,
+	FollowCounts,
+	FollowingListResponse,
+	FollowersListResponse,
+	FollowActionResponse,
+	UserFollowStatsResponse,
+} from '@/types/follow';
 
-export interface FollowStatus {
-	success: boolean;
-	isFollowing: boolean;
-	isFollowedBy: boolean;
-}
-
-export interface FollowCounts {
-	success: boolean;
-	following: number;
-	followers: number;
-}
-
-export interface FollowUser {
-	_id: string;
-	username: string;
-	displayName: string;
-	avatarUrl?: string;
-	bio?: string;
-	followedAt: string;
-}
-
-export interface FollowingListResponse {
-	success: boolean;
-	following: FollowUser[];
-	pagination: {
-		page: number;
-		limit: number;
-		total: number;
-		pages: number;
-	};
-}
-
-export interface FollowersListResponse {
-	success: boolean;
-	followers: FollowUser[];
-	pagination: {
-		page: number;
-		limit: number;
-		total: number;
-		pages: number;
-	};
-}
+// Re-export for backward compatibility
+export type {
+	FollowStatus,
+	FollowCounts,
+	FollowUser,
+	FollowingListResponse,
+	FollowersListResponse,
+	FollowActionResponse,
+	UserFollowStatsResponse,
+} from '@/types/follow';
 
 export const followService = {
 	/**
 	 * Follow a user
 	 */
-	followUser: async (userId: string): Promise<{ success: boolean; message: string }> => {
+	followUser: async (userId: string): Promise<FollowActionResponse> => {
 		const res = await api.post(`/follows/${userId}`, {}, {
 			withCredentials: true,
 		});
@@ -57,7 +33,7 @@ export const followService = {
 	/**
 	 * Unfollow a user
 	 */
-	unfollowUser: async (userId: string): Promise<{ success: boolean; message: string }> => {
+	unfollowUser: async (userId: string): Promise<FollowActionResponse> => {
 		const res = await api.delete(`/follows/${userId}`, {
 			withCredentials: true,
 		});
@@ -133,7 +109,7 @@ export const followService = {
 	/**
 	 * Get follow stats for a user (includes isFollowing status)
 	 */
-	getUserFollowStats: async (userId: string, signal?: AbortSignal): Promise<{ success: boolean; stats: { followers: number; following: number; isFollowing: boolean } }> => {
+	getUserFollowStats: async (userId: string, signal?: AbortSignal): Promise<UserFollowStatsResponse> => {
 		const res = await api.get(`/follows/${userId}/stats`, {
 			withCredentials: true,
 			signal, // Pass abort signal for request cancellation

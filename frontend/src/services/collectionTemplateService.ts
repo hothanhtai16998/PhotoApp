@@ -1,4 +1,5 @@
 import api from '@/lib/axios';
+import type { Collection } from '@/types/collection';
 
 export interface CollectionTemplate {
     _id: string;
@@ -84,7 +85,7 @@ export const collectionTemplateService = {
     createCollectionFromTemplate: async (
         templateId: string,
         data?: CreateCollectionFromTemplateData
-    ): Promise<Record<string, unknown>> => {
+    ): Promise<Collection> => {
         const response = await api.post(`/collection-templates/${templateId}/collections`, data || {}, {
             withCredentials: true,
         });
