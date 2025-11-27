@@ -9,7 +9,9 @@ import type {
   FinalizeImageResponse,
   IncrementViewResponse,
   IncrementDownloadResponse,
+  FetchLocationsResponse,
 } from '@/types/image';
+import type { Coordinates } from '@/types/common';
 
 export const imageService = {
   // Pre-upload: Upload image to S3 only (no database record)
@@ -214,9 +216,7 @@ export const imageService = {
     return { images: [] };
   },
 
-  incrementView: async (
-    imageId: string
-  ): Promise<IncrementViewResponse> => {
+  incrementView: async (imageId: string): Promise<IncrementViewResponse> => {
     const res = await api.patch(
       `/images/${imageId}/view`,
       {},
@@ -259,11 +259,11 @@ export const imageService = {
       }
     }
 
-    const res = await get('/images/locations', {
+    const res = await get<FetchLocationsResponse>('/images/locations', {
       withCredentials: true,
     });
 
-    const locations = (res.data as { locations?: string[] }).locations || [];
+    const locations = res.data.locations || [];
 
     // Update cache
     sessionStorage.setItem(
@@ -282,7 +282,7 @@ export const imageService = {
     data: {
       imageTitle?: string;
       location?: string;
-      coordinates?: { latitude: number; longitude: number } | null;
+      coordinates?: Coordinates | null;
       cameraModel?: string;
       cameraMake?: string;
       focalLength?: number;

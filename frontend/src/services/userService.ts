@@ -1,4 +1,5 @@
 import api from '@/lib/axios';
+import type { ChangePasswordResponse, UpdateProfileResponse } from '@/types/user';
 
 export interface UserSearchResult {
 	_id: string;
@@ -27,8 +28,8 @@ export const userService = {
 		password: string,
 		newPassword: string,
 		newPasswordMatch: string
-	) => {
-		const res = await api.put(
+	): Promise<ChangePasswordResponse> => {
+		const res = await api.put<ChangePasswordResponse>(
 			'/users/change-password',
 			{
 				password,
@@ -42,8 +43,8 @@ export const userService = {
 
 	updateProfile: async (
 		formData: FormData
-	) => {
-		const res = await api.put(
+	): Promise<UpdateProfileResponse> => {
+		const res = await api.put<UpdateProfileResponse>(
 			'/users/change-info',
 			formData,
 			{

@@ -6,25 +6,11 @@ import { Link, useNavigate } from "react-router"
 import { Label } from "../ui/label"
 import { Input } from "../ui/input"
 import { Button } from "../ui/button"
-import { z } from "zod"
 import { useForm } from "react-hook-form"
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useAuthStore } from "@/stores/useAuthStore"
-
-const signUpSchema = z.object({
-  firstname: z.string().min(2, { message: "Họ không được để trống." }),
-  lastname: z.string().min(2, { message: "Tên không được để trống." }),
-  username: z.string().min(6, { message: "Tên đăng nhập phải có ít nhất 3 ký tự." }),
-  email: z.string().email({ message: "Email không hợp lệ." }),
-  password: z.string().min(8, { message: "Mật khẩu phải có ít nhất 8 ký tự." }),
-  confirmpassword: z.string()
-}).refine((data) => data.password === data.confirmpassword, {
-  message: "Mật khẩu không khớp.",
-  path: ["confirmpassword"],
-});
-
-type SignUpFormValue = z.infer<typeof signUpSchema>
+import { signUpSchemaAlt, type SignUpFormValueAlt as SignUpFormValue } from "@/types/forms"
 
 export function SignupForm({
   className,
@@ -35,7 +21,7 @@ export function SignupForm({
   const navigate = useNavigate();
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<SignUpFormValue>({
-    resolver: zodResolver(signUpSchema),
+    resolver: zodResolver(signUpSchemaAlt),
   })
 
   const onSubmit = async (data: SignUpFormValue) => {

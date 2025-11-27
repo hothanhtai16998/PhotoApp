@@ -1,4 +1,14 @@
 import api from '@/lib/axios';
+import type {
+	SignUpResponse,
+	SignInResponse,
+	SignOutResponse,
+	RefreshTokenResponse,
+	CheckEmailAvailabilityResponse,
+	CheckUsernameAvailabilityResponse,
+	FetchMeResponse,
+} from '@/types/auth';
+import type { User } from '@/types/user';
 
 export const authService = {
 	signUp: async (
@@ -9,8 +19,8 @@ export const authService = {
 		lastName: string,
 		phone?: string,
 		bio?: string
-	) => {
-		const res = await api.post(
+	): Promise<SignUpResponse> => {
+		const res = await api.post<SignUpResponse>(
 			'/auth/signup',
 			{
 				username,
@@ -30,8 +40,8 @@ export const authService = {
 	signIn: async (
 		username: string,
 		password: string
-	) => {
-		const res = await api.post(
+	): Promise<SignInResponse> => {
+		const res = await api.post<SignInResponse>(
 			'/auth/signin',
 			{ username, password },
 			{ withCredentials: true }
@@ -39,40 +49,42 @@ export const authService = {
 		return res.data;
 	},
 
-	signOut: async () => {
-		return api.post(
+	signOut: async (): Promise<SignOutResponse> => {
+		const res = await api.post<SignOutResponse>(
 			'/auth/signout',
 			{},
 			{ withCredentials: true }
 		);
+		return res.data;
 	},
 
-	fetchMe: async () => {
-		const res = await api.get(
+	fetchMe: async (): Promise<User> => {
+		const res = await api.get<FetchMeResponse>(
 			'/users/me',
 			{ withCredentials: true }
 		);
 		return res.data.user;
 	},
 
-	refresh: async () => {
-		const res = await api.post(
+	refresh: async (): Promise<string> => {
+		const res = await api.post<RefreshTokenResponse>(
 			'/auth/refresh',
+			{},
 			{ withCredentials: true }
 		);
 		return res.data.accessToken;
 	},
 
-	checkEmailAvailability: async (email: string) => {
-		const res = await api.get(
+	checkEmailAvailability: async (email: string): Promise<CheckEmailAvailabilityResponse> => {
+		const res = await api.get<CheckEmailAvailabilityResponse>(
 			`/auth/check-email?email=${encodeURIComponent(email)}`,
 			{ withCredentials: true }
 		);
 		return res.data;
 	},
 
-	checkUsernameAvailability: async (username: string) => {
-		const res = await api.get(
+	checkUsernameAvailability: async (username: string): Promise<CheckUsernameAvailabilityResponse> => {
+		const res = await api.get<CheckUsernameAvailabilityResponse>(
 			`/auth/check-username?username=${encodeURIComponent(username)}`,
 			{ withCredentials: true }
 		);

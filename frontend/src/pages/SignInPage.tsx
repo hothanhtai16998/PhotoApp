@@ -2,20 +2,13 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { signInSchema, type SignInFormValue } from "@/types/forms";
 import "./SignInPage.css";
-
-const signInSchema = z.object({
-    username: z.string().min(1, { message: "Tên tải khoản không được để trống." }),
-    password: z.string().min(1, { message: "Mật khẩu không được để trống." }),
-});
-
-type SignInFormValue = z.infer<typeof signInSchema>;
 
 function SignInPage() {
     const { signIn } = useAuthStore();

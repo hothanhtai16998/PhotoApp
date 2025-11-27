@@ -2,38 +2,13 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff, Check, X, AlertTriangle } from "lucide-react";
 import { authService } from "@/services/authService";
+import { signUpSchema, type SignUpFormValue } from "@/types/forms";
 import "./SignUpPage.css";
-
-const signUpSchema = z.object({
-    username: z.string()
-        .min(6, { message: "Tên tài khoản phải từ 6 ký tự trở lên." })
-        .max(20, { message: "Tên tài khoản phải từ 20 ký tự trở xuống." })
-        .regex(/^[a-zA-Z0-9_]+$/, { message: "Tên tài khoản chỉ có thể chứa chữ, số và gạch dưới." }),
-    firstName: z.string()
-        .min(2, { message: "Họ không được để trống." })
-        .trim(),
-    lastName: z.string()
-        .min(2, { message: "Tên không được để trống." })
-        .trim(),
-    email: z.string().email({ message: "Vui lòng nhập email hợp lệ." }),
-    password: z.string()
-        .min(6, { message: "Mật khẩu phải từ 6 ký tự trở lên." })
-        .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*([0-9]|[^a-zA-Z0-9]))/, {
-            message: "Mật khẩu phải có chữ hoa, chữ thường và số hoặc ký tự đặc biệt."
-        }),
-    confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-    message: "Xác nhận mật khẩu không chính xác.",
-    path: ["confirmPassword"],
-});
-
-type SignUpFormValue = z.infer<typeof signUpSchema>;
 
 function SignUpPage() {
     const { signUp } = useAuthStore();

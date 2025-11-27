@@ -5,6 +5,7 @@ import { getErrorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, Trash2, FolderDot } from 'lucide-react';
+import type { Pagination } from '@/types/common';
 
 interface Collection {
     _id: string;
@@ -25,7 +26,7 @@ interface Collection {
 export function AdminCollections() {
     const [loading, setLoading] = useState(true);
     const [collections, setCollections] = useState<Collection[]>([]);
-    const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0, limit: 20 });
+    const [pagination, setPagination] = useState<Pagination>({ page: 1, pages: 1, total: 0, limit: 20 });
     const [search, setSearch] = useState('');
 
     const loadCollections = async (page: number = 1) => {

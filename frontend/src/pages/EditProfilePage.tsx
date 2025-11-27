@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
@@ -11,35 +10,8 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
 import { userService } from "@/services/userService";
 import { toast } from "sonner";
+import { changePasswordSchema, type ProfileFormData, type ChangePasswordFormData } from "@/types/forms";
 import "./EditProfilePage.css";
-
-type ProfileFormData = {
-    firstName: string;
-    lastName: string;
-    email: string;
-    username: string;
-    location: string;
-    phone: string;
-    personalSite: string;
-    bio: string;
-    interests: string;
-    instagram: string;
-    twitter: string;
-    paypalEmail: string;
-    showMessageButton: boolean;
-};
-
-// Change password form schema
-const changePasswordSchema = z.object({
-    password: z.string().min(1, { message: "Current password is required" }),
-    newPassword: z.string().min(8, { message: "Password must be at least 8 characters" }),
-    newPasswordMatch: z.string().min(1, { message: "Password confirmation is required" }),
-}).refine((data) => data.newPassword === data.newPasswordMatch, {
-    message: "Passwords do not match",
-    path: ["newPasswordMatch"],
-});
-
-type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
 
 function EditProfilePage() {
     const { user, fetchMe } = useAuthStore();

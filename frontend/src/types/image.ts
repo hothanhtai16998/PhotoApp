@@ -1,6 +1,6 @@
 import type { User } from './user';
-
 import type { Category } from './category';
+import type { Coordinates } from './common';
 
 export interface Image {
   _id: string;
@@ -20,10 +20,7 @@ export interface Image {
   imageCategory: string | Category;
   uploadedBy: User;
   location?: string;
-  coordinates?: {
-    latitude: number;
-    longitude: number;
-  };
+  coordinates?: Coordinates;
   cameraModel?: string;
   // EXIF metadata
   cameraMake?: string; // Camera manufacturer (e.g., "Canon", "Nikon")
@@ -97,7 +94,7 @@ export interface FinalizeImageData {
   imageTitle: string;
   imageCategory: string;
   location?: string;
-  coordinates?: { latitude: number; longitude: number };
+  coordinates?: Coordinates;
   cameraModel?: string;
   tags?: string[];
 }

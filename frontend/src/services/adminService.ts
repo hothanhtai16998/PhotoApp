@@ -1,5 +1,6 @@
 import api from '@/lib/axios';
 import type { AnalyticsData } from '@/types/admin';
+import type { Coordinates, Pagination } from '@/types/common';
 
 export interface DashboardStats {
     stats: {
@@ -121,7 +122,7 @@ export const adminService = {
         page?: number;
         limit?: number;
         search?: string;
-    }): Promise<{ users: User[]; pagination: { page: number; pages: number; total: number; limit: number } }> => {
+    }): Promise<{ users: User[]; pagination: Pagination }> => {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
         if (params?.limit) queryParams.append('limit', params.limit.toString());
@@ -183,7 +184,7 @@ export const adminService = {
         search?: string;
         category?: string;
         userId?: string;
-    }): Promise<{ images: AdminImage[]; pagination: { page: number; pages: number; total: number; limit: number } }> => {
+    }): Promise<{ images: AdminImage[]; pagination: Pagination }> => {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
         if (params?.limit) queryParams.append('limit', params.limit.toString());
@@ -202,7 +203,7 @@ export const adminService = {
 
     updateImage: async (imageId: string, updates: {
         location?: string;
-        coordinates?: { latitude: number; longitude: number } | null;
+        coordinates?: Coordinates | null;
         imageTitle?: string;
         cameraModel?: string;
     }): Promise<{ image: AdminImage }> => {
@@ -310,7 +311,7 @@ export const adminService = {
         page?: number;
         limit?: number;
         search?: string;
-    }): Promise<{ collections: unknown[]; pagination: { page: number; pages: number; total: number; limit: number } }> => {
+    }): Promise<{ collections: unknown[]; pagination: Pagination }> => {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
         if (params?.limit) queryParams.append('limit', params.limit.toString());
@@ -353,7 +354,7 @@ export const adminService = {
         page?: number;
         limit?: number;
         search?: string;
-    }): Promise<{ favorites: unknown[]; pagination: { page: number; pages: number; total: number; limit: number } }> => {
+    }): Promise<{ favorites: unknown[]; pagination: Pagination }> => {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
         if (params?.limit) queryParams.append('limit', params.limit.toString());
@@ -400,7 +401,7 @@ export const adminService = {
         limit?: number;
         level?: string;
         search?: string;
-    }): Promise<{ logs: unknown[]; pagination: { page: number; pages: number; total: number; limit: number } }> => {
+    }): Promise<{ logs: unknown[]; pagination: Pagination }> => {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
         if (params?.limit) queryParams.append('limit', params.limit.toString());

@@ -1,15 +1,13 @@
 import type { User } from './user';
 import type { Image } from './image';
+import type { Coordinates, Pagination } from './common';
 
 export type UploadImageData = {
 	image: File;
 	imageTitle: string;
 	imageCategory: string;
 	location?: string;
-	coordinates?: {
-		latitude: number;
-		longitude: number;
-	};
+	coordinates?: Coordinates;
 	cameraModel?: string;
 	tags?: string[];
 };
@@ -48,12 +46,7 @@ export interface ImageState {
 	loading: boolean;
 	error: string | null;
 	uploadProgress: number;
-	pagination: {
-		page: number;
-		limit: number;
-		total: number;
-		pages: number;
-	} | null;
+	pagination: Pagination | null;
 	currentSearch?: string;
 	currentCategory?: string;
 	currentLocation?: string;

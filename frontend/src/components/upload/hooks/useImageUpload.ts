@@ -4,6 +4,7 @@ import { getErrorMessage } from '@/lib/utils';
 import { categoryService, type Category } from '@/services/categoryService';
 import { imageService } from '@/services/imageService';
 import type { PreUploadResponse, FinalizeImageData } from '@/types/image';
+import type { Coordinates } from '@/types/common';
 import { compressImage } from '@/utils/imageCompression';
 
 export interface ImageData {
@@ -11,10 +12,7 @@ export interface ImageData {
   title: string;
   category: string;
   location: string;
-  coordinates?: {
-    latitude: number;
-    longitude: number;
-  };
+  coordinates?: Coordinates;
   cameraModel: string;
   tags: string[];
   errors: {

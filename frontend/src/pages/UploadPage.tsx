@@ -1,6 +1,5 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,17 +14,8 @@ import { getErrorMessage } from '@/lib/utils';
 import { toast } from 'sonner';
 import { imageService } from '@/services/imageService';
 import type { PreUploadResponse, FinalizeImageData } from '@/types/image';
+import { uploadSchema, type UploadFormValues } from '@/types/forms';
 import './UploadPage.css';
-
-const uploadSchema = z.object({
-    image: z.instanceof(FileList).refine(files => files?.length === 1, 'Image is required.'),
-    imageTitle: z.string().min(1, 'Title is required').max(200, 'Title must be less than 200 characters'),
-    imageCategory: z.string().min(1, 'Category is required'),
-    location: z.string().optional(),
-    cameraModel: z.string().optional(),
-});
-
-type UploadFormValues = z.infer<typeof uploadSchema>;
 
 function UploadPage() {
     const { images, fetchImages } = useImageStore();

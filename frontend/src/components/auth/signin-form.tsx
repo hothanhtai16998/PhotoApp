@@ -6,20 +6,13 @@ import { Link, useNavigate, useSearchParams } from "react-router"
 import { Label } from "../ui/label"
 import { Input } from "../ui/input"
 import { Button } from "../ui/button"
-import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { useEffect } from "react"
 import { toast } from "sonner"
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useAuthStore } from "@/stores/useAuthStore"
-
-const signInSchema = z.object({
-    username: z.string().min(1, { message: "Tên đăng nhập là bắt buộc." }),
-    password: z.string().min(1, { message: "Mật khẩu là bắt buộc." }),
-});
-
-type SignInFormValue = z.infer<typeof signInSchema>
+import { signInSchema, type SignInFormValue } from "@/types/forms"
 
 export function SigninForm({
     className,

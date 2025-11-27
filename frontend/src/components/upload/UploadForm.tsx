@@ -7,6 +7,7 @@ import { MapPin } from 'lucide-react';
 import { reverseGeocode, delay, searchLocations, type LocationSuggestion } from '@/utils/geocoding';
 import type { ImageData } from './hooks/useImageUpload';
 import type { Category } from '@/services/categoryService';
+import type { Coordinates } from '@/types/common';
 
 interface UploadFormProps {
   imageData: ImageData;
@@ -14,7 +15,7 @@ interface UploadFormProps {
   categories: Category[];
   loadingCategories: boolean;
   onUpdate: (index: number, field: 'title' | 'category' | 'location' | 'cameraModel' | 'tags', value: string | string[]) => void;
-  onUpdateCoordinates: (index: number, coordinates: { latitude: number; longitude: number } | undefined) => void;
+  onUpdateCoordinates: (index: number, coordinates: Coordinates | undefined) => void;
 }
 
 export const UploadForm = ({

@@ -20,3 +20,15 @@ export interface User {
 	createdAt?: string;
 	updatedAt?: string;
 }
+
+// User Service Response Types
+export interface ChangePasswordResponse {
+	success: boolean;
+	message?: string;
+}
+
+export interface UpdateProfileResponse {
+	success: boolean;
+	message?: string;
+	user?: User;
+}
