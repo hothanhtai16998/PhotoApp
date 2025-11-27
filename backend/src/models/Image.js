@@ -179,6 +179,19 @@ imageSchema.index({
 // Compound index for search + category queries
 imageSchema.index({ imageCategory: 1, createdAt: -1, imageTitle: 1 });
 
+// Performance optimization indexes
+// Compound index for moderation status + date (frequently queried in getAllImages)
+imageSchema.index({ moderationStatus: 1, createdAt: -1 });
+
+// Compound index for category + moderation + date (common filter combination)
+imageSchema.index({ imageCategory: 1, moderationStatus: 1, createdAt: -1 });
+
+// Index for dominantColors array field (for color filtering)
+imageSchema.index({ dominantColors: 1 });
+
+// Compound index for location + date (for location-based queries)
+imageSchema.index({ location: 1, createdAt: -1 });
+
 const Image = mongoose.model('Image', imageSchema);
 
 export default Image;

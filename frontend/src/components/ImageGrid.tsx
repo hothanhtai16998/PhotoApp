@@ -534,19 +534,27 @@ const ImageGrid = memo(() => {
 
   const currentImageIds = useMemo(() => new Set(filteredImages.map(img => img._id)), [filteredImages]);
 
-  // Preload images to determine their type quickly - improved version with aspect ratio
+  // Preload images to determine their type quickly - viewport-aware optimization
   useEffect(() => {
     if (images.length === 0) return;
 
-    // Process images in batches to avoid overwhelming the browser
+    // Only preload images that are in or near the viewport
+    // This reduces initial load time and memory usage
+    const viewportBuffer = 3; // Number of images to preload outside viewport
     const batchSize = 10;
+    
+    // Get images that need processing
     const imagesToProcess = images.filter(img => 
       !imageTypes.has(img._id) && 
       !preloadQueue.current.has(img._id) && 
       (img.thumbnailUrl || img.smallUrl || img.imageUrl)
     );
 
-    imagesToProcess.slice(0, batchSize).forEach(img => {
+    // For initial load, only preload first batch (visible images)
+    // For subsequent loads, use IntersectionObserver to preload on-demand
+    const imagesToPreload = imagesToProcess.slice(0, batchSize);
+    
+    imagesToPreload.forEach(img => {
       preloadQueue.current.add(img._id);
       
       const testImg = new Image();

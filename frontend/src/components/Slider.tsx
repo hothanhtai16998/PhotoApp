@@ -44,7 +44,7 @@ function Slider() {
   const nextSlideRef = useRef<() => void>();
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
-  const animationStartTimeRef = useRef<Map<number, number>>(new Map());
+
 
   // Fetch all images and select 10 random ones for today
   useEffect(() => {
@@ -260,21 +260,6 @@ function Slider() {
     return () => window.removeEventListener("keydown", handleKeyPress);
   }, [prevSlide, nextSlide, goToSlide, images.length]);
 
-  // Track animation start time for each slide
-  useEffect(() => {
-    animationStartTimeRef.current.set(currentSlide, Date.now());
-
-    // Clear animation attribute after animation completes (8s)
-    const timeout = setTimeout(() => {
-      const slideElements = document.querySelectorAll(`[data-slide-index="${currentSlide}"] .slide-title.typewriter`);
-      slideElements.forEach(el => {
-        el.removeAttribute('data-animation-started');
-      });
-      animationStartTimeRef.current.delete(currentSlide);
-    }, 8000);
-
-    return () => clearTimeout(timeout);
-  }, [currentSlide]);
 
   // Get best image URL
   const getImageUrl = (image: Image | null): string | null => {
@@ -291,11 +276,11 @@ function Slider() {
   };
 
   // Get current and next image for bottom carousel
-  const getBottomCarouselImages = () => {
+  const getBottomCarouselImages = (): Image[] => {
     if (images.length === 0) return [];
     const current = images[currentSlide];
     const next = images[(currentSlide + 1) % images.length];
-    return [current, next].filter(Boolean);
+    return [current, next].filter((img): img is Image => img !== undefined);
   };
 
 
@@ -417,7 +402,6 @@ function Slider() {
               key={image._id}
               className={`main-slide ${index === currentSlide ? "active" : ""}`}
               style={{ backgroundColor: '#1a1a1a' }}
-              data-slide-index={index}
             >
               {/* Blurred background layer */}
               {imageUrl && (
@@ -442,15 +426,6 @@ function Slider() {
                   }}
                 />
               )}
-              <div className="slide-content">
-                <h2
-                  key={`${image._id}-${index === currentSlide ? 'active' : 'inactive'}`}
-                  className="slide-title typewriter"
-                  data-animation-started={index === currentSlide || animationStartTimeRef.current.has(index) ? 'true' : undefined}
-                >
-                  {image.imageTitle}
-                </h2>
-              </div>
             </div>
           );
         })}
@@ -468,6 +443,7 @@ function Slider() {
         </button>
         <div className="bottom-carousel">
           {getBottomCarouselImages().map((image, index) => {
+            if (!image) return null;
             const thumbnailUrl = getThumbnailUrl(image);
             const slideIndex = index === 0 ? currentSlide : (currentSlide + 1) % images.length;
             const isActive = index === 0; // First thumbnail is always the current slide
@@ -483,7 +459,7 @@ function Slider() {
                 {thumbnailUrl ? (
                   <img
                     src={thumbnailUrl}
-                    alt={image.imageTitle}
+                    alt={image.imageTitle || 'Image'}
                     className="bottom-slide-image"
                     loading="eager"
                   />

@@ -113,15 +113,28 @@ export const getFavorites = asyncHandler(async (req, res) => {
     const total = favoriteIds.length;
 
     // Get favorite images with pagination
-    const images = await Image.find({
+    // Optimize populate queries with match filter for active categories
+    let images = await Image.find({
         _id: { $in: favoriteIds },
     })
         .populate('uploadedBy', 'username displayName avatarUrl')
-        .populate('imageCategory', 'name description')
+        .populate({
+            path: 'imageCategory',
+            select: 'name description isActive',
+            match: { isActive: true } // Only populate active categories
+        })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .lean();
+
+    // Filter out images with null/invalid categories (populate match failed)
+    images = images.filter(img => 
+        img.imageCategory && 
+        typeof img.imageCategory === 'object' && 
+        img.imageCategory.name &&
+        img.imageCategory.isActive !== false
+    );
 
     res.status(200).json({
         success: true,
