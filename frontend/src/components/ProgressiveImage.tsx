@@ -83,6 +83,7 @@ const ProgressiveImage = memo(({
   src,
   thumbnailUrl,
   smallUrl,
+  regularUrl,
   thumbnailAvifUrl,
   smallAvifUrl,
   regularAvifUrl,
@@ -97,11 +98,19 @@ const ProgressiveImage = memo(({
   // Generate URLs on-the-fly if not provided (for old images)
   const effectiveThumbnail = thumbnailUrl || generateThumbnailUrl(src);
   const effectiveSmall = smallUrl || generateSmallUrl(src);
-
-  // AVIF URLs (fallback to WebP if not available)
-  const effectiveThumbnailAvif = thumbnailAvifUrl || effectiveThumbnail;
-  const effectiveSmallAvif = smallAvifUrl || effectiveSmall;
-  const effectiveOriginalAvif = imageAvifUrl || src;
+  const effectiveRegular = regularUrl || src;
+  
+  // AVIF URLs (for srcset generation, use null if not available to avoid duplicates)
+  // For fallback in getCurrentUrls, we'll use WebP versions when AVIF is not available
+  const effectiveThumbnailAvif = thumbnailAvifUrl || null;
+  const effectiveSmallAvif = smallAvifUrl || null;
+  const effectiveRegularAvif = regularAvifUrl || null;
+  const effectiveOriginalAvif = imageAvifUrl || null;
+  
+  // AVIF URLs for fallback (use WebP if AVIF not available)
+  const effectiveThumbnailAvifFallback = thumbnailAvifUrl || effectiveThumbnail;
+  const effectiveSmallAvifFallback = smallAvifUrl || effectiveSmall;
+  const effectiveOriginalAvifFallback = imageAvifUrl || src;
 
   // Check if image was already loaded (from global cache or browser cache)
   // Synchronously check cache to prevent any flash
@@ -411,21 +420,54 @@ const ProgressiveImage = memo(({
   const shouldRenderAsLoaded = isLoaded || skipTransition || isActuallyCached;
   const finalClassName = `progressive-image ${shouldRenderAsLoaded ? 'loaded' : 'loading'} ${isError ? 'error' : ''} ${skipTransition ? 'no-transition' : ''}`;
 
-  // Determine which URLs to use based on current state
+  // Generate responsive srcset strings with width descriptors
+  // This allows the browser to choose the best image size based on viewport and DPR
+  const generateSrcSet = (thumbnail: string | null, small: string | null, regular: string | null, original: string | null) => {
+    const srcsetParts: string[] = [];
+    
+    // Add sizes in order: thumbnail (200w), small (800w), regular (1080w), original
+    if (thumbnail) srcsetParts.push(`${thumbnail} 200w`);
+    if (small && small !== thumbnail) srcsetParts.push(`${small} 800w`);
+    if (regular && regular !== small && regular !== thumbnail) srcsetParts.push(`${regular} 1080w`);
+    if (original && original !== regular && original !== small && original !== thumbnail) {
+      // For original, use a larger descriptor (e.g., 1920w for full HD)
+      srcsetParts.push(`${original} 1920w`);
+    }
+    
+    return srcsetParts.length > 0 ? srcsetParts.join(', ') : null;
+  };
+
+  // Generate srcset for AVIF format
+  const avifSrcSet = generateSrcSet(
+    effectiveThumbnailAvif,
+    effectiveSmallAvif,
+    effectiveRegularAvif,
+    effectiveOriginalAvif
+  );
+
+  // Generate srcset for WebP format
+  const webpSrcSet = generateSrcSet(
+    effectiveThumbnail,
+    effectiveSmall,
+    effectiveRegular,
+    src
+  );
+
+  // Determine which URLs to use based on current state (for fallback)
   const getCurrentUrls = () => {
     if (currentSrc === effectiveSmall) {
       return {
-        avif: effectiveSmallAvif,
+        avif: effectiveSmallAvifFallback,
         webp: effectiveSmall,
       };
     } else if (currentSrc === effectiveThumbnail) {
       return {
-        avif: effectiveThumbnailAvif,
+        avif: effectiveThumbnailAvifFallback,
         webp: effectiveThumbnail,
       };
     } else {
       return {
-        avif: effectiveOriginalAvif,
+        avif: effectiveOriginalAvifFallback,
         webp: currentSrc,
       };
     }
@@ -433,26 +475,42 @@ const ProgressiveImage = memo(({
 
   const { avif: currentAvifUrl, webp: currentWebpUrl } = getCurrentUrls();
   const hasAvif = thumbnailAvifUrl || smallAvifUrl || regularAvifUrl || imageAvifUrl;
+  
+  // Determine sizes attribute based on context
+  // For grid items, images are typically displayed at ~300-400px on desktop, full width on mobile
+  // For modal/detail view, images are displayed at larger sizes
+  // Default: assume grid view (can be overridden via className or context)
+  const sizes = className?.includes('modal') || className?.includes('detail') || className?.includes('full')
+    ? '(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1080px' // Modal/detail view
+    : '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px'; // Grid view
 
   return (
     <div ref={containerRef} className={`progressive-image-wrapper ${className}`}>
       {hasAvif ? (
-        // Use <picture> element for AVIF support with WebP fallback
+        // Use <picture> element for AVIF support with WebP fallback and responsive images
         <picture>
-          {/* AVIF source (modern browsers) */}
-          <source
-            srcSet={currentAvifUrl}
-            type="image/avif"
-          />
-          {/* WebP source (fallback) */}
-          <source
-            srcSet={currentWebpUrl}
-            type="image/webp"
-          />
-          {/* Fallback img element */}
+          {/* AVIF source with responsive srcset (modern browsers) */}
+          {avifSrcSet && (
+            <source
+              srcSet={avifSrcSet}
+              sizes={sizes}
+              type="image/avif"
+            />
+          )}
+          {/* WebP source with responsive srcset (fallback) */}
+          {webpSrcSet && (
+            <source
+              srcSet={webpSrcSet}
+              sizes={sizes}
+              type="image/webp"
+            />
+          )}
+          {/* Fallback img element with responsive srcset */}
           <img
             ref={setImgRef}
-            src={currentWebpUrl}
+            src={currentWebpUrl || effectiveSmall || effectiveThumbnail || src}
+            srcSet={webpSrcSet || undefined}
+            sizes={webpSrcSet ? sizes : undefined}
             alt={alt}
             className={finalClassName}
             onLoad={handleLoad}
@@ -479,10 +537,12 @@ const ProgressiveImage = memo(({
           />
         </picture>
       ) : (
-        // Fallback to regular img for images without AVIF
+        // Fallback to regular img with responsive srcset for images without AVIF
         <img
           ref={setImgRef}
-          src={currentSrc}
+          src={currentSrc || effectiveSmall || effectiveThumbnail || src}
+          srcSet={webpSrcSet || undefined}
+          sizes={webpSrcSet ? sizes : undefined}
           alt={alt}
           className={finalClassName}
           onLoad={handleLoad}
