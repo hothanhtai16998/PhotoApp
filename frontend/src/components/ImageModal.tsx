@@ -7,7 +7,6 @@ import {
   ImageOff,
   Heart,
   Edit2,
-  ChevronDown,
   X,
   FolderPlus,
   Tag,
@@ -22,8 +21,11 @@ import { useInfiniteScroll } from './image/hooks/useInfiniteScroll';
 import { useImageZoom } from './image/hooks/useImageZoom';
 import { ImageModalInfo } from './image/ImageModalInfo';
 import { ImageModalShare } from './image/ImageModalShare';
+import { DownloadSizeSelector, type DownloadSize } from './image/DownloadSizeSelector';
 import { Avatar } from './Avatar';
 import { useFormattedDate } from '@/hooks/useFormattedDate';
+import api from '@/lib/api';
+import { toast } from 'sonner';
 import CollectionModal from './CollectionModal';
 import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { useImageStore } from '@/stores/useImageStore';
@@ -94,6 +96,83 @@ const ImageModal = ({
     doubleClickZoom: 2,
   });
 
+  // Download image with size selection
+  const handleDownloadWithSize = useCallback(async (size: DownloadSize) => {
+    try {
+      if (!image._id) {
+        throw new Error('Lỗi khi lấy ID của ảnh');
+      }
+
+      // Increment download count first
+      try {
+        const response = await imageService.incrementDownload(image._id);
+        // Update downloads count if needed
+        if (onImageSelect) {
+          onImageSelect({
+            ...image,
+            downloads: response.downloads,
+            dailyDownloads: response.dailyDownloads || image.dailyDownloads
+          });
+        }
+      } catch (error) {
+        console.error('Failed to increment download:', error);
+      }
+
+      // Download image with selected size
+      const response = await api.get(`/images/${image._id}/download?size=${size}`, {
+        responseType: 'blob',
+        withCredentials: true,
+      });
+
+      // Create blob URL from response
+      const blob = new Blob([response.data], { type: response.headers['content-type'] || 'image/webp' });
+      const blobUrl = URL.createObjectURL(blob);
+
+      // Create download link
+      const link = document.createElement('a');
+      link.href = blobUrl;
+
+      // Get filename from Content-Disposition header or use default
+      const contentDisposition = response.headers['content-disposition'];
+      let fileName = 'photo.webp';
+      if (contentDisposition) {
+        const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
+        if (fileNameMatch) {
+          fileName = fileNameMatch[1];
+        }
+      } else {
+        // Fallback: generate filename from image title
+        const sanitizedTitle = (image.imageTitle || 'photo').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        const urlExtension = image.imageUrl?.match(/\.([a-z]+)(?:\?|$)/i)?.[1] || 'webp';
+        fileName = `${sanitizedTitle}.${urlExtension}`;
+      }
+      link.download = fileName;
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up the blob URL after a short delay
+      setTimeout(() => {
+        URL.revokeObjectURL(blobUrl);
+      }, 100);
+
+      toast.success('Tải ảnh thành công');
+    } catch (error) {
+      console.error('Tải ảnh thất bại:', error);
+      toast.error('Tải ảnh thất bại. Vui lòng thử lại.');
+
+      // Fallback: try opening in new tab if download fails
+      try {
+        if (image.imageUrl) {
+          window.open(image.imageUrl, '_blank');
+        }
+      } catch (fallbackError) {
+        console.error('Lỗi fallback khi tải ảnh:', fallbackError);
+      }
+    }
+  }, [image, onImageSelect]);
+
   // Use the custom hook for modal state and logic
   const {
     views,
@@ -112,6 +191,7 @@ const ImageModal = ({
     onImageSelect,
     onClose,
     onDownload,
+    onDownloadWithSize: handleDownloadWithSize,
   });
 
   // Add zoom keyboard shortcuts
@@ -711,15 +791,10 @@ const ImageModal = ({
 
           {/* Right: Download Button and Close Button */}
           <div className="modal-header-right">
-            <button
-              className="modal-download-btn"
-              onClick={handleDownload}
-              title="Tải xuống (Ctrl/Cmd + D)"
-            >
-              <span>Tải xuống</span>
-              <ChevronDown size={16} />
-              <kbd className="keyboard-hint">⌘D</kbd>
-            </button>
+            <DownloadSizeSelector
+              image={image}
+              onDownload={handleDownloadWithSize}
+            />
             <button
               className="modal-close-btn-header"
               onClick={onClose}

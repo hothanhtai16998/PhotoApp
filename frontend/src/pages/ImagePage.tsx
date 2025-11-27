@@ -136,7 +136,51 @@ function ImagePage() {
       navigate('/'); // Go to home
     }
   }, [navigate, isFromGrid]);
-  
+
+  // Set meta tags for social sharing (Open Graph, Twitter Cards)
+  useEffect(() => {
+    if (!image) return;
+
+    const imageUrl = image.regularUrl || image.smallUrl || image.imageUrl;
+    const title = image.imageTitle || 'Photo';
+    const description = `Photo by ${image.uploadedBy?.displayName || image.uploadedBy?.username || 'Unknown'}`;
+    const currentUrl = `${window.location.origin}/photos/${slug}`;
+
+    // Helper to set or update meta tag
+    const setMetaTag = (property: string, content: string, isProperty = true) => {
+      const attribute = isProperty ? 'property' : 'name';
+      let meta = document.querySelector(`meta[${attribute}="${property}"]`);
+      if (!meta) {
+        meta = document.createElement('meta');
+        meta.setAttribute(attribute, property);
+        document.head.appendChild(meta);
+      }
+      meta.setAttribute('content', content);
+    };
+
+    // Open Graph tags (Facebook)
+    setMetaTag('og:title', title);
+    setMetaTag('og:description', description);
+    setMetaTag('og:image', imageUrl);
+    setMetaTag('og:url', currentUrl);
+    setMetaTag('og:type', 'website');
+
+    // Twitter Card tags
+    setMetaTag('twitter:card', 'summary_large_image', false);
+    setMetaTag('twitter:title', title, false);
+    setMetaTag('twitter:description', description, false);
+    setMetaTag('twitter:image', imageUrl, false);
+
+    // Update page title
+    document.title = `${title} - PhotoApp`;
+
+    // Cleanup function to restore default meta tags
+    return () => {
+      document.title = 'PhotoApp - Discover Beautiful Photos';
+      // Note: We don't remove meta tags as they might be reused
+      // The next image will just overwrite them
+    };
+  }, [image, slug]);
 
   if (loading) {
     return (

@@ -17,6 +17,7 @@ interface UseImageModalProps {
   onImageSelect: (image: Image) => void;
   onClose: () => void;
   onDownload: (image: Image, e: React.MouseEvent) => void;
+  onDownloadWithSize?: (size: 'small' | 'medium' | 'large' | 'original') => void;
 }
 
 export const useImageModal = ({
@@ -25,6 +26,7 @@ export const useImageModal = ({
   onImageSelect,
   onClose,
   onDownload,
+  onDownloadWithSize,
 }: UseImageModalProps) => {
   const { accessToken, user } = useAuthStore();
   const [isTogglingFavorite, setIsTogglingFavorite] = useState<boolean>(false);
@@ -114,11 +116,17 @@ export const useImageModal = ({
     onNavigateLeft: images.length > 1 ? handleNavigateLeft : undefined,
     onNavigateRight: images.length > 1 ? handleNavigateRight : undefined,
     onDownload: () => {
-      const downloadBtn = document.querySelector(
-        '.modal-download-btn'
-      ) as HTMLElement;
-      if (downloadBtn) {
-        downloadBtn.click();
+      // Trigger quick download with default size (medium)
+      if (onDownloadWithSize) {
+        onDownloadWithSize('medium');
+      } else {
+        // Fallback: try to trigger button click
+        const downloadBtn = document.querySelector(
+          '.modal-download-btn'
+        ) as HTMLElement;
+        if (downloadBtn) {
+          downloadBtn.click();
+        }
       }
     },
     onShare: () => {

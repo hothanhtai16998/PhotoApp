@@ -175,6 +175,7 @@ export const getImageById = asyncHandler(async (req, res) => {
 export const downloadImage = asyncHandler(async (req, res) => {
     const imageId = req.params.imageId;
     const userId = req.user?._id; // User downloading the image
+    const size = req.query.size || 'medium'; // Default to medium
 
     // Find the image in database (populate uploadedBy for notification)
     const image = await Image.findById(imageId).populate('uploadedBy', '_id');
@@ -185,8 +186,30 @@ export const downloadImage = asyncHandler(async (req, res) => {
     }
 
     try {
-        // Use the original imageUrl (highest quality) for download
-        const imageUrl = image.imageUrl || image.regularUrl || image.smallUrl;
+        // Map size parameter to image URL
+        // small: 640px (use smallUrl ~800px)
+        // medium: 1920px (use regularUrl ~1080px)
+        // large: 2400px (use original imageUrl)
+        // original: original imageUrl
+        let imageUrl;
+        switch (size.toLowerCase()) {
+            case 'small':
+                imageUrl = image.smallUrl || image.regularUrl || image.imageUrl;
+                break;
+            case 'medium':
+                imageUrl = image.regularUrl || image.imageUrl || image.smallUrl;
+                break;
+            case 'large':
+                imageUrl = image.imageUrl || image.regularUrl || image.smallUrl;
+                break;
+            case 'original':
+                imageUrl = image.imageUrl || image.regularUrl || image.smallUrl;
+                break;
+            default:
+                // Default to medium if invalid size
+                imageUrl = image.regularUrl || image.imageUrl || image.smallUrl;
+        }
+
         if (!imageUrl) {
             return res.status(404).json({
                 message: 'Không tìm thấy URL ảnh',
@@ -206,7 +229,7 @@ export const downloadImage = asyncHandler(async (req, res) => {
         if (s3Response.ContentLength) {
             res.setHeader('Content-Length', s3Response.ContentLength);
         }
-        res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'); // Cache for 1 year, immutable for better performance
 
         // Create notification for image owner (if user is authenticated and different from owner)
         // Note: downloadImage is a public route, so req.user might not exist

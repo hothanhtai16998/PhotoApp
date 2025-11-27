@@ -129,7 +129,7 @@ const uploadToS3 = async (buffer, key, contentType) => {
 			Key: key,
 			Body: buffer,
 			ContentType: contentType,
-			CacheControl: 'public, max-age=31536000', // Cache for 1 year
+			CacheControl: 'public, max-age=31536000, immutable', // Cache for 1 year, immutable for better performance
 		});
 
 		await s3Client.send(command);

@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect, useCallback, memo } from 'react';
-import { Share2, Mail, Link as LinkIcon } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react';
+import { Share2, Mail, Link as LinkIcon, Code, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateImageSlug } from '@/lib/utils';
+import { shareService } from '@/utils/shareService';
 import type { Image } from '@/types/image';
 
 interface ImageModalShareProps {
@@ -10,9 +11,13 @@ interface ImageModalShareProps {
 
 export const ImageModalShare = memo(({ image }: ImageModalShareProps) => {
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [showEmbedModal, setShowEmbedModal] = useState(false);
   const [positionBelow, setPositionBelow] = useState(false);
+  const [embedWidth, setEmbedWidth] = useState(800);
+  const [embedHeight, setEmbedHeight] = useState<'auto' | number>('auto');
   const shareButtonRef = useRef<HTMLButtonElement>(null);
   const shareMenuRef = useRef<HTMLDivElement>(null);
+  const embedCodeRef = useRef<HTMLTextAreaElement>(null);
 
   // Check available space and position menu accordingly
   useEffect(() => {
@@ -88,14 +93,19 @@ export const ImageModalShare = memo(({ image }: ImageModalShareProps) => {
   // Get share URL and text
   const getShareData = useCallback(() => {
     const slug = generateImageSlug(image.imageTitle, image._id);
-    const shareUrl = `${window.location.origin}/?image=${slug}`;
+    // Use /photos/:slug for better SEO and sharing (instead of /?image=slug)
+    const shareUrl = `${window.location.origin}/photos/${slug}`;
     const shareText = `Check out this photo: ${image.imageTitle || 'Untitled'}`;
     return { shareUrl, shareText };
   }, [image._id, image.imageTitle]);
 
   // Handle share to Facebook
+  // Note: Facebook requires Open Graph meta tags on the shared page
+  // The shared URL will be scraped for og:image, og:title, og:description
   const handleShareFacebook = useCallback(() => {
     const { shareUrl } = getShareData();
+    // Facebook sharer only accepts URL - it will scrape the page for OG tags
+    // The page at shareUrl needs to have proper Open Graph meta tags
     const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
     window.open(facebookUrl, '_blank', 'width=600,height=400');
     setShowShareMenu(false);
@@ -110,8 +120,12 @@ export const ImageModalShare = memo(({ image }: ImageModalShareProps) => {
   }, [getShareData, image.imageUrl, image.imageTitle]);
 
   // Handle share to Twitter
+  // Note: Twitter requires Twitter Card meta tags on the shared page
+  // The shared URL will be scraped for twitter:card, twitter:image, etc.
   const handleShareTwitter = useCallback(() => {
     const { shareUrl, shareText } = getShareData();
+    // Twitter intent accepts text and URL - it will scrape the page for Twitter Card tags
+    // The page at shareUrl needs to have proper Twitter Card meta tags
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
     window.open(twitterUrl, '_blank', 'width=600,height=400');
     setShowShareMenu(false);
@@ -153,7 +167,7 @@ export const ImageModalShare = memo(({ image }: ImageModalShareProps) => {
   const handleCopyLink = useCallback(async () => {
     const { shareUrl } = getShareData();
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await shareService.copyToClipboard(shareUrl);
       toast.success('Đã sao chép liên kết vào clipboard');
       setShowShareMenu(false);
     } catch (error) {
@@ -161,6 +175,43 @@ export const ImageModalShare = memo(({ image }: ImageModalShareProps) => {
       toast.error('Không thể sao chép liên kết. Vui lòng thử lại.');
     }
   }, [getShareData]);
+
+  // Handle embed code
+  const handleEmbedCode = useCallback(() => {
+    setShowShareMenu(false);
+    setShowEmbedModal(true);
+  }, []);
+
+  // Generate embed code
+  const embedCode = useMemo(() => {
+    const { shareUrl } = getShareData();
+    const imageUrl = image.regularUrl || image.smallUrl || image.imageUrl;
+    return shareService.generateEmbedCode(imageUrl, {
+      width: embedWidth,
+      height: embedHeight,
+      alt: image.imageTitle || 'Photo',
+      linkUrl: shareUrl,
+    });
+  }, [image, embedWidth, embedHeight, getShareData]);
+
+  // Copy embed code
+  const handleCopyEmbedCode = useCallback(async () => {
+    try {
+      const success = await shareService.copyToClipboard(embedCode);
+      if (success) {
+        toast.success('Đã sao chép mã nhúng vào clipboard');
+        // Select the textarea text for visual feedback
+        if (embedCodeRef.current) {
+          embedCodeRef.current.select();
+        }
+      } else {
+        toast.error('Không thể sao chép mã nhúng. Vui lòng thử lại.');
+      }
+    } catch (error) {
+      console.error('Failed to copy embed code:', error);
+      toast.error('Không thể sao chép mã nhúng. Vui lòng thử lại.');
+    }
+  }, [embedCode]);
 
   // Handle share button click (opens menu)
   const handleShare = useCallback((e: React.MouseEvent) => {
@@ -249,6 +300,101 @@ export const ImageModalShare = memo(({ image }: ImageModalShareProps) => {
               <LinkIcon size={20} className="share-menu-icon-svg" />
               <span>Copy link</span>
             </button>
+            <button
+              className="share-menu-item"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEmbedCode();
+              }}
+            >
+              <Code size={20} className="share-menu-icon-svg" />
+              <span>Embed code</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Embed Code Modal */}
+      {showEmbedModal && (
+        <div
+          className="embed-modal-overlay"
+          onClick={() => setShowEmbedModal(false)}
+        >
+          <div
+            className="embed-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="embed-modal-header">
+              <h3>Embed Code</h3>
+              <button
+                className="embed-modal-close"
+                onClick={() => setShowEmbedModal(false)}
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="embed-modal-content">
+              <div className="embed-options">
+                <div className="embed-option">
+                  <label htmlFor="embed-width">Width (px)</label>
+                  <input
+                    id="embed-width"
+                    type="number"
+                    min="100"
+                    max="2000"
+                    value={embedWidth}
+                    onChange={(e) => setEmbedWidth(parseInt(e.target.value) || 800)}
+                  />
+                </div>
+                <div className="embed-option">
+                  <label htmlFor="embed-height">Height</label>
+                  <select
+                    id="embed-height"
+                    value={embedHeight === 'auto' ? 'auto' : embedHeight}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setEmbedHeight(value === 'auto' ? 'auto' : parseInt(value) || 'auto');
+                    }}
+                  >
+                    <option value="auto">Auto</option>
+                    <option value="400">400px</option>
+                    <option value="600">600px</option>
+                    <option value="800">800px</option>
+                    <option value="1000">1000px</option>
+                  </select>
+                </div>
+              </div>
+              <div className="embed-code-container">
+                <label htmlFor="embed-code-text">HTML Code</label>
+                <textarea
+                  id="embed-code-text"
+                  ref={embedCodeRef}
+                  className="embed-code-textarea"
+                  value={embedCode}
+                  readOnly
+                  rows={6}
+                  onClick={(e) => {
+                    (e.target as HTMLTextAreaElement).select();
+                  }}
+                />
+              </div>
+              <div className="embed-modal-actions">
+                <button
+                  className="embed-copy-btn"
+                  onClick={handleCopyEmbedCode}
+                >
+                  <LinkIcon size={16} />
+                  Copy code
+                </button>
+                <button
+                  className="embed-close-btn"
+                  onClick={() => setShowEmbedModal(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

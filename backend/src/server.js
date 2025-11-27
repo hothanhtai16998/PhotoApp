@@ -30,6 +30,7 @@ import { requestQueue } from './middlewares/requestQueue.js';
 import { csrfToken, validateCsrf, getCsrfToken } from './middlewares/csrfMiddleware.js';
 import { logger } from './utils/logger.js';
 import { startSessionCleanup, stopSessionCleanup } from './utils/sessionCleanup.js';
+import { checkSocialScraper } from './controllers/socialShareController.js';
 import 'dotenv/config';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -168,6 +169,12 @@ app.use('/api/collection-versions', collectionVersionRoute);
 app.use('/api/reports', reportRoute);
 app.use('/api/follows', followRoute);
 app.use('/api/search', searchRoute);
+
+// Social media sharing route - must be before static file serving
+// This handles /photos/:slug for social media scrapers (Facebook, Twitter, etc.)
+// Works in both development and production
+// IMPORTANT: This must be before the SPA fallback route
+app.get('/photos/:slug', checkSocialScraper);
 
 // Serve static files in production
 if (env.NODE_ENV === 'production') {
