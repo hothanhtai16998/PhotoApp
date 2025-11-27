@@ -70,10 +70,19 @@
   transform: scale(1.1); /* Slight scale to hide blur edges */
   opacity: 0.6;
   z-index: 0;
+  transition: opacity 0.3s ease-in-out;
+  pointer-events: none; /* Don't block interactions */
 }
 
-.progressive-image.loaded ~ .progressive-image-blur {
+/* Fade out blur when image is loaded */
+.progressive-image-blur.fade-out {
   opacity: 0;
-  transition: opacity 0.3s ease-in-out;
+}
+
+/* Ensure image/picture is above blur */
+.progressive-image-wrapper picture,
+.progressive-image-wrapper .progressive-image {
+  position: relative;
+  z-index: 1;
 }
 

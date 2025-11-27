@@ -568,10 +568,10 @@ const ProgressiveImage = memo(({
           data-cached={(skipTransition || isActuallyCached) ? 'true' : undefined}
         />
       )}
-      {/* Blur-up overlay effect while loading - don't show for cached images */}
-      {!isLoaded && !skipTransition && effectiveThumbnail && (
+      {/* Blur-up overlay effect while loading - keep in DOM for smooth fade-out */}
+      {effectiveThumbnail && !skipTransition && (
         <div
-          className="progressive-image-blur"
+          className={`progressive-image-blur ${isLoaded ? 'fade-out' : ''}`}
           style={{
             backgroundImage: `url(${effectiveThumbnail})`,
           }}

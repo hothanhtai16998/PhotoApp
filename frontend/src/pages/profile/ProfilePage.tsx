@@ -331,14 +331,12 @@ function ProfilePage() {
 
         // Show loading state immediately (optimistic loading)
         setLoading(true);
-        setCollectionsLoading(true);
 
-        // Fetch all data in parallel for much faster loading
+        // Only fetch essential data on initial load (images and follow stats for header)
+        // Collections and stats will be lazy-loaded when their tabs are clicked
         Promise.all([
             fetchUserImages(false, cancelSignal),
-            fetchCollections(cancelSignal),
             fetchFollowStats(cancelSignal),
-            fetchUserStats(cancelSignal),
         ]).catch((error) => {
             // Ignore cancellation errors - these are expected when navigating away
             const isCanceled = (api.isCancel && api.isCancel(error)) || (error as { code?: string })?.code === 'ERR_CANCELED';
@@ -346,7 +344,22 @@ function ProfilePage() {
                 console.error('Error fetching profile data:', error);
             }
         });
-    }, [displayUserId, currentUser, navigate, fetchUserImages, fetchCollections, fetchFollowStats, fetchUserStats, cancelSignal]);
+    }, [displayUserId, currentUser, navigate, fetchUserImages, fetchFollowStats, cancelSignal]);
+
+    // Lazy-load collections only when collections tab is active
+    useEffect(() => {
+        if (activeTab === 'collections' && !collectionsLoading && collections.length === 0 && displayUserId) {
+            setCollectionsLoading(true);
+            fetchCollections(cancelSignal);
+        }
+    }, [activeTab, displayUserId, fetchCollections, cancelSignal, collectionsLoading, collections.length]);
+
+    // Lazy-load stats only when stats tab is active
+    useEffect(() => {
+        if (activeTab === 'stats' && !userStats && displayUserId) {
+            fetchUserStats(cancelSignal);
+        }
+    }, [activeTab, displayUserId, fetchUserStats, cancelSignal, userStats]);
 
     // Listen for refresh event after image upload
     useEffect(() => {
