@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { toast } from 'sonner';
+import { parseRateLimitHeaders, getRateLimitMessage } from '@/utils/rateLimit';
 
 interface ErrorHandlerOptions {
   showToast?: boolean;
@@ -14,6 +15,7 @@ interface ApiError {
       errors?: Array<{ msg?: string; message?: string }>;
     };
     status?: number;
+    headers?: Record<string, string>;
   };
   code?: string;
   message?: string;
@@ -63,6 +65,22 @@ export function useErrorHandler(options: ErrorHandlerOptions = {}) {
         // Handle specific error codes
         if (apiError.code === 'ECONNABORTED' || apiError.message?.includes('timeout')) {
           message = 'Yêu cầu hết thời gian. Vui lòng thử lại.';
+        } else if (apiError.response?.status === 429) {
+          // Rate limit error - parse headers and show user-friendly message
+          // Axios normalizes headers to lowercase, but we check both cases
+          const headers: Record<string, string> = {};
+          if (apiError.response.headers) {
+            // Convert Axios headers object to plain object
+            Object.keys(apiError.response.headers).forEach((key) => {
+              const value = apiError.response.headers?.[key];
+              if (typeof value === 'string') {
+                headers[key.toLowerCase()] = value;
+                headers[key] = value; // Also keep original case
+              }
+            });
+          }
+          const rateLimitInfo = parseRateLimitHeaders(headers);
+          message = getRateLimitMessage(rateLimitInfo);
         } else if (apiError.response?.status === 401 || apiError.response?.status === 403) {
           message = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
         } else if (apiError.response?.status === 404) {

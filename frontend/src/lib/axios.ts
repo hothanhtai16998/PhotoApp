@@ -97,6 +97,14 @@ api.interceptors.response.use(
 			return Promise.reject(error);
 		}
 
+		// Handle rate limit errors (429) - don't retry, just reject with error
+		// The error handler will show user-friendly message
+		if (error.response?.status === 429) {
+			// Rate limit errors should not be retried
+			// The error will be handled by useErrorHandler with user-friendly message
+			return Promise.reject(error);
+		}
+
 		// Skip token refresh for auth endpoints
 		const authEndpoints = [
 			'/auth/signin',
