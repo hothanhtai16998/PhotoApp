@@ -283,6 +283,7 @@ function EditProfilePage() {
                                             ref={fileInputRef}
                                             type="file"
                                             accept="image/*"
+                                            capture="user"
                                             onChange={handleAvatarChange}
                                             style={{ display: 'none' }}
                                             disabled={user?.isOAuthUser}

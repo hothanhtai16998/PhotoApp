@@ -32,6 +32,20 @@ function ProfilePage() {
     const navigate = useNavigate();
     const params = useParams<{ username?: string; userId?: string }>();
     const [searchParams, setSearchParams] = useSearchParams();
+    
+    // Detect if we're on mobile - MOBILE ONLY check
+    const [isMobile, setIsMobile] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        return window.innerWidth <= 768;
+    });
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth <= 768);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
     const [profileUser, setProfileUser] = useState<PublicUser | null>(null);
     const [profileUserLoading, setProfileUserLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<TabType>('photos');
@@ -420,8 +434,32 @@ function ProfilePage() {
     // Get selected image slug or ID from URL
     const imageParamFromUrl = searchParams.get('image');
 
-    // Find selected image from URL (supports both slug format and legacy ID format)
+    // MOBILE ONLY: If URL has ?image=slug on mobile, redirect to ImagePage
+    useEffect(() => {
+        if (imageParamFromUrl && (isMobile || window.innerWidth <= 768)) {
+            // Set flag to indicate we're opening from grid
+            sessionStorage.setItem('imagePage_fromGrid', 'true');
+            // Navigate to ImagePage with images state
+            navigate(`/photos/${imageParamFromUrl}`, {
+                state: { 
+                    images: displayImages,
+                    fromGrid: true 
+                },
+                replace: true // Replace current URL to avoid back button issues
+            });
+            // Clear the image param from current URL
+            setSearchParams(prev => {
+                const newParams = new URLSearchParams(prev);
+                newParams.delete('image');
+                return newParams;
+            });
+        }
+    }, [imageParamFromUrl, isMobile, navigate, displayImages, setSearchParams]);
+
+    // Find selected image from URL (supports both slug format and legacy ID format) - DESKTOP ONLY
     const selectedImage = useMemo(() => {
+        // Don't show modal on mobile
+        if (isMobile || window.innerWidth <= 768) return null;
         if (!imageParamFromUrl) return null;
 
         // Check if it's a MongoDB ObjectId (24 hex characters) - legacy format
@@ -627,6 +665,22 @@ function ProfilePage() {
                                                 key={image._id}
                                                 className={`profile-image-item ${imageType}`}
                                                 onClick={() => {
+                                                    // MOBILE ONLY: Navigate to ImagePage instead of opening modal
+                                                    if (isMobile || window.innerWidth <= 768) {
+                                                        // Set flag to indicate we're opening from grid
+                                                        sessionStorage.setItem('imagePage_fromGrid', 'true');
+                                                        // Pass images via state for navigation
+                                                        const slug = generateImageSlug(image.imageTitle, image._id);
+                                                        navigate(`/photos/${slug}`, {
+                                                            state: { 
+                                                                images: displayImages,
+                                                                fromGrid: true 
+                                                            }
+                                                        });
+                                                        return;
+                                                    }
+
+                                                    // DESKTOP: Use modal (existing behavior)
                                                     // Update URL when image is selected with slug
                                                     const slug = generateImageSlug(image.imageTitle, image._id);
                                                     setSearchParams(prev => {
@@ -744,8 +798,9 @@ function ProfilePage() {
                 </div>
             </main>
 
-            {/* Image Modal */}
-            {selectedImage && (
+            {/* Image Modal - DESKTOP ONLY */}
+            {/* On mobile, we navigate to ImagePage instead */}
+            {selectedImage && !isMobile && window.innerWidth > 768 && (
                 <ImageModal
                     image={selectedImage}
                     images={displayImages}

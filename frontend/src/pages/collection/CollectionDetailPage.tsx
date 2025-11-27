@@ -23,6 +23,20 @@ export default function CollectionDetailPage() {
 	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const { user } = useAuthStore();
+	
+	// Detect if we're on mobile - MOBILE ONLY check
+	const [isMobile, setIsMobile] = useState(() => {
+		if (typeof window === 'undefined') return false;
+		return window.innerWidth <= 768;
+	});
+
+	useEffect(() => {
+		const handleResize = () => {
+			setIsMobile(window.innerWidth <= 768);
+		};
+		window.addEventListener('resize', handleResize);
+		return () => window.removeEventListener('resize', handleResize);
+	}, []);
 	const [collection, setCollection] = useState<Collection | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [updatingCover, setUpdatingCover] = useState<string | null>(null);
@@ -54,8 +68,32 @@ export default function CollectionDetailPage() {
 			: [];
 	}, [collection]);
 
-	// Find selected image from URL slug
+	// MOBILE ONLY: If URL has ?image=slug on mobile, redirect to ImagePage
+	useEffect(() => {
+		if (imageSlugFromUrl && (isMobile || window.innerWidth <= 768)) {
+			// Set flag to indicate we're opening from grid
+			sessionStorage.setItem('imagePage_fromGrid', 'true');
+			// Navigate to ImagePage with images state
+			navigate(`/photos/${imageSlugFromUrl}`, {
+				state: { 
+					images,
+					fromGrid: true 
+				},
+				replace: true // Replace current URL to avoid back button issues
+			});
+			// Clear the image param from current URL
+			setSearchParams(prev => {
+				const newParams = new URLSearchParams(prev);
+				newParams.delete('image');
+				return newParams;
+			});
+		}
+	}, [imageSlugFromUrl, isMobile, navigate, images, setSearchParams]);
+
+	// Find selected image from URL slug - DESKTOP ONLY
 	const selectedImage = useMemo(() => {
+		// Don't show modal on mobile
+		if (isMobile || window.innerWidth <= 768) return null;
 		if (!imageSlugFromUrl || images.length === 0) return null;
 		
 		const shortId = extractIdFromSlug(imageSlugFromUrl);
@@ -65,7 +103,7 @@ export default function CollectionDetailPage() {
 			const imgShortId = img._id.slice(-12);
 			return imgShortId === shortId;
 		}) || null;
-	}, [imageSlugFromUrl, images]);
+	}, [imageSlugFromUrl, images, isMobile]);
 
 	// Get current image IDs for comparison
 	const currentImageIds = useMemo(() => new Set(images.map(img => img._id)), [images]);
@@ -797,9 +835,32 @@ export default function CollectionDetailPage() {
 										onClick={() => {
 											if (isDragging) return; // Don't open modal if dragging
 											if (selectionMode) {
+												// Selection mode logic
 												toggleImageSelection(image._id);
 												return;
 											}
+
+											// MOBILE ONLY: Navigate to ImagePage instead of opening modal
+											if (isMobile || window.innerWidth <= 768) {
+												// Set flag to indicate we're opening from grid
+												sessionStorage.setItem('imagePage_fromGrid', 'true');
+												// Pass images via state for navigation
+												navigate(`/photos/${slug}`, {
+													state: { 
+														images,
+														fromGrid: true 
+													}
+												});
+												return;
+											}
+
+											// DESKTOP: Use modal (existing behavior)
+											setSearchParams(prev => {
+												const newParams = new URLSearchParams(prev);
+												newParams.set('image', slug);
+												return newParams;
+											});
+										}}
 											// Update URL search params instead of navigating
 											setSearchParams(prev => {
 												const newParams = new URLSearchParams(prev);

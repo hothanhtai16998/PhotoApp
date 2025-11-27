@@ -9,6 +9,32 @@
 	z-index: 1;
 }
 
+/* Mobile: Search bar below header */
+@media (max-width: 768px) {
+	.search-bar-container {
+		position: fixed !important;
+		top: var(--header-height, 56px) !important;
+		left: 0 !important;
+		right: 0 !important;
+		transform: none !important;
+		width: 100% !important;
+		max-width: 100% !important;
+		min-width: auto !important;
+		padding: 8px 12px !important; /* Reduced top/bottom padding */
+		background: #fff !important;
+		border-bottom: none !important; /* Remove border line */
+		z-index: 1499 !important;
+		box-shadow: none !important; /* Remove shadow */
+		visibility: visible !important;
+		margin-bottom: 0 !important; /* Remove any margin */
+	}
+
+	.header-search {
+		border-bottom: none !important; /* Remove border from search input */
+		margin-bottom: 0 !important;
+	}
+}
+
 /* Search Suggestions Dropdown */
 .search-suggestions {
 	position: absolute;
@@ -143,14 +169,49 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+	.search-bar-container {
+		width: 100% !important;
+		max-width: 100% !important;
+		min-width: auto !important;
+	}
+
+	.header-search {
+		padding: 0;
+		border-radius: 6px;
+	}
+
+	.search-input {
+		padding: 8px 6px;
+		font-size: 0.875rem;
+	}
+
+	.search-icon-left {
+		padding: 0 10px;
+	}
+
+	.search-clear {
+		padding: 6px;
+		min-width: 36px;
+		min-height: 36px;
+	}
+
+	.search-filters-wrapper {
+		padding-left: 6px;
+		margin-left: 6px;
+		border-left: 1px solid #e5e5e5;
+	}
+
 	.search-suggestions {
 		max-height: 300px;
 		border-radius: 8px;
+		left: 0;
+		right: 0;
 	}
 
 	.suggestion-item {
 		padding: 14px 16px;
 		font-size: 0.875rem;
+		min-height: 44px; /* Better touch target */
 	}
 
 	.suggestion-hint {
@@ -159,9 +220,52 @@
 }
 
 @media (max-width: 480px) {
+	.search-bar-container {
+		margin-top: 0;
+	}
+
+	.header-search {
+		border-radius: 6px;
+	}
+
+	.search-input {
+		padding: 8px 4px;
+		font-size: 0.8125rem;
+	}
+
+	.search-input::placeholder {
+		font-size: 0.75rem;
+	}
+
+	.search-icon-left {
+		padding: 0 8px;
+	}
+
+	.search-icon-left svg {
+		width: 18px;
+		height: 18px;
+	}
+
+	.search-clear {
+		padding: 6px;
+		min-width: 36px;
+		min-height: 36px;
+	}
+
+	.search-clear svg {
+		width: 14px;
+		height: 14px;
+	}
+
+	.search-filters-wrapper {
+		padding-left: 4px;
+		margin-left: 4px;
+	}
+
 	.search-suggestions {
 		top: calc(100% + 4px);
 		max-height: 250px;
+		border-radius: 6px;
 	}
 
 	.suggestions-header {
@@ -172,6 +276,7 @@
 	.suggestion-item {
 		padding: 12px;
 		font-size: 0.8125rem;
+		min-height: 44px;
 	}
 }
 

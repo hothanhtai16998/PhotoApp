@@ -241,7 +241,8 @@ function UploadPage() {
                                 <Input 
                                     id="image" 
                                     type="file" 
-                                    accept="image/*" 
+                                    accept="image/*"
+                                    capture="environment"
                                     {...register('image')}
                                     ref={fileInputRef}
                                 />

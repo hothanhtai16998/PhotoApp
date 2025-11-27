@@ -428,43 +428,78 @@
   }
 
   .uiverse-card-wrapper {
-    bottom: 20px;
-    right: 20px;
+    bottom: 16px;
+    right: 16px;
   }
 
   .uiverse-card-wrapper.uiverse-card-variation {
-    bottom: 180px;
+    bottom: 140px; /* Reduced from 180px to avoid overlap */
   }
 
   .uiverse-card-v2 {
-    width: 37.5px;
-    height: 37.5px;
-    border-radius: 5.625px;
+    width: 44px; /* Increased from 37.5px for better touch target */
+    height: 44px;
+    border-radius: 8px;
   }
 
   .uiverse-card-v2.hovered,
   .uiverse-card-v2:hover {
-    width: 150px;
-    height: 150px;
-    border-radius: 22.5px;
+    width: 120px; /* Reduced from 150px */
+    height: 120px;
+    border-radius: 16px;
   }
 
   .uiverse-logo-v2 {
-    font-size: 0.25em;
+    font-size: 0.3em;
   }
 
   .uiverse-card-v2.hovered .uiverse-logo-v2,
   .uiverse-card-v2:hover .uiverse-logo-v2 {
-    font-size: 1em;
-    transform: translate(50px, -40px);
+    font-size: 0.9em;
+    transform: translate(40px, -35px);
   }
 
   .uiverse-icon {
-    width: 16px;
-    height: 16px;
+    width: 18px; /* Increased from 16px */
+    height: 18px;
   }
 
   .uiverse-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .uiverse-card-wrapper {
+    bottom: 12px;
+    right: 12px;
+  }
+
+  .uiverse-card-wrapper.uiverse-card-variation {
+    bottom: 120px; /* Further reduced for small screens */
+  }
+
+  .uiverse-card-v2 {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+  }
+
+  .uiverse-card-v2.hovered,
+  .uiverse-card-v2:hover {
+    width: 100px; /* Smaller on very small screens */
+    height: 100px;
+    border-radius: 12px;
+  }
+
+  .uiverse-card-v2.hovered .uiverse-logo-v2,
+  .uiverse-card-v2:hover .uiverse-logo-v2 {
+    font-size: 0.8em;
+    transform: translate(35px, -30px);
+  }
+
+  .uiverse-icon {
     width: 16px;
     height: 16px;
   }

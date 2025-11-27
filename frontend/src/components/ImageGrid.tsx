@@ -299,6 +299,23 @@ ImageGridItem.displayName = 'ImageGridItem';
 const ImageGrid = memo(() => {
   const { images, loading, error, pagination, currentSearch, currentCategory, currentLocation, fetchImages } = useImageStore();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  
+  // Detect if we're on mobile - MOBILE ONLY check
+  const isMobile = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth <= 768;
+  }, []);
+
+  // Listen for window resize to update mobile detection
+  const [isMobileState, setIsMobileState] = useState(isMobile);
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileState(window.innerWidth <= 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   // Cancel requests when search/category/location changes
   const cancelSignal = useRequestCancellationOnChange([currentSearch, currentCategory, currentLocation]);
@@ -324,8 +341,32 @@ const ImageGrid = memo(() => {
   // Get selected image slug from URL search params
   const imageSlugFromUrl = searchParams.get('image');
 
-  // Find selected image from URL slug
+  // MOBILE ONLY: If URL has ?image=slug on mobile, redirect to ImagePage
+  useEffect(() => {
+    if (imageSlugFromUrl && (isMobileState || window.innerWidth <= 768)) {
+      // Set flag to indicate we're opening from grid
+      sessionStorage.setItem('imagePage_fromGrid', 'true');
+      // Navigate to ImagePage with images state
+      navigate(`/photos/${imageSlugFromUrl}`, {
+        state: { 
+          images,
+          fromGrid: true 
+        },
+        replace: true // Replace current URL to avoid back button issues
+      });
+      // Clear the image param from current URL
+      setSearchParams(prev => {
+        const newParams = new URLSearchParams(prev);
+        newParams.delete('image');
+        return newParams;
+      });
+    }
+  }, [imageSlugFromUrl, isMobileState, navigate, images, setSearchParams]);
+
+  // Find selected image from URL slug (DESKTOP ONLY - for modal)
   const selectedImage = useMemo(() => {
+    // Don't show modal on mobile
+    if (isMobileState || window.innerWidth <= 768) return null;
     if (!imageSlugFromUrl) return null;
 
     // Extract short ID from slug and find matching image
@@ -969,6 +1010,22 @@ const ImageGrid = memo(() => {
                 aspectRatio={aspectRatio}
                 eager={isEager}
                 onSelect={(img) => {
+                  // MOBILE ONLY: Navigate to ImagePage instead of opening modal
+                  if (isMobileState || window.innerWidth <= 768) {
+                    // Set flag to indicate we're opening from grid
+                    sessionStorage.setItem('imagePage_fromGrid', 'true');
+                    // Pass images via state for navigation
+                    const slug = generateImageSlug(img.imageTitle, img._id);
+                    navigate(`/photos/${slug}`, {
+                      state: { 
+                        images,
+                        fromGrid: true 
+                      }
+                    });
+                    return;
+                  }
+
+                  // DESKTOP: Use modal (existing behavior)
                   // Set flag to indicate we're opening from grid (not refresh)
                   sessionStorage.setItem('imagePage_fromGrid', 'true');
 
@@ -1010,9 +1067,9 @@ const ImageGrid = memo(() => {
         </div>
       )}
 
-      {/* Image Modal - shown as overlay when image param exists */}
-      {/* Always render as modal (not page) when opened from grid */}
-      {selectedImage && (
+      {/* Image Modal - shown as overlay when image param exists - DESKTOP ONLY */}
+      {/* On mobile, we navigate to ImagePage instead */}
+      {selectedImage && !isMobileState && window.innerWidth > 768 && (
         <ImageModal
           image={selectedImage}
           images={images}

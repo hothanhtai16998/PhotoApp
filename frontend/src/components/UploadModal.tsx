@@ -440,6 +440,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                             <input
                                 type="file"
                                 accept="image/*"
+                                capture="environment"
                                 className="upload-file-input"
                                 multiple={true}
                                 onChange={handleFileInput}
@@ -492,6 +493,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                 const input = document.createElement('input');
                                 input.type = 'file';
                                 input.accept = 'image/*';
+                                input.setAttribute('capture', 'environment');
                                 input.multiple = true;
                                 input.onchange = (event) => {
                                     const target = event.target as HTMLInputElement;

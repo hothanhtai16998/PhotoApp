@@ -10,6 +10,21 @@
   touch-action: pan-y; /* Allow vertical scrolling but handle horizontal swipes */
 }
 
+/* Mobile: Remove gap between search bar and slider - MOBILE ONLY */
+@media (max-width: 768px) {
+  .tripzo-page {
+    margin-top: calc(
+      var(--header-height, 56px) + 56px
+    ) !important; /* Header (56px) + search bar (~56px), no gap */
+    padding-top: 0 !important; /* Remove any padding */
+  }
+
+  .main-carousel-container {
+    margin-top: 0 !important; /* Remove any margin */
+    padding-top: 0 !important; /* Remove any padding */
+  }
+}
+
 /* Loading States */
 .loading-state {
   display: flex;
@@ -118,6 +133,40 @@
   height: 100%;
   z-index: 1;
   pointer-events: none;
+}
+
+/* Mobile: Fill screen better, reduce empty space */
+@media (max-width: 768px) {
+  .main-image-layer {
+    background-size: cover !important; /* Fill screen on mobile */
+    background-position: center;
+  }
+
+  .main-carousel-container {
+    height: calc(
+      100vh - var(--header-height, 56px) - 70px
+    ); /* Account for search bar on mobile */
+  }
+
+  .tripzo-page {
+    height: calc(100vh - var(--header-height, 56px) - 70px);
+    min-height: calc(100vh - var(--header-height, 56px) - 70px);
+    margin-top: calc(
+      var(--header-height, 56px) + 70px
+    ); /* Push down for search bar */
+  }
+}
+
+@media (max-width: 480px) {
+  .main-carousel-container {
+    height: calc(100vh - var(--header-height, 56px) - 70px);
+  }
+
+  .tripzo-page {
+    height: calc(100vh - var(--header-height, 56px) - 70px);
+    min-height: calc(100vh - var(--header-height, 56px) - 70px);
+    margin-top: calc(var(--header-height, 56px) + 70px);
+  }
 }
 
 .main-slide.active {

@@ -69,7 +69,7 @@ export const Header = memo(function Header() {
           {/* Logo */}
           <div className="header-logo-container">
             <Link to="/" className="header-logo" onClick={handleLogoClick}>
-              <Logo size={32} style={logoStyle} />
+              <Logo size={28} style={logoStyle} />
             </Link>
             <button
               className="header-logo-selector-btn"
