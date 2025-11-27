@@ -560,10 +560,12 @@
 
 /* Ensure smooth fade-in when new images appear */
 .masonry-item {
-  animation: fadeIn 0.4s ease-out;
+  /* Animation disabled to prevent flashing when switching categories */
+  /* animation: fadeIn 0.4s ease-out; */
   will-change: opacity, transform;
   position: relative;
   z-index: 2;
+  opacity: 1; /* Ensure images are visible immediately */
 }
 
 @keyframes fadeIn {
