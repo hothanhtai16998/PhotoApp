@@ -7,9 +7,6 @@
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   z-index: 1501;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   padding: 20px;
   animation: fadeIn 0.2s ease;
   /* Prevent layout shifts */
@@ -38,27 +35,31 @@
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   animation: modalSlideIn 0.3s ease;
+  /* Use absolute positioning with transform for stable centering */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   /* Prevent layout shifts - set min-height to prevent repositioning */
   min-height: 200px;
-  /* Use transform for stable positioning */
-  position: relative;
   /* Prevent content from causing layout shifts */
   contain: layout style paint;
   /* Ensure modal doesn't shift when content loads */
   flex-shrink: 0;
   /* Force GPU acceleration for smoother animation */
-  transform: translateZ(0);
   backface-visibility: hidden;
+  /* Ensure modal stays within viewport */
+  margin: 20px;
 }
 
 @keyframes modalSlideIn {
   from {
     opacity: 0;
-    transform: translateY(20px) scale(0.95);
+    transform: translate(-50%, calc(-50% + 20px)) scale(0.95);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 
@@ -411,8 +412,9 @@
 /* Responsive */
 @media (max-width: 768px) {
   .contact-modal {
-    max-width: 95vw;
+    max-width: calc(100vw - 40px);
     max-height: 85vh;
+    width: calc(100vw - 40px);
   }
 
   .contact-modal-header,
