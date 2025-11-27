@@ -21,7 +21,6 @@ const ImagePage = lazy(() => import("./pages/ImagePage"));
 const CollectionsPage = lazy(() => import("./pages/CollectionsPage"));
 const CollectionDetailPage = lazy(() => import("./pages/CollectionDetailPage"));
 const AboutPage = lazy(() => import("./pages/AboutPage"));
-const PlacesPage = lazy(() => import("./pages/PlacesPage"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -47,7 +46,6 @@ function App() {
         <Route path="/signin" element={<SignInPage />} />
         <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
         <Route path="/about" element={<AboutPage />} />
-        <Route path="/places" element={<PlacesPage />} />
 
         {/**protected routes */}
         <Route element={<ProtectedRoute />}>
