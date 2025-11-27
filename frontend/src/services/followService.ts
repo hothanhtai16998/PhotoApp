@@ -133,9 +133,10 @@ export const followService = {
 	/**
 	 * Get follow stats for a user (includes isFollowing status)
 	 */
-	getUserFollowStats: async (userId: string): Promise<{ success: boolean; stats: { followers: number; following: number; isFollowing: boolean } }> => {
+	getUserFollowStats: async (userId: string, signal?: AbortSignal): Promise<{ success: boolean; stats: { followers: number; following: number; isFollowing: boolean } }> => {
 		const res = await api.get(`/follows/${userId}/stats`, {
 			withCredentials: true,
+			signal, // Pass abort signal for request cancellation
 		});
 		return res.data;
 	},

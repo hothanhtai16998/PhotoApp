@@ -33,10 +33,12 @@ export const userStatsService = {
   /**
    * Get user profile statistics
    * @param userId User ID to get stats for
+   * @param signal Optional AbortSignal for request cancellation
    */
-  getUserStats: async (userId: string): Promise<UserStats> => {
+  getUserStats: async (userId: string, signal?: AbortSignal): Promise<UserStats> => {
     const res = await api.get(`/users/${userId}/stats`, {
       withCredentials: true,
+      signal, // Pass abort signal for request cancellation
     });
     return res.data;
   },

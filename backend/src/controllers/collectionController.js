@@ -16,6 +16,7 @@ export const getUserCollections = async (req, res) => {
         const userId = req.user._id;
 
         // Get collections created by user OR where user is a collaborator
+        // Optimize: Only populate coverImage and count images instead of loading all images
         const collections = await Collection.find({
             $or: [
                 { createdBy: userId },
@@ -23,18 +24,31 @@ export const getUserCollections = async (req, res) => {
             ],
         })
             .populate('coverImage', 'thumbnailUrl smallUrl imageUrl imageTitle')
-            .populate('images', 'thumbnailUrl smallUrl imageUrl imageTitle')
+            // Don't populate all images - just count them (much faster)
             .populate({
                 path: 'collaborators.user',
                 select: 'username displayName avatarUrl',
             })
+            .select('-images') // Exclude images array to reduce payload
             .sort({ createdAt: -1 })
             .lean();
+        
+        // Get image counts for each collection separately (more efficient)
+        // Use $size operator to count images array without loading all images
+        const collectionIds = collections.map(c => c._id);
+        const imageCounts = collectionIds.length > 0 
+            ? await Collection.aggregate([
+                { $match: { _id: { $in: collectionIds } } },
+                { $project: { _id: 1, imageCount: { $size: { $ifNull: ['$images', []] } } } }
+            ])
+            : [];
+        
+        const imageCountMap = new Map(imageCounts.map(item => [item._id.toString(), item.imageCount || 0]));
 
-        // Add image count to each collection
+        // Add image count to each collection from the aggregation result
         const collectionsWithCount = collections.map(collection => ({
             ...collection,
-            imageCount: collection.images ? collection.images.length : 0,
+            imageCount: imageCountMap.get(collection._id.toString()) || 0,
         }));
 
         res.json({

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef, lazy, Suspense } from "react";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { imageService } from "@/services/imageService";
@@ -13,13 +13,16 @@ import { generateImageSlug, extractIdFromSlug } from "@/lib/utils";
 import { collectionService } from "@/services/collectionService";
 import type { Collection } from "@/types/collection";
 import { Folder, Eye } from "lucide-react";
-import { UserAnalyticsDashboard } from "./components/UserAnalyticsDashboard";
+// Lazy load analytics dashboard - only needed when stats tab is active
+const UserAnalyticsDashboard = lazy(() => import("./components/UserAnalyticsDashboard").then(module => ({ default: module.UserAnalyticsDashboard })));
 import { followService } from "@/services/followService";
 import { userStatsService, type UserStats } from "@/services/userStatsService";
 import { ProfileCompletion } from "./components/ProfileCompletion";
 import { userService, type PublicUser } from "@/services/userService";
 import { ProfileHeader } from "./components/ProfileHeader";
 import { ProfileTabs } from "./components/ProfileTabs";
+import { useRequestCancellationOnChange } from "@/hooks/useRequestCancellation";
+import { toast } from "sonner";
 import "./ProfilePage.css";
 
 type TabType = 'photos' | 'illustrations' | 'collections' | 'stats';
@@ -51,6 +54,9 @@ function ProfilePage() {
     const processedImages = useRef<Set<string>>(new Set());
     const previousParams = useRef<string>('');
 
+    // Cancel user lookup when params change
+    const userLookupCancelSignal = useRequestCancellationOnChange([params.username, params.userId]);
+
     // Fetch profile user data if viewing someone else's profile
     useEffect(() => {
         const fetchProfileUser = async () => {
@@ -59,9 +65,13 @@ function ProfilePage() {
                 setProfileUser(null);
                 try {
                     setProfileUserLoading(true);
-                    const userData = await userService.getUserByUsername(params.username);
+                    const userData = await userService.getUserByUsername(params.username, userLookupCancelSignal);
                     setProfileUser(userData);
                 } catch (error) {
+                    // Ignore cancelled requests
+                    if (api.isCancel && api.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
+                        return;
+                    }
                     console.error('Failed to fetch user:', error);
                     toast.error('Không tìm thấy người dùng');
                     navigate('/');
@@ -73,9 +83,13 @@ function ProfilePage() {
                 setProfileUser(null);
                 try {
                     setProfileUserLoading(true);
-                    const userData = await userService.getUserById(params.userId);
+                    const userData = await userService.getUserById(params.userId, userLookupCancelSignal);
                     setProfileUser(userData);
                 } catch (error) {
+                    // Ignore cancelled requests
+                    if (api.isCancel && api.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
+                        return;
+                    }
                     console.error('Failed to fetch user:', error);
                     toast.error('Không tìm thấy người dùng');
                     navigate('/');
@@ -91,7 +105,7 @@ function ProfilePage() {
 
         fetchProfileUser();
 
-    }, [params.username, params.userId, navigate]);
+    }, [params.username, params.userId, navigate, userLookupCancelSignal]);
 
     // Determine which user's profile to display
     const displayUserId = useMemo(() => {
@@ -135,13 +149,23 @@ function ProfilePage() {
         }
     }, [params.username, params.userId]);
 
-    const fetchUserImages = useCallback(async (refresh = false) => {
+    const fetchUserImages = useCallback(async (refresh = false, signal?: AbortSignal) => {
         if (!displayUserId) return;
         const currentUserId = displayUserId; // Capture at start of fetch
 
         try {
             setLoading(true);
-            const response = await imageService.fetchUserImages(displayUserId, refresh ? { _refresh: true } : undefined);
+            // Limit initial load to 30 images for faster first render
+            // More images can be loaded via pagination if needed
+            const response = await imageService.fetchUserImages(
+                displayUserId, 
+                { 
+                    page: 1, 
+                    limit: 30, // Load first 30 images only for initial render
+                    ...(refresh ? { _refresh: true } : {})
+                }, 
+                signal
+            );
             const userImages = response.images || [];
 
             // Only update if we're still on the same user (prevent race conditions)
@@ -174,6 +198,10 @@ function ProfilePage() {
                 }
             }
         } catch (error) {
+            // Ignore cancelled requests
+            if (api.isCancel && api.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
+                return;
+            }
             console.error('Failed to fetch user images:', error);
         } finally {
             if (displayUserId === currentUserId) {
@@ -182,7 +210,7 @@ function ProfilePage() {
         }
     }, [displayUserId]);
 
-    const fetchCollections = useCallback(async () => {
+    const fetchCollections = useCallback(async (signal?: AbortSignal) => {
         if (!displayUserId) return;
         const currentUserId = displayUserId; // Capture at start of fetch
 
@@ -196,7 +224,7 @@ function ProfilePage() {
                 }
                 return;
             }
-            const data = await collectionService.getUserCollections();
+            const data = await collectionService.getUserCollections(signal);
             // Only update if we're still on the same user
             if (displayUserId === currentUserId) {
                 setCollections(data);
@@ -207,6 +235,10 @@ function ProfilePage() {
                 }
             }
         } catch (error) {
+            // Ignore cancelled requests
+            if (api.isCancel && api.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
+                return;
+            }
             console.error('Failed to fetch collections:', error);
         } finally {
             if (displayUserId === currentUserId) {
@@ -215,12 +247,12 @@ function ProfilePage() {
         }
     }, [displayUserId, isOwnProfile]);
 
-    const fetchFollowStats = useCallback(async () => {
+    const fetchFollowStats = useCallback(async (signal?: AbortSignal) => {
         if (!displayUserId) return;
         const currentUserId = displayUserId; // Capture at start of fetch
 
         try {
-            const response = await followService.getUserFollowStats(displayUserId);
+            const response = await followService.getUserFollowStats(displayUserId, signal);
             // Only update if we're still on the same user
             if (displayUserId === currentUserId) {
                 setFollowStats(response.stats);
@@ -230,17 +262,21 @@ function ProfilePage() {
                 }
             }
         } catch (error) {
+            // Ignore cancelled requests
+            if (api.isCancel && api.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
+                return;
+            }
             console.error('Failed to fetch follow stats:', error);
         }
     }, [displayUserId]);
 
-    const fetchUserStats = useCallback(async () => {
+    const fetchUserStats = useCallback(async (signal?: AbortSignal) => {
         if (!displayUserId) return;
         const currentUserId = displayUserId; // Capture at start of fetch
 
         try {
             setStatsLoading(true);
-            const stats = await userStatsService.getUserStats(displayUserId);
+            const stats = await userStatsService.getUserStats(displayUserId, signal);
             // Only update if we're still on the same user
             if (displayUserId === currentUserId) {
                 setUserStats(stats);
@@ -249,6 +285,10 @@ function ProfilePage() {
                 setIsSwitchingProfile(false);
             }
         } catch (error) {
+            // Ignore cancelled requests
+            if (api.isCancel && api.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
+                return;
+            }
             console.error('Failed to fetch user stats:', error);
             if (displayUserId === currentUserId) {
                 setIsSwitchingProfile(false);
@@ -277,6 +317,9 @@ function ProfilePage() {
         }
     }, [displayUserId, currentUser?._id, isOwnProfile]);
 
+    // Cancel requests when displayUserId changes
+    const cancelSignal = useRequestCancellationOnChange([displayUserId]);
+
     useEffect(() => {
         // Require authentication for viewing profiles
         if (!currentUser?._id) {
@@ -286,21 +329,34 @@ function ProfilePage() {
 
         if (!displayUserId) return;
 
-        // Fetch new data (state is already reset by the reset effect above)
-        fetchUserImages();
-        fetchCollections();
-        fetchFollowStats();
-        fetchUserStats();
-    }, [displayUserId, currentUser, navigate, fetchUserImages, fetchCollections, fetchFollowStats, fetchUserStats]);
+        // Show loading state immediately (optimistic loading)
+        setLoading(true);
+        setCollectionsLoading(true);
+
+        // Fetch all data in parallel for much faster loading
+        Promise.all([
+            fetchUserImages(false, cancelSignal),
+            fetchCollections(cancelSignal),
+            fetchFollowStats(cancelSignal),
+            fetchUserStats(cancelSignal),
+        ]).catch((error) => {
+            // Ignore cancellation errors - these are expected when navigating away
+            const isCanceled = (api.isCancel && api.isCancel(error)) || (error as { code?: string })?.code === 'ERR_CANCELED';
+            if (!isCanceled) {
+                console.error('Error fetching profile data:', error);
+            }
+        });
+    }, [displayUserId, currentUser, navigate, fetchUserImages, fetchCollections, fetchFollowStats, fetchUserStats, cancelSignal]);
 
     // Listen for refresh event after image upload
     useEffect(() => {
         const handleRefresh = () => {
             // Force fresh fetch with cache-busting
             // Use a small delay to ensure backend has processed the new image
+            // Don't use cancelSignal for refresh - this is a manual refresh action
             setTimeout(() => {
-                fetchUserImages(true); // Pass true to enable cache-busting
-                fetchCollections(); // Also refresh collections
+                fetchUserImages(true); // Pass true to enable cache-busting, no signal for manual refresh
+                fetchCollections(); // Also refresh collections, no signal for manual refresh
             }, 500);
         };
 
@@ -667,7 +723,9 @@ function ProfilePage() {
                                 </div>
                             )
                         ) : (
-                            <UserAnalyticsDashboard />
+                            <Suspense fallback={<div className="profile-stats-loading"><Skeleton className="h-64 w-full" /></div>}>
+                                <UserAnalyticsDashboard />
+                            </Suspense>
                         )}
                     </div>
                 </div>

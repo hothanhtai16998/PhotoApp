@@ -10,8 +10,10 @@ export const collectionService = {
 	/**
 	 * Get all collections for the authenticated user
 	 */
-	getUserCollections: async (): Promise<Collection[]> => {
-		const response = await api.get<CollectionResponse>('/collections');
+	getUserCollections: async (signal?: AbortSignal): Promise<Collection[]> => {
+		const response = await api.get<CollectionResponse>('/collections', {
+			signal, // Pass abort signal for request cancellation
+		});
 		if (response.data.success && response.data.collections) {
 			return response.data.collections;
 		}

@@ -1,5 +1,6 @@
 import { asyncHandler } from "../middlewares/asyncHandler.js";
 import bcrypt from "bcrypt";
+import mongoose from "mongoose";
 import User from "../models/User.js";
 import Image from "../models/Image.js";
 import Collection from "../models/Collection.js";
@@ -374,24 +375,40 @@ export const getUserStats = asyncHandler(async (req, res) => {
         });
     }
 
-    // Get user's images
-    const userImages = await Image.find({ uploadedBy: userId }).select('views downloads').lean();
+    // Optimize: Use aggregation instead of fetching all images
+    // This is much faster for users with many images
+    const [imageStats, totalCollections, totalImages] = await Promise.all([
+        // Aggregate image stats in one query
+        Image.aggregate([
+            { $match: { uploadedBy: new mongoose.Types.ObjectId(userId) } },
+            {
+                $group: {
+                    _id: null,
+                    totalViews: { $sum: { $ifNull: ['$views', 0] } },
+                    totalDownloads: { $sum: { $ifNull: ['$downloads', 0] } },
+                    imageIds: { $push: '$_id' }
+                }
+            }
+        ]),
+        // Get collections count
+        Collection.countDocuments({ createdBy: userId }),
+        // Get total images count (separate for efficiency)
+        Image.countDocuments({ uploadedBy: userId }),
+    ]);
     
-    // Calculate stats
-    const totalImages = userImages.length;
-    const totalViews = userImages.reduce((sum, img) => sum + (img.views || 0), 0);
-    const totalDownloads = userImages.reduce((sum, img) => sum + (img.downloads || 0), 0);
-    
-    // Get collections count
-    const totalCollections = await Collection.countDocuments({ createdBy: userId });
+    // Extract stats from aggregation result
+    const statsResult = imageStats[0] || { totalViews: 0, totalDownloads: 0, imageIds: [] };
+    const totalViews = statsResult.totalViews || 0;
+    const totalDownloads = statsResult.totalDownloads || 0;
+    const userImageIds = statsResult.imageIds || [];
     
     // Calculate total likes received (how many users have favorited this user's images)
-    // Count all users who have any of this user's images in their favorites
-    const userImageIds = userImages.map(img => img._id);
+    // Optimize: Use aggregation for better performance with large datasets
     const totalLikesReceived = userImageIds.length > 0 
-        ? await User.countDocuments({
-            favorites: { $in: userImageIds }
-        })
+        ? await User.aggregate([
+            { $match: { favorites: { $in: userImageIds } } },
+            { $count: 'count' }
+        ]).then(result => result[0]?.count || 0)
         : 0;
     
     // Get followers/following count

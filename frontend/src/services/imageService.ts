@@ -211,7 +211,8 @@ export const imageService = {
     userId: string,
     params?: FetchImagesParams & {
       _refresh?: boolean;
-    }
+    },
+    signal?: AbortSignal
   ): Promise<FetchImagesResponse> => {
     const queryParams = new URLSearchParams();
 
@@ -234,6 +235,7 @@ export const imageService = {
 
     const res = await get(url, {
       withCredentials: true,
+      signal, // Pass abort signal for request cancellation
       // Cache busting is handled by timestamp query parameter (_t)
     });
 

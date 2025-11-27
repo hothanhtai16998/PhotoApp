@@ -71,10 +71,12 @@ export const userService = {
 	/**
 	 * Get public user data by username
 	 * @param username Username to fetch
+	 * @param signal Optional AbortSignal for request cancellation
 	 */
-	getUserByUsername: async (username: string): Promise<PublicUser> => {
+	getUserByUsername: async (username: string, signal?: AbortSignal): Promise<PublicUser> => {
 		const res = await api.get(`/users/username/${username}`, {
 			withCredentials: true,
+			signal, // Pass abort signal for request cancellation
 		});
 		return res.data.user;
 	},
@@ -82,10 +84,12 @@ export const userService = {
 	/**
 	 * Get public user data by userId
 	 * @param userId User ID to fetch
+	 * @param signal Optional AbortSignal for request cancellation
 	 */
-	getUserById: async (userId: string): Promise<PublicUser> => {
+	getUserById: async (userId: string, signal?: AbortSignal): Promise<PublicUser> => {
 		const res = await api.get(`/users/${userId}`, {
 			withCredentials: true,
+			signal, // Pass abort signal for request cancellation
 		});
 		return res.data.user;
 	},
