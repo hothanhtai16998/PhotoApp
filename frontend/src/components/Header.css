@@ -578,8 +578,12 @@
 }
 
 @media (max-width: 480px) {
+  .unsplash-header {
+    border: 0;
+  }
   .header-top {
     padding-top: 0;
+    border: 0;
   }
   .header-container {
     padding: 0 12px;
@@ -678,6 +682,13 @@
 
 /* Desktop Only - Hide on mobile */
 @media (max-width: 768px) {
+  .unsplash-header {
+    border: 0;
+  }
+  .header-top {
+    padding-top: 0;
+    border: 0;
+  }
   .desktop-only {
     display: none !important;
   }
