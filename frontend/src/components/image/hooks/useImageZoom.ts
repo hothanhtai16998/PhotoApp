@@ -7,6 +7,8 @@ interface UseImageZoomOptions {
   doubleClickZoom?: number;
 }
 
+export type UseImageZoomReturn = ReturnType<typeof useImageZoom>;
+
 export const useImageZoom = ({
   minZoom = 1,
   maxZoom = 5,

@@ -1,36 +1,16 @@
-import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  CheckCircle2,
-  MapPin,
-  ExternalLink,
-  ImageOff,
-  Heart,
-  Edit2,
-  X,
-  FolderPlus,
-  Tag,
-} from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
 import type { Image } from '@/types/image';
-import ProgressiveImage from './ProgressiveImage';
-import { imageService } from '@/services/imageService';
-import { useUserStore } from '@/stores/useUserStore';
 import EditImageModal from './EditImageModal';
-import { useImageModal } from './image/hooks/useImageModal';
-import { useInfiniteScroll } from './image/hooks/useInfiniteScroll';
-import { useImageZoom } from './image/hooks/useImageZoom';
-import { ImageModalInfo } from './image/ImageModalInfo';
-import { ImageModalShare } from './image/ImageModalShare';
-import { DownloadSizeSelector, type DownloadSize } from './image/DownloadSizeSelector';
-import { Avatar } from './Avatar';
-import { useFormattedDate } from '@/hooks/useFormattedDate';
-import api from '@/lib/api';
-import { toast } from 'sonner';
 import CollectionModal from './CollectionModal';
-import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
-import { useImageStore } from '@/stores/useImageStore';
-import ReportButton from './ReportButton';
-import { FollowButton } from './FollowButton';
+import { useImageModal } from './image/hooks/useImageModal';
+import { useImageZoom } from './image/hooks/useImageZoom';
+import { useImageModalActions } from './image/hooks/useImageModalActions';
+import { useRelatedImages } from './image/hooks/useRelatedImages';
+import { ImageModalHeader } from './image/ImageModalHeader';
+import { ImageModalContent } from './image/ImageModalContent';
+import { ImageModalSidebar } from './image/ImageModalSidebar';
+import { ImageModalRelated } from './image/ImageModalRelated';
+import { useUserStore } from '@/stores/useUserStore';
 import './ImageModal.css';
 
 interface ImageModalProps {
@@ -59,7 +39,8 @@ const ImageModal = ({
   renderAsPage = false,
 }: ImageModalProps) => {
   const modalContentRef = useRef<HTMLDivElement>(null);
-  
+  const { user } = useUserStore();
+
   // Detect mobile to show author banner on mobile regardless of renderAsPage
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -73,119 +54,31 @@ const ImageModal = ({
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-  const [relatedImagesLimit, setRelatedImagesLimit] = useState(12);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showUserProfileCard, setShowUserProfileCard] = useState(false);
-  const [isClosingProfileCard, setIsClosingProfileCard] = useState(false);
-  const [userImages, setUserImages] = useState<Image[]>([]);
-  const [isLoadingUserImages, setIsLoadingUserImages] = useState(false);
-  const [showCollectionModal, setShowCollectionModal] = useState(false);
-  const userInfoRef = useRef<HTMLDivElement>(null);
-  const userProfileCardRef = useRef<HTMLDivElement>(null);
-  const { user } = useUserStore();
-  const navigate = useNavigate();
 
   // Image zoom functionality
-  const {
-    zoom,
-    pan,
-    isZoomed,
-    containerRef: zoomContainerRef,
-    imageRef: zoomImageRef,
-    zoomIn,
-    zoomOut,
-    resetZoom,
-    handleDoubleClick,
-    handleWheel,
-    handleMouseDown,
-    handleMouseMove,
-    handleMouseUp,
-    handleTouchStart,
-    handleTouchMove,
-    handleTouchEnd,
-  } = useImageZoom({
+  const zoomProps = useImageZoom({
     minZoom: 1,
     maxZoom: 5,
     zoomStep: 0.25,
     doubleClickZoom: 2,
   });
 
-  // Download image with size selection
-  const handleDownloadWithSize = useCallback(async (size: DownloadSize) => {
-    try {
-      if (!image._id) {
-        throw new Error('Lỗi khi lấy ID của ảnh');
-      }
-
-      // Increment download count first
-      try {
-        const response = await imageService.incrementDownload(image._id);
-        // Update downloads count if needed
-        if (onImageSelect) {
-          onImageSelect({
-            ...image,
-            downloads: response.downloads,
-            dailyDownloads: response.dailyDownloads || image.dailyDownloads
-          });
-        }
-      } catch (error) {
-        console.error('Failed to increment download:', error);
-      }
-
-      // Download image with selected size
-      const response = await api.get(`/images/${image._id}/download?size=${size}`, {
-        responseType: 'blob',
-        withCredentials: true,
-      });
-
-      // Create blob URL from response
-      const blob = new Blob([response.data], { type: response.headers['content-type'] || 'image/webp' });
-      const blobUrl = URL.createObjectURL(blob);
-
-      // Create download link
-      const link = document.createElement('a');
-      link.href = blobUrl;
-
-      // Get filename from Content-Disposition header or use default
-      const contentDisposition = response.headers['content-disposition'];
-      let fileName = 'photo.webp';
-      if (contentDisposition) {
-        const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
-        if (fileNameMatch) {
-          fileName = fileNameMatch[1];
-        }
-      } else {
-        // Fallback: generate filename from image title
-        const sanitizedTitle = (image.imageTitle || 'photo').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-        const urlExtension = image.imageUrl?.match(/\.([a-z]+)(?:\?|$)/i)?.[1] || 'webp';
-        fileName = `${sanitizedTitle}.${urlExtension}`;
-      }
-      link.download = fileName;
-
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      // Clean up the blob URL after a short delay
-      setTimeout(() => {
-        URL.revokeObjectURL(blobUrl);
-      }, 100);
-
-      toast.success('Tải ảnh thành công');
-    } catch (error) {
-      console.error('Tải ảnh thất bại:', error);
-      toast.error('Tải ảnh thất bại. Vui lòng thử lại.');
-
-      // Fallback: try opening in new tab if download fails
-      try {
-        if (image.imageUrl) {
-          window.open(image.imageUrl, '_blank');
-        }
-      } catch (fallbackError) {
-        console.error('Lỗi fallback khi tải ảnh:', fallbackError);
-      }
-    }
-  }, [image, onImageSelect]);
+  // Actions hook
+  const {
+    showEditModal,
+    showCollectionModal,
+    handleDownloadWithSize,
+    handleEdit,
+    handleEditClose,
+    handleEditUpdate,
+    handleOpenCollection,
+    handleCollectionClose,
+    handleViewProfile,
+  } = useImageModalActions({
+    image,
+    onImageSelect,
+    onClose,
+  });
 
   // Use the custom hook for modal state and logic
   const {
@@ -207,8 +100,21 @@ const ImageModal = ({
     onDownloadWithSize: handleDownloadWithSize,
   });
 
+  // Related images hook
+  const {
+    relatedImages,
+    hasMoreRelatedImages,
+    isLoadingRelatedImages,
+    loadMoreRef: relatedImagesLoadMoreRef,
+  } = useRelatedImages({
+    image,
+    images,
+    modalContentRef,
+  });
+
   // Add zoom keyboard shortcuts
   useEffect(() => {
+    const { zoom, isZoomed, zoomIn, zoomOut, resetZoom } = zoomProps;
     if (!isZoomed && zoom === 1) return;
 
     const handleKeyboard = (e: KeyboardEvent) => {
@@ -231,7 +137,7 @@ const ImageModal = ({
 
     document.addEventListener('keydown', handleKeyboard);
     return () => document.removeEventListener('keydown', handleKeyboard);
-  }, [isZoomed, zoom, zoomIn, zoomOut, resetZoom]);
+  }, [zoomProps]);
 
   // Lock body scroll when modal is open (only when rendered as modal, not page)
   useEffect(() => {
@@ -422,248 +328,6 @@ const ImageModal = ({
     }
   }, [renderAsPage]);
 
-  // Use the custom hook for formatted date
-  const formattedDate = useFormattedDate(image.createdAt, {
-    locale: 'vi-VN',
-    format: 'long',
-  });
-
-  // Fetch user images when hovering over user info
-  useEffect(() => {
-    if (!showUserProfileCard || !image.uploadedBy._id) return;
-
-    let isMounted = true;
-    setIsLoadingUserImages(true);
-
-    const fetchUserImages = async () => {
-      try {
-        const response = await imageService.fetchUserImages(image.uploadedBy._id, { limit: 3 });
-        if (isMounted) {
-          // Exclude current image from the list
-          const otherImages = (response.images || []).filter(
-            (img: Image) => img._id !== image._id
-          ).slice(0, 3);
-          setUserImages(otherImages);
-        }
-      } catch (error) {
-        console.error('Failed to fetch user images:', error);
-        if (isMounted) {
-          setUserImages([]);
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoadingUserImages(false);
-        }
-      }
-    };
-
-    fetchUserImages();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [showUserProfileCard, image.uploadedBy._id, image._id]);
-
-  // Close user profile card when clicking outside
-  useEffect(() => {
-    if (!showUserProfileCard) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      // Clear hover timeout if any
-      if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current);
-        hoverTimeoutRef.current = null;
-      }
-
-      // Close if click is outside both user info and profile card
-      const isInsideUserInfo = userInfoRef.current?.contains(target);
-      const isInsideProfileCard = userProfileCardRef.current?.contains(target);
-
-      if (!isInsideUserInfo && !isInsideProfileCard) {
-        setIsClosingProfileCard(true);
-        // Wait for fade-out animation before actually hiding
-        setTimeout(() => {
-          setShowUserProfileCard(false);
-          setIsClosingProfileCard(false);
-        }, 250); // Match CSS transition duration
-      }
-    };
-
-    // Add listener immediately - clicks outside should always close
-    document.addEventListener('mousedown', handleClickOutside, true);
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside, true);
-    };
-  }, [showUserProfileCard]);
-
-  // Use a timeout to handle mouse leave with a small delay (to allow moving to the card)
-  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleMouseEnter = useCallback(() => {
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-      hoverTimeoutRef.current = null;
-    }
-    setIsClosingProfileCard(false);
-    setShowUserProfileCard(true);
-  }, []);
-
-  const handleMouseLeave = useCallback(() => {
-    // Add a delay before closing to allow moving to the card
-    // Increased delay for smoother UX
-    hoverTimeoutRef.current = setTimeout(() => {
-      setIsClosingProfileCard(true);
-      // Wait for fade-out animation before actually hiding
-      setTimeout(() => {
-        setShowUserProfileCard(false);
-        setIsClosingProfileCard(false);
-      }, 250); // Match CSS transition duration
-    }, 200);
-  }, []);
-
-  // Handle view profile navigation
-  const handleViewProfile = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    // Clear any pending hover timeout
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-      hoverTimeoutRef.current = null;
-    }
-    // Close card immediately
-    setShowUserProfileCard(false);
-    // Small delay to ensure card is closed before navigation
-    setTimeout(() => {
-      // Navigate to user's profile using username or userId
-      if (image.uploadedBy?.username) {
-        navigate(`/profile/${image.uploadedBy.username}`);
-        onClose(); // Close modal when navigating to profile
-      } else if (image.uploadedBy?._id) {
-        navigate(`/profile/user/${image.uploadedBy._id}`);
-        onClose();
-      }
-    }, 50);
-  }, [navigate, image.uploadedBy, onClose]);
-
-  // Cleanup timeouts on unmount
-  useEffect(() => {
-    return () => {
-      if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Get related images with improved algorithm (same photographer, location, category, title similarity)
-  const { relatedImages, hasMoreRelatedImages } = useMemo(() => {
-    if (!image || images.length === 0) {
-      return { relatedImages: [], hasMoreRelatedImages: false };
-    }
-
-    // Get current image properties
-    const currentCategoryId = typeof image.imageCategory === 'string'
-      ? image.imageCategory
-      : image.imageCategory?._id;
-    const currentPhotographerId = image.uploadedBy?._id || image.uploadedBy;
-    const currentLocation = image.location?.toLowerCase().trim();
-    const currentTitle = image.imageTitle?.toLowerCase().trim() || '';
-
-    // Calculate relevance score for each image
-    const scoredImages = images
-      .filter(img => img._id !== image._id) // Exclude current image
-      .map(img => {
-        let score = 0;
-        const reasons: string[] = []; // Track why images are related (for debugging)
-
-        // Same photographer (highest priority - 100 points)
-        const imgPhotographerId = img.uploadedBy?._id || img.uploadedBy;
-        if (currentPhotographerId && imgPhotographerId &&
-          String(currentPhotographerId) === String(imgPhotographerId)) {
-          score += 100;
-          reasons.push('same photographer');
-        }
-
-        // Same location (high priority - 50 points)
-        const imgLocation = img.location?.toLowerCase().trim();
-        if (currentLocation && imgLocation && currentLocation === imgLocation) {
-          score += 50;
-          reasons.push('same location');
-        }
-
-        // Same category (medium priority - 30 points, but only if we have other matches)
-        const imgCategoryId = typeof img.imageCategory === 'string'
-          ? img.imageCategory
-          : img.imageCategory?._id;
-        if (currentCategoryId && imgCategoryId &&
-          String(currentCategoryId) === String(imgCategoryId)) {
-          score += 30;
-          reasons.push('same category');
-        }
-
-        // Title similarity (low priority - up to 20 points)
-        const imgTitle = img.imageTitle?.toLowerCase().trim() || '';
-        if (currentTitle && imgTitle) {
-          // Check for common words
-          const currentWords = currentTitle.split(/\s+/).filter(w => w.length > 2);
-          const imgWords = imgTitle.split(/\s+/).filter(w => w.length > 2);
-          const commonWords = currentWords.filter(w => imgWords.includes(w));
-          if (commonWords.length > 0) {
-            score += Math.min(commonWords.length * 5, 20);
-            reasons.push(`title similarity (${commonWords.length} words)`);
-          }
-        }
-
-        return { image: img, score, reasons };
-      })
-      // Require minimum score threshold - only show images with meaningful relevance
-      // Minimum 30 points means: same category OR same location OR title similarity + category
-      // This prevents showing completely unrelated images while still showing category matches
-      .filter(item => item.score >= 30)
-      .sort((a, b) => b.score - a.score) // Sort by score descending
-      .map(item => item.image); // Extract just the images
-
-    // Use scored images if we have any matches
-    // Prioritize higher-scored images (same photographer, location) over category-only matches
-    let filtered: Image[];
-    if (scoredImages.length > 0) {
-      // If we have highly relevant images (score >= 50), prioritize those
-      // Otherwise, show category matches (score >= 30) which are still somewhat relevant
-      filtered = scoredImages;
-    } else {
-      // If no matches at all, don't show related images
-      filtered = [];
-    }
-
-    // Return limited images for infinite scroll and check if more available
-    return {
-      relatedImages: filtered.slice(0, relatedImagesLimit),
-      hasMoreRelatedImages: filtered.length > relatedImagesLimit,
-    };
-  }, [image, images, relatedImagesLimit]);
-
-  // State for tracking loading status separately to avoid circular dependency
-  const [isLoadingRelatedImages, setIsLoadingRelatedImages] = useState(false);
-
-  // Load more related images handler
-  const handleLoadMoreRelatedImages = useCallback(async () => {
-    setIsLoadingRelatedImages(true);
-    setRelatedImagesLimit(prev => prev + 12);
-    // Reset loading state after a delay
-    setTimeout(() => setIsLoadingRelatedImages(false), 300);
-  }, []);
-
-  // Infinite scroll for related images (modal content scrolling)
-  const { loadMoreRef: relatedImagesLoadMoreRef } = useInfiniteScroll({
-    hasMore: hasMoreRelatedImages,
-    isLoading: isLoadingRelatedImages,
-    onLoadMore: handleLoadMoreRelatedImages,
-    root: modalContentRef.current,
-    rootMargin: '200px',
-    delay: 300,
-  });
-
   return (
     <>
       {!renderAsPage && (
@@ -691,277 +355,21 @@ const ImageModal = ({
           }
         }}
       >
-        {/* Modal Header - Desktop only (show on desktop modal mode, hide on mobile) */}
-        {!isMobile && !renderAsPage && (
-          <div className="image-modal-header">
-            {/* Left: User Info */}
-            <div
-              className="modal-header-left clickable-user-info"
-              ref={userInfoRef}
-              onMouseEnter={handleMouseEnter}
-              onMouseLeave={handleMouseLeave}
-              onClick={() => {
-                if (image.uploadedBy?.username) {
-                  navigate(`/profile/${image.uploadedBy.username}`);
-                  onClose(); // Close modal when navigating to profile
-                } else if (image.uploadedBy?._id) {
-                  navigate(`/profile/user/${image.uploadedBy._id}`);
-                  onClose();
-                }
-              }}
-              style={{ position: 'relative', cursor: 'pointer', willChange: 'opacity' }}
-              title="Xem hồ sơ"
-            >
-              <Avatar
-                user={image.uploadedBy}
-                size={40}
-                className="modal-user-avatar"
-                fallbackClassName="modal-user-avatar-placeholder"
-              />
-              <div className="modal-user-info">
-                <div
-                  className="modal-user-name hoverable"
-                  style={{ cursor: 'pointer' }}
-                >
-                  {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}
-                  <CheckCircle2 className="verified-badge" size={16} />
-                </div>
-                <div className="modal-user-status">Sẵn sàng nhận việc</div>
-              </div>
-
-              {/* User Profile Card */}
-              {showUserProfileCard && (
-                <div
-                  ref={userProfileCardRef}
-                  className={`user-profile-card ${isClosingProfileCard ? 'closing' : ''}`}
-                  onMouseEnter={handleMouseEnter}
-                  onMouseLeave={handleMouseLeave}
-                >
-                  <div className="user-profile-card-header">
-                    <div className="user-profile-card-avatar-section">
-                      <Avatar
-                        user={image.uploadedBy}
-                        size={48}
-                        className="user-profile-card-avatar"
-                        fallbackClassName="user-profile-card-avatar-placeholder"
-                      />
-                      <div className="user-profile-card-name-section">
-                        <div className="user-profile-card-name">
-                          {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}
-                        </div>
-                        <div className="user-profile-card-username">{image.uploadedBy.username}</div>
-                      </div>
-                    </div>
-                    {user && user._id !== image.uploadedBy._id && (
-                      <div className="user-profile-card-follow">
-                        <FollowButton
-                          userId={image.uploadedBy._id}
-                          userDisplayName={image.uploadedBy.displayName || image.uploadedBy.username}
-                          variant="default"
-                          size="sm"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  {isLoadingUserImages && userImages.length === 0 ? (
-                    <div className="user-profile-card-loading">
-                      <div className="loading-spinner-small" />
-                    </div>
-                  ) : userImages.length > 0 ? (
-                    <div className="user-profile-card-images">
-                      {userImages.map((userImage) => (
-                        <div
-                          key={userImage._id}
-                          className="user-profile-card-image-item"
-                          onClick={() => {
-                            setShowUserProfileCard(false);
-                            onImageSelect(userImage);
-                            // Scroll to top instantly to show the new image (like Unsplash)
-                            if (modalContentRef.current) {
-                              modalContentRef.current.scrollTo({ top: 0, behavior: 'auto' });
-                            }
-                          }}
-                        >
-                          <img
-                            src={userImage.thumbnailUrl || userImage.smallUrl || userImage.imageUrl}
-                            alt={userImage.imageTitle || 'Photo'}
-                            loading="lazy"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-
-                  <button
-                    className="user-profile-card-view-btn"
-                    onClick={handleViewProfile}
-                  >
-                    Xem hồ sơ
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Right: Download Button and Close Button */}
-            <div className="modal-header-right">
-              <DownloadSizeSelector
-                image={image}
-                onDownload={handleDownloadWithSize}
-              />
-              <button
-                className="modal-close-btn-header"
-                onClick={onClose}
-                title="Đóng (Esc)"
-                aria-label="Đóng"
-              >
-                <X size={20} />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Author Banner - Mobile always, Desktop when in page mode (like Unsplash) */}
-        {(isMobile || renderAsPage) && (
-          <div className="image-modal-author-banner">
-            <div
-              className="modal-author-banner-left clickable-user-info"
-              ref={userInfoRef}
-              onMouseEnter={handleMouseEnter}
-              onMouseLeave={handleMouseLeave}
-              onClick={() => {
-                if (image.uploadedBy?.username) {
-                  navigate(`/profile/${image.uploadedBy.username}`);
-                  onClose();
-                } else if (image.uploadedBy?._id) {
-                  navigate(`/profile/user/${image.uploadedBy._id}`);
-                  onClose();
-                }
-              }}
-              style={{ position: 'relative', cursor: 'pointer', willChange: 'opacity' }}
-              title="Xem hồ sơ"
-            >
-              <Avatar
-                user={image.uploadedBy}
-                size={40}
-                className="modal-user-avatar"
-                fallbackClassName="modal-user-avatar-placeholder"
-              />
-              <div className="modal-user-info">
-                <div
-                  className="modal-user-name hoverable"
-                  style={{ cursor: 'pointer' }}
-                >
-                  {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}
-                  <CheckCircle2 className="verified-badge" size={16} />
-                </div>
-                <div className="modal-user-status">Sẵn sàng nhận việc</div>
-              </div>
-
-              {/* User Profile Card */}
-              {showUserProfileCard && (
-                <div
-                  ref={userProfileCardRef}
-                  className={`user-profile-card ${isClosingProfileCard ? 'closing' : ''}`}
-                  onMouseEnter={handleMouseEnter}
-                  onMouseLeave={handleMouseLeave}
-                >
-                  <div className="user-profile-card-header">
-                    <div className="user-profile-card-avatar-section">
-                      <Avatar
-                        user={image.uploadedBy}
-                        size={48}
-                        className="user-profile-card-avatar"
-                        fallbackClassName="user-profile-card-avatar-placeholder"
-                      />
-                      <div className="user-profile-card-name-section">
-                        <div className="user-profile-card-name">
-                          {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}
-                        </div>
-                        <div className="user-profile-card-username">{image.uploadedBy.username}</div>
-                      </div>
-                    </div>
-                    {user && user._id !== image.uploadedBy._id && (
-                      <div className="user-profile-card-follow">
-                        <FollowButton
-                          userId={image.uploadedBy._id}
-                          userDisplayName={image.uploadedBy.displayName || image.uploadedBy.username}
-                          variant="default"
-                          size="sm"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  {isLoadingUserImages && userImages.length === 0 ? (
-                    <div className="user-profile-card-loading">
-                      <div className="loading-spinner-small" />
-                    </div>
-                  ) : userImages.length > 0 ? (
-                    <div className="user-profile-card-images">
-                      {userImages.map((userImage) => (
-                        <div
-                          key={userImage._id}
-                          className="user-profile-card-image-item"
-                          onClick={() => {
-                            setShowUserProfileCard(false);
-                            onImageSelect(userImage);
-                            if (modalContentRef.current) {
-                              modalContentRef.current.scrollTo({ top: 0, behavior: 'auto' });
-                            }
-                          }}
-                        >
-                          <img
-                            src={userImage.thumbnailUrl || userImage.smallUrl || userImage.imageUrl}
-                            alt={userImage.imageTitle || 'Photo'}
-                            loading="lazy"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-
-                  <button
-                    className="user-profile-card-view-btn"
-                    onClick={handleViewProfile}
-                  >
-                    Xem hồ sơ
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className="modal-author-banner-right">
-              <button
-                className="modal-action-btn"
-                onClick={() => {
-                  // Toggle favorite
-                  handleToggleFavorite();
-                }}
-                title={isFavorited ? 'Bỏ yêu thích' : 'Yêu thích'}
-                aria-label={isFavorited ? 'Bỏ yêu thích' : 'Yêu thích'}
-              >
-                <Heart
-                  size={20}
-                  fill={isFavorited ? 'currentColor' : 'none'}
-                  className={isFavorited ? 'favorite-icon-filled' : ''}
-                />
-              </button>
-              <button
-                className="modal-action-btn"
-                onClick={() => setShowCollectionModal(true)}
-                title="Thêm vào bộ sưu tập"
-                aria-label="Thêm vào bộ sưu tập"
-              >
-                <FolderPlus size={20} />
-              </button>
-              <DownloadSizeSelector
-                image={image}
-                onDownload={handleDownloadWithSize}
-              />
-            </div>
-          </div>
-        )}
+        {/* Modal Header */}
+        <ImageModalHeader
+          image={image}
+          user={user}
+          isMobile={isMobile}
+          renderAsPage={renderAsPage}
+          isFavorited={isFavorited}
+          handleToggleFavorite={handleToggleFavorite}
+          handleDownloadWithSize={handleDownloadWithSize}
+          handleViewProfile={handleViewProfile}
+          handleOpenCollection={handleOpenCollection}
+          onClose={onClose}
+          modalContentRef={modalContentRef}
+          onImageSelect={onImageSelect}
+        />
 
         {/* Modal Image Content - Scrollable */}
         <div
@@ -969,363 +377,43 @@ const ImageModal = ({
           ref={modalContentRef}
         >
           {/* Main Image with Zoom */}
-          <div
-            className="modal-main-image-container"
-            ref={zoomContainerRef}
-            onWheel={handleWheel}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            style={{
-              cursor: isZoomed ? (zoom > 1 ? 'grab' : 'default') : 'zoom-in',
-              userSelect: 'none',
-              touchAction: 'none',
-            }}
-          >
-            <div
-              className="modal-image-wrapper"
-              style={{
-                transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-                transformOrigin: 'center center',
-                transition: zoom === 1 ? 'transform 0.3s ease' : 'none',
-              }}
-            >
-              {image.imageAvifUrl || image.regularAvifUrl || image.smallAvifUrl || image.thumbnailAvifUrl ? (
-                <picture>
-                  {/* AVIF sources with responsive sizes */}
-                  <source
-                    srcSet={
-                      image.thumbnailAvifUrl && image.smallAvifUrl && image.regularAvifUrl && image.imageAvifUrl
-                        ? `${image.thumbnailAvifUrl} 200w, ${image.smallAvifUrl} 800w, ${image.regularAvifUrl} 1080w, ${image.imageAvifUrl} 1920w`
-                        : image.regularAvifUrl || image.imageAvifUrl || ''
-                    }
-                    type="image/avif"
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 98vw, 1920px"
-                  />
-                  {/* WebP sources with responsive sizes (fallback) */}
-                  <source
-                    srcSet={
-                      image.thumbnailUrl && image.smallUrl && image.regularUrl && image.imageUrl
-                        ? `${image.thumbnailUrl} 200w, ${image.smallUrl} 800w, ${image.regularUrl} 1080w, ${image.imageUrl} 1920w`
-                        : undefined
-                    }
-                    type="image/webp"
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 98vw, 1920px"
-                  />
-                  {/* Fallback img element with blur-up technique */}
-                  <img
-                    ref={zoomImageRef}
-                    src={modalImageSrc || image.regularUrl || image.smallUrl || image.imageUrl}
-                    alt={image.imageTitle || 'Photo'}
-                    style={{
-                      backgroundImage: modalPlaceholderSrc
-                        ? `url("${modalPlaceholderSrc}")`
-                        : undefined,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                      backgroundColor: '#f0f0f0', // Fallback color while placeholder loads
-                    }}
-                    className={`modal-image ${isModalImageLoaded ? 'loaded' : 'loading'} ${(imageTypes.get(image._id) || 'landscape') === 'landscape' ? 'landscape' : 'portrait'}`}
-                    loading="eager"
-                    decoding="async"
-                    fetchPriority="high"
-                    crossOrigin="anonymous"
-                    onDoubleClick={handleDoubleClick}
-                    draggable={false}
-                    onLoad={(e) => {
-                      setIsModalImageLoaded(true);
-                      // Update class if orientation was misdetected
-                      const img = e.currentTarget;
-                      const isPortraitImg = img.naturalHeight > img.naturalWidth;
-                      const currentType = imageTypes.get(image._id) || 'landscape';
-                      const shouldBePortrait = isPortraitImg;
-                      if (shouldBePortrait !== (currentType === 'portrait')) {
-                        img.classList.toggle('landscape', !shouldBePortrait);
-                        img.classList.toggle('portrait', shouldBePortrait);
-                      }
-                    }}
-                  />
-                </picture>
-              ) : (
-                <img
-                  ref={zoomImageRef}
-                  src={modalImageSrc || image.regularUrl || image.smallUrl || image.imageUrl}
-                  srcSet={
-                    image.thumbnailUrl && image.smallUrl && image.regularUrl && image.imageUrl
-                      ? `${image.thumbnailUrl} 200w, ${image.smallUrl} 800w, ${image.regularUrl} 1080w, ${image.imageUrl} 1920w`
-                      : undefined
-                  }
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 98vw, 1920px"
-                  alt={image.imageTitle || 'Photo'}
-                  style={{
-                    backgroundImage: modalPlaceholderSrc
-                      ? `url("${modalPlaceholderSrc}")`
-                      : undefined,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    backgroundColor: '#f0f0f0', // Fallback color while placeholder loads
-                  }}
-                  className={`modal-image ${isModalImageLoaded ? 'loaded' : 'loading'} ${(imageTypes.get(image._id) || 'landscape') === 'landscape' ? 'landscape' : 'portrait'}`}
-                  loading="eager"
-                  decoding="async"
-                  fetchPriority="high"
-                  crossOrigin="anonymous"
-                  onDoubleClick={handleDoubleClick}
-                  draggable={false}
-                  onLoad={(e) => {
-                    setIsModalImageLoaded(true);
-                    // Update class if orientation was misdetected
-                    const img = e.currentTarget;
-                    const isPortraitImg = img.naturalHeight > img.naturalWidth;
-                    const currentType = imageTypes.get(image._id) || 'landscape';
-                    const shouldBePortrait = isPortraitImg;
-                    if (shouldBePortrait !== (currentType === 'portrait')) {
-                      img.classList.toggle('landscape', !shouldBePortrait);
-                      img.classList.toggle('portrait', shouldBePortrait);
-                    }
-                  }}
-                />
-              )}
-            </div>
+          <ImageModalContent
+            image={image}
+            imageTypes={imageTypes}
+            modalImageSrc={modalImageSrc}
+            modalPlaceholderSrc={modalPlaceholderSrc}
+            isModalImageLoaded={isModalImageLoaded}
+            setIsModalImageLoaded={setIsModalImageLoaded}
+            zoomProps={zoomProps}
+          />
 
-            {/* Zoom Controls */}
-            {isZoomed && (
-              <div className="modal-zoom-controls">
-                <button
-                  className="modal-zoom-btn"
-                  onClick={zoomOut}
-                  title="Thu nhỏ"
-                  aria-label="Thu nhỏ"
-                >
-                  <ZoomOut size={18} />
-                </button>
-                <span className="modal-zoom-level">{Math.round(zoom * 100)}%</span>
-                <button
-                  className="modal-zoom-btn"
-                  onClick={zoomIn}
-                  disabled={zoom >= 5}
-                  title="Phóng to"
-                  aria-label="Phóng to"
-                >
-                  <ZoomIn size={18} />
-                </button>
-                <button
-                  className="modal-zoom-btn"
-                  onClick={resetZoom}
-                  title="Đặt lại (Esc)"
-                  aria-label="Đặt lại zoom"
-                >
-                  <RotateCcw size={18} />
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Modal Footer */}
-          <div className="image-modal-footer">
-            {/* Left: Stats */}
-            <div className="modal-footer-left">
-              <div className="modal-footer-left-stats">
-                <div className="modal-stat">
-                  <span className="stat-label">Lượt xem</span>
-                  <span className="stat-value">{views.toLocaleString()}</span>
-                </div>
-                <div className="modal-stat">
-                  <span className="stat-label">Lượt tải</span>
-                  <span className="stat-value">{downloads.toLocaleString()}</span>
-                </div>
-              </div>
-              {/* Image Info */}
-              <div className="modal-image-info">
-                {image.imageTitle && (
-                  <div className="image-info-title">{image.imageTitle}</div>
-                )}
-                {(image.location || image.cameraModel) && (
-                  <div className="image-info-details">
-                    {image.location && (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <MapPin size={14} style={{ flexShrink: 0 }} />
-                        {image.coordinates ? (
-                          <a
-                            href={`https://www.google.com/maps?q=${image.coordinates.latitude},${image.coordinates.longitude}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              color: 'inherit',
-                              textDecoration: 'none',
-                              transition: 'opacity 0.2s',
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
-                            onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-                            title="Xem trên Google Maps"
-                          >
-                            {image.location}
-                            <ExternalLink size={12} style={{ flexShrink: 0, opacity: 0.7 }} />
-                          </a>
-                        ) : (
-                          <span>{image.location}</span>
-                        )}
-                      </span>
-                    )}
-                    {image.location && image.cameraModel && <span> • </span>}
-                    {image.cameraModel && <span>{image.cameraModel}</span>}
-                  </div>
-                )}
-                {formattedDate && (
-                  <div className="image-info-date">
-                    {formattedDate}
-                  </div>
-                )}
-                {/* Debug: Uncomment to check tags in console */}
-                {/* {console.log('Image tags debug:', image.tags, 'Type:', typeof image.tags, 'Is Array:', Array.isArray(image.tags))} */}
-                {image.tags && Array.isArray(image.tags) && image.tags.length > 0 && (
-                  <div className="image-info-tags">
-                    <div className="image-info-tags-list">
-                      {image.tags.map((tag, index) => (
-                        <button
-                          key={index}
-                          type="button"
-                          className="image-info-tag"
-                          onClick={() => {
-                            onClose();
-                            navigate('/');
-                            setTimeout(() => {
-                              useImageStore.getState().fetchImages({ tag });
-                            }, 100);
-                          }}
-                          title={`Tìm kiếm: ${tag}`}
-                        >
-                          <Tag size={12} />
-                          {tag}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Right: Actions */}
-            <div className="modal-footer-right">
-              {user && (
-                <button
-                  className={`modal-footer-btn ${isFavorited ? 'favorited' : ''}`}
-                  onClick={handleToggleFavorite}
-                  disabled={isTogglingFavorite}
-                  aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-                  title={`${isFavorited ? 'Bỏ yêu thích' : 'Yêu thích'} (F)`}
-                >
-                  <Heart
-                    size={18}
-                    fill={isFavorited ? 'currentColor' : 'none'}
-                    className={isFavorited ? 'favorite-icon-filled' : ''}
-                  />
-                  <span>{isFavorited ? 'Đã lưu' : 'Lưu'}</span>
-                  <kbd className="keyboard-hint">F</kbd>
-                </button>
-              )}
-              {user && (
-                <button
-                  className="modal-footer-btn"
-                  onClick={() => setShowCollectionModal(true)}
-                  aria-label="Save to collection"
-                  title="Lưu vào bộ sưu tập"
-                >
-                  <FolderPlus size={18} />
-                  <span>Bộ sưu tập</span>
-                </button>
-              )}
-              <ImageModalShare image={image} />
-              <ImageModalInfo
-                image={image}
-              />
-              {user && user._id !== image.uploadedBy._id && (
-                <ReportButton
-                  type="image"
-                  targetId={image._id}
-                  targetName={image.imageTitle}
-                  className="modal-footer-btn"
-                />
-              )}
-              {user && (user._id === image.uploadedBy._id || user.isAdmin || user.isSuperAdmin) && (
-                <button
-                  className="modal-footer-btn"
-                  onClick={() => setShowEditModal(true)}
-                  aria-label="Edit image"
-                  title="Edit image"
-                >
-                  <Edit2 size={18} />
-                </button>
-              )}
-            </div>
-          </div>
+          {/* Modal Footer / Sidebar */}
+          <ImageModalSidebar
+            image={image}
+            views={views}
+            downloads={downloads}
+            isFavorited={isFavorited}
+            isTogglingFavorite={isTogglingFavorite}
+            user={user}
+            handleToggleFavorite={handleToggleFavorite}
+            handleOpenCollection={handleOpenCollection}
+            handleEdit={handleEdit}
+            onClose={onClose}
+          />
 
           {/* Related Images Section */}
-          <div className="modal-related-images">
-            <h3 className="related-images-title">Các ảnh cùng chủ đề</h3>
-            {relatedImages.length > 0 ? (
-              <>
-                <div className="related-images-grid">
-                  {relatedImages.map((relatedImage) => {
-                    const imageType = imageTypes.get(relatedImage._id) || 'landscape';
-                    return (
-                      <div
-                        key={relatedImage._id}
-                        className={`related-image-item ${imageType}`}
-                        onClick={() => {
-                          onImageSelect(relatedImage);
-                          // Scroll to top instantly to show the new image (like Unsplash)
-                          if (modalContentRef.current) {
-                            modalContentRef.current.scrollTo({ top: 0, behavior: 'auto' });
-                          }
-                        }}
-                      >
-                        <ProgressiveImage
-                          src={relatedImage.imageUrl}
-                          thumbnailUrl={relatedImage.thumbnailUrl}
-                          smallUrl={relatedImage.smallUrl}
-                          regularUrl={relatedImage.regularUrl}
-                          alt={relatedImage.imageTitle || 'Photo'}
-                          onLoad={(img) => {
-                            if (!processedImages.current.has(relatedImage._id) && currentImageIds.has(relatedImage._id)) {
-                              onImageLoad(relatedImage._id, img);
-                            }
-                          }}
-                        />
-                        <div className="related-image-overlay">
-                          <span className="related-image-title">{relatedImage.imageTitle}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                {/* Infinite scroll trigger for related images */}
-                {hasMoreRelatedImages && (
-                  <div ref={relatedImagesLoadMoreRef} className="related-images-load-more-trigger" />
-                )}
-                {isLoadingRelatedImages && (
-                  <div className="related-images-loading">
-                    <div className="loading-spinner" />
-                    <p>Đang tải ảnh...</p>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="related-images-empty">
-                <div className="related-images-empty-icon">
-                  <ImageOff size={48} />
-                </div>
-                <p className="related-images-empty-text">Không có ảnh liên quan</p>
-              </div>
-            )}
-          </div>
+          <ImageModalRelated
+            relatedImages={relatedImages}
+            hasMoreRelatedImages={hasMoreRelatedImages}
+            isLoadingRelatedImages={isLoadingRelatedImages}
+            imageTypes={imageTypes}
+            currentImageIds={currentImageIds}
+            processedImages={processedImages}
+            onImageSelect={onImageSelect}
+            onImageLoad={onImageLoad}
+            modalContentRef={modalContentRef}
+            loadMoreRef={relatedImagesLoadMoreRef}
+          />
         </div>
       </div>
 
@@ -1333,17 +421,14 @@ const ImageModal = ({
       <EditImageModal
         image={image}
         isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        onUpdate={(updatedImage) => {
-          onImageSelect(updatedImage);
-          setShowEditModal(false);
-        }}
+        onClose={handleEditClose}
+        onUpdate={handleEditUpdate}
       />
 
       {/* Collection Modal */}
       <CollectionModal
         isOpen={showCollectionModal}
-        onClose={() => setShowCollectionModal(false)}
+        onClose={handleCollectionClose}
         imageId={image._id}
         onCollectionUpdate={() => {
           // Optionally refresh data if needed
