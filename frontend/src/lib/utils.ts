@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
-export function cn(...inputs: ClassValue[]) {
+export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs))
 }
 
@@ -38,7 +38,7 @@ function vietnameseToASCII(str: string): string {
     'Đ': 'D',
   };
 
-  return str.replace(/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ]/g, (char) => vietnameseMap[char] || char);
+  return str.replace(/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ]/g, (char) => vietnameseMap[char] ?? char);
 }
 
 /**
@@ -77,7 +77,7 @@ export function generateImageSlug(imageTitle: string, imageId: string): string {
 export function extractIdFromSlug(slug: string): string {
   // Extract the last part after the last hyphen (the short ID)
   const parts = slug.split('-');
-  return parts[parts.length - 1] || '';
+  return parts[parts.length - 1] ?? '';
 }
 
 /**
@@ -90,7 +90,7 @@ export function getErrorMessage(error: unknown, defaultMessage: string = 'An err
   }
   if (typeof error === 'object' && error !== null) {
     const axiosError = error as { response?: { data?: { message?: string } }; message?: string };
-    return axiosError.response?.data?.message || axiosError.message || defaultMessage;
+    return axiosError.response?.data?.message ?? axiosError.message ?? defaultMessage;
   }
   return defaultMessage;
 }

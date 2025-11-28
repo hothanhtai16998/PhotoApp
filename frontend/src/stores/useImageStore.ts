@@ -351,11 +351,11 @@ export const useImageStore = create(
 
         // Debug: Log if image was actually removed from current store
         if (beforeCount === afterCount) {
-          console.log(
+          console.warn(
             `Image ${imageId} not in current store, but added to deleted list to prevent future fetches`
           );
         } else {
-          console.log(
+          console.warn(
             `Successfully removed image ${imageId} from store. Count: ${beforeCount} -> ${afterCount}`
           );
         }

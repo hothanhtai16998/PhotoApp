@@ -33,7 +33,7 @@ export async function compressImage(
 				file,
 				compressionOptions
 			);
-			console.log(
+			console.warn(
 				`Image compressed: ${(file.size / 1024 / 1024).toFixed(2)}MB -> ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`
 			);
 			return compressedFile;

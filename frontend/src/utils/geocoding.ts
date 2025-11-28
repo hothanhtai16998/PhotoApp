@@ -39,7 +39,7 @@ export async function reverseGeocode(
 
 		const data = await response.json();
 
-		if (!data || !data.address) {
+		if (!data?.address) {
 			return { location: null, error: 'No address found' };
 		}
 

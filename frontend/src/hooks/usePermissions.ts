@@ -5,7 +5,14 @@ import type { AdminRolePermissions } from '@/services/adminService';
  * Hook to check user permissions
  * Returns functions to check if user has specific permissions
  */
-export function usePermissions() {
+export function usePermissions(): {
+  hasPermission: (permission: keyof AdminRolePermissions) => boolean;
+  hasAnyPermission: (permissions: Array<keyof AdminRolePermissions>) => boolean;
+  hasAllPermissions: (permissions: Array<keyof AdminRolePermissions>) => boolean;
+  isAdmin: () => boolean;
+  isSuperAdmin: () => boolean;
+  permissions: AdminRolePermissions | null;
+} {
     const user = useUserStore((state) => state.user);
 
     /**
@@ -59,7 +66,7 @@ export function usePermissions() {
         hasAllPermissions,
         isAdmin,
         isSuperAdmin,
-        permissions: user?.permissions || null,
+        permissions: user?.permissions ?? null,
     };
 }
 

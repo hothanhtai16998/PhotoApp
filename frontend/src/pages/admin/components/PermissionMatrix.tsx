@@ -1,6 +1,5 @@
 import { usePermissions } from '@/hooks/usePermissions';
-import { PermissionBadge } from './PermissionBadge';
-import { RoleBadge } from './PermissionBadge';
+import { PermissionBadge, RoleBadge } from './PermissionBadge';
 import { useUserStore } from '@/stores/useUserStore';
 
 /**

@@ -66,7 +66,7 @@ export const useCollectionDetail = () => {
 
   // Get current cover image ID
   const coverImageId = useMemo(() => {
-    if (!collection || !collection.coverImage) return null;
+    if (!collection?.coverImage) return null;
     return typeof collection.coverImage === 'object'
       ? collection.coverImage._id
       : collection.coverImage;

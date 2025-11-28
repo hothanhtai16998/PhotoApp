@@ -70,7 +70,7 @@ export default function CollectionsPage() {
 					const collectionIds = currentCollections.map((c) => c._id).filter(Boolean) as string[];
 					await checkFavorites(collectionIds);
 				}
-			} catch (error) {
+			} catch (_error) {
 				// Error already handled in store
 			}
 		};
@@ -137,7 +137,7 @@ export default function CollectionsPage() {
 					? 'Đã công khai bộ sưu tập' 
 					: 'Đã ẩn bộ sưu tập'
 			);
-		} catch (error) {
+		} catch (_error) {
 			// Error already handled in store
 		}
 	};
@@ -145,7 +145,7 @@ export default function CollectionsPage() {
 	const handleSaveAsTemplate = async (e: React.MouseEvent, collection: Collection) => {
 		e.stopPropagation();
 		const templateName = prompt(`Nhập tên mẫu cho "${collection.name}":`, collection.name);
-		if (!templateName || !templateName.trim()) {
+		if (!templateName?.trim()) {
 			return;
 		}
 

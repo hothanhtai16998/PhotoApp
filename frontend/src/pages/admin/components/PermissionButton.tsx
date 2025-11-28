@@ -1,5 +1,4 @@
-import { Button } from '@/components/ui/button';
-import type { ButtonProps } from '@/components/ui/button';
+import { Button, type ButtonProps } from '@/components/ui/button';
 import { usePermissions } from '@/hooks/usePermissions';
 import { PermissionTooltip } from './PermissionTooltip';
 import type { ReactNode } from 'react';

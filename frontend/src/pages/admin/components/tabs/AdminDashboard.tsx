@@ -1,5 +1,4 @@
-import type { DashboardStats } from '@/services/adminService';
-import { adminService } from '@/services/adminService';
+import { adminService, type DashboardStats } from '@/services/adminService';
 import { useFormattedDate } from '@/hooks/useFormattedDate';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useState } from 'react';

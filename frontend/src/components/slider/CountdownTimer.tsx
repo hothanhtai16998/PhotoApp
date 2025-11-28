@@ -8,10 +8,9 @@ interface CountdownTimerProps {
 
 export function CountdownTimer({ progress, totalDuration }: CountdownTimerProps) {
   const [seconds, setSeconds] = useState(6);
-  const [, setPrevSeconds] = useState(6);
   const [isFlipping, setIsFlipping] = useState(false);
   const flipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const prevProgressRef = useRef(0);
+  const prevSecondsRef = useRef(6);
 
   useEffect(() => {
     // Calculate remaining seconds from progress
@@ -20,21 +19,24 @@ export function CountdownTimer({ progress, totalDuration }: CountdownTimerProps)
     const newSeconds = Math.max(0, Math.min(6, Math.ceil(remainingTime)));
     
     // Only trigger flip if seconds actually changed
-    if (newSeconds !== seconds) {
-      setPrevSeconds(seconds);
-      setSeconds(newSeconds);
-      setIsFlipping(true);
+    if (newSeconds !== prevSecondsRef.current) {
+      // Store previous value before updating
+      prevSecondsRef.current = newSeconds;
       
-      // Reset flip animation after it completes
-      if (flipTimeoutRef.current) {
-        clearTimeout(flipTimeoutRef.current);
-      }
-      flipTimeoutRef.current = setTimeout(() => {
-        setIsFlipping(false);
-      }, 600); // Match CSS animation duration
+      // Use requestAnimationFrame to avoid synchronous setState in effect
+      requestAnimationFrame(() => {
+        setSeconds(newSeconds);
+        setIsFlipping(true);
+        
+        // Reset flip animation after it completes
+        if (flipTimeoutRef.current) {
+          clearTimeout(flipTimeoutRef.current);
+        }
+        flipTimeoutRef.current = setTimeout(() => {
+          setIsFlipping(false);
+        }, 600); // Match CSS animation duration
+      });
     }
-    
-    prevProgressRef.current = progress;
   }, [progress, totalDuration]);
 
   // For countdown 0-6, we only need to show a single digit

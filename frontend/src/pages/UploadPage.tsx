@@ -8,12 +8,11 @@ import { useImageStore } from '@/stores/useImageStore';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { Upload, TrendingUp } from 'lucide-react';
-import type { Image } from '@/types/image';
+import type { Image, PreUploadResponse, FinalizeImageData } from '@/types/image';
 import { compressImage } from '@/utils/imageCompression';
 import { getErrorMessage } from '@/lib/utils';
 import { toast } from 'sonner';
 import { imageService } from '@/services/imageService';
-import type { PreUploadResponse, FinalizeImageData } from '@/types/image';
 import { uploadSchema, type UploadFormValues } from '@/types/forms';
 import './UploadPage.css';
 

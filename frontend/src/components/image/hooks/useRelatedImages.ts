@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import type { Image } from '@/types/image';
 import { useInfiniteScroll } from './useInfiniteScroll';
 
@@ -15,6 +15,7 @@ export const useRelatedImages = ({
 }: UseRelatedImagesProps) => {
   const [relatedImagesLimit, setRelatedImagesLimit] = useState(12);
   const [isLoadingRelatedImages, setIsLoadingRelatedImages] = useState(false);
+  const [rootElement, setRootElement] = useState<HTMLDivElement | null>(null);
 
   // Get related images with improved algorithm (same photographer, location, category, title similarity)
   const { relatedImages, hasMoreRelatedImages } = useMemo(() => {
@@ -111,12 +112,17 @@ export const useRelatedImages = ({
     setTimeout(() => setIsLoadingRelatedImages(false), 300);
   }, []);
 
+  // Update root element when ref becomes available (avoid accessing ref during render)
+  useEffect(() => {
+    setRootElement(modalContentRef.current);
+  }, [modalContentRef]);
+
   // Infinite scroll for related images (modal content scrolling)
   const { loadMoreRef } = useInfiniteScroll({
     hasMore: hasMoreRelatedImages,
     isLoading: isLoadingRelatedImages,
     onLoadMore: handleLoadMoreRelatedImages,
-    root: modalContentRef.current,
+    root: rootElement,
     rootMargin: '200px',
     delay: 300,
   });

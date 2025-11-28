@@ -13,7 +13,7 @@ class ErrorTracker {
   /**
    * Initialize error tracking (e.g., with Sentry)
    */
-  init(options?: { dsn?: string; enabled?: boolean }) {
+  init(options?: { dsn?: string; enabled?: boolean }): void {
     this.enabled = options?.enabled ?? import.meta.env.PROD;
     // DSN would be used here if Sentry was integrated
     void options?.dsn;
@@ -32,7 +32,7 @@ class ErrorTracker {
   /**
    * Capture an exception
    */
-  captureException(error: Error, context?: ErrorContext) {
+  captureException(error: Error, context?: ErrorContext): void {
     if (!this.enabled) {
       console.error('Error:', error, context);
       return;
@@ -51,9 +51,13 @@ class ErrorTracker {
   /**
    * Capture a message
    */
-  captureMessage(message: string, level: 'info' | 'warning' | 'error' = 'info', context?: ErrorContext) {
+  captureMessage(message: string, level: 'info' | 'warning' | 'error' = 'info', context?: ErrorContext): void {
     if (!this.enabled) {
-      console.log(`[${level.toUpperCase()}]`, message, context);
+      if (level === 'error') {
+        console.error(`[${level.toUpperCase()}]`, message, context);
+      } else if (level === 'warning') {
+        console.warn(`[${level.toUpperCase()}]`, message, context);
+      }
       return;
     }
 
@@ -64,13 +68,17 @@ class ErrorTracker {
     //   },
     // });
 
-    console.log(`[${level.toUpperCase()}]`, message, context);
+    if (level === 'error') {
+      console.error(`[${level.toUpperCase()}]`, message, context);
+    } else if (level === 'warning') {
+      console.warn(`[${level.toUpperCase()}]`, message, context);
+    }
   }
 
   /**
    * Set user context for error tracking
    */
-  setUser(user: { id: string; username?: string; email?: string }) {
+  setUser(user: { id: string; username?: string; email?: string }): void {
     if (!this.enabled) return;
 
     // In production with Sentry:
@@ -82,7 +90,7 @@ class ErrorTracker {
   /**
    * Clear user context
    */
-  clearUser() {
+  clearUser(): void {
     if (!this.enabled) return;
 
     // In production with Sentry:

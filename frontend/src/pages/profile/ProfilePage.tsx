@@ -76,7 +76,7 @@ function ProfilePage() {
     const [activeTab, setActiveTab] = useState<TabType>('photos');
     const [isSwitchingProfile, setIsSwitchingProfile] = useState(false);
     // Track which user ID the current stats belong to
-    const statsUserIdRef = useRef<string | undefined>(undefined);
+    const [statsUserId, setStatsUserId] = useState<string | undefined>(undefined);
     const processedImages = useRef<Set<string>>(new Set());
     const previousParams = useRef<string>('');
 
@@ -88,7 +88,7 @@ function ProfilePage() {
         const loadProfileUser = async () => {
             try {
                 await fetchProfileUser(params.username, params.userId, userLookupCancelSignal);
-            } catch (error) {
+            } catch (_error) {
                 // Error already handled in store, navigate away
                 navigate('/');
             }
@@ -119,7 +119,7 @@ function ProfilePage() {
             setIsSwitchingProfile(true);
 
             // Clear the stats user ID ref so old data won't be shown
-            statsUserIdRef.current = undefined;
+            setStatsUserId(undefined);
 
             // Clear all profile-related state immediately when switching users
             clearProfile();
@@ -141,10 +141,10 @@ function ProfilePage() {
         try {
             await fetchUserImages(displayUserId, refresh, signal);
             // Update ref to track which user this data belongs to
-            if (displayUserId === currentUserId && !statsUserIdRef.current) {
-                statsUserIdRef.current = displayUserId;
+            if (displayUserId === currentUserId && !statsUserId) {
+                setStatsUserId(displayUserId);
             }
-        } catch (error) {
+        } catch (_error) {
             // Error already handled in store
         }
     }, [displayUserId, fetchUserImages]);
@@ -162,10 +162,10 @@ function ProfilePage() {
         try {
             await fetchCollections(displayUserId, signal);
             // Update ref to track which user this data belongs to
-            if (displayUserId === currentUserId && !statsUserIdRef.current) {
-                statsUserIdRef.current = displayUserId;
+            if (displayUserId === currentUserId && !statsUserId) {
+                setStatsUserId(displayUserId);
             }
-        } catch (error) {
+        } catch (_error) {
             // Error already handled in store
         }
     }, [displayUserId, isOwnProfile, fetchCollections]);
@@ -178,10 +178,10 @@ function ProfilePage() {
         try {
             await fetchFollowStats(displayUserId, signal);
             // Update ref to track which user this data belongs to
-            if (displayUserId === currentUserId && !statsUserIdRef.current) {
-                statsUserIdRef.current = displayUserId;
+            if (displayUserId === currentUserId && !statsUserId) {
+                setStatsUserId(displayUserId);
             }
-        } catch (error) {
+        } catch (_error) {
             // Error already handled in store
         }
     }, [displayUserId, fetchFollowStats]);
@@ -195,11 +195,11 @@ function ProfilePage() {
             await fetchUserStats(displayUserId, signal);
             // Only update if we're still on the same user
             if (displayUserId === currentUserId) {
-                statsUserIdRef.current = displayUserId;
+                setStatsUserId(displayUserId);
                 // Mark that we're done switching once stats are loaded
                 setIsSwitchingProfile(false);
             }
-        } catch (error) {
+        } catch (_error) {
             // Error already handled in store
             if (displayUserId === currentUserId) {
                 setIsSwitchingProfile(false);
@@ -503,7 +503,7 @@ function ProfilePage() {
                         userStats={userStats}
                         displayUserId={displayUserId}
                         isSwitchingProfile={isSwitchingProfile}
-                        statsUserIdRef={statsUserIdRef}
+                        statsUserId={statsUserId}
                         photosCount={photosCount}
                         collectionsCount={collectionsCount}
                         followStats={followStats}

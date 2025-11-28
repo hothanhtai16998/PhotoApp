@@ -2,10 +2,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, Edit2, Trash2, Ban, Unlock } from 'lucide-react';
 import { UserEditModal } from '../modals';
-import { adminService } from '@/services/adminService';
+import { adminService, type User } from '@/services/adminService';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/utils';
-import type { User } from '@/services/adminService';
 import type { User as AuthUser } from '@/types/user';
 import { PermissionButton } from '../PermissionButton';
 

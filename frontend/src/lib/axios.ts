@@ -55,7 +55,7 @@ api.interceptors.request.use(
 		}
 
 		// Add CSRF token for state-changing requests (POST, PUT, DELETE, PATCH)
-		if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(config.method?.toUpperCase() || '')) {
+		if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(config.method?.toUpperCase() ?? '')) {
 			const csrfToken = getCsrfTokenFromCookie();
 			if (csrfToken && config.headers) {
 				config.headers['X-XSRF-TOKEN'] = csrfToken;
@@ -123,7 +123,7 @@ api.interceptors.response.use(
 		}
 
 		originalRequest._retryCount =
-			originalRequest._retryCount || 0;
+			originalRequest._retryCount ?? 0;
 
 		// Retry on 403 (token expired) or 401 (unauthorized)
 		if (

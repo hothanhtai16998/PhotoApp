@@ -12,7 +12,7 @@ interface ProfileHeaderProps {
     userStats: UserStats | null;
     displayUserId: string | undefined;
     isSwitchingProfile: boolean;
-    statsUserIdRef: React.MutableRefObject<string | undefined>;
+    statsUserId: string | undefined;
     photosCount: number;
     collectionsCount: number;
     followStats: { followers: number; following: number; isFollowing: boolean };
@@ -28,7 +28,7 @@ export function ProfileHeader({
     userStats,
     displayUserId,
     isSwitchingProfile,
-    statsUserIdRef,
+    statsUserId,
     photosCount,
     collectionsCount,
     followStats,
@@ -154,7 +154,7 @@ export function ProfileHeader({
                         </div>
                         <div className="stat-card-content">
                             <span className="stat-card-value">
-                                {(isSwitchingProfile || statsUserIdRef.current !== displayUserId) ? '-' : photosCount}
+                                {(isSwitchingProfile || statsUserId !== displayUserId) ? '-' : photosCount}
                             </span>
                             <span className="stat-card-label">Ảnh</span>
                         </div>
@@ -168,7 +168,7 @@ export function ProfileHeader({
                         </div>
                         <div className="stat-card-content">
                             <span className="stat-card-value">
-                                {(isSwitchingProfile || statsUserIdRef.current !== displayUserId) ? '-' : collectionsCount}
+                                {(isSwitchingProfile || statsUserId !== displayUserId) ? '-' : collectionsCount}
                             </span>
                             <span className="stat-card-label">Bộ sưu tập</span>
                         </div>
@@ -182,7 +182,7 @@ export function ProfileHeader({
                         </div>
                         <div className="stat-card-content">
                             <span className="stat-card-value">
-                                {(isSwitchingProfile || !userStats || statsUserIdRef.current !== displayUserId) 
+                                {(isSwitchingProfile || !userStats || statsUserId !== displayUserId) 
                                     ? '-' 
                                     : userStats.totalFavorites.toLocaleString()}
                             </span>
@@ -198,7 +198,7 @@ export function ProfileHeader({
                         </div>
                         <div className="stat-card-content">
                             <span className="stat-card-value">
-                                {(isSwitchingProfile || !userStats || statsUserIdRef.current !== displayUserId) 
+                                {(isSwitchingProfile || !userStats || statsUserId !== displayUserId) 
                                     ? '-' 
                                     : userStats.totalDownloads.toLocaleString()}
                             </span>
@@ -216,7 +216,7 @@ export function ProfileHeader({
                             </div>
                             <div className="stat-card-content">
                                 <span className="stat-card-value">
-                                    {(isSwitchingProfile || !userStats || statsUserIdRef.current !== displayUserId || userStats.profileViews === 0)
+                                    {(isSwitchingProfile || !userStats || statsUserId !== displayUserId || userStats.profileViews === 0)
                                         ? '-' 
                                         : userStats.profileViews.toLocaleString()}
                                 </span>
@@ -235,7 +235,7 @@ export function ProfileHeader({
                         </div>
                         <div className="stat-card-content">
                             <span className="stat-card-value">
-                                {(isSwitchingProfile || statsUserIdRef.current !== displayUserId) ? '-' : followStats.followers}
+                                {(isSwitchingProfile || statsUserId !== displayUserId) ? '-' : followStats.followers}
                             </span>
                             <span className="stat-card-label">Người theo dõi</span>
                         </div>
@@ -251,7 +251,7 @@ export function ProfileHeader({
                         </div>
                         <div className="stat-card-content">
                             <span className="stat-card-value">
-                                {(isSwitchingProfile || statsUserIdRef.current !== displayUserId) ? '-' : followStats.following}
+                                {(isSwitchingProfile || statsUserId !== displayUserId) ? '-' : followStats.following}
                             </span>
                             <span className="stat-card-label">Đang theo dõi</span>
                         </div>

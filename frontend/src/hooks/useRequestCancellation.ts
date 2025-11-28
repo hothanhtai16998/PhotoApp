@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 /**
  * Custom hook for cancelling API requests when component unmounts or dependencies change
@@ -12,16 +12,12 @@ import { useEffect, useRef } from 'react';
  */
 export function useRequestCancellation() {
   const abortControllerRef = useRef<AbortController | null>(null);
+  const [signal, setSignal] = useState<AbortSignal | null>(null);
 
-  // Create new AbortController on mount or when dependencies change
+  // Initialize controller on mount
   useEffect(() => {
-    // Abort previous request if it exists
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    // Create new AbortController
-    abortControllerRef.current = new AbortController();
+    abortControllerRef.current ??= new AbortController();
+    setSignal(abortControllerRef.current.signal);
 
     // Cleanup: abort request when component unmounts
     return () => {
@@ -29,9 +25,9 @@ export function useRequestCancellation() {
         abortControllerRef.current.abort();
       }
     };
-  }, []); // Empty deps - only cancel on unmount
+  }, []);
 
-  return abortControllerRef.current?.signal;
+  return signal ?? new AbortController().signal;
 }
 
 /**
@@ -63,8 +59,11 @@ export function useRequestCancellationOnChange(deps: React.DependencyList) {
         abortControllerRef.current.abort();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
+  // Return current signal - this is safe because refs don't cause re-renders
+  // and the signal is stable for the lifetime of the controller
   return abortControllerRef.current?.signal;
 }
 

@@ -99,7 +99,7 @@ export const shareService = {
           const successful = document.execCommand('copy');
           document.body.removeChild(textArea);
           return successful;
-        } catch (err) {
+        } catch (_err) {
           document.body.removeChild(textArea);
           return false;
         }

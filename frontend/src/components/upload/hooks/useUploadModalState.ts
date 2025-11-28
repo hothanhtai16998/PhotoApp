@@ -21,7 +21,7 @@ export const useUploadModalState = ({ preUploadAllImages }: UseUploadModalStateP
         // Initialize or update imagesData array
         const newImagesData: ImageData[] = selectedFiles.map((file, index) => {
           // If image data already exists for this file at this index, keep it; otherwise create new
-          if (prev[index] && prev[index].file === file) {
+          if (prev[index]?.file === file) {
             return prev[index];
           }
           return {

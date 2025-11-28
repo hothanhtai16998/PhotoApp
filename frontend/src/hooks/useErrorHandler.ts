@@ -25,7 +25,10 @@ interface ApiError {
  * Custom hook for centralized error handling
  * Provides consistent error handling patterns across the application
  */
-export function useErrorHandler(options: ErrorHandlerOptions = {}) {
+export function useErrorHandler(options: ErrorHandlerOptions = {}): {
+  handleError: (error: unknown, customMessage?: string) => string;
+  handleAsyncError: <T,>(asyncFn: () => Promise<T>, options?: ErrorHandlerOptions) => Promise<[T | null, Error | null]>;
+} {
   const {
     showToast = true,
     fallbackMessage = 'Đã xảy ra lỗi. Vui lòng thử lại.',
@@ -38,7 +41,7 @@ export function useErrorHandler(options: ErrorHandlerOptions = {}) {
         console.error('Error:', error);
       }
 
-      let message = customMessage || fallbackMessage;
+      let message = customMessage ?? fallbackMessage;
 
       // Handle Axios errors
       if (error && typeof error === 'object' && 'response' in error) {
@@ -52,7 +55,7 @@ export function useErrorHandler(options: ErrorHandlerOptions = {}) {
           const validationErrors = apiError.response.data.errors
             .map(
               (err: { msg?: string; message?: string }) =>
-                err.msg || err.message || 'Validation failed'
+                err.msg ?? err.message ?? 'Validation failed'
             )
             .join(', ');
           message = `Lỗi xác thực: ${validationErrors}`;
@@ -89,7 +92,7 @@ export function useErrorHandler(options: ErrorHandlerOptions = {}) {
           message = 'Lỗi máy chủ. Vui lòng thử lại sau.';
         }
       } else if (error instanceof Error) {
-        message = error.message || message;
+        message = error.message ?? message;
       }
 
       if (showToast) {

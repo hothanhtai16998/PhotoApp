@@ -1,10 +1,9 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, Trash2, CheckCircle, XCircle, Flag } from 'lucide-react';
-import { adminService } from '@/services/adminService';
+import { adminService, type AdminImage } from '@/services/adminService';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/utils';
-import type { AdminImage } from '@/services/adminService';
 import { PermissionButton } from '../PermissionButton';
 
 interface AdminImagesProps {
