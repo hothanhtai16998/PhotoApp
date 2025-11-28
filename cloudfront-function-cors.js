@@ -13,10 +13,10 @@ function handler(event) {
     var request = event.request;
     var response = event.response;
     var headers = response.headers;
-
+    
     // Get the origin from the request
     var origin = request.headers.origin ? request.headers.origin.value : '*';
-
+    
     // List of allowed origins
     var allowedOrigins = [
         'http://localhost:3000',
@@ -24,10 +24,9 @@ function handler(event) {
         'https://uploadanh.cloud',
         'https://www.uploadanh.cloud'
     ];
-
-    // Check if origin is in allowed list
-    // When credentials are allowed, we cannot use '*' - must specify exact origin
-    var allowOrigin = null;
+    
+    // Check if origin is in allowed list, or allow all in development
+    var allowOrigin = '*';
     if (origin && origin !== 'null') {
         // Check if it's a localhost origin (development)
         if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
@@ -36,19 +35,13 @@ function handler(event) {
             allowOrigin = origin;
         }
     }
-
-    // Only set CORS headers if we have a valid origin match
-    // When credentials are allowed, we cannot use '*' - must specify exact origin
-    if (allowOrigin) {
-        // Add CORS headers with credentials support
-        headers['access-control-allow-origin'] = { value: allowOrigin };
-        headers['access-control-allow-methods'] = { value: 'GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS' };
-        headers['access-control-allow-headers'] = { value: 'Content-Type, Authorization, X-XSRF-TOKEN, X-CSRF-Token' };
-        headers['access-control-allow-credentials'] = { value: 'true' };
-        headers['access-control-max-age'] = { value: '3600' };
-    }
-    // If no valid origin match, don't set CORS headers (request will be handled by origin server)
-
+    
+    // Add CORS headers
+    headers['access-control-allow-origin'] = { value: allowOrigin };
+    headers['access-control-allow-methods'] = { value: 'GET, HEAD, OPTIONS' };
+    headers['access-control-allow-headers'] = { value: '*' };
+    headers['access-control-max-age'] = { value: '3600' };
+    
     // Handle preflight OPTIONS requests
     if (request.method === 'OPTIONS') {
         return {
@@ -57,7 +50,7 @@ function handler(event) {
             headers: headers
         };
     }
-
+    
     return response;
 }
 
