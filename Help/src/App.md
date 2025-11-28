@@ -15,16 +15,12 @@ function App() {
         {/* Public routes */}
         <Route path="/" element={<HomePage />} />
         {/* ... more public routes */}
-        
+
         {/* Protected routes */}
-        <Route element={<ProtectedRoute />}>
-          {/* ... protected routes */}
-        </Route>
-        
+        <Route element={<ProtectedRoute />}>{/* ... protected routes */}</Route>
+
         {/* Admin routes */}
-        <Route element={<AdminRoute />}>
-          {/* ... admin routes */}
-        </Route>
+        <Route element={<AdminRoute />}>{/* ... admin routes */}</Route>
       </Routes>
       <FloatingContactButton />
     </Suspense>
@@ -35,25 +31,29 @@ function App() {
 ## Step-by-Step Breakdown
 
 ### Step 1: Lazy Load All Pages
+
 ```typescript
 const HomePage = lazy(() => import('./pages/HomePage'));
-const SignInPage = lazy(() => import("./pages/SignInPage"));
-const SignUpPage = lazy(() => import("./pages/SignUpPage"));
+const SignInPage = lazy(() => import('./pages/SignInPage'));
+const SignUpPage = lazy(() => import('./pages/SignUpPage'));
 // ... more lazy-loaded pages
 ```
 
 **What is lazy loading?**
+
 - Pages are loaded only when needed (not all at once)
 - Reduces initial bundle size
 - Faster initial page load
 - Better performance
 
 **How it works:**
+
 - `React.lazy()` creates a dynamic import
 - Component code is split into separate chunks
 - Loaded when route is accessed
 
 ### Step 2: Loading Fallback Component
+
 ```typescript
 const PageLoader = () => (
   <div className="flex min-h-screen items-center justify-center">
@@ -66,29 +66,32 @@ const PageLoader = () => (
 ```
 
 **What this does:**
+
 - Shows while lazy-loaded page is loading
 - Provides visual feedback
 - Prevents blank screen during load
 - Uses skeleton loaders for better UX
 
 ### Step 3: Wrap in Suspense
+
 ```typescript
-<Suspense fallback={<PageLoader />}>
-  {/* Routes */}
-</Suspense>
+<Suspense fallback={<PageLoader />}>{/* Routes */}</Suspense>
 ```
 
 **Why Suspense?**
+
 - Required for `React.lazy()` to work
 - Handles loading state while component loads
 - Shows `fallback` component during load
 
 ### Step 4: Page View Tracking
+
 ```typescript
 <PageViewTracker />
 ```
 
 **What this does:**
+
 - Tracks page views for analytics
 - Records which pages users visit
 - Helps with user behavior analysis
@@ -96,6 +99,7 @@ const PageLoader = () => (
 ### Step 5: Define Routes
 
 #### Public Routes (No Authentication Required)
+
 ```typescript
 <Route path="/" element={<HomePage />} />
 <Route path="/photos/:slug" element={<ImagePage />} />
@@ -106,11 +110,13 @@ const PageLoader = () => (
 ```
 
 **These routes:**
+
 - Accessible to everyone (logged in or not)
 - No authentication check
 - Can be accessed directly via URL
 
 #### Protected Routes (Authentication Required)
+
 ```typescript
 <Route element={<ProtectedRoute />}>
   <Route path="/profile" element={<ProfilePage />} />
@@ -126,12 +132,14 @@ const PageLoader = () => (
 ```
 
 **How it works:**
+
 - `<ProtectedRoute />` wraps all protected routes
 - Checks authentication before rendering
 - Redirects to `/signin` if not logged in
 - `<Outlet />` in `ProtectedRoute` renders child routes
 
 #### Admin Routes (Admin Access Required)
+
 ```typescript
 <Route element={<AdminRoute />}>
   <Route path="/admin" element={<AdminPage />} />
@@ -139,17 +147,20 @@ const PageLoader = () => (
 ```
 
 **How it works:**
+
 - `<AdminRoute />` wraps admin routes
 - Checks authentication AND admin privileges
 - Redirects to `/signin` if not logged in
 - Redirects to `/` if not admin
 
 ### Step 6: Global Components
+
 ```typescript
 <FloatingContactButton />
 ```
 
 **What this does:**
+
 - Appears on all pages
 - Provides quick access to contact/about
 - Always visible regardless of route
@@ -189,6 +200,7 @@ App
 ## Code Splitting Benefits
 
 ### Without Lazy Loading:
+
 ```
 Initial Bundle: 2.5 MB
 - All pages loaded at once
@@ -197,6 +209,7 @@ Initial Bundle: 2.5 MB
 ```
 
 ### With Lazy Loading:
+
 ```
 Initial Bundle: 500 KB
 - Only HomePage loaded initially
@@ -206,6 +219,7 @@ Initial Bundle: 500 KB
 ```
 
 **Example:**
+
 - User visits `/` → Only `HomePage` code loads
 - User visits `/admin` → Only `AdminPage` code loads
 - User never visits `/upload` → `UploadPage` code never loads
@@ -213,6 +227,7 @@ Initial Bundle: 500 KB
 ## Route Guards Explained
 
 ### ProtectedRoute Flow:
+
 ```
 User → /profile
   ↓
@@ -222,6 +237,7 @@ ProtectedRoute checks: Has accessToken?
 ```
 
 ### AdminRoute Flow:
+
 ```
 User → /admin
   ↓
@@ -235,28 +251,36 @@ AdminRoute checks: Has accessToken?
 ## Common Questions
 
 ### Q: Why lazy load all pages?
+
 **A:** Reduces initial bundle size significantly. Users only download code for pages they visit.
 
 ### Q: What happens if a lazy-loaded page fails to load?
+
 **A:** React Router will show an error. You can add error boundaries to handle this gracefully.
 
 ### Q: Can I add more routes?
+
 **A:** Yes! Just add a new `<Route>` inside the appropriate section (public, protected, or admin).
 
 ### Q: Why use `<Outlet />` in route guards?
+
 **A:** `<Outlet />` is React Router's way of rendering nested routes. The guard wraps routes and renders them via `<Outlet />`.
 
 ### Q: What's the difference between `path` and `element`?
-**A:** 
+
+**A:**
+
 - `path` - The URL path (e.g., `/profile`)
 - `element` - The component to render for that path
 
 ### Q: Why is FloatingContactButton outside Routes?
+
 **A:** It appears on all pages, so it's placed outside the routing logic to always render.
 
 ## Summary
 
 **App** is the routing hub that:
+
 1. ✅ Defines all application routes
 2. ✅ Implements lazy loading for performance
 3. ✅ Protects routes with authentication guards
@@ -265,4 +289,3 @@ AdminRoute checks: Has accessToken?
 6. ✅ Tracks page views for analytics
 
 It's the "traffic controller" for your entire application - directing users to the right pages based on their authentication status!
-
