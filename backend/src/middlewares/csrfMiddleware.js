@@ -57,8 +57,13 @@ export const validateCsrf = asyncHandler(async (req, res, next) => {
         return next();
     }
 
-    // Skip CSRF validation for public endpoints (signup, signin)
-    const publicPaths = ['/api/auth/signup', '/api/auth/signin', '/api/auth/refresh'];
+    // Skip CSRF validation for public endpoints (signup, signin, refresh, analytics tracking)
+    const publicPaths = [
+        '/api/auth/signup', 
+        '/api/auth/signin', 
+        '/api/auth/refresh',
+        '/api/admin/analytics/track' // Public tracking endpoint
+    ];
     if (publicPaths.some(path => req.path.startsWith(path))) {
         return next();
     }
