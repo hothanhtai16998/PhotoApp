@@ -9,7 +9,7 @@ import './UserAnalyticsDashboard.css';
 export const UserAnalyticsDashboard = () => {
   const [analytics, setAnalytics] = useState<UserAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
-  const [days, setDays] = useState(30);
+  const [days, setDays] = useState<number>(uiConfig.analytics.dayOptions[1]); // Default to 30 days
 
   useEffect(() => {
     const loadAnalytics = async () => {
@@ -77,11 +77,9 @@ export const UserAnalyticsDashboard = () => {
           value={days}
           onChange={(e) => setDays(Number(e.target.value))}
         >
-          <option value={7}>7 ngày</option>
-          <option value={30}>30 ngày</option>
-          <option value={90}>90 ngày</option>
-          <option value={180}>180 ngày</option>
-          <option value={365}>365 ngày</option>
+          {uiConfig.analytics.dayOptions.map((days) => (
+            <option key={days} value={days}>{days} ngày</option>
+          ))}
         </select>
       </div>
 

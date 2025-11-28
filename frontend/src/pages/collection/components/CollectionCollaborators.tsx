@@ -36,7 +36,7 @@ export default function CollectionCollaborators({
 	const [showCollaborators, setShowCollaborators] = useState(true);
 	const [updatingPermission, setUpdatingPermission] = useState<string | null>(null);
 	const [removingCollaborator, setRemovingCollaborator] = useState<string | null>(null);
-	
+
 	// User search state
 	const [searchQuery, setSearchQuery] = useState('');
 	const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
@@ -72,21 +72,21 @@ export default function CollectionCollaborators({
 		try {
 			// Use a smaller limit for faster response, with abort signal
 			const results = await userService.searchUsers(query, 10);
-			
+
 			// Pre-compute existing collaborator emails once
 			const existingCollaboratorEmails = new Set(
-				collection.collaborators?.map(c => 
+				collection.collaborators?.map(c =>
 					typeof c.user === 'object' ? c.user.email : ''
 				).filter(Boolean) || []
 			);
-			
+
 			// Filter efficiently
 			const filteredResults = (results.users || []).filter(
-				(searchUser: { email: string }) => 
-					!existingCollaboratorEmails.has(searchUser.email) && 
+				(searchUser: { email: string }) =>
+					!existingCollaboratorEmails.has(searchUser.email) &&
 					searchUser.email !== currentUser?.email
 			);
-			
+
 			setSearchResults(filteredResults);
 			// Always show dropdown if we have a query (even if no results, to show "no results" message)
 			setShowSearchResults(query.length >= 2);
@@ -96,7 +96,7 @@ export default function CollectionCollaborators({
 			if (err?.name === 'AbortError' || err?.message === 'canceled') {
 				return;
 			}
-			
+
 			console.error('Failed to search users:', error);
 			setSearchResults([]);
 			setShowSearchResults(false);
@@ -151,6 +151,7 @@ export default function CollectionCollaborators({
 			document.addEventListener('mousedown', handleClickOutside);
 			return () => document.removeEventListener('mousedown', handleClickOutside);
 		}
+		return undefined;
 	}, [showSearchResults]);
 
 	const handleSelectUser = (user: UserSearchResult, e?: React.MouseEvent) => {
@@ -173,7 +174,7 @@ export default function CollectionCollaborators({
 
 	const handleInvite = async () => {
 		const emailToInvite = selectedUser?.email || inviteEmail.trim();
-		
+
 		if (!emailToInvite) {
 			toast.error('Vui lòng chọn hoặc nhập email người dùng');
 			return;
@@ -188,10 +189,10 @@ export default function CollectionCollaborators({
 			);
 			onCollectionUpdate(updatedCollection);
 			toast.success('Đã mời cộng tác viên thành công');
-			
+
 			// Option 3: Optimistic update - trigger notification refresh
 			triggerNotificationRefresh();
-			
+
 			setShowInviteModal(false);
 			setInviteEmail('');
 			setSearchQuery('');
@@ -442,11 +443,11 @@ export default function CollectionCollaborators({
 												setShowSearchResults(false);
 											}
 										}}
-									onFocus={() => {
-										if (searchResults.length > 0 && !selectedUser) {
-											setShowSearchResults(true);
-										}
-									}}
+										onFocus={() => {
+											if (searchResults.length > 0 && !selectedUser) {
+												setShowSearchResults(true);
+											}
+										}}
 										placeholder="Tìm theo tên, username hoặc email..."
 										autoFocus
 									/>

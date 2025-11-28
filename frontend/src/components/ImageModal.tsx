@@ -327,6 +327,7 @@ const ImageModal = ({
         window.scrollTo(0, scrollY);
       };
     }
+    return undefined;
   }, [renderAsPage]);
 
   return (

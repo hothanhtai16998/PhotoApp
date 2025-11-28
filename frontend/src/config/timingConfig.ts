@@ -42,6 +42,12 @@ export const timingConfig = {
         
         // Initial check delay for UI components
         initCheckDelayMs: 150,
+        
+        // Location search debounce delay
+        locationSearchDebounceMs: 500,
+        
+        // Initial delay before location search (to respect API rate limits)
+        locationSearchInitialDelayMs: 300,
     },
 } as const;
 

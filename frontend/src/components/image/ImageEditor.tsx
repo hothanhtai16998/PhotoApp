@@ -754,6 +754,7 @@ export const ImageEditor = ({ imageUrl, imageTitle, onSave, onCancel }: ImageEdi
         }
       };
     }
+    return undefined;
   }, [filters, crop, watermark, transform, originalImageLoaded, historyIndex, saveToHistory]);
 
   useEffect(() => {

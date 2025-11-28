@@ -16,5 +16,19 @@ export const uiConfig = {
         // Number of skeleton items for analytics cards
         analyticsCardCount: 4,
     },
+    
+    // Tag input limits
+    tags: {
+        // Maximum number of tags allowed
+        maxTags: 20,
+        
+        // Maximum length per tag
+        maxTagLength: 50,
+    },
+    
+    // Analytics date range options (in days)
+    analytics: {
+        dayOptions: [7, 30, 90, 180, 365] as const,
+    },
 } as const;
 

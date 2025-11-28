@@ -2,6 +2,8 @@
  * Utility function for retrying failed API calls
  */
 
+import { apiConfig } from '@/config/apiConfig';
+
 interface RetryOptions {
   maxRetries?: number;
   delay?: number;

@@ -18,8 +18,6 @@ export interface SearchBarRef {
   focus: () => void;
 }
 
-import { searchConfig } from '@/config/searchConfig';
-
 interface SearchHistoryItem {
   query: string
   timestamp: number

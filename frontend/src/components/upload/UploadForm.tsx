@@ -8,6 +8,8 @@ import { reverseGeocode, delay, searchLocations, type LocationSuggestion } from 
 import type { ImageData } from './hooks/useImageUpload';
 import type { Category } from '@/services/categoryService';
 import type { Coordinates } from '@/types/common';
+import { uiConfig } from '@/config/uiConfig';
+import { timingConfig } from '@/config/timingConfig';
 
 interface UploadFormProps {
   imageData: ImageData;
@@ -99,7 +101,7 @@ export const UploadForm = ({
       locationSearchTimeoutRef.current = setTimeout(async () => {
         try {
           // Small initial delay to respect API rate limits
-          await delay(300);
+          await delay(timingConfig.ui.locationSearchInitialDelayMs);
           const suggestions = await searchLocations(value.trim(), 'vi', 8);
           setLocationSuggestions(suggestions);
           setShowLocationSuggestions(suggestions.length > 0);
@@ -110,7 +112,7 @@ export const UploadForm = ({
         } finally {
           setLoadingLocationSuggestions(false);
         }
-      }, 500); // Wait 500ms after user stops typing
+      }, timingConfig.ui.locationSearchDebounceMs); // Wait after user stops typing
     } else {
       setShowLocationSuggestions(false);
       setLocationSuggestions([]);
@@ -426,8 +428,8 @@ export const UploadForm = ({
           tags={imageData.tags || []}
           onChange={(tags) => onUpdate(index, 'tags', tags)}
           placeholder="Nhập tag và nhấn Enter (ví dụ: nature, landscape, sunset)..."
-          maxTags={20}
-          maxTagLength={50}
+          maxTags={uiConfig.tags.maxTags}
+          maxTagLength={uiConfig.tags.maxTagLength}
         />
       </div>
     </div>

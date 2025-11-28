@@ -40,7 +40,8 @@ export async function batchRequest<T>(
 		// Get or create batch for this endpoint pattern
 		const batchKey = url.split('?')[0]; // Use path without query params as key
 		if (!batchKey) {
-			return requestFn();
+			requestFn().then(resolve).catch(reject);
+			return;
 		}
 		let batch = pendingBatches.get(batchKey);
 

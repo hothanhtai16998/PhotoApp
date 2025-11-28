@@ -152,7 +152,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
     useEffect(() => {
         if (showSuccess) {
             const container = document.getElementById('confetti-container');
-            if (!container) return;
+            if (!container) return undefined;
 
             const colors = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#95e1d3', '#f38181'];
             const confettiCount = 50;
@@ -174,6 +174,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                 container.innerHTML = '';
             };
         }
+        return undefined;
     }, [showSuccess]);
 
     if (!isOpen || !accessToken) return null;
