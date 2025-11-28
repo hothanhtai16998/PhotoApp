@@ -13,6 +13,7 @@ import api from "@/lib/axios";
 import { generateImageSlug, extractIdFromSlug } from "@/lib/utils";
 import { toast } from "sonner";
 import { appConfig } from "@/config/appConfig";
+import { uiConfig } from "@/config/uiConfig";
 import "./FavoritesPage.css";
 
 // Lazy load ImageModal - conditionally rendered
@@ -187,7 +188,7 @@ function FavoritesPage() {
     // Loading skeleton
     const FavoritesSkeleton = () => (
         <div className="favorites-grid" aria-label="Đang tải ảnh yêu thích" aria-live="polite">
-            {Array.from({ length: 12 }).map((_, index) => (
+            {Array.from({ length: uiConfig.skeleton.imageGridCount }).map((_, index) => (
                 <div
                     key={`skeleton-${index}`}
                     className={`favorites-item ${index % 3 === 0 ? 'portrait' : 'landscape'}`}

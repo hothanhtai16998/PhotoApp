@@ -51,8 +51,8 @@ export const UploadForm = ({
           reject,
           {
             enableHighAccuracy: true,
-            timeout: 10000, // 10 seconds timeout
-            maximumAge: 300000, // Accept cached location up to 5 minutes old
+            timeout: timingConfig.geolocation.timeoutMs,
+            maximumAge: timingConfig.geolocation.maximumAgeMs,
           }
         );
       });
@@ -64,7 +64,7 @@ export const UploadForm = ({
 
       // Reverse geocode coordinates to location name
       // Small delay to respect API rate limits (1 request per second)
-      await delay(1100);
+      await delay(timingConfig.geocoding.rateLimitDelayMs);
       const geocodeResult = await reverseGeocode(
         coords.latitude,
         coords.longitude,

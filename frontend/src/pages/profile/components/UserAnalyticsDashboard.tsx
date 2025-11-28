@@ -3,6 +3,7 @@ import { analyticsService, type UserAnalytics } from '@/services/analyticsServic
 import { Skeleton } from '@/components/ui/skeleton';
 import { Eye, Download, Image as ImageIcon, TrendingUp, MapPin, Folder } from 'lucide-react';
 import { toast } from 'sonner';
+import { uiConfig } from '@/config/uiConfig';
 import './UserAnalyticsDashboard.css';
 
 export const UserAnalyticsDashboard = () => {
@@ -48,7 +49,7 @@ export const UserAnalyticsDashboard = () => {
           <Skeleton className="h-10 w-32" />
         </div>
         <div className="analytics-grid">
-          {Array.from({ length: 4 }).map((_, i) => (
+          {Array.from({ length: uiConfig.skeleton.analyticsCardCount }).map((_, i) => (
             <Skeleton key={i} className="h-32 w-full" />
           ))}
         </div>

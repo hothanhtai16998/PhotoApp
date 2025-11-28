@@ -5,6 +5,7 @@ import { useNavigate, useLocation } from "react-router-dom"
 import { useImageStore } from "@/stores/useImageStore"
 import { categoryService, type Category } from "@/services/categoryService"
 import { appConfig } from '@/config/appConfig';
+import { timingConfig } from '@/config/timingConfig';
 import './CategoryNavigation.css'
 
 export const CategoryNavigation = memo(function CategoryNavigation() {
@@ -40,7 +41,7 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
     let resizeTimer: number | null = null
     const handleResize = () => {
       if (resizeTimer) clearTimeout(resizeTimer)
-      resizeTimer = setTimeout(updateHeaderHeight, 100)
+      resizeTimer = setTimeout(updateHeaderHeight, timingConfig.ui.resizeDebounceMs)
     }
     window.addEventListener('resize', handleResize)
 
@@ -51,7 +52,7 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
       resizeObserver = new ResizeObserver(() => {
         // Debounce ResizeObserver updates too
         if (resizeTimer) clearTimeout(resizeTimer)
-        resizeTimer = setTimeout(updateHeaderHeight, 100)
+        resizeTimer = setTimeout(updateHeaderHeight, timingConfig.ui.resizeDebounceMs)
       })
       resizeObserver.observe(header)
     }
@@ -164,7 +165,7 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
       handleScroll()
     }
     
-    setTimeout(initCheck, 150)
+    setTimeout(initCheck, timingConfig.ui.initCheckDelayMs)
     
     return () => {
       window.removeEventListener('scroll', throttledScroll)

@@ -23,6 +23,8 @@ import { useRequestCancellationOnChange } from "@/hooks/useRequestCancellation";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { toast } from "sonner";
 import { appConfig } from "@/config/appConfig";
+import { timingConfig } from "@/config/timingConfig";
+import { uiConfig } from "@/config/uiConfig";
 import "./ProfilePage.css";
 
 type TabType = 'photos' | 'illustrations' | 'collections' | 'stats';
@@ -272,7 +274,7 @@ function ProfilePage() {
                 if (isOwnProfile) {
                     fetchCollectionsWrapper(); // Also refresh collections, no signal for manual refresh
                 }
-            }, 500);
+            }, timingConfig.refresh.afterUploadMs);
         };
 
         window.addEventListener('refreshProfile', handleRefresh);
@@ -435,7 +437,7 @@ function ProfilePage() {
             // Clean up the blob URL after a short delay
             setTimeout(() => {
                 URL.revokeObjectURL(blobUrl);
-            }, 100);
+            }, timingConfig.cleanup.blobUrlRevokeMs);
 
             toast.success('Tải ảnh thành công');
         } catch (error) {
@@ -517,7 +519,7 @@ function ProfilePage() {
                         {activeTab === TABS.PHOTOS || activeTab === TABS.ILLUSTRATIONS ? (
                             loading ? (
                                 <div className="profile-image-grid" aria-label="Đang tải ảnh" aria-live="polite">
-                                    {Array.from({ length: 12 }).map((_, index) => (
+                                    {Array.from({ length: uiConfig.skeleton.imageGridCount }).map((_, index) => (
                                         <div
                                             key={`skeleton-${index}`}
                                             className={`profile-image-item ${index % 3 === 0 ? 'portrait' : 'landscape'}`}
@@ -592,7 +594,7 @@ function ProfilePage() {
                         ) : activeTab === TABS.COLLECTIONS ? (
                             collectionsLoading ? (
                                 <div className="profile-collections-grid" aria-label="Đang tải bộ sưu tập" aria-live="polite">
-                                    {Array.from({ length: 6 }).map((_, index) => (
+                                    {Array.from({ length: uiConfig.skeleton.collectionGridCount }).map((_, index) => (
                                         <div key={`skeleton-${index}`} className="profile-collection-item">
                                             <Skeleton className="w-full h-48 rounded-lg mb-3" />
                                             <Skeleton className="w-3/4 h-4 rounded" />

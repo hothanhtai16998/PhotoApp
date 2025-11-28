@@ -275,6 +275,7 @@ function buildLocationName(item: NominatimItem, address: NominatimAddress): stri
  * @returns Promise with array of location suggestions
  */
 import { apiConfig } from '@/config/apiConfig';
+import { timingConfig } from '@/config/timingConfig';
 
 export async function searchLocations(
 	query: string,
@@ -353,7 +354,7 @@ export async function searchLocations(
 			}
 
 			// Small delay to respect rate limits
-			await new Promise(resolve => setTimeout(resolve, 200));
+			await new Promise(resolve => setTimeout(resolve, timingConfig.geocoding.batchDelayMs));
 		}
 
 		// If no results with Vietnam filter, try without country restriction
