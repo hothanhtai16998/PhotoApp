@@ -1,9 +1,8 @@
 import { CheckCircle2, Heart, FolderPlus, X } from 'lucide-react';
 import type { Image } from '@/types/image';
 import { Avatar } from '../Avatar';
-import { DownloadSizeSelector } from './DownloadSizeSelector';
+import { DownloadSizeSelector, type DownloadSize } from './DownloadSizeSelector';
 import { FollowButton } from '../FollowButton';
-import type { DownloadSize } from './DownloadSizeSelector';
 import { useUserProfileCard } from './hooks/useUserProfileCard';
 
 interface ImageModalHeaderProps {
@@ -109,7 +108,7 @@ export const ImageModalHeader = ({
                   <div className="user-profile-card-follow">
                     <FollowButton
                       userId={image.uploadedBy._id}
-                      userDisplayName={image.uploadedBy.displayName || image.uploadedBy.username}
+                      userDisplayName={image.uploadedBy.displayName ?? image.uploadedBy.username}
                       variant="default"
                       size="sm"
                     />
@@ -130,8 +129,8 @@ export const ImageModalHeader = ({
                       onClick={() => handleUserImageClick(userImage)}
                     >
                       <img
-                        src={userImage.thumbnailUrl || userImage.smallUrl || userImage.imageUrl}
-                        alt={userImage.imageTitle || 'Photo'}
+                        src={userImage.thumbnailUrl ?? userImage.smallUrl ?? userImage.imageUrl}
+                        alt={userImage.imageTitle ?? 'Photo'}
                         loading="lazy"
                       />
                     </div>
@@ -225,7 +224,7 @@ export const ImageModalHeader = ({
                   <div className="user-profile-card-follow">
                     <FollowButton
                       userId={image.uploadedBy._id}
-                      userDisplayName={image.uploadedBy.displayName || image.uploadedBy.username}
+                      userDisplayName={image.uploadedBy.displayName ?? image.uploadedBy.username}
                       variant="default"
                       size="sm"
                     />
@@ -246,8 +245,8 @@ export const ImageModalHeader = ({
                       onClick={() => handleUserImageClick(userImage)}
                     >
                       <img
-                        src={userImage.thumbnailUrl || userImage.smallUrl || userImage.imageUrl}
-                        alt={userImage.imageTitle || 'Photo'}
+                        src={userImage.thumbnailUrl ?? userImage.smallUrl ?? userImage.imageUrl}
+                        alt={userImage.imageTitle ?? 'Photo'}
                         loading="lazy"
                       />
                     </div>

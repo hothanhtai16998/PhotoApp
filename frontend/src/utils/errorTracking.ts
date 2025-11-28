@@ -84,7 +84,7 @@ class ErrorTracker {
     // In production with Sentry:
     // Sentry.setUser(user);
 
-    console.debug('Error tracking user set:', user);
+    console.warn('Error tracking user set:', user);
   }
 
   /**
@@ -96,7 +96,7 @@ class ErrorTracker {
     // In production with Sentry:
     // Sentry.setUser(null);
 
-    console.debug('Error tracking user cleared');
+    console.warn('Error tracking user cleared');
   }
 
   /**
@@ -106,7 +106,7 @@ class ErrorTracker {
     // _level parameter is kept for API compatibility but not currently used
     void _level;
     if (!this.enabled) {
-      console.debug(`[Breadcrumb] [${category}]`, message, data);
+      console.warn(`[Breadcrumb] [${category}]`, message, data);
       return;
     }
 

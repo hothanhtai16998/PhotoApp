@@ -22,7 +22,7 @@ export function PageViewTracker() {
                 // Silently fail - don't interrupt user experience
                 // Only log in development
                 if (import.meta.env.DEV) {
-                    console.debug('Failed to track page view:', error);
+                    console.warn('Failed to track page view:', error);
                 }
             }
         };
