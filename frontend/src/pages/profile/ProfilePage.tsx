@@ -34,6 +34,8 @@ const TABS = {
 } as const;
 
 function ProfilePage() {
+    // currentUser: the logged-in user viewing the profile
+    // profileUser: the user whose profile is being displayed (may be different from currentUser)
     const { user: currentUser } = useUserStore();
     const navigate = useNavigate();
     const params = useParams<{ username?: string; userId?: string }>();
@@ -131,6 +133,13 @@ function ProfilePage() {
         }
     }, [params.username, params.userId, clearProfile, clearImages]);
 
+    // Helper to update statsUserId if still on the same user
+    const updateStatsUserIdIfSame = useCallback((capturedUserId: string) => {
+        if (displayUserId === capturedUserId && !statsUserId) {
+            setStatsUserId(displayUserId);
+        }
+    }, [displayUserId, statsUserId, setStatsUserId]);
+
     // Wrapper to handle race condition checks
     const fetchUserImagesWrapper = useCallback(async (refresh = false, signal?: AbortSignal) => {
         if (!displayUserId) return;
@@ -138,35 +147,27 @@ function ProfilePage() {
 
         try {
             await fetchUserImages(displayUserId, refresh, signal);
-            // Update ref to track which user this data belongs to
-            if (displayUserId === currentUserId && !statsUserId) {
-                setStatsUserId(displayUserId);
-            }
+            updateStatsUserIdIfSame(currentUserId);
         } catch (_error) {
             // Error already handled in store
         }
-    }, [displayUserId, fetchUserImages, statsUserId]);
+    }, [displayUserId, fetchUserImages, updateStatsUserIdIfSame]);
 
     // Wrapper to handle race condition checks and own profile check
     const fetchCollectionsWrapper = useCallback(async (signal?: AbortSignal) => {
         if (!displayUserId) return;
-        const currentUserId = displayUserId; // Capture at start of fetch
-
         // For now, only fetch own collections. TODO: Add endpoint to fetch other users' collections
-        if (!isOwnProfile) {
-            return;
-        }
+        if (!isOwnProfile) return;
+
+        const currentUserId = displayUserId; // Capture at start of fetch
 
         try {
             await fetchCollections(displayUserId, signal);
-            // Update ref to track which user this data belongs to
-            if (displayUserId === currentUserId && !statsUserId) {
-                setStatsUserId(displayUserId);
-            }
+            updateStatsUserIdIfSame(currentUserId);
         } catch (_error) {
             // Error already handled in store
         }
-    }, [displayUserId, isOwnProfile, fetchCollections, statsUserId]);
+    }, [displayUserId, isOwnProfile, fetchCollections, updateStatsUserIdIfSame]);
 
     // Wrapper to handle race condition checks
     const fetchFollowStatsWrapper = useCallback(async (signal?: AbortSignal) => {
@@ -175,14 +176,11 @@ function ProfilePage() {
 
         try {
             await fetchFollowStats(displayUserId, signal);
-            // Update ref to track which user this data belongs to
-            if (displayUserId === currentUserId && !statsUserId) {
-                setStatsUserId(displayUserId);
-            }
+            updateStatsUserIdIfSame(currentUserId);
         } catch (_error) {
             // Error already handled in store
         }
-    }, [displayUserId, fetchFollowStats, statsUserId]);
+    }, [displayUserId, fetchFollowStats, updateStatsUserIdIfSame]);
 
     // Wrapper to handle race condition checks
     const fetchUserStatsWrapper = useCallback(async (signal?: AbortSignal) => {
@@ -194,7 +192,6 @@ function ProfilePage() {
             // Only update if we're still on the same user
             if (displayUserId === currentUserId) {
                 setStatsUserId(displayUserId);
-                // Mark that we're done switching once stats are loaded
                 setIsSwitchingProfile(false);
             }
         } catch (_error) {
@@ -203,7 +200,7 @@ function ProfilePage() {
                 setIsSwitchingProfile(false);
             }
         }
-    }, [displayUserId, fetchUserStats]);
+    }, [displayUserId, fetchUserStats, setStatsUserId, setIsSwitchingProfile]);
 
     // Track profile view when component mounts (only once per session)
     useEffect(() => {

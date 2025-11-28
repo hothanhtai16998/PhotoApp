@@ -18,10 +18,31 @@ const ROUTES = {
     SIGNIN: '/signin',
 } as const;
 
+// Helper function to determine if a menu item should be shown
+function shouldShowMenuItem(itemId: string, isOAuthUser: boolean): boolean {
+    // Hide "Change password" for OAuth users
+    if (isOAuthUser && itemId === SECTION_IDS.CHANGE_PASSWORD) {
+        return false;
+    }
+    return true;
+}
+
+// Helper function to check if user can change password
+function canChangePassword(user: { isOAuthUser?: boolean } | null | undefined): boolean {
+    return user !== null && user !== undefined && !user.isOAuthUser;
+}
+
+// Helper function to check if section is a "coming soon" section
+function isComingSoonSection(activeSection: string): boolean {
+    return activeSection !== SECTION_IDS.EDIT_PROFILE && activeSection !== SECTION_IDS.CHANGE_PASSWORD;
+}
+
+type SectionId = typeof SECTION_IDS[keyof typeof SECTION_IDS];
+
 function EditProfilePage() {
     const { user } = useUserStore();
     const navigate = useNavigate();
-    const [activeSection, setActiveSection] = useState(SECTION_IDS.EDIT_PROFILE);
+    const [activeSection, setActiveSection] = useState<SectionId>(SECTION_IDS.EDIT_PROFILE);
 
     const {
         isSubmitting,
@@ -51,6 +72,8 @@ function EditProfilePage() {
         }
         // Set form values when user data is available
         const nameParts = user.displayName?.split(' ') ?? [];
+
+        // Initialize form with user data
         setValue('firstName', nameParts[0] ?? '');
         setValue('lastName', nameParts.slice(1).join(' ') ?? '');
         setValue('email', user.email ?? '');
@@ -63,16 +86,16 @@ function EditProfilePage() {
         setValue('twitter', user.twitter ?? '');
     }, [user, navigate, setValue]);
 
-    // Filter menu items based on user type
+    // Define all available menu items
     const allMenuItems = [
         { id: SECTION_IDS.EDIT_PROFILE, label: 'Chỉnh sửa thông tin' },
         { id: SECTION_IDS.DOWNLOAD_HISTORY, label: 'Lịch sử tải xuống' },
         { id: SECTION_IDS.CHANGE_PASSWORD, label: 'Đổi mật khẩu' },
     ];
 
-    // Hide "Change password" for OAuth users
+    // Filter menu items based on user type (hide password change for OAuth users)
     const menuItems = allMenuItems.filter(item =>
-        user?.isOAuthUser ? item.id !== SECTION_IDS.CHANGE_PASSWORD : true
+        shouldShowMenuItem(item.id, user?.isOAuthUser ?? false)
     );
 
     return (
@@ -98,7 +121,7 @@ function EditProfilePage() {
 
                     {/* Right Main Content */}
                     <div className="profile-main-content">
-                        {activeSection === SECTION_IDS.EDIT_PROFILE && (
+                        {activeSection === SECTION_IDS.EDIT_PROFILE && user && (
                             <ProfileForm
                                 user={user}
                                 avatarPreview={avatarPreview}
@@ -115,7 +138,7 @@ function EditProfilePage() {
                             />
                         )}
 
-                        {activeSection === SECTION_IDS.CHANGE_PASSWORD && !user?.isOAuthUser && (
+                        {activeSection === SECTION_IDS.CHANGE_PASSWORD && canChangePassword(user) && (
                             <PasswordForm
                                 register={registerPassword}
                                 handleSubmit={handlePasswordSubmit}
@@ -127,7 +150,7 @@ function EditProfilePage() {
                             />
                         )}
 
-                        {activeSection !== SECTION_IDS.EDIT_PROFILE && activeSection !== SECTION_IDS.CHANGE_PASSWORD && (
+                        {isComingSoonSection(activeSection) && (
                             <div className="coming-soon">
                                 <h2>{menuItems.find(item => item.id === activeSection)?.label}</h2>
                                 <p>Phần này sẽ sớm ra mắt.</p>

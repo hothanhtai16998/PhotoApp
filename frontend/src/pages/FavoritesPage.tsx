@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useUserStore } from "@/stores/useUserStore";
@@ -20,7 +20,7 @@ function FavoritesPage() {
     const { user } = useUserStore();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
-    
+
     // Favorite store
     const {
         images,
@@ -32,15 +32,15 @@ function FavoritesPage() {
         setImageType,
         updateImage,
     } = useFavoriteStore();
-    
+
     // Detect if we're on mobile
     const isMobile = useIsMobile();
 
     const processedImages = useRef<Set<string>>(new Set());
-    
+
     // Get selected image slug or ID from URL
     const imageParamFromUrl = searchParams.get('image');
-    
+
     // MOBILE ONLY: If URL has ?image=slug on mobile, redirect to ImagePage
     useEffect(() => {
         if (imageParamFromUrl && isMobile) {
@@ -48,9 +48,9 @@ function FavoritesPage() {
             sessionStorage.setItem('imagePage_fromGrid', 'true');
             // Navigate to ImagePage with images state
             navigate(`/photos/${imageParamFromUrl}`, {
-                state: { 
+                state: {
                     images,
-                    fromGrid: true 
+                    fromGrid: true
                 },
                 replace: true // Replace current URL to avoid back button issues
             });
@@ -68,10 +68,10 @@ function FavoritesPage() {
         // Don't show modal on mobile
         if (isMobile) return null;
         if (!imageParamFromUrl) return null;
-        
+
         // Check if it's a MongoDB ObjectId (24 hex characters) - legacy format
         const isObjectId = /^[0-9a-fA-F]{24}$/.test(imageParamFromUrl);
-        
+
         if (isObjectId) {
             // Legacy format: direct ID match
             return images.find(img => img._id === imageParamFromUrl) || null;
@@ -79,7 +79,7 @@ function FavoritesPage() {
             // New format: slug with short ID
             const shortId = extractIdFromSlug(imageParamFromUrl);
             if (!shortId) return null;
-            
+
             // Find image by matching the last 12 characters of ID
             return images.find(img => {
                 const imgShortId = img._id.slice(-12);
@@ -87,7 +87,7 @@ function FavoritesPage() {
             }) || null;
         }
     }, [imageParamFromUrl, images, isMobile]);
-    
+
     // Get current image IDs for comparison
     const currentImageIds = useMemo(() => new Set(images.map(img => img._id)), [images]);
 
@@ -208,7 +208,7 @@ function FavoritesPage() {
                         <div className="favorites-header-info">
                             <h1 className="favorites-title">Ảnh yêu thích</h1>
                             <p className="favorites-subtitle">
-                                {pagination?.total 
+                                {pagination?.total
                                     ? `${pagination.total} ảnh đã lưu`
                                     : 'Chưa có ảnh yêu thích nào'}
                             </p>
@@ -223,7 +223,7 @@ function FavoritesPage() {
                             <Heart size={64} className="empty-icon" />
                             <h2>Chưa có ảnh yêu thích</h2>
                             <p>Bắt đầu lưu những ảnh bạn yêu thích để xem lại sau</p>
-                            <button 
+                            <button
                                 className="browse-button"
                                 onClick={() => navigate('/')}
                             >
@@ -248,9 +248,9 @@ function FavoritesPage() {
                                                 // Pass images via state for navigation
                                                 const slug = generateImageSlug(image.imageTitle, image._id);
                                                 navigate(`/photos/${slug}`, {
-                                                    state: { 
+                                                    state: {
                                                         images,
-                                                        fromGrid: true 
+                                                        fromGrid: true
                                                     }
                                                 });
                                                 return;
