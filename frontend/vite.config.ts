@@ -32,6 +32,10 @@ export default defineConfig({
 		// Optimize chunk size limits (in KB)
 		// Warn if any chunk exceeds 500KB (helps identify optimization opportunities)
 		chunkSizeWarningLimit: 500,
+		// Ensure proper module resolution and prevent React loading issues
+		modulePreload: {
+			polyfill: true,
+		},
 		rollupOptions: {
 			output: {
 				assetFileNames: (assetInfo) => {
@@ -42,11 +46,18 @@ export default defineConfig({
 					return 'assets/[name]-[hash][extname]';
 				},
 				// Smart chunk splitting for better performance and caching
-				manualChunks: (id) => {
-					// Don't split React/ReactDOM - keep them in main bundle to avoid loading issues
-					// React is small and always needed, so splitting doesn't provide much benefit
-					if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
-						return undefined; // Keep in main bundle
+				manualChunks: (id, { getModuleInfo }) => {
+					// CRITICAL: Keep React/ReactDOM in the main entry chunk to prevent loading issues
+					// Don't split React - it must be available synchronously when components load
+					// Check if this is React or ReactDOM - if so, don't chunk it (keep in entry)
+					if (
+						id.includes('node_modules/react/') || 
+						id.includes('node_modules/react-dom/') ||
+						id.includes('node_modules/react/jsx-runtime') ||
+						id.includes('node_modules/react/jsx-dev-runtime')
+					) {
+						// Don't return a chunk name - this keeps it in the entry chunk
+						return;
 					}
 
 					// Router - only needed for navigation, can be loaded on demand
@@ -110,7 +121,12 @@ export default defineConfig({
 					}
 
 					// All other node_modules go into vendor chunk
-					if (id.includes('node_modules')) {
+					// BUT exclude React/ReactDOM (already handled above)
+					if (
+						id.includes('node_modules') &&
+						!id.includes('node_modules/react/') &&
+						!id.includes('node_modules/react-dom/')
+					) {
 						return 'vendor';
 					}
 				},
