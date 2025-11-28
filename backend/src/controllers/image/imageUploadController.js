@@ -9,6 +9,8 @@ import { logger } from '../../utils/logger.js';
 import { clearCache } from '../../middlewares/cacheMiddleware.js';
 import { extractDominantColors } from '../../utils/colorExtractor.js';
 import { extractExifData } from '../../utils/exifExtractor.js';
+import { Queue } from 'bullmq';
+import IORedis from 'ioredis';
 
 const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25MB
 const MAX_IMAGE_TITLE_LENGTH = 255;
@@ -362,120 +364,54 @@ export const preUploadImage = asyncHandler(async (req, res) => {
     }
 });
 
+// create queue (singleton)
+const connection = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379');
+const imageProcessingQueue = new Queue('image-processing', { connection });
+
 export const finalizeImageUpload = asyncHandler(async (req, res) => {
     const userId = req.user._id;
     const isAdmin = req.user?.isAdmin || req.user?.isSuperAdmin;
     const { uploadId, uploadKey, imageTitle, imageCategory, location, cameraModel, coordinates, tags } = req.body;
 
+    // quick validation (same as before)
     if (!uploadId || !uploadKey || !UPLOAD_ID_PATTERN.test(uploadId)) {
-        return res.status(400).json({
-            message: 'Invalid upload ID format',
-        });
+        return res.status(400).json({ message: 'Invalid upload ID format' });
     }
-
     const trimmedTitle = String(imageTitle || '').trim();
     if (!trimmedTitle) {
-        return res.status(400).json({
-            message: 'Tiêu đề ảnh không được để trống',
-        });
+        return res.status(400).json({ message: 'Tiêu đề ảnh không được để trống' });
     }
 
+    // validate category synchronously or minimally (optional)
     let categoryDoc;
     try {
         categoryDoc = await findCategory(imageCategory);
-    } catch (error) {
-        return res.status(400).json({ message: error.message });
+    } catch (err) {
+        return res.status(400).json({ message: err.message });
     }
 
-    let imageBuffer;
-    try {
-        const imageData = await getImageFromS3(uploadKey);
-        if (!imageData.Body) {
-            return res.status(400).json({
-                message: 'Không tìm thấy ảnh đã tải lên',
-            });
-        }
-        imageBuffer = await streamToBuffer(imageData.Body);
-    } catch (error) {
-        logger.error('Failed to download raw upload:', error.message);
-        return res.status(400).json({
-            message: 'Không thể đọc ảnh đã tải lên',
-        });
-    }
+    // enqueue background job: do not download/process here
+    const job = await imageProcessingQueue.add('processUpload', {
+        uploadKey,
+        uploadId,
+        userId: userId.toString(),
+        isAdmin: !!isAdmin,
+        imageTitle: trimmedTitle,
+        imageCategory: categoryDoc._id.toString(),
+        location,
+        cameraModel,
+        coordinates,
+        tags
+    }, {
+        removeOnComplete: 1000,
+        removeOnFail: 1000
+    });
 
-    let uploadResult;
-    let newImage;
-
-    try {
-        // Extract metadata in parallel
-        const metadata = await extractMetadata(imageBuffer);
-
-        // Process image
-        uploadResult = await uploadImageWithSizes(imageBuffer, 'photo-app-images', uploadId);
-
-        // Create image document
-        newImage = await createImageDocument(
-            uploadResult,
-            userId,
-            categoryDoc,
-            metadata,
-            {
-                imageTitle: trimmedTitle,
-                location,
-                coordinates,
-                cameraModel,
-                tags,
-                isAdmin,
-            }
-        );
-
-        await newImage.populate('uploadedBy', 'username displayName avatarUrl');
-        await newImage.populate('imageCategory', 'name description');
-
-        // Clear cache
-        safeAsync(clearCache, '/api/images').catch(err => {
-            logger.warn('Failed to clear cache:', err?.message || err);
-        });
-
-        // Clean up raw upload (async, don't wait)
-        safeAsync(deleteObjectByKey, uploadKey)
-            .catch(err => logger.warn(`Failed to delete raw upload ${uploadKey}:`, err?.message || err));
-
-        // Create success notification (async)
-        safeAsync(Notification?.create, {
-            recipient: userId,
-            type: 'upload_completed',
-            image: newImage._id,
-            metadata: { imageTitle: trimmedTitle },
-        }).catch(err => logger.error('Failed to create notification:', err?.message || err));
-
-        res.status(201).json({
-            message: 'Thêm ảnh thành công',
-            image: newImage,
-        });
-    } catch (error) {
-        logger.error('Finalize upload failed:', error.message);
-
-        // Rollback processed images
-        if (uploadResult?.publicId) {
-            safeAsync(deleteImageFromS3, uploadResult.publicId, 'photo-app-images')
-                .catch(err => {
-                    logger.error('Rollback failed:', err?.message || err);
-                });
-        }
-
-        // Create failure notification (async)
-        safeAsync(Notification?.create, {
-            recipient: userId,
-            type: 'upload_failed',
-            metadata: {
-                imageTitle: trimmedTitle || 'Unknown',
-                error: error.message,
-            },
-        }).catch(err => logger.error('Failed to create failure notification:', err?.message || err));
-
-        throw error;
-    }
+    // respond quickly
+    return res.status(202).json({
+        message: 'Upload accepted, processing started',
+        jobId: job.id
+    });
 });
 
 export const createBulkUploadNotification = asyncHandler(async (req, res) => {
