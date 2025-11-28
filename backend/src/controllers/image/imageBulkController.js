@@ -1,243 +1,203 @@
-import { uploadImageWithSizes, deleteImageFromS3 } from '../../libs/s3.js';
-import Image from '../../models/Image.js';
-import Notification from '../../models/Notification.js';
+import mongoose from 'mongoose';
+import crypto from 'crypto';
 import { asyncHandler } from '../../middlewares/asyncHandler.js';
-import { logger } from '../../utils/logger.js';
-import { clearCache } from '../../middlewares/cacheMiddleware.js';
+import Image from '../../models/Image.js';
+import { uploadImageWithSizes, deleteImageFromS3 } from '../../libs/s3.js';
 import { extractDominantColors } from '../../utils/colorExtractor.js';
+import { clearCache } from '../../middlewares/cacheMiddleware.js';
+import { logger } from '../../utils/logger.js';
 
-// Replace image file (for edited images)
-export const replaceImage = asyncHandler(async (req, res) => {
-    const imageId = req.params.imageId;
-    const userId = req.user?._id;
+const MAX_FILE_BYTES = 25 * 1024 * 1024; // 25MB
+const CONCURRENCY = 5; // batch concurrency
 
-    if (!req.file) {
-        return res.status(400).json({
-            message: 'Bạn chưa chọn ảnh',
-        });
+async function replaceSingleImage({ imageId, fileBuffer, mimetype, fileSize, userId, isAdmin, index }) {
+    if (!mongoose.Types.ObjectId.isValid(imageId)) {
+        return { ok: false, imageId, error: 'Invalid imageId' };
     }
 
-    // Find the image
-    const image = await Image.findById(imageId);
-    if (!image) {
-        return res.status(404).json({
-            message: 'Không tìm thấy ảnh',
-        });
+    if (!fileBuffer || !Buffer.isBuffer(fileBuffer)) {
+        return { ok: false, imageId, error: 'No file buffer provided' };
     }
 
-    // Check if user is the owner or admin
-    const isOwner = image.uploadedBy.toString() === userId?.toString();
-    const isAdmin = req.user?.isAdmin || req.user?.isSuperAdmin;
-
-    if (!isOwner && !isAdmin) {
-        return res.status(403).json({
-            message: 'Bạn không có quyền chỉnh sửa ảnh này',
-        });
+    if (!mimetype || !mimetype.startsWith('image/')) {
+        return { ok: false, imageId, error: 'Invalid file type' };
     }
 
+    if (typeof fileSize === 'number' && fileSize > MAX_FILE_BYTES) {
+        return { ok: false, imageId, error: 'File too large' };
+    }
+
+    const image = await Image.findById(imageId).select('uploadedBy publicId').lean();
+    if (!image) return { ok: false, imageId, error: 'Image not found' };
+
+    const isOwner = image.uploadedBy?.toString() === userId?.toString();
+    if (!isOwner && !isAdmin) return { ok: false, imageId, error: 'No permission to replace this image' };
+
+    let uploadResult;
     try {
-        // Delete old images from S3
-        const oldPublicId = image.publicId;
-        if (oldPublicId) {
-            try {
-                // deleteImageFromS3 automatically deletes all sizes and formats (webp, avif)
-                await deleteImageFromS3(oldPublicId, 'photo-app-images');
-            } catch (deleteError) {
-                logger.warn('Failed to delete old images from S3:', deleteError);
-                // Continue even if deletion fails
-            }
+        // Best-effort: delete old S3 object (don't fail replace if delete fails)
+        if (image.publicId) {
+            deleteImageFromS3(image.publicId, 'photo-app-images').catch(err => {
+                logger.warn('Failed to delete old image from S3 (non-fatal):', err.message);
+            });
         }
 
-        // Generate new unique filename
-        const timestamp = Date.now();
-        const randomString = Math.random().toString(36).substring(2, 15);
-        const filename = `image-${timestamp}-${randomString}`;
+        const filename = `image-${Date.now()}-${crypto.randomBytes(8).toString('hex')}-${index}`;
 
-        // Upload new image to S3 with multiple sizes
-        const uploadResult = await uploadImageWithSizes(
-            req.file.buffer,
-            'photo-app-images',
-            filename
-        );
+        // Upload and extract colors in parallel
+        const [uploadRes, colors] = await Promise.all([
+            uploadImageWithSizes(fileBuffer, 'photo-app-images', filename),
+            extractDominantColors(fileBuffer, 3).catch(err => {
+                logger.warn('Color extraction failed (non-fatal):', err.message);
+                return [];
+            })
+        ]);
 
-        // Extract dominant colors from new image
-        let dominantColors = [];
-        try {
-            dominantColors = await extractDominantColors(req.file.buffer, 3);
-        } catch (colorError) {
-            logger.warn('Failed to extract colors:', colorError);
-        }
+        uploadResult = uploadRes;
 
-        // Update image in database
-        const updatedImage = await Image.findByIdAndUpdate(
+        const update = {
+            imageUrl: uploadResult.imageUrl,
+            thumbnailUrl: uploadResult.thumbnailUrl,
+            smallUrl: uploadResult.smallUrl,
+            regularUrl: uploadResult.regularUrl,
+            imageAvifUrl: uploadResult.imageAvifUrl,
+            thumbnailAvifUrl: uploadResult.thumbnailAvifUrl,
+            smallAvifUrl: uploadResult.smallAvifUrl,
+            regularAvifUrl: uploadResult.regularAvifUrl,
+            publicId: uploadResult.publicId,
+            dominantColors: Array.isArray(colors) && colors.length ? colors : undefined,
+            updatedAt: new Date(),
+        };
+
+        const updated = await Image.findByIdAndUpdate(
             imageId,
-            {
-                $set: {
-                    imageUrl: uploadResult.imageUrl,
-                    thumbnailUrl: uploadResult.thumbnailUrl,
-                    smallUrl: uploadResult.smallUrl,
-                    regularUrl: uploadResult.regularUrl,
-                    publicId: uploadResult.publicId,
-                    dominantColors,
-                },
-            },
+            { $set: update },
             { new: true, runValidators: true }
         )
             .populate('uploadedBy', 'username displayName avatarUrl')
-            .populate({
-                path: 'imageCategory',
-                select: 'name description',
-                justOne: true,
-            })
+            .populate({ path: 'imageCategory', select: 'name description', justOne: true })
             .lean();
 
-        // Clear cache
-        clearCache(`/api/images/${imageId}`);
-        clearCache('/api/images');
+        // Clear caches for this image
+        clearCache(`/api/images/${imageId}`).catch(() => { });
+        clearCache('/api/images').catch(() => { }); // update listing caches as well
 
-        res.status(200).json({
-            message: 'Cập nhật ảnh thành công',
-            image: updatedImage,
-        });
-    } catch (error) {
-        logger.error('Error replacing image:', error);
-        res.status(500).json({
-            message: 'Lỗi khi cập nhật ảnh',
-        });
+        return { ok: true, image: updated };
+    } catch (err) {
+        logger.error('replaceSingleImage error', { imageId, error: err.message });
+
+        // rollback uploaded assets if any
+        if (uploadResult?.publicId) {
+            deleteImageFromS3(uploadResult.publicId, 'photo-app-images').catch(e => {
+                logger.error('Rollback delete failed', { publicId: uploadResult.publicId, error: e.message });
+            });
+        }
+
+        return { ok: false, imageId, error: err.message || 'Unknown error' };
     }
+}
+
+export const replaceImage = asyncHandler(async (req, res) => {
+    const imageId = req.params.imageId;
+    const userId = req.user?._id;
+    const isAdmin = req.user?.isAdmin || req.user?.isSuperAdmin;
+    const file = req.file;
+
+    if (!file) {
+        return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const result = await replaceSingleImage({
+        imageId,
+        fileBuffer: file.buffer,
+        mimetype: file.mimetype,
+        fileSize: file.size,
+        userId,
+        isAdmin,
+        index: 0
+    });
+
+    if (!result.ok) {
+        return res.status(400).json({ success: false, message: result.error });
+    }
+
+    res.json({ success: true, message: 'Image replaced', image: result.image });
 });
 
-// Batch replace images (for batch editing)
 export const batchReplaceImages = asyncHandler(async (req, res) => {
     const userId = req.user?._id;
+    const isAdmin = req.user?.isAdmin || req.user?.isSuperAdmin;
     const files = req.files || [];
-    const imageIds = req.body.imageIds || [];
+    let imageIds = req.body.imageIds || req.body.ids || req.body.imageIdList;
 
-    if (files.length === 0 || imageIds.length === 0) {
-        return res.status(400).json({
-            message: 'Không có ảnh nào để cập nhật',
-        });
+    // Normalize imageIds to array
+    if (typeof imageIds === 'string') {
+        try {
+            imageIds = JSON.parse(imageIds);
+        } catch {
+            imageIds = imageIds.split(',').map(s => s.trim()).filter(Boolean);
+        }
+    }
+    if (!Array.isArray(imageIds)) imageIds = [];
+
+    if (imageIds.length === 0 || files.length === 0) {
+        return res.status(400).json({ success: false, message: 'imageIds and files are required' });
     }
 
     if (files.length !== imageIds.length) {
-        return res.status(400).json({
-            message: 'Số lượng ảnh và ID không khớp',
+        return res.status(400).json({ success: false, message: 'Number of files must match number of imageIds' });
+    }
+
+    const tasks = [];
+    for (let i = 0; i < files.length; i++) {
+        tasks.push({
+            imageId: imageIds[i],
+            file: files[i],
+            index: i
         });
     }
 
-    try {
-        const updatedImages = [];
-
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            const imageId = Array.isArray(imageIds) ? imageIds[i] : imageIds;
-
-            // Find the image
-            const image = await Image.findById(imageId);
-            if (!image) {
-                logger.warn(`Image ${imageId} not found, skipping`);
-                continue;
-            }
-
-            // Check if user is the owner or admin
-            const isOwner = image.uploadedBy.toString() === userId?.toString();
-            const isAdmin = req.user?.isAdmin || req.user?.isSuperAdmin;
-
-            if (!isOwner && !isAdmin) {
-                logger.warn(`User ${userId} does not have permission to edit image ${imageId}`);
-                continue;
-            }
-
-            // Delete old images from S3
-            const oldPublicId = image.publicId;
-            if (oldPublicId) {
-                try {
-                    // deleteImageFromS3 automatically deletes all sizes and formats (webp, avif)
-                    await deleteImageFromS3(oldPublicId, 'photo-app-images');
-                } catch (deleteError) {
-                    logger.warn('Failed to delete old images from S3:', deleteError);
-                }
-            }
-
-            // Generate new unique filename
-            const timestamp = Date.now();
-            const randomString = Math.random().toString(36).substring(2, 15);
-            const filename = `image-${timestamp}-${randomString}-${i}`;
-
-            // Upload new image to S3 with multiple sizes
-            const uploadResult = await uploadImageWithSizes(
-                file.buffer,
-                'photo-app-images',
-                filename
-            );
-
-            // Extract dominant colors
-            let dominantColors = [];
-            try {
-                dominantColors = await extractDominantColors(file.buffer, 3);
-            } catch (colorError) {
-                logger.warn('Failed to extract colors:', colorError);
-            }
-
-            // Update image in database
-            const updatedImage = await Image.findByIdAndUpdate(
-                imageId,
-                {
-                    $set: {
-                        imageUrl: uploadResult.imageUrl,
-                        thumbnailUrl: uploadResult.thumbnailUrl,
-                        smallUrl: uploadResult.smallUrl,
-                        regularUrl: uploadResult.regularUrl,
-                        publicId: uploadResult.publicId,
-                        dominantColors,
-                    },
-                },
-                { new: true, runValidators: true }
-            )
-                .populate('uploadedBy', 'username displayName avatarUrl')
-                .populate({
-                    path: 'imageCategory',
-                    select: 'name description',
-                    justOne: true,
-                })
-                .lean();
-
-            updatedImages.push(updatedImage);
-
-            // Clear cache
-            clearCache(`/api/images/${imageId}`);
+    const results = [];
+    // Process in chunks to limit concurrency
+    for (let i = 0; i < tasks.length; i += CONCURRENCY) {
+        const chunk = tasks.slice(i, i + CONCURRENCY);
+        const promises = chunk.map(t =>
+            replaceSingleImage({
+                imageId: t.imageId,
+                fileBuffer: t.file.buffer,
+                mimetype: t.file.mimetype,
+                fileSize: t.file.size,
+                userId,
+                isAdmin,
+                index: t.index
+            })
+        );
+        // wait for chunk
+        // use allSettled to ensure all in chunk complete
+        // then push results
+        //noinspection ES6MissingAwait
+        const settled = await Promise.allSettled(promises);
+        for (const r of settled) {
+            if (r.status === 'fulfilled') results.push(r.value);
+            else results.push({ ok: false, error: r.reason?.message || String(r.reason) });
         }
-
-        clearCache('/api/images');
-
-        // Create bulk operation notification if multiple images were replaced
-        if (updatedImages.length > 1 && userId) {
-            try {
-                await Notification.create({
-                    recipient: userId,
-                    type: 'bulk_upload_completed', // Reuse this type for bulk operations
-                    metadata: {
-                        operation: 'batch_replace',
-                        successCount: updatedImages.length,
-                        totalCount: files.length,
-                        failedCount: files.length - updatedImages.length,
-                    },
-                });
-            } catch (notifError) {
-                logger.error('Failed to create bulk operation notification:', notifError);
-                // Don't fail the operation if notification fails
-            }
-        }
-
-        res.status(200).json({
-            message: `Đã cập nhật ${updatedImages.length} ảnh thành công`,
-            images: updatedImages,
-        });
-    } catch (error) {
-        logger.error('Error in batch replace images:', error);
-        res.status(500).json({
-            message: 'Lỗi khi cập nhật ảnh',
-        });
     }
+
+    const successes = results.filter(r => r.ok).map(r => r.image);
+    const failures = results.filter(r => !r.ok).map(r => ({ imageId: r.imageId, error: r.error }));
+
+    // Clear listing cache once more to ensure UI sees updates
+    clearCache('/api/images').catch(() => { });
+
+    res.json({
+        success: true,
+        summary: {
+            total: results.length,
+            updated: successes.length,
+            failed: failures.length,
+        },
+        updated: successes,
+        failures,
+    });
 });
 

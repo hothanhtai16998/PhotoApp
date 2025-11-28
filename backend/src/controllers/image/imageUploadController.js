@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import crypto from 'crypto';
 import { uploadImageWithSizes, deleteImageFromS3, getImageFromS3, generatePresignedUploadUrl, deleteObjectByKey } from '../../libs/s3.js';
 import Image from '../../models/Image.js';
 import Category from '../../models/Category.js';
@@ -10,24 +11,35 @@ import { extractDominantColors } from '../../utils/colorExtractor.js';
 import { extractExifData } from '../../utils/exifExtractor.js';
 
 const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25MB
+const MAX_IMAGE_TITLE_LENGTH = 255;
+const MAX_TAG_LENGTH = 50;
+const MAX_TAGS_PER_IMAGE = 20;
 const RAW_UPLOAD_FOLDER = 'photo-app-raw';
-
-const generateUploadId = () => `image-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+const UPLOAD_ID_PATTERN = /^image-\d+-[a-z0-9]{8}$/;
 
 const extensionMap = {
     jpeg: 'jpg',
     'svg+xml': 'svg',
 };
 
+/**
+ * Generate secure random upload ID
+ */
+const generateUploadId = () => {
+    const timestamp = Date.now();
+    const randomBytes = crypto.randomBytes(4).toString('hex'); // 8 hex chars
+    return `image-${timestamp}-${randomBytes}`;
+};
+
 const getFileExtension = (fileName = '', fileType = '') => {
     const nameExt = fileName.includes('.') ? fileName.split('.').pop()?.toLowerCase() : null;
-    if (nameExt && nameExt.length <= 5) {
+    if (nameExt && nameExt.length <= 5 && /^[a-z0-9]+$/.test(nameExt)) {
         return nameExt;
     }
 
     if (fileType.includes('/')) {
         const typePart = fileType.split('/')[1]?.toLowerCase();
-        if (typePart) {
+        if (typePart && /^[a-z0-9+\-]+$/.test(typePart)) {
             return extensionMap[typePart] || typePart;
         }
     }
@@ -43,32 +55,161 @@ const streamToBuffer = async (stream) => {
     return Buffer.concat(chunks);
 };
 
+/**
+ * Validate and parse coordinates
+ */
+const validateCoordinates = (coordinates) => {
+    if (!coordinates) return undefined;
+
+    try {
+        const parsed = typeof coordinates === 'string' ? JSON.parse(coordinates) : coordinates;
+
+        if (!parsed.latitude || !parsed.longitude) return undefined;
+
+        const lat = parseFloat(parsed.latitude);
+        const lng = parseFloat(parsed.longitude);
+
+        if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+            return undefined;
+        }
+
+        return { latitude: lat, longitude: lng };
+    } catch (error) {
+        logger.warn('Invalid coordinates format:', error.message);
+        return undefined;
+    }
+};
+
+/**
+ * Find category by ID or name
+ */
+const findCategory = async (categoryInput) => {
+    const trimmed = String(categoryInput || '').trim();
+
+    if (!trimmed) {
+        throw new Error('Danh mục không được để trống');
+    }
+
+    let categoryDoc;
+    if (mongoose.Types.ObjectId.isValid(trimmed)) {
+        categoryDoc = await Category.findById(trimmed);
+    } else {
+        categoryDoc = await Category.findOne({
+            name: { $regex: new RegExp(`^${trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+            isActive: true,
+        });
+    }
+
+    if (!categoryDoc) {
+        throw new Error('Danh mục ảnh không tồn tại hoặc đã bị xóa');
+    }
+
+    return categoryDoc;
+};
+
+/**
+ * Parse and validate tags
+ */
+const parseTags = (tagsInput) => {
+    let tagsArray = [];
+
+    if (!tagsInput) return [];
+
+    try {
+        tagsArray = typeof tagsInput === 'string' ? JSON.parse(tagsInput) : tagsInput;
+        if (!Array.isArray(tagsArray)) return [];
+    } catch (error) {
+        logger.warn('Invalid tags format:', error.message);
+        return [];
+    }
+
+    // Use Set for O(n) deduplication instead of O(n²) filter
+    const uniqueTags = new Set();
+    return tagsArray
+        .map(tag => (typeof tag === 'string' ? tag : String(tag)).trim().toLowerCase())
+        .filter(tag => tag.length > 0 && tag.length <= MAX_TAG_LENGTH)
+        .filter(tag => {
+            if (uniqueTags.has(tag)) return false;
+            uniqueTags.add(tag);
+            return true;
+        })
+        .slice(0, MAX_TAGS_PER_IMAGE);
+};
+
+/**
+ * Extract metadata from image buffer in parallel
+ */
+const extractMetadata = async (imageBuffer) => {
+    try {
+        const [dominantColors, exifData] = await Promise.all([
+            extractDominantColors(imageBuffer, 3).catch(err => {
+                logger.warn('Failed to extract colors:', err.message);
+                return [];
+            }),
+            extractExifData(imageBuffer).catch(err => {
+                logger.warn('Failed to extract EXIF:', err.message);
+                return {};
+            }),
+        ]);
+
+        return { dominantColors, exifData };
+    } catch (error) {
+        logger.warn('Failed to extract metadata:', error.message);
+        return { dominantColors: [], exifData: {} };
+    }
+};
+
+/**
+ * Create image document in database
+ */
+const createImageDocument = async (uploadResult, userId, categoryDoc, metadata, input) => {
+    const { dominantColors, exifData } = metadata;
+    const { imageTitle, location, coordinates, cameraModel, tags } = input;
+
+    const parsedTags = parseTags(tags);
+    const parsedCoordinates = validateCoordinates(coordinates);
+
+    const isAdmin = input.isAdmin || false;
+    const moderationStatus = isAdmin ? 'approved' : 'pending';
+
+    const imageData = {
+        imageUrl: uploadResult.imageUrl,
+        thumbnailUrl: uploadResult.thumbnailUrl,
+        smallUrl: uploadResult.smallUrl,
+        regularUrl: uploadResult.regularUrl,
+        imageAvifUrl: uploadResult.imageAvifUrl,
+        thumbnailAvifUrl: uploadResult.thumbnailAvifUrl,
+        smallAvifUrl: uploadResult.smallAvifUrl,
+        regularAvifUrl: uploadResult.regularAvifUrl,
+        publicId: uploadResult.publicId,
+        imageTitle: imageTitle.substring(0, MAX_IMAGE_TITLE_LENGTH),
+        imageCategory: categoryDoc._id,
+        uploadedBy: userId,
+        location: location?.trim() || undefined,
+        coordinates: parsedCoordinates,
+        cameraMake: exifData.cameraMake || undefined,
+        cameraModel: exifData.cameraModel || cameraModel?.trim() || undefined,
+        focalLength: exifData.focalLength || undefined,
+        aperture: exifData.aperture || undefined,
+        shutterSpeed: exifData.shutterSpeed || undefined,
+        iso: exifData.iso || undefined,
+        dominantColors: dominantColors.length > 0 ? dominantColors : undefined,
+        tags: parsedTags.length > 0 ? parsedTags : undefined,
+        moderationStatus,
+        isModerated: isAdmin,
+        ...(isAdmin ? {
+            moderatedAt: new Date(),
+            moderatedBy: userId,
+        } : {}),
+    };
+
+    return Image.create(imageData);
+};
+
 export const uploadImage = asyncHandler(async (req, res) => {
     const userId = req.user._id;
+    const isAdmin = req.user?.isAdmin || req.user?.isSuperAdmin;
     const { imageTitle, imageCategory, location, cameraModel, coordinates, tags } = req.body;
-
-    // Parse coordinates if provided as JSON string
-    let parsedCoordinates;
-    if (coordinates) {
-        try {
-            parsedCoordinates = typeof coordinates === 'string' ? JSON.parse(coordinates) : coordinates;
-            // Validate coordinates
-            if (parsedCoordinates.latitude && parsedCoordinates.longitude) {
-                const lat = parseFloat(parsedCoordinates.latitude);
-                const lng = parseFloat(parsedCoordinates.longitude);
-                if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-                    parsedCoordinates = undefined;
-                } else {
-                    parsedCoordinates = { latitude: lat, longitude: lng };
-                }
-            } else {
-                parsedCoordinates = undefined;
-            }
-        } catch (error) {
-            logger.warn('Invalid coordinates format:', error);
-            parsedCoordinates = undefined;
-        }
-    }
 
     if (!req.file) {
         return res.status(400).json({
@@ -76,143 +217,64 @@ export const uploadImage = asyncHandler(async (req, res) => {
         });
     }
 
-    // Validate and trim inputs
-    const trimmedTitle = typeof imageTitle === 'string' ? imageTitle.trim() : '';
-    const trimmedCategory = typeof imageCategory === 'string' ? imageCategory.trim() : String(imageCategory || '');
-
-    if (!trimmedTitle || !trimmedCategory) {
+    const trimmedTitle = String(imageTitle || '').trim();
+    if (!trimmedTitle) {
         return res.status(400).json({
-            message: 'Tiêu đề và danh mục của ảnh không được để trống',
+            message: 'Tiêu đề ảnh không được để trống',
         });
     }
 
-    // Find category by name (case-insensitive) - accept either category name or ID
-    let categoryDoc;
-    if (mongoose.Types.ObjectId.isValid(trimmedCategory)) {
-        // If it's a valid ObjectId, try to find by ID
-        categoryDoc = await Category.findById(trimmedCategory);
-    } else {
-        // Otherwise, find by name
-        categoryDoc = await Category.findOne({
-            name: { $regex: new RegExp(`^${trimmedCategory}$`, 'i') },
-            isActive: true,
-        });
-    }
-
-    if (!categoryDoc) {
-        console.error('Category not found!');
-        return res.status(400).json({
-            message: 'Danh mục ảnh không tồn tại hoặc đã bị xóa',
-        });
-    }
-
-    // Validate file type
     if (!req.file.mimetype.startsWith('image/')) {
         return res.status(400).json({
-            message: 'Tệp phải có định dạng là ảnh hoặc video',
+            message: 'Tệp phải có định dạng là ảnh',
         });
+    }
+
+    let categoryDoc;
+    try {
+        categoryDoc = await findCategory(imageCategory);
+    } catch (error) {
+        return res.status(400).json({ message: error.message });
     }
 
     let uploadResult;
     try {
-        // Generate unique filename
-        const timestamp = Date.now();
-        const randomString = Math.random().toString(36).substring(2, 15);
-        const filename = `image-${timestamp}-${randomString}`;
+        // Generate secure filename
+        const filename = `image-${Date.now()}-${crypto.randomBytes(8).toString('hex')}`;
 
-        // Upload image to S3 with multiple sizes using Sharp
+        // Upload image to S3 with multiple sizes
         uploadResult = await uploadImageWithSizes(
             req.file.buffer,
             'photo-app-images',
             filename
         );
 
-        // Clear cache for images endpoint when new image is uploaded
-        clearCache('/api/images');
+        // Extract metadata in parallel
+        const metadata = await extractMetadata(req.file.buffer);
 
-        // Extract dominant colors from image
-        let dominantColors = [];
-        try {
-            dominantColors = await extractDominantColors(req.file.buffer, 3);
-            logger.info(`Extracted ${dominantColors.length} dominant colors for image`);
-        } catch (colorError) {
-            logger.warn('Failed to extract colors, continuing without colors:', colorError);
-            // Don't fail upload if color extraction fails
-        }
-
-        // Extract EXIF data from image
-        let exifData = {};
-        try {
-            exifData = await extractExifData(req.file.buffer);
-            logger.info('Extracted EXIF data from image');
-        } catch (exifError) {
-            logger.warn('Failed to extract EXIF data, continuing without EXIF:', exifError);
-            // Don't fail upload if EXIF extraction fails
-        }
-
-        // Parse and validate tags
-        let parsedTags = [];
-        if (tags) {
-            try {
-                // Handle both JSON string and array
-                const tagsArray = typeof tags === 'string' ? JSON.parse(tags) : tags;
-                if (Array.isArray(tagsArray)) {
-                    // Clean and validate tags (trim, lowercase, remove duplicates, max 20 tags)
-                    parsedTags = tagsArray
-                        .map(tag => typeof tag === 'string' ? tag.trim().toLowerCase() : String(tag).trim().toLowerCase())
-                        .filter(tag => tag.length > 0 && tag.length <= 50) // Max 50 chars per tag
-                        .filter((tag, index, self) => self.indexOf(tag) === index) // Remove duplicates
-                        .slice(0, 20); // Max 20 tags per image
-                }
-            } catch (error) {
-                logger.warn('Invalid tags format, ignoring tags:', error);
+        // Create image document
+        const newImage = await createImageDocument(
+            uploadResult,
+            userId,
+            categoryDoc,
+            metadata,
+            {
+                imageTitle: trimmedTitle,
+                location,
+                coordinates,
+                cameraModel,
+                tags,
+                isAdmin,
             }
-        }
+        );
 
-        // Determine moderation status based on user role
-        // Admins' images are auto-approved, regular users need moderation
-        const isAdmin = req.user?.isAdmin || req.user?.isSuperAdmin;
-        const moderationStatus = isAdmin ? 'approved' : 'pending';
-        const isModerated = isAdmin; // Admin images are considered pre-moderated
-
-        // Save to database with multiple image sizes and formats
-        const newImage = await Image.create({
-            imageUrl: uploadResult.imageUrl, // Original (optimized) - WebP
-            thumbnailUrl: uploadResult.thumbnailUrl, // Small thumbnail for blur-up - WebP
-            smallUrl: uploadResult.smallUrl, // Small size for grid - WebP
-            regularUrl: uploadResult.regularUrl, // Regular size for detail - WebP
-            // AVIF versions for better compression (modern browsers)
-            imageAvifUrl: uploadResult.imageAvifUrl, // Original - AVIF
-            thumbnailAvifUrl: uploadResult.thumbnailAvifUrl, // Thumbnail - AVIF
-            smallAvifUrl: uploadResult.smallAvifUrl, // Small - AVIF
-            regularAvifUrl: uploadResult.regularAvifUrl, // Regular - AVIF
-            publicId: uploadResult.publicId,
-            imageTitle: trimmedTitle,
-            imageCategory: categoryDoc._id, // Use category ObjectId directly
-            uploadedBy: userId,
-            location: location?.trim() || undefined,
-            coordinates: parsedCoordinates || undefined,
-            // Use EXIF data if available, otherwise use manual input
-            cameraMake: exifData.cameraMake || undefined,
-            cameraModel: exifData.cameraModel || cameraModel?.trim() || undefined,
-            focalLength: exifData.focalLength || undefined,
-            aperture: exifData.aperture || undefined,
-            shutterSpeed: exifData.shutterSpeed || undefined,
-            iso: exifData.iso || undefined,
-            dominantColors: dominantColors.length > 0 ? dominantColors : undefined,
-            tags: parsedTags.length > 0 ? parsedTags : undefined,
-            // Moderation status
-            moderationStatus,
-            isModerated,
-            ...(isAdmin ? {
-                moderatedAt: new Date(),
-                moderatedBy: userId,
-            } : {}),
-        });
-
-        // Populate user and category info
         await newImage.populate('uploadedBy', 'username displayName avatarUrl');
         await newImage.populate('imageCategory', 'name description');
+
+        // Clear cache asynchronously
+        clearCache('/api/images').catch(err => {
+            logger.warn('Failed to clear cache:', err.message);
+        });
 
         res.status(201).json({
             message: 'Thêm ảnh thành công',
@@ -221,39 +283,24 @@ export const uploadImage = asyncHandler(async (req, res) => {
     } catch (error) {
         // Rollback S3 upload if DB save failed
         if (uploadResult?.publicId) {
-            try {
-                await deleteImageFromS3(uploadResult.publicId, 'photo-app-images');
-            } catch (rollbackError) {
-                logger.error('Lỗi xóa ảnh từ S3 sau khi rollback', rollbackError);
-            }
+            deleteImageFromS3(uploadResult.publicId, 'photo-app-images').catch(err => {
+                logger.error('Rollback failed:', err.message);
+            });
         }
 
-        // Provide user-friendly error messages
-        logger.error('Lỗi tải ảnh', {
+        logger.error('Upload failed:', {
             message: error.message,
             fileSize: req.file?.size,
-            fileName: req.file?.originalname,
         });
 
-        if (error.message?.includes('timeout') || error.message?.includes('Upload timeout')) {
-            throw new Error('Lỗi tải ảnh: vui lòng thử lại với ảnh có dung lượng nhỏ hơn hoặc kiểm tra kết nối mạng của bạn.');
+        if (error.message?.includes('timeout')) {
+            throw new Error('Lỗi tải ảnh: vui lòng thử lại với ảnh có dung lượng nhỏ hơn');
         }
 
-        if (error.message?.includes('Failed to process')) {
-            throw new Error('Lỗi xử lý ảnh: định dạng ảnh không được hỗ trợ hoặc ảnh bị hỏng.');
-        }
-
-        if (error.message?.includes('Failed to upload')) {
-            throw new Error('Tải ảnh thất bại: không thể tải ảnh lên server. Vui lòng thử lại.');
-        }
-
-        // Re-throw other errors (they'll be handled by errorHandler middleware)
         throw error;
     }
 });
 
-// Pre-upload endpoint: Upload image to S3 only, return URLs (no database record yet)
-// This allows frontend to upload image first, then finalize with metadata later
 export const preUploadImage = asyncHandler(async (req, res) => {
     const { fileName, fileType, fileSize } = req.body;
 
@@ -270,13 +317,7 @@ export const preUploadImage = asyncHandler(async (req, res) => {
     }
 
     const numericFileSize = Number(fileSize);
-    if (Number.isNaN(numericFileSize) || numericFileSize <= 0) {
-        return res.status(400).json({
-            message: 'Kích thước tệp không hợp lệ',
-        });
-    }
-
-    if (numericFileSize > MAX_FILE_SIZE_BYTES) {
+    if (Number.isNaN(numericFileSize) || numericFileSize <= 0 || numericFileSize > MAX_FILE_SIZE_BYTES) {
         return res.status(413).json({
             message: `Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn ${(MAX_FILE_SIZE_BYTES / (1024 * 1024)).toFixed(0)}MB`,
         });
@@ -297,78 +338,34 @@ export const preUploadImage = asyncHandler(async (req, res) => {
             maxFileSize: MAX_FILE_SIZE_BYTES,
         });
     } catch (error) {
-        logger.error('Lỗi tạo URL tải lên S3', error);
+        logger.error('Failed to generate upload URL:', error.message);
         throw new Error('Không thể khởi tạo tải ảnh. Vui lòng thử lại.');
     }
 });
 
-// Finalize endpoint: Link metadata to pre-uploaded image and create database record
 export const finalizeImageUpload = asyncHandler(async (req, res) => {
     const userId = req.user._id;
-    const { 
-        uploadId,
-        uploadKey,
-        imageTitle, 
-        imageCategory, 
-        location, 
-        cameraModel, 
-        coordinates, 
-        tags 
-    } = req.body;
+    const isAdmin = req.user?.isAdmin || req.user?.isSuperAdmin;
+    const { uploadId, uploadKey, imageTitle, imageCategory, location, cameraModel, coordinates, tags } = req.body;
 
-    if (!uploadId || !uploadKey) {
+    if (!uploadId || !uploadKey || !UPLOAD_ID_PATTERN.test(uploadId)) {
         return res.status(400).json({
-            message: 'Thiếu thông tin ảnh đã tải lên. Vui lòng tải ảnh lại.',
+            message: 'Invalid upload ID format',
         });
     }
 
-    // Parse coordinates if provided
-    let parsedCoordinates;
-    if (coordinates) {
-        try {
-            parsedCoordinates = typeof coordinates === 'string' ? JSON.parse(coordinates) : coordinates;
-            if (parsedCoordinates.latitude && parsedCoordinates.longitude) {
-                const lat = parseFloat(parsedCoordinates.latitude);
-                const lng = parseFloat(parsedCoordinates.longitude);
-                if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-                    parsedCoordinates = undefined;
-                } else {
-                    parsedCoordinates = { latitude: lat, longitude: lng };
-                }
-            } else {
-                parsedCoordinates = undefined;
-            }
-        } catch (error) {
-            logger.warn('Invalid coordinates format:', error);
-            parsedCoordinates = undefined;
-        }
-    }
-
-    // Validate and trim inputs
-    const trimmedTitle = typeof imageTitle === 'string' ? imageTitle.trim() : '';
-    const trimmedCategory = typeof imageCategory === 'string' ? imageCategory.trim() : String(imageCategory || '');
-
-    if (!trimmedTitle || !trimmedCategory) {
+    const trimmedTitle = String(imageTitle || '').trim();
+    if (!trimmedTitle) {
         return res.status(400).json({
-            message: 'Tiêu đề và danh mục của ảnh không được để trống',
+            message: 'Tiêu đề ảnh không được để trống',
         });
     }
 
-    // Find category by name (case-insensitive) - accept either category name or ID
     let categoryDoc;
-    if (mongoose.Types.ObjectId.isValid(trimmedCategory)) {
-        categoryDoc = await Category.findById(trimmedCategory);
-    } else {
-        categoryDoc = await Category.findOne({
-            name: { $regex: new RegExp(`^${trimmedCategory}$`, 'i') },
-            isActive: true,
-        });
-    }
-
-    if (!categoryDoc) {
-        return res.status(400).json({
-            message: 'Danh mục ảnh không tồn tại hoặc đã bị xóa',
-        });
+    try {
+        categoryDoc = await findCategory(imageCategory);
+    } catch (error) {
+        return res.status(400).json({ message: error.message });
     }
 
     let imageBuffer;
@@ -376,118 +373,64 @@ export const finalizeImageUpload = asyncHandler(async (req, res) => {
         const imageData = await getImageFromS3(uploadKey);
         if (!imageData.Body) {
             return res.status(400).json({
-                message: 'Không tìm thấy ảnh đã tải lên. Vui lòng thử lại.',
+                message: 'Không tìm thấy ảnh đã tải lên',
             });
         }
         imageBuffer = await streamToBuffer(imageData.Body);
     } catch (error) {
-        logger.error('Failed to download raw upload from S3', error);
+        logger.error('Failed to download raw upload:', error.message);
         return res.status(400).json({
-            message: 'Không thể đọc ảnh đã tải lên. Vui lòng thử lại.',
+            message: 'Không thể đọc ảnh đã tải lên',
         });
     }
-
-    // Extract metadata from buffer
-    let dominantColors = [];
-    let exifData = {};
-    try {
-        dominantColors = await extractDominantColors(imageBuffer, 3);
-        exifData = await extractExifData(imageBuffer);
-    } catch (error) {
-        logger.warn('Failed to extract metadata, continuing without metadata:', error);
-    }
-
-    // Parse and validate tags
-    let parsedTags = [];
-    if (tags) {
-        try {
-            const tagsArray = typeof tags === 'string' ? JSON.parse(tags) : tags;
-            if (Array.isArray(tagsArray)) {
-                parsedTags = tagsArray
-                    .map(tag => typeof tag === 'string' ? tag.trim().toLowerCase() : String(tag).trim().toLowerCase())
-                    .filter(tag => tag.length > 0 && tag.length <= 50)
-                    .filter((tag, index, self) => self.indexOf(tag) === index)
-                    .slice(0, 20);
-            }
-        } catch (error) {
-            logger.warn('Invalid tags format, ignoring tags:', error);
-        }
-    }
-
-    // Determine moderation status based on user role
-    const isAdmin = req.user?.isAdmin || req.user?.isSuperAdmin;
-    const moderationStatus = isAdmin ? 'approved' : 'pending';
-    const isModerated = isAdmin;
 
     let uploadResult;
+    let newImage;
+
     try {
-        uploadResult = await uploadImageWithSizes(
-            imageBuffer,
-            'photo-app-images',
-            uploadId
+        // Extract metadata in parallel
+        const metadata = await extractMetadata(imageBuffer);
+
+        // Process image
+        uploadResult = await uploadImageWithSizes(imageBuffer, 'photo-app-images', uploadId);
+
+        // Create image document
+        newImage = await createImageDocument(
+            uploadResult,
+            userId,
+            categoryDoc,
+            metadata,
+            {
+                imageTitle: trimmedTitle,
+                location,
+                coordinates,
+                cameraModel,
+                tags,
+                isAdmin,
+            }
         );
-    } catch (error) {
-        logger.error('Failed to process uploaded image', error);
-        throw new Error('Xử lý ảnh thất bại. Vui lòng thử lại với ảnh khác.');
-    }
 
-    try {
-        // Save to database with processed image URLs
-        const newImage = await Image.create({
-            imageUrl: uploadResult.imageUrl,
-            thumbnailUrl: uploadResult.thumbnailUrl,
-            smallUrl: uploadResult.smallUrl,
-            regularUrl: uploadResult.regularUrl,
-            imageAvifUrl: uploadResult.imageAvifUrl,
-            thumbnailAvifUrl: uploadResult.thumbnailAvifUrl,
-            smallAvifUrl: uploadResult.smallAvifUrl,
-            regularAvifUrl: uploadResult.regularAvifUrl,
-            publicId: uploadResult.publicId,
-            imageTitle: trimmedTitle,
-            imageCategory: categoryDoc._id,
-            uploadedBy: userId,
-            location: location?.trim() || undefined,
-            coordinates: parsedCoordinates || undefined,
-            cameraMake: exifData.cameraMake || undefined,
-            cameraModel: exifData.cameraModel || cameraModel?.trim() || undefined,
-            focalLength: exifData.focalLength || undefined,
-            aperture: exifData.aperture || undefined,
-            shutterSpeed: exifData.shutterSpeed || undefined,
-            iso: exifData.iso || undefined,
-            dominantColors: dominantColors.length > 0 ? dominantColors : undefined,
-            tags: parsedTags.length > 0 ? parsedTags : undefined,
-            moderationStatus,
-            isModerated,
-            ...(isAdmin ? {
-                moderatedAt: new Date(),
-                moderatedBy: userId,
-            } : {}),
-        });
-
-        // Populate user and category info
         await newImage.populate('uploadedBy', 'username displayName avatarUrl');
         await newImage.populate('imageCategory', 'name description');
 
-        // Clear cache for images endpoint when new image is uploaded
-        clearCache('/api/images');
+        // Clear cache
+        clearCache('/api/images').catch(err => {
+            logger.warn('Failed to clear cache:', err.message);
+        });
 
-        // Create upload completed notification
-        try {
-            await Notification.create({
-                recipient: userId,
-                type: 'upload_completed',
-                image: newImage._id,
-                metadata: {
-                    imageTitle: trimmedTitle,
-                },
-            });
-        } catch (notifError) {
-            logger.error('Failed to create upload notification:', notifError);
-        }
-
-        // Delete the temporary raw object
+        // Clean up raw upload (async, don't wait)
         deleteObjectByKey(uploadKey).catch(err => {
-            logger.warn(`Failed to delete raw upload ${uploadKey}`, err);
+            logger.warn(`Failed to delete raw upload ${uploadKey}:`, err.message);
+        });
+
+        // Create success notification (async)
+        Notification.create({
+            recipient: userId,
+            type: 'upload_completed',
+            image: newImage._id,
+            metadata: { imageTitle: trimmedTitle },
+        }).catch(err => {
+            logger.error('Failed to create notification:', err.message);
         });
 
         res.status(201).json({
@@ -495,42 +438,31 @@ export const finalizeImageUpload = asyncHandler(async (req, res) => {
             image: newImage,
         });
     } catch (error) {
-        logger.error('Lỗi lưu ảnh vào database', {
-            message: error.message,
-            uploadId,
-        });
+        logger.error('Finalize upload failed:', error.message);
 
-        // Create upload failed notification
-        try {
-            await Notification.create({
-                recipient: userId,
-                type: 'upload_failed',
-                metadata: {
-                    imageTitle: trimmedTitle || 'Unknown',
-                    error: error.message || 'Unknown error',
-                },
-            });
-        } catch (notifError) {
-            logger.error('Failed to create upload failed notification:', notifError);
-        }
-
-        // Rollback processed images if DB save failed
+        // Rollback processed images
         if (uploadResult?.publicId) {
-            try {
-                await deleteImageFromS3(uploadResult.publicId, 'photo-app-images');
-            } catch (rollbackError) {
-                logger.error('Lỗi xóa ảnh từ S3 sau khi rollback', rollbackError);
-            }
+            deleteImageFromS3(uploadResult.publicId, 'photo-app-images').catch(err => {
+                logger.error('Rollback failed:', err.message);
+            });
         }
+
+        // Create failure notification (async)
+        Notification.create({
+            recipient: userId,
+            type: 'upload_failed',
+            metadata: {
+                imageTitle: trimmedTitle || 'Unknown',
+                error: error.message,
+            },
+        }).catch(err => {
+            logger.error('Failed to create failure notification:', err.message);
+        });
 
         throw error;
     }
 });
 
-/**
- * Create bulk upload completed notification
- * POST /api/images/bulk-upload-notification
- */
 export const createBulkUploadNotification = asyncHandler(async (req, res) => {
     const userId = req.user._id;
     const { successCount, totalCount, failedCount } = req.body;
@@ -558,7 +490,7 @@ export const createBulkUploadNotification = asyncHandler(async (req, res) => {
             message: 'Bulk upload notification created',
         });
     } catch (error) {
-        logger.error('Failed to create bulk upload notification:', error);
+        logger.error('Failed to create bulk notification:', error.message);
         res.status(500).json({
             success: false,
             message: 'Failed to create notification',
