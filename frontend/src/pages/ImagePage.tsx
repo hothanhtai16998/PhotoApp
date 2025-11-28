@@ -1,11 +1,13 @@
-import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
-import ImageModal from '@/components/ImageModal';
 import { imageService } from '@/services/imageService';
 import { extractIdFromSlug, generateImageSlug } from '@/lib/utils';
 import type { Image } from '@/types/image';
 import './ImagePage.css';
+
+// Lazy load ImageModal - main component of this page
+const ImageModal = lazy(() => import('@/components/ImageModal'));
 
 function ImagePage() {
   const { slug } = useParams<{ slug: string }>();
@@ -167,18 +169,24 @@ function ImagePage() {
     <>
       <Header />
       <div className={`image-page-container ${isFromGrid ? 'modal-mode' : 'page-mode'}`}>
-        <ImageModal
-          image={image}
-          images={images}
-          onClose={handleClose}
-          onImageSelect={handleImageSelect}
-          onDownload={handleDownload}
-          imageTypes={imageTypes}
-          onImageLoad={handleImageLoad}
-          currentImageIds={currentImageIds.current}
-          processedImages={processedImages}
-          renderAsPage={renderAsPage}
-        />
+        <Suspense fallback={
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="loading-spinner" />
+          </div>
+        }>
+          <ImageModal
+            image={image}
+            images={images}
+            onClose={handleClose}
+            onImageSelect={handleImageSelect}
+            onDownload={handleDownload}
+            imageTypes={imageTypes}
+            onImageLoad={handleImageLoad}
+            currentImageIds={currentImageIds.current}
+            processedImages={processedImages}
+            renderAsPage={renderAsPage}
+          />
+        </Suspense>
       </div>
     </>
   );

@@ -1,11 +1,14 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import ImageGrid from "@/components/ImageGrid";
 import './HomePage.css';
-import Slider from "@/components/Slider";
 import { useImageStore } from "@/stores/useImageStore";
 import { useGlobalKeyboardShortcuts } from "@/hooks/useGlobalKeyboardShortcuts";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// Lazy load Slider - conditionally rendered
+const Slider = lazy(() => import("@/components/Slider"));
 
 function HomePage() {
     const { currentSearch } = useImageStore();
@@ -58,7 +61,15 @@ function HomePage() {
             <Header />
             <main className="homepage">
                 {/* Hide Slider when user is searching to show ImageGrid immediately */}
-                {!currentSearch && <Slider />}
+                {!currentSearch && (
+                    <Suspense fallback={
+                        <div className="flex items-center justify-center py-8">
+                            <Skeleton className="h-64 w-full max-w-6xl" />
+                        </div>
+                    }>
+                        <Slider />
+                    </Suspense>
+                )}
                 <ImageGrid />
             </main>
         </>

@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo, useRef } from "react";
+import { useEffect, useCallback, useMemo, useRef, lazy, Suspense } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useUserStore } from "@/stores/useUserStore";
@@ -8,12 +8,14 @@ import Header from "@/components/Header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Heart } from "lucide-react";
 import type { Image } from "@/types/image";
-import ImageModal from "@/components/ImageModal";
 import ProgressiveImage from "@/components/ProgressiveImage";
 import api from "@/lib/axios";
 import { generateImageSlug, extractIdFromSlug } from "@/lib/utils";
 import { toast } from "sonner";
 import "./FavoritesPage.css";
+
+// Lazy load ImageModal - conditionally rendered
+const ImageModal = lazy(() => import("@/components/ImageModal"));
 
 function FavoritesPage() {
     const { accessToken } = useAuthStore();
@@ -327,33 +329,35 @@ function FavoritesPage() {
             {/* Image Modal - DESKTOP ONLY */}
             {/* On mobile, we navigate to ImagePage instead */}
             {selectedImage && !isMobile && window.innerWidth > 768 && (
-                <ImageModal
-                    image={selectedImage}
-                    images={images}
-                    onClose={() => {
-                        // Remove image param from URL when closing
-                        setSearchParams(prev => {
-                            const newParams = new URLSearchParams(prev);
-                            newParams.delete('image');
-                            return newParams;
-                        });
-                    }}
-                    onImageSelect={(updatedImage) => {
-                        handleImageUpdate(updatedImage);
-                        // Update URL to reflect the selected image with slug
-                        const slug = generateImageSlug(updatedImage.imageTitle, updatedImage._id);
-                        setSearchParams(prev => {
-                            const newParams = new URLSearchParams(prev);
-                            newParams.set('image', slug);
-                            return newParams;
-                        });
-                    }}
-                    onDownload={handleDownloadImage}
-                    imageTypes={imageTypes}
-                    onImageLoad={handleImageLoad}
-                    currentImageIds={currentImageIds}
-                    processedImages={processedImages}
-                />
+                <Suspense fallback={null}>
+                    <ImageModal
+                        image={selectedImage}
+                        images={images}
+                        onClose={() => {
+                            // Remove image param from URL when closing
+                            setSearchParams(prev => {
+                                const newParams = new URLSearchParams(prev);
+                                newParams.delete('image');
+                                return newParams;
+                            });
+                        }}
+                        onImageSelect={(updatedImage) => {
+                            handleImageUpdate(updatedImage);
+                            // Update URL to reflect the selected image with slug
+                            const slug = generateImageSlug(updatedImage.imageTitle, updatedImage._id);
+                            setSearchParams(prev => {
+                                const newParams = new URLSearchParams(prev);
+                                newParams.set('image', slug);
+                                return newParams;
+                            });
+                        }}
+                        onDownload={handleDownloadImage}
+                        imageTypes={imageTypes}
+                        onImageLoad={handleImageLoad}
+                        currentImageIds={currentImageIds}
+                        processedImages={processedImages}
+                    />
+                </Suspense>
             )}
         </>
     );

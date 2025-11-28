@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { collectionService } from '@/services/collectionService';
@@ -11,10 +11,12 @@ import { useCollectionsListStore } from '@/stores/useCollectionsListStore';
 import { useCollectionFavoriteStore } from '@/stores/useCollectionFavoriteStore';
 import { Folder, Plus, Trash2, Edit2, Eye, Copy, Lock, Unlock, Search, X, Filter, Heart, FileText } from 'lucide-react';
 import ProgressiveImage from '@/components/ProgressiveImage';
-import CollectionModal from '@/components/CollectionModal';
 import { CollectionShare } from '@/components/collection/CollectionShare';
 import { collectionTemplateService } from '@/services/collectionTemplateService';
 import './CollectionsPage.css';
+
+// Lazy load CollectionModal - only shown when editing
+const CollectionModal = lazy(() => import('@/components/CollectionModal'));
 
 export default function CollectionsPage() {
 	const { accessToken } = useAuthStore();
@@ -481,15 +483,19 @@ export default function CollectionsPage() {
 			</div>
 
 			{/* Edit Collection Modal */}
-			<CollectionModal
-				isOpen={showEditModal}
-				onClose={() => {
-					setShowEditModal(false);
-					setEditingCollection(null);
-				}}
-				collectionToEdit={editingCollection || undefined}
-				onCollectionUpdate={handleCollectionUpdated}
-			/>
+			{showEditModal && (
+				<Suspense fallback={null}>
+					<CollectionModal
+						isOpen={showEditModal}
+						onClose={() => {
+							setShowEditModal(false);
+							setEditingCollection(null);
+						}}
+						collectionToEdit={editingCollection || undefined}
+						onCollectionUpdate={handleCollectionUpdated}
+					/>
+				</Suspense>
+			)}
 		</>
 	);
 }

@@ -1,8 +1,7 @@
-import { useEffect, useLayoutEffect, useMemo, useState, useRef, useCallback, memo } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState, useRef, useCallback, memo, lazy, Suspense } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { Image } from '@/types/image';
 import CategoryNavigation from './CategoryNavigation';
-import ImageModal from './ImageModal';
 import { Skeleton } from './ui/skeleton';
 import { toast } from 'sonner';
 import api from '@/lib/axios';
@@ -13,6 +12,9 @@ import { applyImageFilters } from '@/utils/imageFilters';
 import { useImageStore } from '@/stores/useImageStore';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import './ImageGrid.css';
+
+// Lazy load ImageModal - conditionally rendered
+const ImageModal = lazy(() => import('./ImageModal'));
 
 const ImageGrid = memo(() => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -686,36 +688,38 @@ const ImageGrid = memo(() => {
       {/* Image Modal - shown as overlay when image param exists - DESKTOP ONLY */}
       {/* On mobile, we navigate to ImagePage instead */}
       {selectedImage && !isMobileState && window.innerWidth > 768 && (
-        <ImageModal
-          image={selectedImage}
-          images={images}
-          onClose={() => {
-            // Remove image param from URL when closing
-            setSearchParams(prev => {
-              const newParams = new URLSearchParams(prev);
-              newParams.delete('image');
-              return newParams;
-            });
-          }}
-          onImageSelect={(updatedImage) => {
-            handleImageUpdate(updatedImage);
-            // Set fromGrid flag to prevent HomePage from redirecting when changing images in modal
-            sessionStorage.setItem('imagePage_fromGrid', 'true');
-            // Update URL to reflect the selected image with slug
-            const slug = generateImageSlug(updatedImage.imageTitle, updatedImage._id);
-            setSearchParams(prev => {
-              const newParams = new URLSearchParams(prev);
-              newParams.set('image', slug);
-              return newParams;
-            });
-          }}
-          onDownload={handleDownloadImage}
-          imageTypes={imageTypes}
-          onImageLoad={handleImageLoad}
-          currentImageIds={currentImageIds}
-          processedImages={processedImages}
-          renderAsPage={false} // Always modal when opened from grid
-        />
+        <Suspense fallback={null}>
+          <ImageModal
+            image={selectedImage}
+            images={images}
+            onClose={() => {
+              // Remove image param from URL when closing
+              setSearchParams(prev => {
+                const newParams = new URLSearchParams(prev);
+                newParams.delete('image');
+                return newParams;
+              });
+            }}
+            onImageSelect={(updatedImage) => {
+              handleImageUpdate(updatedImage);
+              // Set fromGrid flag to prevent HomePage from redirecting when changing images in modal
+              sessionStorage.setItem('imagePage_fromGrid', 'true');
+              // Update URL to reflect the selected image with slug
+              const slug = generateImageSlug(updatedImage.imageTitle, updatedImage._id);
+              setSearchParams(prev => {
+                const newParams = new URLSearchParams(prev);
+                newParams.set('image', slug);
+                return newParams;
+              });
+            }}
+            onDownload={handleDownloadImage}
+            imageTypes={imageTypes}
+            onImageLoad={handleImageLoad}
+            currentImageIds={currentImageIds}
+            processedImages={processedImages}
+            renderAsPage={false} // Always modal when opened from grid
+          />
+        </Suspense>
       )}
     </div>
   );

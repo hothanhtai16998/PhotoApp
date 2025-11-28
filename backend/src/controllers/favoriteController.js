@@ -18,7 +18,7 @@ export const toggleFavorite = asyncHandler(async (req, res) => {
     if (!image) {
         return res.status(404).json({
             success: false,
-            message: 'Image not found',
+            message: 'Ảnh không tồn tại',
             errorCode: 'IMAGE_NOT_FOUND',
         });
     }
@@ -46,7 +46,7 @@ export const toggleFavorite = asyncHandler(async (req, res) => {
             { $pull: { favorites: imageId } },
             { new: true }
         ).select('favorites');
-        
+
         logger.info('Image removed from favorites', {
             userId,
             imageId,
@@ -58,7 +58,7 @@ export const toggleFavorite = asyncHandler(async (req, res) => {
             { $addToSet: { favorites: imageId } },
             { new: true }
         ).select('favorites');
-        
+
         logger.info('Image added to favorites', {
             userId,
             imageId,
@@ -83,8 +83,8 @@ export const toggleFavorite = asyncHandler(async (req, res) => {
     res.status(200).json({
         success: true,
         isFavorited: !isFavorited,
-        message: !isFavorited 
-            ? 'Image added to favorites' 
+        message: !isFavorited
+            ? 'Image added to favorites'
             : 'Image removed from favorites',
     });
 });
@@ -129,9 +129,9 @@ export const getFavorites = asyncHandler(async (req, res) => {
         .lean();
 
     // Filter out images with null/invalid categories (populate match failed)
-    images = images.filter(img => 
-        img.imageCategory && 
-        typeof img.imageCategory === 'object' && 
+    images = images.filter(img =>
+        img.imageCategory &&
+        typeof img.imageCategory === 'object' &&
         img.imageCategory.name &&
         img.imageCategory.isActive !== false
     );
@@ -175,7 +175,7 @@ export const checkFavorites = asyncHandler(async (req, res) => {
         const idString = String(imageId).trim();
         const matchesRegex = objectIdRegex.test(idString);
         const isValidMongoose = mongoose.Types.ObjectId.isValid(idString);
-        
+
         // First check format with regex, then validate with Mongoose
         if (matchesRegex && isValidMongoose) {
             validImageIds.push(idString);
@@ -205,7 +205,7 @@ export const checkFavorites = asyncHandler(async (req, res) => {
     }
 
     const favoriteIds = (user.favorites || []).map(id => id.toString());
-    
+
     // Create map of favorited image IDs (only for valid IDs)
     const favoritesMap = {};
     validImageIds.forEach(imageId => {
