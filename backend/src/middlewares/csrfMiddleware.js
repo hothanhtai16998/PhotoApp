@@ -58,13 +58,15 @@ export const validateCsrf = asyncHandler(async (req, res, next) => {
     }
 
     // Skip CSRF validation for public endpoints (signup, signin, refresh, analytics tracking)
+    // Use originalUrl to get the full path (req.path is relative when using mounted routers)
+    const fullPath = req.originalUrl.split('?')[0]; // Remove query string
     const publicPaths = [
         '/api/auth/signup', 
         '/api/auth/signin', 
         '/api/auth/refresh',
         '/api/admin/analytics/track' // Public tracking endpoint
     ];
-    if (publicPaths.some(path => req.path.startsWith(path))) {
+    if (publicPaths.some(path => fullPath.startsWith(path))) {
         return next();
     }
 
@@ -80,7 +82,7 @@ export const validateCsrf = asyncHandler(async (req, res, next) => {
     // Validate token
     if (!cookieToken || !submittedToken) {
         logger.warn('CSRF token missing', {
-            path: req.path,
+            path: fullPath,
             method: req.method,
             hasCookie: !!cookieToken,
             hasSubmitted: !!submittedToken,
@@ -95,7 +97,7 @@ export const validateCsrf = asyncHandler(async (req, res, next) => {
 
     if (cookieToken !== submittedToken) {
         logger.warn('CSRF token mismatch', {
-            path: req.path,
+            path: fullPath,
             method: req.method,
             ip: req.ip,
         });
