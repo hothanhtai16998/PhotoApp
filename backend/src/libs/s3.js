@@ -1,4 +1,5 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { env } from './env.js';
 import sharp from 'sharp';
 
@@ -272,4 +273,36 @@ export const getImageFromS3 = async (imageUrl) => {
 };
 
 export default s3Client;
+
+/**
+ * Generate a pre-signed URL that allows uploading directly to S3
+ * @param {string} key - Target S3 object key
+ * @param {string} contentType - MIME type of the object
+ * @param {number} expiresIn - Expiration in seconds (default 5 minutes)
+ */
+export const generatePresignedUploadUrl = async (key, contentType, expiresIn = 300) => {
+	const command = new PutObjectCommand({
+		Bucket: env.AWS_S3_BUCKET_NAME,
+		Key: key,
+		ContentType: contentType || 'application/octet-stream',
+	});
+
+	return getSignedUrl(s3Client, command, { expiresIn });
+};
+
+/**
+ * Delete an arbitrary object by key (used for temporary raw uploads)
+ * @param {string} key - Full S3 object key
+ */
+export const deleteObjectByKey = async (key) => {
+	try {
+		const command = new DeleteObjectCommand({
+			Bucket: env.AWS_S3_BUCKET_NAME,
+			Key: key,
+		});
+		await s3Client.send(command);
+	} catch (error) {
+		console.error(`Failed to delete object ${key}: ${error.message}`);
+	}
+};
 

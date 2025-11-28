@@ -194,15 +194,7 @@ export const useImageUpload = ({ onSuccess }: UseImageUploadProps = {}) => {
           try {
             const finalizeData: FinalizeImageData = {
               uploadId: imgData.preUploadData.uploadId,
-              publicId: imgData.preUploadData.publicId,
-              imageUrl: imgData.preUploadData.imageUrl,
-              thumbnailUrl: imgData.preUploadData.thumbnailUrl,
-              smallUrl: imgData.preUploadData.smallUrl,
-              regularUrl: imgData.preUploadData.regularUrl,
-              imageAvifUrl: imgData.preUploadData.imageAvifUrl,
-              thumbnailAvifUrl: imgData.preUploadData.thumbnailAvifUrl,
-              smallAvifUrl: imgData.preUploadData.smallAvifUrl,
-              regularAvifUrl: imgData.preUploadData.regularAvifUrl,
+              uploadKey: imgData.preUploadData.uploadKey,
               imageTitle: imgData.title.trim(),
               imageCategory: imgData.category.trim(),
               location: imgData.location.trim() || undefined,

@@ -159,15 +159,7 @@ function UploadPage() {
             // Finalize: Only send metadata to link with pre-uploaded image
             const finalizeData: FinalizeImageData = {
                 uploadId: preUploadData.uploadId,
-                publicId: preUploadData.publicId,
-                imageUrl: preUploadData.imageUrl,
-                thumbnailUrl: preUploadData.thumbnailUrl,
-                smallUrl: preUploadData.smallUrl,
-                regularUrl: preUploadData.regularUrl,
-                imageAvifUrl: preUploadData.imageAvifUrl,
-                thumbnailAvifUrl: preUploadData.thumbnailAvifUrl,
-                smallAvifUrl: preUploadData.smallAvifUrl,
-                regularAvifUrl: preUploadData.regularAvifUrl,
+                uploadKey: preUploadData.uploadKey,
                 imageTitle: data.imageTitle.trim(),
                 imageCategory: data.imageCategory.trim(),
                 location: data.location?.trim() || undefined,

@@ -1,3 +1,4 @@
+import axios from 'axios';
 import api from '@/lib/api';
 import type { UploadImageData } from '@/types/store';
 import type {
@@ -12,18 +13,27 @@ export const imageUploadService = {
     imageFile: File,
     onUploadProgress?: (progress: number) => void
   ): Promise<PreUploadResponse> => {
-    const formData = new FormData();
-    formData.append('image', imageFile);
-
-    const res = await api.post('/images/pre-upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
+    const metadataRes = await api.post(
+      '/images/pre-upload',
+      {
+        fileName: imageFile.name || 'upload.jpg',
+        fileType: imageFile.type || 'application/octet-stream',
+        fileSize: imageFile.size,
       },
-      withCredentials: true,
-      timeout: 120000, // 2 minutes for uploads
+      {
+        withCredentials: true,
+      }
+    );
+
+    const preUploadData: PreUploadResponse = metadataRes.data;
+
+    await axios.put(preUploadData.uploadUrl, imageFile, {
+      headers: {
+        'Content-Type': imageFile.type || 'application/octet-stream',
+      },
+      timeout: 120000,
       onUploadProgress: (progressEvent) => {
         if (onUploadProgress && progressEvent.total) {
-          // Calculate upload progress (0-100%)
           const percentCompleted = Math.round(
             (progressEvent.loaded * 100) / progressEvent.total
           );
@@ -32,7 +42,8 @@ export const imageUploadService = {
       },
     });
 
-    return res.data;
+    onUploadProgress?.(100);
+    return preUploadData;
   },
 
   // Finalize: Link metadata to pre-uploaded image and create database record

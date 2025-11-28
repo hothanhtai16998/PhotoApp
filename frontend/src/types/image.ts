@@ -69,28 +69,15 @@ export interface FetchImagesResponse {
 export interface PreUploadResponse {
   message: string;
   uploadId: string;
-  publicId: string;
-  imageUrl: string;
-  thumbnailUrl: string;
-  smallUrl: string;
-  regularUrl: string;
-  imageAvifUrl: string;
-  thumbnailAvifUrl: string;
-  smallAvifUrl: string;
-  regularAvifUrl: string;
+  uploadKey: string;
+  uploadUrl: string;
+  expiresIn: number;
+  maxFileSize: number;
 }
 
 export interface FinalizeImageData {
   uploadId: string;
-  publicId: string;
-  imageUrl: string;
-  thumbnailUrl: string;
-  smallUrl: string;
-  regularUrl: string;
-  imageAvifUrl: string;
-  thumbnailAvifUrl: string;
-  smallAvifUrl: string;
-  regularAvifUrl: string;
+  uploadKey: string;
   imageTitle: string;
   imageCategory: string;
   location?: string;
