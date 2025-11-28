@@ -58,7 +58,12 @@ if (env.NODE_ENV === 'production') {
                 styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
                 // Allow inline event handlers (needed for some libraries)
                 scriptSrcAttr: ["'unsafe-inline'"],
-                connectSrc: ["'self'"],
+                connectSrc: [
+                    "'self'",
+                    "https://photo-app-images-2026.s3.ap-southeast-2.amazonaws.com",
+                    "https://nominatim.openstreetmap.org",
+                    "https://uploadanh.cloud"
+                ],
                 fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
                 objectSrc: ["'none'"],
                 mediaSrc: ["'self'"],
