@@ -95,9 +95,56 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 app.use(
     cors({
-        origin: env.NODE_ENV === 'development' 
-            ? ['http://localhost:3000', 'http://localhost:5173', env.CLIENT_URL].filter(Boolean)
-            : env.CLIENT_URL,
+        origin: (origin, callback) => {
+            // In development, allow localhost and CLIENT_URL
+            if (env.NODE_ENV === 'development') {
+                const allowedOrigins = [
+                    'http://localhost:3000',
+                    'http://localhost:5173',
+                    env.CLIENT_URL
+                ].filter(Boolean);
+                
+                // Allow requests with no origin (mobile apps, Postman, etc.)
+                if (!origin || allowedOrigins.includes(origin)) {
+                    callback(null, true);
+                } else {
+                    callback(null, true); // Allow in dev for flexibility
+                }
+            } else {
+                // In production, allow CLIENT_URL, FRONTEND_URL, and common deployment platforms
+                const allowedOrigins = [
+                    env.CLIENT_URL,
+                    env.FRONTEND_URL,
+                ].filter(Boolean);
+                
+                // Allow requests with no origin (mobile apps, Postman, etc.)
+                if (!origin) {
+                    callback(null, true);
+                    return;
+                }
+                
+                // Check if origin matches allowed origins
+                if (allowedOrigins.includes(origin)) {
+                    callback(null, true);
+                    return;
+                }
+                
+                // Allow Render preview URLs (pattern: *.onrender.com)
+                if (origin.includes('.onrender.com')) {
+                    callback(null, true);
+                    return;
+                }
+                
+                // Allow Vercel preview URLs (pattern: *.vercel.app)
+                if (origin.includes('.vercel.app')) {
+                    callback(null, true);
+                    return;
+                }
+                
+                // Reject all other origins
+                callback(new Error('Not allowed by CORS'));
+            }
+        },
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'X-XSRF-TOKEN', 'X-CSRF-Token'],
@@ -121,6 +168,7 @@ app.get('/api/health', (req, res) => {
     res.status(200).json({
         status: 'ok',
         timestamp: new Date().toISOString(),
+        version: '1.0.0-cors-fix', // Version marker to verify deployment
     });
 });
 
