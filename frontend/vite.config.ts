@@ -6,185 +6,118 @@ import { visualizer } from 'rollup-plugin-visualizer';
 
 // https://vite.dev/config/
 export default defineConfig({
-	plugins: [
-		react(),
-		tailwindcss(),
-		// Bundle analyzer - generates stats.html in dist folder
-		// Run with ANALYZE=true npm run build to generate analysis
-		process.env.ANALYZE === 'true' &&
-			visualizer({
-				open: true,
-				filename: 'dist/stats.html',
-				gzipSize: true,
-				brotliSize: true,
-			}),
-	].filter(Boolean),
-	resolve: {
-		alias: {
-			'@': path.resolve(
-				__dirname,
-				'./src'
-			),
-		},
-	},
-	build: {
-		cssCodeSplit: true,
-		// Optimize chunk size limits (in KB)
-		// Warn if any chunk exceeds 500KB (helps identify optimization opportunities)
-		chunkSizeWarningLimit: 500,
-		// Ensure proper module resolution and prevent React loading issues
-		modulePreload: {
-			polyfill: true,
-		},
-		rollupOptions: {
-			output: {
-				assetFileNames: (assetInfo) => {
-					// Ensure consistent naming for CSS files
-					if (assetInfo.name && assetInfo.name.endsWith('.css')) {
-						return 'assets/[name]-[hash][extname]';
-					}
-					return 'assets/[name]-[hash][extname]';
-				},
-				// Smart chunk splitting for better performance and caching
-				manualChunks: (id, { getModuleInfo }) => {
-					// CRITICAL: Keep React/ReactDOM in the main entry chunk to prevent loading issues
-					// Don't split React - it must be available synchronously when components load
-					// Check if this is React or ReactDOM - if so, don't chunk it (keep in entry)
-					if (
-						id.includes('node_modules/react/') || 
-						id.includes('node_modules/react-dom/') ||
-						id.includes('node_modules/react/jsx-runtime') ||
-						id.includes('node_modules/react/jsx-dev-runtime')
-					) {
-						// Don't return a chunk name - this keeps it in the entry chunk
-						return;
-					}
-
-					// Router - only needed for navigation, can be loaded on demand
-					if (id.includes('node_modules/react-router')) {
-						return 'router';
-					}
-
-					// Radix UI components - UI library, can be lazy loaded
-					if (id.includes('node_modules/@radix-ui')) {
-						return 'ui-radix';
-					}
-
-					// Recharts - charting library, only used in admin/modal (large, ~200KB)
-					if (id.includes('node_modules/recharts')) {
-						return 'charts';
-					}
-
-					// Form libraries - only needed on form pages
-					if (
-						id.includes('node_modules/react-hook-form') ||
-						id.includes('node_modules/@hookform') ||
-						id.includes('node_modules/zod')
-					) {
-						return 'forms';
-					}
-
-					// Icons - lucide-react (can be code-split)
-					if (id.includes('node_modules/lucide-react')) {
-						return 'icons';
-					}
-
-					// State management and utilities
-					if (
-						id.includes('node_modules/zustand') ||
-						id.includes('node_modules/immer')
-					) {
-						return 'state';
-					}
-
-					// HTTP client and image utilities
-					if (
-						id.includes('node_modules/axios') ||
-						id.includes('node_modules/browser-image-compression')
-					) {
-						return 'utils';
-					}
-
-					// Toast notifications
-					if (id.includes('node_modules/sonner')) {
-						return 'notifications';
-					}
-
-					// Tailwind and styling utilities
-					if (
-						id.includes('node_modules/tailwind') ||
-						id.includes('node_modules/clsx') ||
-						id.includes('node_modules/tailwind-merge') ||
-						id.includes('node_modules/class-variance-authority')
-					) {
-						return 'styles';
-					}
-
-					// All other node_modules go into vendor chunk
-					// BUT exclude React/ReactDOM (already handled above)
-					if (
-						id.includes('node_modules') &&
-						!id.includes('node_modules/react/') &&
-						!id.includes('node_modules/react-dom/')
-					) {
-						return 'vendor';
-					}
-				},
-				// Prevent circular dependency issues
-				format: 'es',
-			},
-			// Handle circular dependencies better
-			onwarn(warning, warn) {
-				// Suppress circular dependency warnings for vendor chunks
-				if (warning.code === 'CIRCULAR_DEPENDENCY') {
-					return;
-				}
-				// Suppress other warnings that don't affect functionality
-				if (warning.code === 'MODULE_LEVEL_DIRECTIVE') {
-					return;
-				}
-				warn(warning);
-			},
-			// Better handling of module dependencies and circular dependencies
-			treeshake: {
-				moduleSideEffects: 'no-external',
-				preset: 'recommended',
-			},
-		},
-		// Enable minification (esbuild is faster than terser)
-		minify: 'esbuild',
-		// Optimize source maps for production
-		sourcemap: false, // Disable source maps in production for smaller bundle
-		// Common chunk splitting strategy
-		commonjsOptions: {
-			include: [/node_modules/],
-			transformMixedEsModules: true,
-		},
-	},
-	// Optimize dependencies
-	optimizeDeps: {
-		include: [
-			'react',
-			'react-dom',
-			'react-router',
-			'react-router-dom',
-			'axios',
-			'zustand',
-			'immer',
-			'recharts',
-		],
-		// Don't force re-optimization - let Vite handle it naturally
-		force: false,
-		// Better handling of commonjs dependencies
-		esbuildOptions: {
-			target: 'es2020',
-		},
-	},
-	// Server configuration for development
-	server: {
-		// Ensure proper handling of module scripts
-		fs: {
-			strict: false,
-		},
-	},
+  plugins: [
+    react({
+      // Ensure React is properly handled for React 19
+      jsxRuntime: 'automatic',
+    }),
+    tailwindcss(),
+    // Bundle analyzer - generates stats.html in dist folder
+    // Run with ANALYZE=true npm run build to generate analysis
+    process.env.ANALYZE === 'true' &&
+      visualizer({
+        open: true,
+        filename: 'dist/stats.html',
+        gzipSize: true,
+        brotliSize: true,
+      }),
+  ].filter(Boolean),
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+  build: {
+    cssCodeSplit: true,
+    // Optimize chunk size limits (in KB)
+    // Warn if any chunk exceeds 500KB (helps identify optimization opportunities)
+    chunkSizeWarningLimit: 500,
+    // Ensure proper module resolution and prevent React loading issues
+    modulePreload: {
+      polyfill: true,
+    },
+    rollupOptions: {
+      // Preserve entry signatures to keep React in entry chunk
+      preserveEntrySignatures: 'strict',
+      output: {
+        // Explicitly control chunk file names
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: (assetInfo) => {
+          // Ensure consistent naming for CSS files
+          if (assetInfo.name && assetInfo.name.endsWith('.css')) {
+            return 'assets/[name]-[hash][extname]';
+          }
+          return 'assets/[name]-[hash][extname]';
+        },
+        // CRITICAL FIX: Explicitly prevent React from being chunked
+        // This ensures React stays in the entry chunk and is always available
+        manualChunks: (id) => {
+          // NEVER chunk React or ReactDOM - they must stay in entry chunk
+          if (
+            id.includes('react') && 
+            (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/'))
+          ) {
+            // Return undefined to keep in entry chunk
+            return undefined;
+          }
+          // For everything else, let Vite handle chunking naturally
+          // This prevents the vendor chunk from including React
+        },
+        // Prevent circular dependency issues
+        format: 'es',
+      },
+      // Handle circular dependencies better
+      onwarn(warning, warn) {
+        // Suppress circular dependency warnings for vendor chunks
+        if (warning.code === 'CIRCULAR_DEPENDENCY') {
+          return;
+        }
+        // Suppress other warnings that don't affect functionality
+        if (warning.code === 'MODULE_LEVEL_DIRECTIVE') {
+          return;
+        }
+        warn(warning);
+      },
+      // Better handling of module dependencies and circular dependencies
+      treeshake: {
+        moduleSideEffects: 'no-external',
+        preset: 'recommended',
+      },
+    },
+    // Enable minification (esbuild is faster than terser)
+    minify: 'esbuild',
+    // Optimize source maps for production
+    sourcemap: false, // Disable source maps in production for smaller bundle
+    // Common chunk splitting strategy
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true,
+    },
+  },
+  // Optimize dependencies
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-router',
+      'react-router-dom',
+      'axios',
+      'zustand',
+      'immer',
+      'recharts',
+    ],
+    // Don't force re-optimization - let Vite handle it naturally
+    force: false,
+    // Better handling of commonjs dependencies
+    esbuildOptions: {
+      target: 'es2020',
+    },
+  },
+  // Server configuration for development
+  server: {
+    // Ensure proper handling of module scripts
+    fs: {
+      strict: false,
+    },
+  },
 });
