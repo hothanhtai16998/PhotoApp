@@ -28,20 +28,20 @@ export const uploadImageWithSizes = async (imageBuffer, folder = 'photo-app-imag
 		// Use auto-rotate to respect EXIF orientation data (fixes portrait images)
 		// Sharp's rotate() without parameters auto-rotates based on EXIF orientation tag
 		
-		// Create a shared sharp instance for each size to avoid reprocessing
-		const createThumbnail = (buffer) => sharp(buffer, { failOnError: false })
+		// Prepare base pipelines once per size, then clone for each format to avoid redundant resizing work.
+		const thumbnailBase = sharp(imageBuffer, { failOnError: false })
 			.rotate()
 			.resize(200, null, { withoutEnlargement: true });
-		
-		const createSmall = (buffer) => sharp(buffer, { failOnError: false })
+
+		const smallBase = sharp(imageBuffer, { failOnError: false })
 			.rotate()
 			.resize(800, null, { withoutEnlargement: true });
-		
-		const createRegular = (buffer) => sharp(buffer, { failOnError: false })
+
+		const regularBase = sharp(imageBuffer, { failOnError: false })
 			.rotate()
 			.resize(1080, null, { withoutEnlargement: true });
-		
-		const createOriginal = (buffer) => sharp(buffer, { failOnError: false })
+
+		const originalBase = sharp(imageBuffer, { failOnError: false })
 			.rotate();
 
 		// Kick off all Sharp transforms in parallel to reduce total processing time.
@@ -49,22 +49,22 @@ export const uploadImageWithSizes = async (imageBuffer, folder = 'photo-app-imag
 		// maximizes CPU usage and avoids the previous sequential bottleneck.
 		const [
 			thumbnailWebp,
-			smallWebp,
-			regularWebp,
-			originalWebp,
 			thumbnailAvif,
+			smallWebp,
 			smallAvif,
+			regularWebp,
 			regularAvif,
+			originalWebp,
 			originalAvif,
 		] = await Promise.all([
-			createThumbnail(imageBuffer).webp({ quality: 60 }).toBuffer(),
-			createSmall(imageBuffer).webp({ quality: 80 }).toBuffer(),
-			createRegular(imageBuffer).webp({ quality: 85 }).toBuffer(),
-			createOriginal(imageBuffer).webp({ quality: 85 }).toBuffer(),
-			createThumbnail(imageBuffer).avif({ quality: 60 }).toBuffer(),
-			createSmall(imageBuffer).avif({ quality: 80 }).toBuffer(),
-			createRegular(imageBuffer).avif({ quality: 85 }).toBuffer(),
-			createOriginal(imageBuffer).avif({ quality: 85 }).toBuffer(),
+			thumbnailBase.clone().webp({ quality: 60 }).toBuffer(),
+			thumbnailBase.clone().avif({ quality: 60 }).toBuffer(),
+			smallBase.clone().webp({ quality: 80 }).toBuffer(),
+			smallBase.clone().avif({ quality: 80 }).toBuffer(),
+			regularBase.clone().webp({ quality: 85 }).toBuffer(),
+			regularBase.clone().avif({ quality: 85 }).toBuffer(),
+			originalBase.clone().webp({ quality: 85 }).toBuffer(),
+			originalBase.clone().avif({ quality: 85 }).toBuffer(),
 		]);
 
 		// Upload all sizes and formats to S3
