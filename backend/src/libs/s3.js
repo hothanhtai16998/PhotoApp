@@ -44,39 +44,28 @@ export const uploadImageWithSizes = async (imageBuffer, folder = 'photo-app-imag
 		const createOriginal = (buffer) => sharp(buffer, { failOnError: false })
 			.rotate();
 
-		// Generate WebP versions (for compatibility)
-		const thumbnailWebp = await createThumbnail(imageBuffer)
-			.webp({ quality: 60 })
-			.toBuffer();
-		
-		const smallWebp = await createSmall(imageBuffer)
-			.webp({ quality: 80 })
-			.toBuffer();
-		
-		const regularWebp = await createRegular(imageBuffer)
-			.webp({ quality: 85 })
-			.toBuffer();
-		
-		const originalWebp = await createOriginal(imageBuffer)
-			.webp({ quality: 85 })
-			.toBuffer();
-
-		// Generate AVIF versions (better compression, ~30% smaller)
-		const thumbnailAvif = await createThumbnail(imageBuffer)
-			.avif({ quality: 60 })
-			.toBuffer();
-		
-		const smallAvif = await createSmall(imageBuffer)
-			.avif({ quality: 80 })
-			.toBuffer();
-		
-		const regularAvif = await createRegular(imageBuffer)
-			.avif({ quality: 85 })
-			.toBuffer();
-		
-		const originalAvif = await createOriginal(imageBuffer)
-			.avif({ quality: 85 })
-			.toBuffer();
+		// Kick off all Sharp transforms in parallel to reduce total processing time.
+		// Each transform works on its own Sharp pipeline, so running them concurrently
+		// maximizes CPU usage and avoids the previous sequential bottleneck.
+		const [
+			thumbnailWebp,
+			smallWebp,
+			regularWebp,
+			originalWebp,
+			thumbnailAvif,
+			smallAvif,
+			regularAvif,
+			originalAvif,
+		] = await Promise.all([
+			createThumbnail(imageBuffer).webp({ quality: 60 }).toBuffer(),
+			createSmall(imageBuffer).webp({ quality: 80 }).toBuffer(),
+			createRegular(imageBuffer).webp({ quality: 85 }).toBuffer(),
+			createOriginal(imageBuffer).webp({ quality: 85 }).toBuffer(),
+			createThumbnail(imageBuffer).avif({ quality: 60 }).toBuffer(),
+			createSmall(imageBuffer).avif({ quality: 80 }).toBuffer(),
+			createRegular(imageBuffer).avif({ quality: 85 }).toBuffer(),
+			createOriginal(imageBuffer).avif({ quality: 85 }).toBuffer(),
+		]);
 
 		// Upload all sizes and formats to S3
 		const uploadPromises = [

@@ -108,8 +108,9 @@ Invoke-WebRequest -Uri "https://YOUR_CLOUDFRONT_URL/api/health" -Method Head
 **Symptom:** Browser console shows CORS errors
 
 **Solution:**
-- Verify your CloudFront CORS function is published and associated
+- Verify your CloudFront managed CORS policies are configured correctly
 - Check that your frontend origin is in the allowed origins list
+- Ensure the correct response headers policy is attached to each behavior
 - See `CLOUDFRONT_UPDATE_GUIDE.md` for CORS setup
 
 ### Issue 3: CloudFront Can't Reach Origin
@@ -172,7 +173,7 @@ Invoke-WebRequest -Uri "https://photoapp-pgq4.onrender.com/api/health" -Verbose
 
 If all tests pass but you still have issues, check:
 - CloudFront cache settings
-- CloudFront function associations
+- CloudFront response headers policy associations
 - Browser developer tools network tab
 - CloudFront CloudWatch logs
 
