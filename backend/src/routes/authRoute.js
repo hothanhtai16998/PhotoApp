@@ -42,4 +42,65 @@ router.get('/google/test', (req, res) => {
     });
 });
 
+// TEMPORARY: Admin creation endpoint (REMOVE AFTER USE!)
+// Usage: POST /api/auth/make-admin?username=YOUR_USERNAME&secret=YOUR_SECRET
+// Set ADMIN_SECRET in environment variables for security
+router.post('/make-admin', async (req, res) => {
+    try {
+        const { username, secret } = req.query;
+        const adminSecret = process.env.ADMIN_SECRET || 'temp-secret-change-me';
+        
+        // Verify secret
+        if (secret !== adminSecret) {
+            return res.status(401).json({ message: 'Invalid secret' });
+        }
+        
+        if (!username) {
+            return res.status(400).json({ message: 'Username is required' });
+        }
+        
+        const User = (await import('../models/User.js')).default;
+        const AdminRole = (await import('../models/AdminRole.js')).default;
+        
+        const user = await User.findOne({ username: username.toLowerCase() });
+        
+        if (!user) {
+            return res.status(404).json({ message: `User "${username}" not found` });
+        }
+        
+        // Check if user already has an admin role
+        const existingRole = await AdminRole.findOne({ userId: user._id });
+        
+        if (existingRole) {
+            return res.json({ 
+                message: `User "${username}" already has an admin role`,
+                role: existingRole.role 
+            });
+        }
+        
+        // Create AdminRole entry
+        const adminRole = await AdminRole.create({
+            userId: user._id,
+            role: 'admin',
+            permissions: {
+                manageUsers: true,
+                deleteUsers: true,
+                manageImages: true,
+                deleteImages: true,
+                manageCategories: true,
+                manageAdmins: false,
+                viewDashboard: true,
+            },
+        });
+        
+        return res.json({ 
+            message: `User "${username}" is now an admin!`,
+            email: user.email,
+            displayName: user.displayName
+        });
+    } catch (error) {
+        return res.status(500).json({ message: 'Error making user admin', error: error.message });
+    }
+});
+
 export default router;
