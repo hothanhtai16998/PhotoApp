@@ -3,7 +3,7 @@ import { type LogoStyle } from '@/components/Logo'
 /**
  * Updates the favicon dynamically based on the selected logo style
  */
-export function updateFavicon(style: LogoStyle) {
+export function updateFavicon(style: LogoStyle): void {
   // Remove existing favicon links
   const existingLinks = document.querySelectorAll('link[rel*="icon"]')
   existingLinks.forEach(link => link.remove())
@@ -30,7 +30,7 @@ export function updateFavicon(style: LogoStyle) {
   setTimeout(() => {
     existingLinks.forEach((oldLink) => {
       const oldHref = oldLink.getAttribute('href')
-      if (oldHref && oldHref.startsWith('blob:')) {
+      if (oldHref?.startsWith('blob:')) {
         URL.revokeObjectURL(oldHref)
       }
     })

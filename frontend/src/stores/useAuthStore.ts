@@ -51,7 +51,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 				);
 			} catch (error: unknown) {
 				const message =
-					(error as ApiErrorResponse)?.response?.data?.message ||
+					(error as ApiErrorResponse)?.response?.data?.message ??
 					'Đăng ký thất bại. Vui lòng thử lại.';
 				toast.error(message);
 			} finally {
@@ -96,8 +96,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 						errorResponse.response.data.errors
 							.map(
 								(err) =>
-									err.msg ||
-									err.message ||
+									err.msg ??
+									err.message ??
 									'Validation failed'
 							)
 							.join(', ');
@@ -107,7 +107,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 				} else {
 					const message =
 						errorResponse.response?.data
-							?.message ||
+							?.message ??
 						'Đăng nhập thất bại. Kiểm tra lại tên tài khoản hoặc mật khẩu của bạn.';
 					toast.error(message);
 				}

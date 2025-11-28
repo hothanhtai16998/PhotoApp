@@ -75,7 +75,7 @@ export async function batchRequest<T>(
 /**
  * Process a single batch
  */
-function processBatch(batchKey: string) {
+function processBatch(batchKey: string): void {
 	const batch = pendingBatches.get(batchKey);
 	if (!batch || batch.length === 0) {
 		pendingBatches.delete(batchKey);
@@ -96,7 +96,7 @@ function processBatch(batchKey: string) {
 /**
  * Process all pending batches
  */
-function processBatches() {
+function processBatches(): void {
 	for (const batchKey of pendingBatches.keys()) {
 		processBatch(batchKey);
 	}

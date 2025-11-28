@@ -17,21 +17,21 @@ export interface RateLimitInfo {
 export function parseRateLimitHeaders(headers: Record<string, string>): RateLimitInfo | null {
   // Try standard headers first (RateLimit-*)
   const limit = 
-    headers['ratelimit-limit'] || 
-    headers['RateLimit-Limit'] || 
-    headers['x-ratelimit-limit'] || 
+    headers['ratelimit-limit'] ?? 
+    headers['RateLimit-Limit'] ?? 
+    headers['x-ratelimit-limit'] ?? 
     headers['X-RateLimit-Limit'];
   
   const remaining = 
-    headers['ratelimit-remaining'] || 
-    headers['RateLimit-Remaining'] || 
-    headers['x-ratelimit-remaining'] || 
+    headers['ratelimit-remaining'] ?? 
+    headers['RateLimit-Remaining'] ?? 
+    headers['x-ratelimit-remaining'] ?? 
     headers['X-RateLimit-Remaining'];
   
   const reset = 
-    headers['ratelimit-reset'] || 
-    headers['RateLimit-Reset'] || 
-    headers['x-ratelimit-reset'] || 
+    headers['ratelimit-reset'] ?? 
+    headers['RateLimit-Reset'] ?? 
+    headers['x-ratelimit-reset'] ?? 
     headers['X-RateLimit-Reset'];
 
   if (!limit || !remaining || !reset) {

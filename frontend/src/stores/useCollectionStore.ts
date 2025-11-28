@@ -36,7 +36,7 @@ export const useCollectionStore = create(
 				try {
 					const favoritesResponse = await collectionFavoriteService.checkFavorites([collectionId]);
 					set((state) => {
-						state.isFavorited = favoritesResponse.favorites[collectionId] || false;
+						state.isFavorited = favoritesResponse.favorites[collectionId] ?? false;
 					});
 				} catch (error) {
 					console.error('Failed to check favorite status:', error);
@@ -44,7 +44,7 @@ export const useCollectionStore = create(
 			} catch (error: unknown) {
 				console.error('Failed to load collection:', error);
 				const message =
-					(error as ApiErrorResponse)?.response?.data?.message ||
+					(error as ApiErrorResponse)?.response?.data?.message ??
 					'Không thể tải bộ sưu tập';
 				set((state) => {
 					state.error = message;
@@ -73,7 +73,7 @@ export const useCollectionStore = create(
 			} catch (error: unknown) {
 				console.error('Failed to update collection:', error);
 				const message =
-					(error as ApiErrorResponse)?.response?.data?.message ||
+					(error as ApiErrorResponse)?.response?.data?.message ??
 					'Không thể cập nhật bộ sưu tập. Vui lòng thử lại.';
 				toast.error(message);
 				throw error;
@@ -89,7 +89,7 @@ export const useCollectionStore = create(
 			} catch (error: unknown) {
 				console.error('Failed to delete collection:', error);
 				const message =
-					(error as ApiErrorResponse)?.response?.data?.message ||
+					(error as ApiErrorResponse)?.response?.data?.message ??
 					'Không thể xóa bộ sưu tập. Vui lòng thử lại.';
 				toast.error(message);
 				throw error;
@@ -115,7 +115,7 @@ export const useCollectionStore = create(
 			} catch (error: unknown) {
 				console.error('Failed to set cover image:', error);
 				const message =
-					(error as ApiErrorResponse)?.response?.data?.message ||
+					(error as ApiErrorResponse)?.response?.data?.message ??
 					'Không thể đặt ảnh bìa. Vui lòng thử lại.';
 				set((state) => {
 					state.updatingCover = null;
@@ -190,7 +190,7 @@ export const useCollectionStore = create(
 			} catch (error: unknown) {
 				console.error('Failed to restore version:', error);
 				const message =
-					(error as ApiErrorResponse)?.response?.data?.message ||
+					(error as ApiErrorResponse)?.response?.data?.message ??
 					'Không thể khôi phục phiên bản. Vui lòng thử lại.';
 				toast.error(message);
 				throw error;
