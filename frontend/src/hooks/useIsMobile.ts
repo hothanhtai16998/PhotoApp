@@ -1,21 +1,20 @@
 import { useState, useEffect } from 'react';
-
-const MOBILE_BREAKPOINT = 768;
+import { appConfig } from '@/config/appConfig';
 
 /**
  * Hook to detect if the current viewport is mobile-sized
- * Returns true if window width <= 768px
+ * Returns true if window width <= mobile breakpoint
  * Handles window resize events and SSR (returns false if window is undefined)
  */
 export function useIsMobile(): boolean {
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window === 'undefined') return false;
-    return window.innerWidth <= MOBILE_BREAKPOINT;
+    return window.innerWidth <= appConfig.mobileBreakpoint;
   });
 
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth <= MOBILE_BREAKPOINT);
+      setIsMobile(window.innerWidth <= appConfig.mobileBreakpoint);
     };
 
     window.addEventListener('resize', handleResize);

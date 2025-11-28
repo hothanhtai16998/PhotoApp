@@ -6,6 +6,7 @@ import './HomePage.css';
 import { useImageStore } from "@/stores/useImageStore";
 import { useGlobalKeyboardShortcuts } from "@/hooks/useGlobalKeyboardShortcuts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { appConfig } from "@/config/appConfig";
 
 // Lazy load Slider - conditionally rendered
 const Slider = lazy(() => import("@/components/Slider"));
@@ -38,13 +39,13 @@ function HomePage() {
         if (imageParam) {
             // Check if this is a page refresh by checking sessionStorage
             // If image param exists but we don't have the "fromGrid" flag, it's a refresh
-            const fromGrid = sessionStorage.getItem('imagePage_fromGrid');
+            const fromGrid = sessionStorage.getItem(appConfig.storage.imagePageFromGridKey);
             if (!fromGrid) {
                 // This is a refresh or direct access, redirect to /photos/:slug
                 navigate(`/photos/${imageParam}`, { replace: true });
             } else {
                 // Clear the flag after using it
-                sessionStorage.removeItem('imagePage_fromGrid');
+                sessionStorage.removeItem(appConfig.storage.imagePageFromGridKey);
             }
         }
     }, [searchParams, navigate]);

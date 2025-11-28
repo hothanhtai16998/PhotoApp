@@ -74,8 +74,8 @@ export async function retry<T>(
  */
 export async function retryWithExponentialBackoff<T>(
   fn: () => Promise<T>,
-  maxRetries: number = 3,
-  initialDelay: number = 1000
+  maxRetries: number = apiConfig.retry.maxRetries,
+  initialDelay: number = apiConfig.retry.initialDelayMs
 ): Promise<T> {
   return retry(fn, {
     maxRetries,

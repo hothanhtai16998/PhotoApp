@@ -22,6 +22,7 @@ import { ProfileTabs } from "./components/ProfileTabs";
 import { useRequestCancellationOnChange } from "@/hooks/useRequestCancellation";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { toast } from "sonner";
+import { appConfig } from "@/config/appConfig";
 import "./ProfilePage.css";
 
 type TabType = 'photos' | 'illustrations' | 'collections' | 'stats';
@@ -209,13 +210,13 @@ function ProfilePage() {
 
         // Only track views for other users' profiles
         if (!isOwnProfile) {
-            const hasTrackedView = sessionStorage.getItem(`profile_view_${displayUserId}_${currentUser._id}`);
+            const hasTrackedView = sessionStorage.getItem(`${appConfig.storage.profileViewKeyPrefix}${displayUserId}_${currentUser._id}`);
             if (!hasTrackedView) {
                 userStatsService.trackProfileView(displayUserId).catch(err => {
                     console.error('Failed to track profile view:', err);
                     // Don't show error to user - this is background tracking
                 });
-                sessionStorage.setItem(`profile_view_${displayUserId}_${currentUser._id}`, 'true');
+                sessionStorage.setItem(`${appConfig.storage.profileViewKeyPrefix}${displayUserId}_${currentUser._id}`, 'true');
             }
         }
     }, [displayUserId, currentUser?._id, isOwnProfile]);
@@ -325,7 +326,7 @@ function ProfilePage() {
     useEffect(() => {
         if (imageParamFromUrl && isMobile) {
             // Set flag to indicate we're opening from grid
-            sessionStorage.setItem('imagePage_fromGrid', 'true');
+            sessionStorage.setItem(appConfig.storage.imagePageFromGridKey, 'true');
             // Navigate to ImagePage with images state
             navigate(`/photos/${imageParamFromUrl}`, {
                 state: {
@@ -548,7 +549,7 @@ function ProfilePage() {
                                                     // MOBILE ONLY: Navigate to ImagePage instead of opening modal
                                                     if (isMobile) {
                                                         // Set flag to indicate we're opening from grid
-                                                        sessionStorage.setItem('imagePage_fromGrid', 'true');
+                                                        sessionStorage.setItem(appConfig.storage.imagePageFromGridKey, 'true');
                                                         // Pass images via state for navigation
                                                         const slug = generateImageSlug(image.imageTitle, image._id);
                                                         navigate(`/photos/${slug}`, {
@@ -680,7 +681,7 @@ function ProfilePage() {
 
             {/* Image Modal - DESKTOP ONLY */}
             {/* On mobile, we navigate to ImagePage instead */}
-            {selectedImage && !isMobile && window.innerWidth > 768 && (
+            {selectedImage && !isMobile && window.innerWidth > appConfig.mobileBreakpoint && (
                 <Suspense fallback={null}>
                     <ImageModal
                         image={selectedImage}

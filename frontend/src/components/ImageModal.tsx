@@ -11,6 +11,7 @@ import { ImageModalContent } from './image/ImageModalContent';
 import { ImageModalSidebar } from './image/ImageModalSidebar';
 import { ImageModalRelated } from './image/ImageModalRelated';
 import { useUserStore } from '@/stores/useUserStore';
+import { appConfig } from '@/config/appConfig';
 import './ImageModal.css';
 
 interface ImageModalProps {
@@ -44,12 +45,12 @@ const ImageModal = ({
   // Detect mobile to show author banner on mobile regardless of renderAsPage
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window === 'undefined') return false;
-    return window.innerWidth <= 768;
+    return window.innerWidth <= appConfig.mobileBreakpoint;
   });
 
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
+      setIsMobile(window.innerWidth <= appConfig.mobileBreakpoint);
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);

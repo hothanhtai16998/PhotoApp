@@ -4,6 +4,7 @@ import Header from '@/components/Header';
 import { imageService } from '@/services/imageService';
 import { extractIdFromSlug, generateImageSlug } from '@/lib/utils';
 import type { Image } from '@/types/image';
+import { appConfig } from '@/config/appConfig';
 import './ImagePage.css';
 
 // Lazy load ImageModal - main component of this page
@@ -28,14 +29,14 @@ function ImagePage() {
     const hasState = location.state?.fromGrid === true;
     
     // Check sessionStorage (set when clicking from grid)
-    const fromGridFlag = sessionStorage.getItem('imagePage_fromGrid');
+    const fromGridFlag = sessionStorage.getItem(appConfig.storage.imagePageFromGridKey);
     
     // If we have state OR sessionStorage flag, it's from grid (modal mode)
     const fromGrid = hasState || fromGridFlag === 'true';
     
     // Clear sessionStorage flag after reading (only if it exists)
     if (fromGridFlag === 'true') {
-      sessionStorage.removeItem('imagePage_fromGrid');
+      sessionStorage.removeItem(appConfig.storage.imagePageFromGridKey);
     }
     
     return fromGrid;

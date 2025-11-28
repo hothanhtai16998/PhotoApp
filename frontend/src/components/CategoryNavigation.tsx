@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, memo } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { useImageStore } from "@/stores/useImageStore"
 import { categoryService, type Category } from "@/services/categoryService"
+import { appConfig } from '@/config/appConfig';
 import './CategoryNavigation.css'
 
 export const CategoryNavigation = memo(function CategoryNavigation() {
@@ -232,13 +233,13 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
         ref={categoryNavRef}
         onTouchMove={(e) => {
           // Prevent scrolling in category navigation on mobile
-          if (window.innerWidth <= 768) {
+          if (window.innerWidth <= appConfig.mobileBreakpoint) {
             e.preventDefault();
           }
         }}
         onTouchStart={(e) => {
           // Prevent scrolling in category navigation on mobile
-          if (window.innerWidth <= 768) {
+          if (window.innerWidth <= appConfig.mobileBreakpoint) {
             e.stopPropagation();
           }
         }}
@@ -248,7 +249,7 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
           className="category-navigation"
           onTouchMove={(e) => {
             // Prevent scrolling in category navigation on mobile
-            if (window.innerWidth <= 768) {
+            if (window.innerWidth <= appConfig.mobileBreakpoint) {
               e.preventDefault();
             }
           }}

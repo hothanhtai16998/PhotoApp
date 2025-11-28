@@ -12,6 +12,7 @@ import { applyImageFilters } from '@/utils/imageFilters';
 import { useImageStore } from '@/stores/useImageStore';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { imageGridConfig } from '@/config/imageGridConfig';
+import { appConfig } from '@/config/appConfig';
 import './ImageGrid.css';
 
 // Lazy load ImageModal - conditionally rendered
@@ -75,7 +76,7 @@ const ImageGrid = memo(() => {
   useEffect(() => {
     if (imageSlugFromUrl && isMobileState) {
       // Set flag to indicate we're opening from grid
-      sessionStorage.setItem('imagePage_fromGrid', 'true');
+      sessionStorage.setItem(appConfig.storage.imagePageFromGridKey, 'true');
       // Navigate to ImagePage with images state
       navigate(`/photos/${imageSlugFromUrl}`, {
         state: { 
@@ -634,7 +635,7 @@ const ImageGrid = memo(() => {
                   // MOBILE ONLY: Navigate to ImagePage instead of opening modal
                   if (isMobileState) {
                     // Set flag to indicate we're opening from grid
-                    sessionStorage.setItem('imagePage_fromGrid', 'true');
+                    sessionStorage.setItem(appConfig.storage.imagePageFromGridKey, 'true');
                     // Pass images via state for navigation
                     const slug = generateImageSlug(img.imageTitle, img._id);
                     navigate(`/photos/${slug}`, {
@@ -648,7 +649,7 @@ const ImageGrid = memo(() => {
 
                   // DESKTOP: Use modal (existing behavior)
                   // Set flag to indicate we're opening from grid (not refresh)
-                  sessionStorage.setItem('imagePage_fromGrid', 'true');
+                  sessionStorage.setItem(appConfig.storage.imagePageFromGridKey, 'true');
 
                   // Update URL with search param instead of navigating
                   // This keeps the grid mounted (like Unsplash)
@@ -690,7 +691,7 @@ const ImageGrid = memo(() => {
 
       {/* Image Modal - shown as overlay when image param exists - DESKTOP ONLY */}
       {/* On mobile, we navigate to ImagePage instead */}
-      {selectedImage && !isMobileState && window.innerWidth > 768 && (
+      {selectedImage && !isMobileState && window.innerWidth > appConfig.mobileBreakpoint && (
         <Suspense fallback={null}>
           <ImageModal
             image={selectedImage}
@@ -706,7 +707,7 @@ const ImageGrid = memo(() => {
             onImageSelect={(updatedImage) => {
               handleImageUpdate(updatedImage);
               // Set fromGrid flag to prevent HomePage from redirecting when changing images in modal
-              sessionStorage.setItem('imagePage_fromGrid', 'true');
+              sessionStorage.setItem(appConfig.storage.imagePageFromGridKey, 'true');
               // Update URL to reflect the selected image with slug
               const slug = generateImageSlug(updatedImage.imageTitle, updatedImage._id);
               setSearchParams(prev => {

@@ -274,10 +274,12 @@ function buildLocationName(item: NominatimItem, address: NominatimAddress): stri
  * @param limit - Maximum number of results (default: 8)
  * @returns Promise with array of location suggestions
  */
+import { apiConfig } from '@/config/apiConfig';
+
 export async function searchLocations(
 	query: string,
-	lang: string = 'vi',
-	limit: number = 8
+	lang: string = apiConfig.geocoding.defaultLanguage,
+	limit: number = apiConfig.geocoding.defaultLimit
 ): Promise<LocationSuggestion[]> {
 	if (!query || query.trim().length < 2) {
 		return [];

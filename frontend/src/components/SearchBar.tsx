@@ -10,6 +10,8 @@ import { imageService } from "@/services/imageService"
 import { searchService, type SearchSuggestion } from "@/services/searchService"
 import { useRequestCancellationOnChange } from "@/hooks/useRequestCancellation"
 import SearchFilters, { type SearchFilters as SearchFiltersType } from "./SearchFilters"
+import { searchConfig } from '@/config/searchConfig';
+import { appConfig } from '@/config/appConfig';
 import './SearchBar.css'
 
 export interface SearchBarRef {
@@ -71,7 +73,7 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
   // Load search history from localStorage
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('photoApp_searchHistory')
+      const stored = localStorage.getItem(appConfig.storage.searchHistoryKey)
       if (stored) {
         const history = JSON.parse(stored) as SearchHistoryItem[]
         setSearchHistory(history.slice(0, searchConfig.maxHistoryItems))
@@ -155,7 +157,7 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
     if (!query.trim()) return
 
     try {
-      const stored = localStorage.getItem('photoApp_searchHistory')
+      const stored = localStorage.getItem(appConfig.storage.searchHistoryKey)
       let history: SearchHistoryItem[] = stored ? JSON.parse(stored) : []
       
       // Remove duplicates and add to beginning
@@ -165,7 +167,7 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
       // Keep only max history items
       history = history.slice(0, searchConfig.maxHistoryItems)
       
-      localStorage.setItem('photoApp_searchHistory', JSON.stringify(history))
+      localStorage.setItem(appConfig.storage.searchHistoryKey, JSON.stringify(history))
       setSearchHistory(history)
     } catch (error) {
       console.error('Failed to save search history:', error)
@@ -415,7 +417,7 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
   }
 
   const clearHistory = () => {
-    localStorage.removeItem('photoApp_searchHistory')
+    localStorage.removeItem(appConfig.storage.searchHistoryKey)
     setSearchHistory([])
   }
 

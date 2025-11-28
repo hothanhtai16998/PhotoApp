@@ -3,6 +3,7 @@ import axios, {
 	type AxiosError,
 	type InternalAxiosRequestConfig,
 } from 'axios';
+import { appConfig } from '@/config/appConfig';
 
 const api = axios.create({
 	baseURL:
@@ -11,7 +12,7 @@ const api = axios.create({
 			? 'http://localhost:3000/api'
 			: '/api',
 	withCredentials: true,
-	timeout: 120000, // 2 minutes for file uploads (can be overridden per request)
+	timeout: appConfig.apiTimeout, // 2 minutes for file uploads (can be overridden per request)
 });
 
 // Helper function to get CSRF token from cookie

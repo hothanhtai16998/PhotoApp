@@ -4,6 +4,7 @@ import type { Image } from '@/types/image';
 import type { Collection } from '@/types/collection';
 import { useCollectionImageStore } from '@/stores/useCollectionImageStore';
 import { generateImageSlug, extractIdFromSlug } from '@/lib/utils';
+import { appConfig } from '@/config/appConfig';
 
 interface UseCollectionImagesProps {
   collection: Collection | null;
@@ -67,7 +68,7 @@ export const useCollectionImages = ({
   useEffect(() => {
     if (imageSlugFromUrl && isMobile) {
       // Set flag to indicate we're opening from grid
-      sessionStorage.setItem('imagePage_fromGrid', 'true');
+      sessionStorage.setItem(appConfig.storage.imagePageFromGridKey, 'true');
       // Navigate to ImagePage with images state
       navigate(`/photos/${imageSlugFromUrl}`, {
         state: {
@@ -198,7 +199,7 @@ export const useCollectionImages = ({
     // MOBILE ONLY: Navigate to ImagePage instead of opening modal
     if (isMobile) {
       // Set flag to indicate we're opening from grid
-      sessionStorage.setItem('imagePage_fromGrid', 'true');
+      sessionStorage.setItem(appConfig.storage.imagePageFromGridKey, 'true');
       // Pass images via state for navigation
       const slug = generateImageSlug(image.imageTitle, image._id);
       navigate(`/photos/${slug}`, {

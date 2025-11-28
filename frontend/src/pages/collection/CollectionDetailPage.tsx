@@ -14,6 +14,7 @@ import { CollectionVersionHistory } from './components/CollectionVersionHistory'
 import { CollectionBulkActions } from './components/CollectionBulkActions';
 import CollectionCollaborators from './components/CollectionCollaborators';
 import api from '@/lib/axios';
+import { appConfig } from '@/config/appConfig';
 import './CollectionDetailPage.css';
 
 // Lazy load ImageModal - conditionally rendered
@@ -23,12 +24,12 @@ export default function CollectionDetailPage() {
 	const navigate = useNavigate();
 	const [isMobile, setIsMobile] = useState(() => {
 		if (typeof window === 'undefined') return false;
-		return window.innerWidth <= 768;
+		return window.innerWidth <= appConfig.mobileBreakpoint;
 	});
 
 	useEffect(() => {
 		const handleResize = () => {
-			setIsMobile(window.innerWidth <= 768);
+			setIsMobile(window.innerWidth <= appConfig.mobileBreakpoint);
 		};
 		window.addEventListener('resize', handleResize);
 		return () => window.removeEventListener('resize', handleResize);

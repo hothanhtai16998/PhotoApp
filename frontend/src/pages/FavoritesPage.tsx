@@ -12,6 +12,7 @@ import ProgressiveImage from "@/components/ProgressiveImage";
 import api from "@/lib/axios";
 import { generateImageSlug, extractIdFromSlug } from "@/lib/utils";
 import { toast } from "sonner";
+import { appConfig } from "@/config/appConfig";
 import "./FavoritesPage.css";
 
 // Lazy load ImageModal - conditionally rendered
@@ -47,7 +48,7 @@ function FavoritesPage() {
     useEffect(() => {
         if (imageParamFromUrl && isMobile) {
             // Set flag to indicate we're opening from grid
-            sessionStorage.setItem('imagePage_fromGrid', 'true');
+            sessionStorage.setItem(appConfig.storage.imagePageFromGridKey, 'true');
             // Navigate to ImagePage with images state
             navigate(`/photos/${imageParamFromUrl}`, {
                 state: {
@@ -246,7 +247,7 @@ function FavoritesPage() {
                                             // MOBILE ONLY: Navigate to ImagePage instead of opening modal
                                             if (isMobile) {
                                                 // Set flag to indicate we're opening from grid
-                                                sessionStorage.setItem('imagePage_fromGrid', 'true');
+                                                sessionStorage.setItem(appConfig.storage.imagePageFromGridKey, 'true');
                                                 // Pass images via state for navigation
                                                 const slug = generateImageSlug(image.imageTitle, image._id);
                                                 navigate(`/photos/${slug}`, {
@@ -328,7 +329,7 @@ function FavoritesPage() {
 
             {/* Image Modal - DESKTOP ONLY */}
             {/* On mobile, we navigate to ImagePage instead */}
-            {selectedImage && !isMobile && window.innerWidth > 768 && (
+            {selectedImage && !isMobile && window.innerWidth > appConfig.mobileBreakpoint && (
                 <Suspense fallback={null}>
                     <ImageModal
                         image={selectedImage}
