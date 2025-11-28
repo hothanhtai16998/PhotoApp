@@ -65,7 +65,7 @@ export const useCollectionImages = ({
 
   // MOBILE ONLY: If URL has ?image=slug on mobile, redirect to ImagePage
   useEffect(() => {
-    if (imageSlugFromUrl && (isMobile || window.innerWidth <= 768)) {
+    if (imageSlugFromUrl && isMobile) {
       // Set flag to indicate we're opening from grid
       sessionStorage.setItem('imagePage_fromGrid', 'true');
       // Navigate to ImagePage with images state
@@ -88,7 +88,7 @@ export const useCollectionImages = ({
   // Find selected image from URL slug - DESKTOP ONLY
   const selectedImage = useMemo(() => {
     // Don't show modal on mobile
-    if (isMobile || window.innerWidth <= 768) return null;
+    if (isMobile) return null;
     if (!imageSlugFromUrl || images.length === 0) return null;
 
     const shortId = extractIdFromSlug(imageSlugFromUrl);
@@ -196,7 +196,7 @@ export const useCollectionImages = ({
     }
 
     // MOBILE ONLY: Navigate to ImagePage instead of opening modal
-    if (isMobile || window.innerWidth <= 768) {
+    if (isMobile) {
       // Set flag to indicate we're opening from grid
       sessionStorage.setItem('imagePage_fromGrid', 'true');
       // Pass images via state for navigation

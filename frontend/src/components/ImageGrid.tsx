@@ -11,26 +11,14 @@ import { ImageGridItem } from './image/ImageGridItem';
 import { useImageGrid } from './image/hooks/useImageGrid';
 import { applyImageFilters } from '@/utils/imageFilters';
 import { useImageStore } from '@/stores/useImageStore';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import './ImageGrid.css';
 
 const ImageGrid = memo(() => {
   const [searchParams, setSearchParams] = useSearchParams();
   
-  // Detect if we're on mobile - MOBILE ONLY check
-  const isMobile = useMemo(() => {
-    if (typeof window === 'undefined') return false;
-    return window.innerWidth <= 768;
-  }, []);
-
-  // Listen for window resize to update mobile detection
-  const [isMobileState, setIsMobileState] = useState(isMobile);
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobileState(window.innerWidth <= 768);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  // Detect if we're on mobile
+  const isMobileState = useIsMobile();
 
   // Track image aspect ratios (portrait vs landscape)
   const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
@@ -82,7 +70,7 @@ const ImageGrid = memo(() => {
 
   // MOBILE ONLY: If URL has ?image=slug on mobile, redirect to ImagePage
   useEffect(() => {
-    if (imageSlugFromUrl && (isMobileState || window.innerWidth <= 768)) {
+    if (imageSlugFromUrl && isMobileState) {
       // Set flag to indicate we're opening from grid
       sessionStorage.setItem('imagePage_fromGrid', 'true');
       // Navigate to ImagePage with images state
@@ -105,7 +93,7 @@ const ImageGrid = memo(() => {
   // Find selected image from URL slug (DESKTOP ONLY - for modal)
   const selectedImage = useMemo(() => {
     // Don't show modal on mobile
-    if (isMobileState || window.innerWidth <= 768) return null;
+    if (isMobileState) return null;
     if (!imageSlugFromUrl) return null;
 
     // Extract short ID from slug and find matching image
@@ -639,7 +627,7 @@ const ImageGrid = memo(() => {
                 eager={isEager}
                 onSelect={(img) => {
                   // MOBILE ONLY: Navigate to ImagePage instead of opening modal
-                  if (isMobileState || window.innerWidth <= 768) {
+                  if (isMobileState) {
                     // Set flag to indicate we're opening from grid
                     sessionStorage.setItem('imagePage_fromGrid', 'true');
                     // Pass images via state for navigation

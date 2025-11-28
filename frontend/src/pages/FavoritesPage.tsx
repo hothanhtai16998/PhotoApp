@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useUserStore } from "@/stores/useUserStore";
 import { useFavoriteStore } from "@/stores/useFavoriteStore";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import Header from "@/components/Header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Heart } from "lucide-react";
@@ -32,19 +33,8 @@ function FavoritesPage() {
         updateImage,
     } = useFavoriteStore();
     
-    // Detect if we're on mobile - MOBILE ONLY check
-    const [isMobile, setIsMobile] = useState(() => {
-        if (typeof window === 'undefined') return false;
-        return window.innerWidth <= 768;
-    });
-
-    useEffect(() => {
-        const handleResize = () => {
-            setIsMobile(window.innerWidth <= 768);
-        };
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    // Detect if we're on mobile
+    const isMobile = useIsMobile();
 
     const processedImages = useRef<Set<string>>(new Set());
     
@@ -53,7 +43,7 @@ function FavoritesPage() {
     
     // MOBILE ONLY: If URL has ?image=slug on mobile, redirect to ImagePage
     useEffect(() => {
-        if (imageParamFromUrl && (isMobile || window.innerWidth <= 768)) {
+        if (imageParamFromUrl && isMobile) {
             // Set flag to indicate we're opening from grid
             sessionStorage.setItem('imagePage_fromGrid', 'true');
             // Navigate to ImagePage with images state
@@ -76,7 +66,7 @@ function FavoritesPage() {
     // Find selected image from URL (supports both slug format and legacy ID format) - DESKTOP ONLY
     const selectedImage = useMemo(() => {
         // Don't show modal on mobile
-        if (isMobile || window.innerWidth <= 768) return null;
+        if (isMobile) return null;
         if (!imageParamFromUrl) return null;
         
         // Check if it's a MongoDB ObjectId (24 hex characters) - legacy format
@@ -252,7 +242,7 @@ function FavoritesPage() {
                                         aria-label={`Ảnh yêu thích: ${image.imageTitle || 'Không có tiêu đề'}`}
                                         onClick={() => {
                                             // MOBILE ONLY: Navigate to ImagePage instead of opening modal
-                                            if (isMobile || window.innerWidth <= 768) {
+                                            if (isMobile) {
                                                 // Set flag to indicate we're opening from grid
                                                 sessionStorage.setItem('imagePage_fromGrid', 'true');
                                                 // Pass images via state for navigation

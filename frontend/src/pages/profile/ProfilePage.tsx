@@ -19,10 +19,19 @@ import { userStatsService } from "@/services/userStatsService";
 import { ProfileHeader } from "./components/ProfileHeader";
 import { ProfileTabs } from "./components/ProfileTabs";
 import { useRequestCancellationOnChange } from "@/hooks/useRequestCancellation";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { toast } from "sonner";
 import "./ProfilePage.css";
 
 type TabType = 'photos' | 'illustrations' | 'collections' | 'stats';
+
+// Profile tab IDs
+const TABS = {
+    PHOTOS: 'photos',
+    ILLUSTRATIONS: 'illustrations',
+    COLLECTIONS: 'collections',
+    STATS: 'stats',
+} as const;
 
 function ProfilePage() {
     const { user: currentUser } = useUserStore();
@@ -59,21 +68,10 @@ function ProfilePage() {
         clearImages,
     } = useUserImageStore();
 
-    // Detect if we're on mobile - MOBILE ONLY check
-    const [isMobile, setIsMobile] = useState(() => {
-        if (typeof window === 'undefined') return false;
-        return window.innerWidth <= 768;
-    });
+    // Detect if we're on mobile
+    const isMobile = useIsMobile();
 
-    useEffect(() => {
-        const handleResize = () => {
-            setIsMobile(window.innerWidth <= 768);
-        };
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
-    const [activeTab, setActiveTab] = useState<TabType>('photos');
+    const [activeTab, setActiveTab] = useState<TabType>(TABS.PHOTOS);
     const [isSwitchingProfile, setIsSwitchingProfile] = useState(false);
     // Track which user ID the current stats belong to
     const [statsUserId, setStatsUserId] = useState<string | undefined>(undefined);
@@ -252,14 +250,14 @@ function ProfilePage() {
 
     // Lazy-load collections only when collections tab is active
     useEffect(() => {
-        if (activeTab === 'collections' && !collectionsLoading && collections.length === 0 && displayUserId) {
+        if (activeTab === TABS.COLLECTIONS && !collectionsLoading && collections.length === 0 && displayUserId) {
             fetchCollectionsWrapper(cancelSignal);
         }
     }, [activeTab, displayUserId, fetchCollectionsWrapper, cancelSignal, collectionsLoading, collections.length]);
 
     // Lazy-load stats only when stats tab is active
     useEffect(() => {
-        if (activeTab === 'stats' && !userStats && displayUserId) {
+        if (activeTab === TABS.STATS && !userStats && displayUserId) {
             fetchUserStatsWrapper(cancelSignal);
         }
     }, [activeTab, displayUserId, fetchUserStatsWrapper, cancelSignal, userStats]);
@@ -300,7 +298,7 @@ function ProfilePage() {
 
     // Calculate display images based on active tab
     const displayImages = useMemo(() => {
-        if (activeTab === 'photos') {
+        if (activeTab === TABS.PHOTOS) {
             return images.filter(img => {
                 const categoryName = typeof img.imageCategory === 'string'
                     ? img.imageCategory
@@ -309,7 +307,7 @@ function ProfilePage() {
                     !categoryName.toLowerCase().includes('illustration') &&
                     !categoryName.toLowerCase().includes('svg');
             });
-        } else if (activeTab === 'illustrations') {
+        } else if (activeTab === TABS.ILLUSTRATIONS) {
             return images.filter(img => {
                 const categoryName = typeof img.imageCategory === 'string'
                     ? img.imageCategory
@@ -327,7 +325,7 @@ function ProfilePage() {
 
     // MOBILE ONLY: If URL has ?image=slug on mobile, redirect to ImagePage
     useEffect(() => {
-        if (imageParamFromUrl && (isMobile || window.innerWidth <= 768)) {
+        if (imageParamFromUrl && isMobile) {
             // Set flag to indicate we're opening from grid
             sessionStorage.setItem('imagePage_fromGrid', 'true');
             // Navigate to ImagePage with images state
@@ -350,7 +348,7 @@ function ProfilePage() {
     // Find selected image from URL (supports both slug format and legacy ID format) - DESKTOP ONLY
     const selectedImage = useMemo(() => {
         // Don't show modal on mobile
-        if (isMobile || window.innerWidth <= 768) return null;
+        if (isMobile) return null;
         if (!imageParamFromUrl) return null;
 
         // Check if it's a MongoDB ObjectId (24 hex characters) - legacy format
@@ -517,7 +515,7 @@ function ProfilePage() {
 
                     {/* Content Area */}
                     <div className="profile-content">
-                        {activeTab === 'photos' || activeTab === 'illustrations' ? (
+                        {activeTab === TABS.PHOTOS || activeTab === TABS.ILLUSTRATIONS ? (
                             loading ? (
                                 <div className="profile-image-grid" aria-label="Đang tải ảnh" aria-live="polite">
                                     {Array.from({ length: 12 }).map((_, index) => (
@@ -531,7 +529,7 @@ function ProfilePage() {
                                 </div>
                             ) : displayImages.length === 0 ? (
                                 <div className="empty-state" role="status" aria-live="polite">
-                                    <p>Chưa có {activeTab === 'photos' ? 'ảnh' : 'minh họa'} nào.</p>
+                                    <p>Chưa có {activeTab === TABS.PHOTOS ? 'ảnh' : 'minh họa'} nào.</p>
                                     <Button
                                         variant="outline"
                                         onClick={() => navigate('/upload')}
@@ -550,7 +548,7 @@ function ProfilePage() {
                                                 className={`profile-image-item ${imageType}`}
                                                 onClick={() => {
                                                     // MOBILE ONLY: Navigate to ImagePage instead of opening modal
-                                                    if (isMobile || window.innerWidth <= 768) {
+                                                    if (isMobile) {
                                                         // Set flag to indicate we're opening from grid
                                                         sessionStorage.setItem('imagePage_fromGrid', 'true');
                                                         // Pass images via state for navigation
@@ -592,7 +590,7 @@ function ProfilePage() {
                                     })}
                                 </div>
                             )
-                        ) : activeTab === 'collections' ? (
+                        ) : activeTab === TABS.COLLECTIONS ? (
                             collectionsLoading ? (
                                 <div className="profile-collections-grid" aria-label="Đang tải bộ sưu tập" aria-live="polite">
                                     {Array.from({ length: 6 }).map((_, index) => (
