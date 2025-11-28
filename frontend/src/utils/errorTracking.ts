@@ -118,7 +118,7 @@ class ErrorTracker {
     //   data,
     // });
 
-    console.debug(`[Breadcrumb] [${category}]`, message, data);
+    console.warn(`[Breadcrumb] [${category}]`, message, data);
   }
 }
 

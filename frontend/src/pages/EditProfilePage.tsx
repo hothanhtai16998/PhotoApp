@@ -40,17 +40,17 @@ function EditProfilePage() {
         }
         // Set form values when user data is available
         if (user) {
-            const nameParts = user.displayName?.split(' ') || [];
-            setValue('firstName', nameParts[0] || '');
-            setValue('lastName', nameParts.slice(1).join(' ') || '');
-            setValue('email', user.email || '');
-            setValue('username', user.username || '');
-            setValue('bio', user.bio || '');
-            setValue('location', user.location || '');
-            setValue('phone', user.phone || '');
-            setValue('personalSite', user.website || 'https://');
-            setValue('instagram', user.instagram || '');
-            setValue('twitter', user.twitter || '');
+            const nameParts = user.displayName?.split(' ') ?? [];
+            setValue('firstName', nameParts[0] ?? '');
+            setValue('lastName', nameParts.slice(1).join(' ') ?? '');
+            setValue('email', user.email ?? '');
+            setValue('username', user.username ?? '');
+            setValue('bio', user.bio ?? '');
+            setValue('location', user.location ?? '');
+            setValue('phone', user.phone ?? '');
+            setValue('personalSite', user.website ?? 'https://');
+            setValue('instagram', user.instagram ?? '');
+            setValue('twitter', user.twitter ?? '');
         }
     }, [user, navigate, setValue]);
 

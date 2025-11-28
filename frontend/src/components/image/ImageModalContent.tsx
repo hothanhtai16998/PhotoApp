@@ -73,7 +73,7 @@ export const ImageModalContent = ({
               srcSet={
                 image.thumbnailAvifUrl && image.smallAvifUrl && image.regularAvifUrl && image.imageAvifUrl
                   ? `${image.thumbnailAvifUrl} 200w, ${image.smallAvifUrl} 800w, ${image.regularAvifUrl} 1080w, ${image.imageAvifUrl} 1920w`
-                  : image.regularAvifUrl || image.imageAvifUrl || ''
+                  : image.regularAvifUrl ?? image.imageAvifUrl ?? ''
               }
               type="image/avif"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 98vw, 1920px"
@@ -91,8 +91,8 @@ export const ImageModalContent = ({
             {/* Fallback img element with blur-up technique */}
             <img
               ref={zoomImageRef}
-              src={modalImageSrc || image.regularUrl || image.smallUrl || image.imageUrl}
-              alt={image.imageTitle || 'Photo'}
+              src={modalImageSrc ?? image.regularUrl ?? image.smallUrl ?? image.imageUrl}
+              alt={image.imageTitle ?? 'Photo'}
               style={{
                 backgroundImage: modalPlaceholderSrc
                   ? `url("${modalPlaceholderSrc}")`
@@ -101,7 +101,7 @@ export const ImageModalContent = ({
                 backgroundPosition: 'center',
                 backgroundColor: '#f0f0f0', // Fallback color while placeholder loads
               }}
-              className={`modal-image ${isModalImageLoaded ? 'loaded' : 'loading'} ${(imageTypes.get(image._id) || 'landscape') === 'landscape' ? 'landscape' : 'portrait'}`}
+              className={`modal-image ${isModalImageLoaded ? 'loaded' : 'loading'} ${(imageTypes.get(image._id) ?? 'landscape') === 'landscape' ? 'landscape' : 'portrait'}`}
               loading="eager"
               decoding="async"
               fetchPriority="high"
@@ -113,7 +113,7 @@ export const ImageModalContent = ({
                 // Update class if orientation was misdetected
                 const img = e.currentTarget;
                 const isPortraitImg = img.naturalHeight > img.naturalWidth;
-                const currentType = imageTypes.get(image._id) || 'landscape';
+                const currentType = imageTypes.get(image._id) ?? 'landscape';
                 const shouldBePortrait = isPortraitImg;
                 if (shouldBePortrait !== (currentType === 'portrait')) {
                   img.classList.toggle('landscape', !shouldBePortrait);
@@ -141,7 +141,7 @@ export const ImageModalContent = ({
               backgroundPosition: 'center',
               backgroundColor: '#f0f0f0', // Fallback color while placeholder loads
             }}
-            className={`modal-image ${isModalImageLoaded ? 'loaded' : 'loading'} ${(imageTypes.get(image._id) || 'landscape') === 'landscape' ? 'landscape' : 'portrait'}`}
+            className={`modal-image ${isModalImageLoaded ? 'loaded' : 'loading'} ${(imageTypes.get(image._id) ?? 'landscape') === 'landscape' ? 'landscape' : 'portrait'}`}
             loading="eager"
             decoding="async"
             fetchPriority="high"

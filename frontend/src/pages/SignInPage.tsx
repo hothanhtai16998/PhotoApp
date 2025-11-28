@@ -54,7 +54,7 @@ function SignInPage() {
     const handleSocialLogin = (provider: string) => {
         if (provider === 'google') {
             // Google OAuth - redirect to backend
-            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+            const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
             window.location.href = `${apiUrl}/api/auth/google`;
         } else {
             // For other providers, show coming soon message
