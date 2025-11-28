@@ -324,34 +324,34 @@ export default function CollectionDetailPage() {
 			{/* Image Modal - shown as overlay when image param exists */}
 			{selectedImage && (
 				<Suspense fallback={null}>
-					<ImageModal
-						image={selectedImage}
-						images={images}
-						onClose={() => {
-							// Remove image param from URL when closing
-							setSearchParams(prev => {
-								const newParams = new URLSearchParams(prev);
-								newParams.delete('image');
-								return newParams;
-							});
-						}}
-						onImageSelect={(updatedImage) => {
-							handleImageUpdate(updatedImage);
-							// Update URL to reflect the selected image with slug
-							const slug = generateImageSlug(updatedImage.imageTitle, updatedImage._id);
-							setSearchParams(prev => {
-								const newParams = new URLSearchParams(prev);
-								newParams.set('image', slug);
-								return newParams;
-							});
-						}}
-						onDownload={handleDownload}
-						imageTypes={imageTypes}
-						onImageLoad={handleImageLoad}
-						currentImageIds={currentImageIds}
-						processedImages={processedImages}
-						renderAsPage={false} // Always render as modal when opened from collection
-					/>
+				<ImageModal
+					image={selectedImage}
+					images={images}
+					onClose={() => {
+						// Remove image param from URL when closing
+						setSearchParams(prev => {
+							const newParams = new URLSearchParams(prev);
+							newParams.delete('image');
+							return newParams;
+						});
+					}}
+					onImageSelect={(updatedImage) => {
+						handleImageUpdate(updatedImage);
+						// Update URL to reflect the selected image with slug
+						const slug = generateImageSlug(updatedImage.imageTitle, updatedImage._id);
+						setSearchParams(prev => {
+							const newParams = new URLSearchParams(prev);
+							newParams.set('image', slug);
+							return newParams;
+						});
+					}}
+					onDownload={handleDownload}
+					imageTypes={imageTypes}
+					onImageLoad={handleImageLoad}
+					currentImageIds={currentImageIds}
+					processedImages={processedImages}
+					renderAsPage={false} // Always render as modal when opened from collection
+				/>
 				</Suspense>
 			)}
 		</>

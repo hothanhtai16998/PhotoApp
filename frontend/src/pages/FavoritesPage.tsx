@@ -332,33 +332,33 @@ function FavoritesPage() {
             {/* On mobile, we navigate to ImagePage instead */}
             {selectedImage && !isMobile && window.innerWidth > appConfig.mobileBreakpoint && (
                 <Suspense fallback={null}>
-                    <ImageModal
-                        image={selectedImage}
-                        images={images}
-                        onClose={() => {
-                            // Remove image param from URL when closing
-                            setSearchParams(prev => {
-                                const newParams = new URLSearchParams(prev);
-                                newParams.delete('image');
-                                return newParams;
-                            });
-                        }}
-                        onImageSelect={(updatedImage) => {
-                            handleImageUpdate(updatedImage);
-                            // Update URL to reflect the selected image with slug
-                            const slug = generateImageSlug(updatedImage.imageTitle, updatedImage._id);
-                            setSearchParams(prev => {
-                                const newParams = new URLSearchParams(prev);
-                                newParams.set('image', slug);
-                                return newParams;
-                            });
-                        }}
-                        onDownload={handleDownloadImage}
-                        imageTypes={imageTypes}
-                        onImageLoad={handleImageLoad}
-                        currentImageIds={currentImageIds}
-                        processedImages={processedImages}
-                    />
+                <ImageModal
+                    image={selectedImage}
+                    images={images}
+                    onClose={() => {
+                        // Remove image param from URL when closing
+                        setSearchParams(prev => {
+                            const newParams = new URLSearchParams(prev);
+                            newParams.delete('image');
+                            return newParams;
+                        });
+                    }}
+                    onImageSelect={(updatedImage) => {
+                        handleImageUpdate(updatedImage);
+                        // Update URL to reflect the selected image with slug
+                        const slug = generateImageSlug(updatedImage.imageTitle, updatedImage._id);
+                        setSearchParams(prev => {
+                            const newParams = new URLSearchParams(prev);
+                            newParams.set('image', slug);
+                            return newParams;
+                        });
+                    }}
+                    onDownload={handleDownloadImage}
+                    imageTypes={imageTypes}
+                    onImageLoad={handleImageLoad}
+                    currentImageIds={currentImageIds}
+                    processedImages={processedImages}
+                />
                 </Suspense>
             )}
         </>

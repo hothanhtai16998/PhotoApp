@@ -485,15 +485,15 @@ export default function CollectionsPage() {
 			{/* Edit Collection Modal */}
 			{showEditModal && (
 				<Suspense fallback={null}>
-					<CollectionModal
-						isOpen={showEditModal}
-						onClose={() => {
-							setShowEditModal(false);
-							setEditingCollection(null);
-						}}
-						collectionToEdit={editingCollection || undefined}
-						onCollectionUpdate={handleCollectionUpdated}
-					/>
+			<CollectionModal
+				isOpen={showEditModal}
+				onClose={() => {
+					setShowEditModal(false);
+					setEditingCollection(null);
+				}}
+				collectionToEdit={editingCollection || undefined}
+				onCollectionUpdate={handleCollectionUpdated}
+			/>
 				</Suspense>
 			)}
 		</>

@@ -175,18 +175,18 @@ function ImagePage() {
             <div className="loading-spinner" />
           </div>
         }>
-          <ImageModal
-            image={image}
-            images={images}
-            onClose={handleClose}
-            onImageSelect={handleImageSelect}
-            onDownload={handleDownload}
-            imageTypes={imageTypes}
-            onImageLoad={handleImageLoad}
-            currentImageIds={currentImageIds.current}
-            processedImages={processedImages}
-            renderAsPage={renderAsPage}
-          />
+        <ImageModal
+          image={image}
+          images={images}
+          onClose={handleClose}
+          onImageSelect={handleImageSelect}
+          onDownload={handleDownload}
+          imageTypes={imageTypes}
+          onImageLoad={handleImageLoad}
+          currentImageIds={currentImageIds.current}
+          processedImages={processedImages}
+          renderAsPage={renderAsPage}
+        />
         </Suspense>
       </div>
     </>
