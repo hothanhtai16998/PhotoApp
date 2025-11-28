@@ -85,7 +85,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['**/pages/**/*.tsx', '**/components/**/*.tsx'],
+    files: ['**/pages/**/*.tsx', '**/components/**/*.tsx', '**/App.tsx'],
     rules: {
       '@typescript-eslint/explicit-function-return-type': 'off',
     },
