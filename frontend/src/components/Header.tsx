@@ -1,5 +1,3 @@
-"use client"
-
 import { memo, useState, useRef, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Shield, Heart, Menu, X, User, LogOut, Info, Palette } from "lucide-react"

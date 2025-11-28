@@ -21,7 +21,8 @@ function handler(event) {
     var allowedOrigins = [
         'http://localhost:3000',
         'http://localhost:5173',
-        'https://your-production-domain.com' // Replace with your production domain
+        'https://uploadanh.cloud',
+        'https://www.uploadanh.cloud'
     ];
     
     // Check if origin is in allowed list, or allow all in development

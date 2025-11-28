@@ -43,9 +43,10 @@ export default defineConfig({
 				},
 				// Smart chunk splitting for better performance and caching
 				manualChunks: (id) => {
-					// Core React libraries - always needed, small and frequently used
+					// Don't split React/ReactDOM - keep them in main bundle to avoid loading issues
+					// React is small and always needed, so splitting doesn't provide much benefit
 					if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
-						return 'react-vendor';
+						return undefined; // Keep in main bundle
 					}
 
 					// Router - only needed for navigation, can be loaded on demand

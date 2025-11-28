@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect, useRef, memo } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { useImageStore } from "@/stores/useImageStore"
