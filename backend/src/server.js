@@ -141,6 +141,12 @@ app.use(
                     return;
                 }
                 
+                // Allow uploadanh.cloud domain (CloudFront frontend)
+                if (origin.includes('uploadanh.cloud')) {
+                    callback(null, true);
+                    return;
+                }
+                
                 // Reject all other origins
                 callback(new Error('Not allowed by CORS'));
             }

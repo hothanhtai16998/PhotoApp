@@ -10,7 +10,7 @@ const api = axios.create({
 		import.meta.env.MODE ===
 		'development'
 			? 'http://localhost:3000/api'
-			: '/api',
+			: import.meta.env.VITE_API_URL || 'https://photoapp-pgq4.onrender.com/api', // Direct to backend to bypass CloudFront
 	withCredentials: true,
 	timeout: appConfig.apiTimeout, // 2 minutes for file uploads (can be overridden per request)
 });
