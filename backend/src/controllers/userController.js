@@ -1,6 +1,7 @@
 import { asyncHandler } from "../middlewares/asyncHandler.js";
 import bcrypt from "bcrypt";
 import mongoose from "mongoose";
+import crypto from "crypto";
 import User from "../models/User.js";
 import Image from "../models/Image.js";
 import Collection from "../models/Collection.js";
@@ -9,6 +10,32 @@ import Notification from "../models/Notification.js";
 import { uploadAvatar, deleteAvatarFromS3 } from "../libs/s3.js";
 import { logger } from '../utils/logger.js';
 
+// Input validation constants
+const VALIDATION_RULES = {
+    bio: { max: 500 },
+    location: { max: 100 },
+    website: { max: 255 },
+    instagram: { max: 30 },
+    twitter: { max: 15 },
+    facebook: { max: 50 },
+    phone: { max: 20 },
+    displayName: { max: 100 },
+    password: { min: 8, max: 128 },
+};
+
+// Helper function to validate input length
+const validateInputLength = (field, value, rules) => {
+    if (!value) return true;
+    const trimmed = String(value).trim();
+    if (rules.max && trimmed.length > rules.max) {
+        throw new Error(`${field} exceeds maximum length of ${rules.max}`);
+    }
+    if (rules.min && trimmed.length < rules.min) {
+        throw new Error(`${field} must be at least ${rules.min} characters`);
+    }
+    return true;
+};
+
 /**
  * Search users by email, username, or displayName
  * Public endpoint for collaboration features
@@ -16,46 +43,57 @@ import { logger } from '../utils/logger.js';
 export const searchUsers = asyncHandler(async (req, res) => {
     const search = req.query.search?.trim();
     const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 10), 20);
+    const skip = Math.max(0, parseInt(req.query.skip) || 0);
 
     if (!search || search.length < 2) {
         return res.status(200).json({
             users: [],
+            total: 0,
+            skip,
+            limit,
+        });
+    }
+
+    // Validate search length
+    if (search.length > 100) {
+        return res.status(400).json({
+            message: "Search query is too long",
         });
     }
 
     // Escape special regex characters for safety
     const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const searchRegex = new RegExp(escapedSearch, 'i');
-    
-    // Optimized query: Use indexed fields with regex
-    // Try to match username first (most common), then email, then displayName
-    // Using $or with indexed fields for better performance
+
     const query = {
         $or: [
-            { username: searchRegex },      // Username is indexed
-            { email: searchRegex },          // Email is indexed  
-            { displayName: searchRegex },     // Display name search
+            { username: searchRegex },
+            { email: searchRegex },
+            { displayName: searchRegex },
         ],
     };
 
-    // Use lean() for faster queries (no Mongoose overhead)
-    // Select only needed fields to reduce data transfer
-    // Limit results early for better performance
+    // Get total count for pagination
+    const total = await User.countDocuments(query);
+
+    // Use lean() for faster queries
     const users = await User.find(query)
         .select('username email displayName avatarUrl')
+        .skip(skip)
         .limit(limit)
         .lean();
 
     res.status(200).json({
         users,
+        total,
+        skip,
+        limit,
     });
 });
 
 export const authMe = asyncHandler(async (req, res) => {
-    // req.user is already enriched with permissions by authMiddleware
     const user = req.user;
 
-    // Return user with permissions (already included by enrichUserWithAdminStatus)
     return res.status(200).json({
         user: {
             _id: user._id,
@@ -82,39 +120,48 @@ export const authMe = asyncHandler(async (req, res) => {
 
 export const changePassword = asyncHandler(async (req, res) => {
     const { password, newPassword, newPasswordMatch } = req.body;
-    const userId = req.user._id; // From authMiddleware
+    const userId = req.user._id;
 
     if (!password || !newPassword || !newPasswordMatch) {
         return res.status(400).json({
-            message: "Mật khẩu và xác nhận mật khẩu mới không được để trống",
+            message: "Password fields cannot be empty",
         });
     }
 
-    // Fetch user with hashedPassword (authMiddleware excludes it for security)
-    const user = await User.findById(userId);
-
-    // Verify current password
-    const isPasswordMatch = await bcrypt.compare(password, user.hashedPassword);
-
-    if (!isPasswordMatch) {
-        return res.status(400).json({
-            message: "Xác nhận mật khẩu hiện tại không đúng, xin thử lại"
-        });
+    // Validate password length
+    try {
+        validateInputLength('Password', newPassword, VALIDATION_RULES.password);
+    } catch (error) {
+        return res.status(400).json({ message: error.message });
     }
 
     if (newPassword !== newPasswordMatch) {
         return res.status(400).json({
-            message: "Mật khẩu mới không khớp, xin thử lại"
+            message: "New passwords do not match",
+        });
+    }
+
+    // Fetch user with hashedPassword
+    const user = await User.findById(userId);
+    if (!user) {
+        return res.status(404).json({ message: "User not found" });
+    }
+
+    // Verify current password
+    const isPasswordMatch = await bcrypt.compare(password, user.hashedPassword);
+    if (!isPasswordMatch) {
+        return res.status(401).json({
+            message: "Current password is incorrect",
         });
     }
 
     // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // Update user password
+    // Update password
     await User.findByIdAndUpdate(userId, { hashedPassword });
 
-    // Create password_changed notification
+    // Create notification
     try {
         await Notification.create({
             recipient: userId,
@@ -125,339 +172,406 @@ export const changePassword = asyncHandler(async (req, res) => {
             },
         });
     } catch (notifError) {
-        logger.error('Failed to create password changed notification:', notifError);
-        // Don't fail the password change if notification fails
+        logger.error('Failed to create password changed notification', { userId });
     }
 
     return res.status(200).json({
-        message: "Cập nhật mật khẩu thành công"
+        message: "Password changed successfully",
     });
-})
+});
 
-export const forgotPassword = asyncHandler(async (req, res) => { })
+export const forgotPassword = asyncHandler(async (req, res) => {
+    // TODO: Implement forgot password
+});
 
 export const changeInfo = asyncHandler(async (req, res) => {
     const userId = req.user._id;
     const { firstName, lastName, email, bio, location, website, instagram, twitter, facebook, phone } = req.body;
 
-    // Get current user to check for existing avatar
+    // Get current user
     const currentUser = await User.findById(userId);
+    if (!currentUser) {
+        return res.status(404).json({ message: "User not found" });
+    }
 
     const updateData = {};
     const changedFields = [];
 
-    // Helper function to normalize values for comparison (treat empty string, null, undefined as the same)
+    // Helper function to normalize values
     const normalizeValue = (value) => {
         if (value === null || value === undefined) return undefined;
         const trimmed = String(value).trim();
         return trimmed === '' ? undefined : trimmed;
     };
 
-    // Update displayName if firstName/lastName provided
+    // Validate and update displayName
     if (firstName !== undefined || lastName !== undefined) {
-        const firstNameValue = firstName?.trim() || '';
-        const lastNameValue = lastName?.trim() || '';
-        const newDisplayName = `${firstNameValue} ${lastNameValue}`.trim();
-        if (newDisplayName !== currentUser.displayName) {
-            updateData.displayName = newDisplayName;
-            changedFields.push('displayName');
+        try {
+            const firstNameValue = firstName?.trim() || '';
+            const lastNameValue = lastName?.trim() || '';
+            const newDisplayName = `${firstNameValue} ${lastNameValue}`.trim();
+
+            validateInputLength('Display name', newDisplayName, VALIDATION_RULES.displayName);
+
+            if (newDisplayName !== currentUser.displayName) {
+                updateData.displayName = newDisplayName;
+                changedFields.push('displayName');
+            }
+        } catch (error) {
+            return res.status(400).json({ message: error.message });
         }
     }
 
-    // Update email if provided and changed
+    // Validate and update email
     if (email !== undefined) {
-        const newEmail = email.toLowerCase().trim();
-        const oldEmail = (currentUser.email || '').toLowerCase().trim();
-        
-        // Only process if email actually changed
-        if (newEmail !== oldEmail) {
-            // Prevent OAuth users from changing email (must match Google account)
-            if (currentUser.isOAuthUser) {
-                return res.status(403).json({
-                    message: "Không thể thay đổi email đã liên kết với Google."
-                });
-            }
+        try {
+            const newEmail = email.toLowerCase().trim();
+            const oldEmail = (currentUser.email || '').toLowerCase().trim();
 
-            // Check if email is already taken by another user
-            const existingEmail = await User.findOne({
-                email: newEmail,
-                _id: { $ne: userId }
-            });
+            if (newEmail !== oldEmail) {
+                // Prevent OAuth users from changing email
+                if (currentUser.isOAuthUser) {
+                    return res.status(403).json({
+                        message: "Cannot change email linked to Google account",
+                    });
+                }
 
-            if (existingEmail) {
-                return res.status(409).json({
-                    message: "Email đã tồn tại"
-                });
-            }
-            updateData.email = newEmail;
+                // Validate email format (basic)
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(newEmail)) {
+                    return res.status(400).json({
+                        message: "Invalid email format",
+                    });
+                }
 
-            // Create email_changed notification
-            try {
-                await Notification.create({
-                    recipient: userId,
-                    type: 'email_changed',
-                    metadata: {
-                        oldEmail: currentUser.email,
-                        newEmail: newEmail,
-                        timestamp: new Date().toISOString(),
-                    },
-                });
-            } catch (notifError) {
-                logger.error('Failed to create email changed notification:', notifError);
-                // Don't fail the email change if notification fails
+                // Check for duplicate email with unique constraint handling
+                try {
+                    const existingEmail = await User.findOne({
+                        email: newEmail,
+                        _id: { $ne: userId }
+                    });
+
+                    if (existingEmail) {
+                        return res.status(409).json({
+                            message: "Email already in use",
+                        });
+                    }
+                } catch (dbError) {
+                    logger.error('Database error checking email uniqueness', { userId });
+                    return res.status(500).json({
+                        message: "Server error",
+                    });
+                }
+
+                updateData.email = newEmail;
+                changedFields.push('email');
+
+                // Create notification
+                try {
+                    await Notification.create({
+                        recipient: userId,
+                        type: 'email_changed',
+                        metadata: {
+                            timestamp: new Date().toISOString(),
+                        },
+                    });
+                } catch (notifError) {
+                    logger.error('Failed to create email changed notification', { userId });
+                }
             }
+        } catch (error) {
+            return res.status(400).json({ message: error.message });
         }
     }
 
-    // Update bio if provided and changed
+    // Validate and update bio
     if (bio !== undefined) {
-        const newBio = normalizeValue(bio);
-        const oldBio = normalizeValue(currentUser.bio);
-        if (newBio !== oldBio) {
-            updateData.bio = newBio;
-            changedFields.push('bio');
+        try {
+            validateInputLength('Bio', bio, VALIDATION_RULES.bio);
+            const newBio = normalizeValue(bio);
+            const oldBio = normalizeValue(currentUser.bio);
+            if (newBio !== oldBio) {
+                updateData.bio = newBio;
+                changedFields.push('bio');
+            }
+        } catch (error) {
+            return res.status(400).json({ message: error.message });
         }
     }
 
-    // Update location if provided and changed
+    // Validate and update location
     if (location !== undefined) {
-        const newLocation = normalizeValue(location);
-        const oldLocation = normalizeValue(currentUser.location);
-        if (newLocation !== oldLocation) {
-            updateData.location = newLocation;
-            changedFields.push('location');
+        try {
+            validateInputLength('Location', location, VALIDATION_RULES.location);
+            const newLocation = normalizeValue(location);
+            const oldLocation = normalizeValue(currentUser.location);
+            if (newLocation !== oldLocation) {
+                updateData.location = newLocation;
+                changedFields.push('location');
+            }
+        } catch (error) {
+            return res.status(400).json({ message: error.message });
         }
     }
 
-    // Update phone if provided and changed
+    // Validate and update phone
     if (phone !== undefined) {
-        const newPhone = normalizeValue(phone);
-        const oldPhone = normalizeValue(currentUser.phone);
-        if (newPhone !== oldPhone) {
-            updateData.phone = newPhone;
-            changedFields.push('phone');
+        try {
+            validateInputLength('Phone', phone, VALIDATION_RULES.phone);
+            const newPhone = normalizeValue(phone);
+            const oldPhone = normalizeValue(currentUser.phone);
+            if (newPhone !== oldPhone) {
+                updateData.phone = newPhone;
+                changedFields.push('phone');
+            }
+        } catch (error) {
+            return res.status(400).json({ message: error.message });
         }
     }
 
-    // Update website if provided and changed
+    // Validate and update website
     if (website !== undefined) {
-        let websiteValue = normalizeValue(website);
-        // Ensure website has protocol if provided
-        if (websiteValue && !websiteValue.startsWith('http://') && !websiteValue.startsWith('https://')) {
-            websiteValue = `https://${websiteValue}`;
-        }
-        const oldWebsite = normalizeValue(currentUser.website);
-        if (websiteValue !== oldWebsite) {
-            updateData.website = websiteValue;
-            changedFields.push('website');
+        try {
+            validateInputLength('Website', website, VALIDATION_RULES.website);
+            let websiteValue = normalizeValue(website);
+            if (websiteValue && !websiteValue.startsWith('http://') && !websiteValue.startsWith('https://')) {
+                websiteValue = `https://${websiteValue}`;
+            }
+            const oldWebsite = normalizeValue(currentUser.website);
+            if (websiteValue !== oldWebsite) {
+                updateData.website = websiteValue;
+                changedFields.push('website');
+            }
+        } catch (error) {
+            return res.status(400).json({ message: error.message });
         }
     }
 
-    // Update social links if provided and changed
+    // Validate and update social links
     if (instagram !== undefined) {
-        const rawInstagram = instagram.trim().replace(/^@/, '');
-        const newInstagram = normalizeValue(rawInstagram);
-        const oldInstagram = normalizeValue(currentUser.instagram);
-        if (newInstagram !== oldInstagram) {
-            updateData.instagram = newInstagram;
-            changedFields.push('instagram');
-        }
-    }
-    if (twitter !== undefined) {
-        const rawTwitter = twitter.trim().replace(/^@/, '');
-        const newTwitter = normalizeValue(rawTwitter);
-        const oldTwitter = normalizeValue(currentUser.twitter);
-        if (newTwitter !== oldTwitter) {
-            updateData.twitter = newTwitter;
-            changedFields.push('twitter');
-        }
-    }
-    if (facebook !== undefined) {
-        const newFacebook = normalizeValue(facebook);
-        const oldFacebook = normalizeValue(currentUser.facebook);
-        if (newFacebook !== oldFacebook) {
-            updateData.facebook = newFacebook;
-            changedFields.push('facebook');
+        try {
+            validateInputLength('Instagram', instagram, VALIDATION_RULES.instagram);
+            const rawInstagram = instagram.trim().replace(/^@/, '');
+            const newInstagram = normalizeValue(rawInstagram);
+            const oldInstagram = normalizeValue(currentUser.instagram);
+            if (newInstagram !== oldInstagram) {
+                updateData.instagram = newInstagram;
+                changedFields.push('instagram');
+            }
+        } catch (error) {
+            return res.status(400).json({ message: error.message });
         }
     }
 
-    // Handle avatar upload if file is provided
-    // Prevent OAuth users from changing avatar (must use Google avatar)
+    if (twitter !== undefined) {
+        try {
+            validateInputLength('Twitter', twitter, VALIDATION_RULES.twitter);
+            const rawTwitter = twitter.trim().replace(/^@/, '');
+            const newTwitter = normalizeValue(rawTwitter);
+            const oldTwitter = normalizeValue(currentUser.twitter);
+            if (newTwitter !== oldTwitter) {
+                updateData.twitter = newTwitter;
+                changedFields.push('twitter');
+            }
+        } catch (error) {
+            return res.status(400).json({ message: error.message });
+        }
+    }
+
+    if (facebook !== undefined) {
+        try {
+            validateInputLength('Facebook', facebook, VALIDATION_RULES.facebook);
+            const newFacebook = normalizeValue(facebook);
+            const oldFacebook = normalizeValue(currentUser.facebook);
+            if (newFacebook !== oldFacebook) {
+                updateData.facebook = newFacebook;
+                changedFields.push('facebook');
+            }
+        } catch (error) {
+            return res.status(400).json({ message: error.message });
+        }
+    }
+
+    // Handle avatar upload
     if (req.file && currentUser.isOAuthUser) {
         return res.status(403).json({
-            message: "Không thể thay đổi ảnh đại diện được liên kết với tài khoản Google."
+            message: "Cannot change avatar linked to Google account",
         });
     }
 
     if (req.file) {
-        let uploadResult;
         try {
-            // Generate unique filename
+            // Use crypto for secure random filename
+            const randomBytes = crypto.randomBytes(16).toString('hex');
             const timestamp = Date.now();
-            const randomString = Math.random().toString(36).substring(2, 15);
-            const filename = `avatar-${timestamp}-${randomString}`;
+            const filename = `avatar-${timestamp}-${randomBytes}`;
 
-            // Upload avatar to S3 with Sharp processing
-            uploadResult = await uploadAvatar(
+            // Upload avatar to S3
+            const uploadResult = await uploadAvatar(
                 req.file.buffer,
                 'photo-app-avatars',
                 filename
             );
 
-            // Delete old avatar from S3 if exists
+            // Delete old avatar if exists
             if (currentUser.avatarId) {
                 try {
                     await deleteAvatarFromS3(currentUser.avatarId);
                 } catch (deleteError) {
-                    logger.warn('Lỗi xoá ảnh đại diện từ S3', deleteError);
-                    // Continue even if deletion fails
+                    logger.warn('Failed to delete old avatar', { userId, avatarId: currentUser.avatarId });
                 }
             }
 
             updateData.avatarUrl = uploadResult.avatarUrl;
             updateData.avatarId = uploadResult.publicId;
+            changedFields.push('avatar');
         } catch (error) {
-            logger.error('Lỗi không thể cập nhật ảnh đại diện', error);
+            logger.error('Avatar upload failed', { userId, error: error.message });
             return res.status(500).json({
-                message: "Lỗi hệ thống"
+                message: "Avatar upload failed",
             });
         }
     }
 
-    // Update user
-    const updatedUser = await User.findByIdAndUpdate(
-        userId,
-        updateData,
-        { new: true, runValidators: true }
-    ).select('-hashedPassword');
-
-    // Create profile_updated notification (user is notified of their own profile update)
-    // This can be useful for security purposes (detecting unauthorized changes)
-    // Only notify if there are actual field changes (exclude avatarUrl/avatarId from notification)
+    // Update user in database
     try {
-        const userFacingFields = changedFields.filter(field => 
-            field !== 'avatarUrl' && field !== 'avatarId'
-        );
-        if (userFacingFields.length > 0) {
-            await Notification.create({
-                recipient: userId,
-                type: 'profile_updated',
-                metadata: {
-                    changedFields: userFacingFields,
-                    timestamp: new Date().toISOString(),
-                },
-            });
-        }
-    } catch (notifError) {
-        logger.error('Failed to create profile updated notification:', notifError);
-        // Don't fail the update if notification fails
-    }
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            updateData,
+            { new: true, runValidators: true }
+        ).select('-hashedPassword');
 
-    return res.status(200).json({
-        message: "Cập nhật thông tin thành công",
-        user: updatedUser
-    });
+        // Create profile update notification
+        try {
+            const userFacingFields = changedFields.filter(field =>
+                field !== 'avatarUrl' && field !== 'avatarId'
+            );
+            if (userFacingFields.length > 0) {
+                await Notification.create({
+                    recipient: userId,
+                    type: 'profile_updated',
+                    metadata: {
+                        changedFields: userFacingFields,
+                        timestamp: new Date().toISOString(),
+                    },
+                });
+            }
+        } catch (notifError) {
+            logger.error('Failed to create profile updated notification', { userId });
+        }
+
+        return res.status(200).json({
+            message: "Profile updated successfully",
+            user: updatedUser,
+        });
+    } catch (error) {
+        logger.error('Profile update failed', { userId, error: error.message });
+        return res.status(500).json({
+            message: "Profile update failed",
+        });
+    }
 });
 
 /**
  * Get user profile statistics
  * GET /api/users/:userId/stats
- * Returns: totalImages, totalCollections, totalFavorites (received), totalDownloads, totalViews, followersCount, followingCount, profileViews, joinDate
  */
 export const getUserStats = asyncHandler(async (req, res) => {
     const { userId } = req.params;
-    
-    // Get user with profile fields for completion calculation
-    const user = await User.findById(userId).select('profileViews createdAt avatarUrl bio phone displayName').lean();
+
+    // Validate userId format
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+    }
+
+    const user = await User.findById(userId)
+        .select('profileViews createdAt avatarUrl bio phone displayName')
+        .lean();
+
     if (!user) {
         return res.status(404).json({
             message: 'User not found',
         });
     }
 
-    // Optimize: Use aggregation instead of fetching all images
-    // This is much faster for users with many images
-    const [imageStats, totalCollections, totalImages] = await Promise.all([
-        // Aggregate image stats in one query
-        Image.aggregate([
-            { $match: { uploadedBy: new mongoose.Types.ObjectId(userId) } },
-            {
-                $group: {
-                    _id: null,
-                    totalViews: { $sum: { $ifNull: ['$views', 0] } },
-                    totalDownloads: { $sum: { $ifNull: ['$downloads', 0] } },
-                    imageIds: { $push: '$_id' }
+    try {
+        // Use aggregation for all stats
+        const [imageStats, totalCollections, totalImages] = await Promise.all([
+            Image.aggregate([
+                { $match: { uploadedBy: new mongoose.Types.ObjectId(userId) } },
+                {
+                    $group: {
+                        _id: null,
+                        totalViews: { $sum: { $ifNull: ['$views', 0] } },
+                        totalDownloads: { $sum: { $ifNull: ['$downloads', 0] } },
+                        totalLikes: { $sum: { $size: { $ifNull: ['$likedBy', []] } } },
+                    }
                 }
-            }
-        ]),
-        // Get collections count
-        Collection.countDocuments({ createdBy: userId }),
-        // Get total images count (separate for efficiency)
-        Image.countDocuments({ uploadedBy: userId }),
-    ]);
-    
-    // Extract stats from aggregation result
-    const statsResult = imageStats[0] || { totalViews: 0, totalDownloads: 0, imageIds: [] };
-    const totalViews = statsResult.totalViews || 0;
-    const totalDownloads = statsResult.totalDownloads || 0;
-    const userImageIds = statsResult.imageIds || [];
-    
-    // Calculate total likes received (how many users have favorited this user's images)
-    // Optimize: Use aggregation for better performance with large datasets
-    const totalLikesReceived = userImageIds.length > 0 
-        ? await User.aggregate([
-            { $match: { favorites: { $in: userImageIds } } },
-            { $count: 'count' }
-        ]).then(result => result[0]?.count || 0)
-        : 0;
-    
-    // Get followers/following count
-    const followersCount = await Follow.countDocuments({ following: userId });
-    const followingCount = await Follow.countDocuments({ follower: userId });
-    
-    // Calculate profile completion percentage
-    // Criteria: avatar, bio, phone, at least 1 image, at least 1 collection
-    const completionCriteria = {
-        hasAvatar: !!(user.avatarUrl && user.avatarUrl.trim() !== ''),
-        hasBio: !!(user.bio && user.bio.trim() !== ''),
-        hasPhone: !!(user.phone && user.phone.trim() !== ''),
-        hasImages: totalImages > 0,
-        hasCollections: totalCollections > 0,
-    };
-    
-    const completedCount = Object.values(completionCriteria).filter(Boolean).length;
-    const totalCriteria = Object.keys(completionCriteria).length;
-    const completionPercentage = Math.round((completedCount / totalCriteria) * 100);
-    
-    res.status(200).json({
-        totalImages,
-        totalCollections,
-        totalFavorites: totalLikesReceived, // Likes received (favorites on user's images)
-        totalDownloads,
-        totalViews,
-        followersCount,
-        followingCount,
-        profileViews: user.profileViews || 0,
-        joinDate: user.createdAt,
-        verifiedBadge: false, // Future feature
-        profileCompletion: {
-            percentage: completionPercentage,
-            completed: completedCount,
-            total: totalCriteria,
-            criteria: completionCriteria,
-        },
-    });
+            ]),
+            Collection.countDocuments({ createdBy: userId }),
+            Image.countDocuments({ uploadedBy: userId }),
+        ]);
+
+        const statsResult = imageStats[0] || { totalViews: 0, totalDownloads: 0, totalLikes: 0 };
+
+        // Get followers/following count
+        const [followersCount, followingCount] = await Promise.all([
+            Follow.countDocuments({ following: userId }),
+            Follow.countDocuments({ follower: userId }),
+        ]);
+
+        // Calculate profile completion
+        const completionCriteria = {
+            hasAvatar: !!(user.avatarUrl && user.avatarUrl.trim() !== ''),
+            hasBio: !!(user.bio && user.bio.trim() !== ''),
+            hasPhone: !!(user.phone && user.phone.trim() !== ''),
+            hasImages: totalImages > 0,
+            hasCollections: totalCollections > 0,
+        };
+
+        const completedCount = Object.values(completionCriteria).filter(Boolean).length;
+        const totalCriteria = Object.keys(completionCriteria).length;
+        const completionPercentage = Math.round((completedCount / totalCriteria) * 100);
+
+        res.status(200).json({
+            totalImages,
+            totalCollections,
+            totalFavorites: statsResult.totalLikes,
+            totalDownloads: statsResult.totalDownloads,
+            totalViews: statsResult.totalViews,
+            followersCount,
+            followingCount,
+            profileViews: user.profileViews || 0,
+            joinDate: user.createdAt,
+            verifiedBadge: false,
+            profileCompletion: {
+                percentage: completionPercentage,
+                completed: completedCount,
+                total: totalCriteria,
+                criteria: completionCriteria,
+            },
+        });
+    } catch (error) {
+        logger.error('Failed to get user stats', { userId, error: error.message });
+        return res.status(500).json({
+            message: 'Failed to retrieve statistics',
+        });
+    }
 });
 
 /**
  * Track profile view
  * POST /api/users/:userId/view
- * Increments profileViews when someone visits a user's profile
  */
 export const trackProfileView = asyncHandler(async (req, res) => {
     const { userId } = req.params;
-    const viewerId = req.user?._id; // Optional - can be null for anonymous views
-    
+    const viewerId = req.user?._id;
+
+    // Validate userId format
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+    }
+
     // Don't count self-views
     if (viewerId && viewerId.toString() === userId) {
         return res.status(200).json({
@@ -465,8 +579,7 @@ export const trackProfileView = asyncHandler(async (req, res) => {
             profileViews: 0,
         });
     }
-    
-    // Update profile views
+
     const user = await User.findByIdAndUpdate(
         userId,
         {
@@ -475,13 +588,13 @@ export const trackProfileView = asyncHandler(async (req, res) => {
         },
         { new: true }
     ).select('profileViews');
-    
+
     if (!user) {
         return res.status(404).json({
             message: 'User not found',
         });
     }
-    
+
     res.status(200).json({
         message: 'Profile view tracked',
         profileViews: user.profileViews,
@@ -491,21 +604,20 @@ export const trackProfileView = asyncHandler(async (req, res) => {
 /**
  * Get public user data by username
  * GET /api/users/username/:username
- * Public endpoint - returns basic user info
  */
 export const getUserByUsername = asyncHandler(async (req, res) => {
     const { username } = req.params;
-    
+
     const user = await User.findOne({ username: username.toLowerCase() })
         .select('username displayName avatarUrl bio location website instagram twitter facebook createdAt')
         .lean();
-    
+
     if (!user) {
         return res.status(404).json({
             message: 'User not found',
         });
     }
-    
+
     res.status(200).json({
         user: {
             _id: user._id,
@@ -526,21 +638,25 @@ export const getUserByUsername = asyncHandler(async (req, res) => {
 /**
  * Get public user data by userId
  * GET /api/users/:userId
- * Public endpoint - returns basic user info
  */
 export const getUserById = asyncHandler(async (req, res) => {
     const { userId } = req.params;
-    
+
+    // Validate userId format
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+    }
+
     const user = await User.findById(userId)
         .select('username displayName avatarUrl bio location website instagram twitter facebook createdAt')
         .lean();
-    
+
     if (!user) {
         return res.status(404).json({
             message: 'User not found',
         });
     }
-    
+
     res.status(200).json({
         user: {
             _id: user._id,
@@ -556,4 +672,4 @@ export const getUserById = asyncHandler(async (req, res) => {
             createdAt: user.createdAt,
         },
     });
-})
+});

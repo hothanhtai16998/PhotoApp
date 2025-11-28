@@ -7,8 +7,21 @@ import { logger } from '../../utils/logger.js';
 import { PAGINATION } from '../../utils/constants.js';
 import { clearCache } from '../../middlewares/cacheMiddleware.js';
 
+// Validation constants
+const FOCAL_LENGTH_MAX = 10000; // mm
+const APERTURE_MAX = 128; // f-stop
+const ISO_MAX = 25600; // typical max
+const TAG_MAX_LENGTH = 50;
+const TAG_MAX_COUNT = 20;
+
 export const getImagesByUserId = asyncHandler(async (req, res) => {
     const userId = req.params.userId;
+
+    // Validate userId is ObjectId
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+    }
+
     const page = Math.max(1, parseInt(req.query.page) || PAGINATION.DEFAULT_PAGE);
     const limit = Math.min(
         Math.max(1, parseInt(req.query.limit) || PAGINATION.DEFAULT_LIMIT),
@@ -34,48 +47,35 @@ export const getImagesByUserId = asyncHandler(async (req, res) => {
     // Handle images with invalid or missing category references
     const images = imagesRaw.map(img => {
         // Convert dailyViews and dailyDownloads Maps to plain objects
-        // When using .lean(), Maps are already plain objects, so we need to handle both cases
         let dailyViewsObj = {};
         if (img.dailyViews) {
-            if (img.dailyViews instanceof Map) {
-                dailyViewsObj = Object.fromEntries(img.dailyViews);
-            } else {
-                // Already a plain object from .lean()
-                dailyViewsObj = img.dailyViews;
-            }
+            dailyViewsObj = img.dailyViews instanceof Map
+                ? Object.fromEntries(img.dailyViews)
+                : img.dailyViews;
         }
 
         let dailyDownloadsObj = {};
         if (img.dailyDownloads) {
-            if (img.dailyDownloads instanceof Map) {
-                dailyDownloadsObj = Object.fromEntries(img.dailyDownloads);
-            } else {
-                // Already a plain object from .lean()
-                dailyDownloadsObj = img.dailyDownloads;
-            }
+            dailyDownloadsObj = img.dailyDownloads instanceof Map
+                ? Object.fromEntries(img.dailyDownloads)
+                : img.dailyDownloads;
         }
 
         return {
             ...img,
-            // Ensure imageCategory is either an object with name or null
             imageCategory: (img.imageCategory && typeof img.imageCategory === 'object' && img.imageCategory.name)
                 ? img.imageCategory
                 : null,
-            // Include daily views and downloads
             dailyViews: dailyViewsObj,
             dailyDownloads: dailyDownloadsObj,
         };
     });
 
-    // Set cache headers for better performance
-    // Use shorter cache for user-specific images since they change more frequently
-    // Check if there's a cache-busting parameter
+    // Set cache headers
     const hasCacheBust = req.query._t;
     if (hasCacheBust) {
-        // If cache-busting is requested, use no-cache
         res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     } else {
-        // Otherwise, cache for 30 seconds (shorter than public images)
         res.set('Cache-Control', 'public, max-age=30');
     }
 
@@ -94,75 +94,26 @@ export const getImagesByUserId = asyncHandler(async (req, res) => {
 export const getImageById = asyncHandler(async (req, res) => {
     const imageId = req.params.imageId;
 
-    let image;
-
-    // Check if it's a valid MongoDB ObjectId (24 hex characters)
-    if (mongoose.Types.ObjectId.isValid(imageId) && imageId.length === 24) {
-        // Full ObjectId - use findById
-        image = await Image.findById(imageId)
-            .populate('uploadedBy', 'username displayName avatarUrl')
-            .populate({
-                path: 'imageCategory',
-                select: 'name description',
-                justOne: true
-            })
-            .lean();
-    } else if (imageId.length === 12 && /^[0-9a-fA-F]{12}$/.test(imageId)) {
-        // Short ID (12 hex characters) - search by last 12 characters of _id
-        // Use aggregation to find image where _id ends with the short ID
-        const result = await Image.aggregate([
-            {
-                $addFields: {
-                    idString: { $toString: '$_id' },
-                    idLength: { $strLenCP: { $toString: '$_id' } }
-                }
-            },
-            {
-                $addFields: {
-                    last12Chars: {
-                        $substr: [
-                            '$idString',
-                            { $subtract: ['$idLength', 12] },
-                            12
-                        ]
-                    }
-                }
-            },
-            {
-                $match: {
-                    $expr: {
-                        $eq: [
-                            { $toLower: '$last12Chars' },
-                            imageId.toLowerCase()
-                        ]
-                    }
-                }
-            },
-            {
-                $limit: 1
-            }
-        ]);
-
-        if (result.length > 0) {
-            // Populate the found image
-            image = await Image.findById(result[0]._id)
-                .populate('uploadedBy', 'username displayName avatarUrl')
-                .populate({
-                    path: 'imageCategory',
-                    select: 'name description',
-                    justOne: true
-                })
-                .lean();
-        }
-    } else {
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(imageId)) {
         return res.status(400).json({
-            message: 'ID ảnh không hợp lệ',
+            message: 'Invalid image ID format',
         });
     }
 
+    // Always use ObjectId lookup (more efficient than aggregation)
+    const image = await Image.findById(imageId)
+        .populate('uploadedBy', 'username displayName avatarUrl')
+        .populate({
+            path: 'imageCategory',
+            select: 'name description',
+            justOne: true
+        })
+        .lean();
+
     if (!image) {
         return res.status(404).json({
-            message: 'Không tìm thấy ảnh',
+            message: 'Image not found',
         });
     }
 
@@ -174,23 +125,29 @@ export const getImageById = asyncHandler(async (req, res) => {
 // Download image - proxy from S3 to avoid CORS issues
 export const downloadImage = asyncHandler(async (req, res) => {
     const imageId = req.params.imageId;
-    const userId = req.user?._id; // User downloading the image
-    const size = req.query.size || 'medium'; // Default to medium
+    const userId = req.user?._id;
+    const size = req.query.size || 'medium';
 
-    // Find the image in database (populate uploadedBy for notification)
-    const image = await Image.findById(imageId).populate('uploadedBy', '_id');
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(imageId)) {
+        return res.status(400).json({
+            message: 'Invalid image ID',
+        });
+    }
+
+    // Find the image (only fetch needed fields)
+    const image = await Image.findById(imageId)
+        .select('imageTitle imageUrl regularUrl smallUrl uploadedBy')
+        .lean();
+
     if (!image) {
         return res.status(404).json({
-            message: 'Không tìm thấy ảnh',
+            message: 'Image not found',
         });
     }
 
     try {
         // Map size parameter to image URL
-        // small: 640px (use smallUrl ~800px)
-        // medium: 1920px (use regularUrl ~1080px)
-        // large: 2400px (use original imageUrl)
-        // original: original imageUrl
         let imageUrl;
         switch (size.toLowerCase()) {
             case 'small':
@@ -200,26 +157,23 @@ export const downloadImage = asyncHandler(async (req, res) => {
                 imageUrl = image.regularUrl || image.imageUrl || image.smallUrl;
                 break;
             case 'large':
-                imageUrl = image.imageUrl || image.regularUrl || image.smallUrl;
-                break;
             case 'original':
                 imageUrl = image.imageUrl || image.regularUrl || image.smallUrl;
                 break;
             default:
-                // Default to medium if invalid size
                 imageUrl = image.regularUrl || image.imageUrl || image.smallUrl;
         }
 
         if (!imageUrl) {
             return res.status(404).json({
-                message: 'Không tìm thấy URL ảnh',
+                message: 'Image URL not found',
             });
         }
 
         // Get image from S3
         const s3Response = await getImageFromS3(imageUrl);
 
-        // Set appropriate headers
+        // Set response headers
         const sanitizedTitle = (image.imageTitle || 'photo').replace(/[^a-z0-9]/gi, '_').toLowerCase();
         const urlExtension = imageUrl.match(/\.([a-z]+)(?:\?|$)/i)?.[1] || 'webp';
         const fileName = `${sanitizedTitle}.${urlExtension}`;
@@ -229,57 +183,46 @@ export const downloadImage = asyncHandler(async (req, res) => {
         if (s3Response.ContentLength) {
             res.setHeader('Content-Length', s3Response.ContentLength);
         }
-        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'); // Cache for 1 year, immutable for better performance
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
 
-        // Create notification for image owner (if user is authenticated and different from owner)
-        // Note: downloadImage is a public route, so req.user might not exist
-        // Create notification BEFORE streaming to ensure it's sent even if stream fails
-        if (req.user?._id && image.uploadedBy) {
-            const uploadedById = typeof image.uploadedBy === 'object' 
-                ? image.uploadedBy._id?.toString() 
-                : image.uploadedBy.toString();
-            const userId = req.user._id.toString();
-            
-            if (uploadedById && uploadedById !== userId) {
-                try {
-                    await Notification.create({
-                        recipient: uploadedById,
-                        type: 'image_downloaded',
-                        image: imageId,
-                        actor: userId,
-                    });
-                } catch (notifError) {
-                    logger.error('Failed to create download notification:', notifError);
-                    // Don't fail the download if notification fails
-                }
+        // Create notification for image owner (async, don't wait)
+        if (userId && image.uploadedBy) {
+            const uploadedById = image.uploadedBy.toString();
+            if (uploadedById !== userId.toString()) {
+                Notification.create({
+                    recipient: uploadedById,
+                    type: 'image_downloaded',
+                    image: imageId,
+                    actor: userId,
+                }).catch(err => {
+                    logger.error('Failed to create download notification', { err: err.message });
+                });
             }
         }
 
-        // Stream the image to the response
+        // Stream the image to response
         s3Response.Body.pipe(res);
 
-        // Handle stream errors
+        // Handle stream errors (only if headers not sent)
         s3Response.Body.on('error', (streamError) => {
-            logger.error('Error streaming image from S3:', streamError);
+            logger.error('Stream error', { imageId, error: streamError.message });
             if (!res.headersSent) {
-                res.status(500).json({
-                    message: 'Lỗi khi tải ảnh',
-                });
+                res.status(500).json({ message: 'Failed to download image' });
+            } else {
+                res.destroy(); // Destroy response if headers already sent
             }
         });
 
         // Handle client disconnect
         res.on('close', () => {
-            if (s3Response.Body && typeof s3Response.Body.destroy === 'function') {
+            if (s3Response.Body?.destroy) {
                 s3Response.Body.destroy();
             }
         });
     } catch (error) {
-        logger.error('Error downloading image:', error);
+        logger.error('Download error', { imageId, error: error.message });
         if (!res.headersSent) {
-            res.status(500).json({
-                message: 'Lỗi khi tải ảnh',
-            });
+            res.status(500).json({ message: 'Failed to download image' });
         }
     }
 });
@@ -287,108 +230,120 @@ export const downloadImage = asyncHandler(async (req, res) => {
 // Update image information
 export const updateImage = asyncHandler(async (req, res) => {
     const imageId = req.params.imageId;
-    const { imageTitle, location, coordinates, cameraModel, cameraMake, focalLength, aperture, shutterSpeed, iso, tags } = req.body;
     const userId = req.user?._id;
+    const { imageTitle, location, coordinates, cameraModel, cameraMake, focalLength, aperture, shutterSpeed, iso, tags } = req.body;
 
-    // Find the image
-    const image = await Image.findById(imageId);
-    if (!image) {
-        return res.status(404).json({
-            message: 'Không tìm thấy ảnh',
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(imageId)) {
+        return res.status(400).json({
+            message: 'Invalid image ID',
         });
     }
 
-    // Check if user is the owner or admin
+    // Find the image
+    const image = await Image.findById(imageId).select('uploadedBy');
+    if (!image) {
+        return res.status(404).json({
+            message: 'Image not found',
+        });
+    }
+
+    // Check permissions
     const isOwner = image.uploadedBy.toString() === userId?.toString();
     const isAdmin = req.user?.isAdmin || req.user?.isSuperAdmin;
 
     if (!isOwner && !isAdmin) {
         return res.status(403).json({
-            message: 'Bạn không có quyền chỉnh sửa ảnh này',
+            message: 'Unauthorized to edit this image',
         });
     }
 
-    // Build update object
+    // Build update object with validation
     const updateData = {};
 
     if (imageTitle !== undefined) {
-        updateData.imageTitle = imageTitle.trim();
+        updateData.imageTitle = imageTitle ? imageTitle.trim().substring(0, 255) : '';
     }
 
     if (location !== undefined) {
-        updateData.location = location ? location.trim() : null;
+        updateData.location = location ? location.trim().substring(0, 200) : null;
     }
 
     if (coordinates !== undefined) {
-        if (coordinates && coordinates.latitude && coordinates.longitude) {
-            updateData.coordinates = {
-                latitude: parseFloat(coordinates.latitude),
-                longitude: parseFloat(coordinates.longitude),
-            };
+        if (coordinates?.latitude && coordinates?.longitude) {
+            const lat = parseFloat(coordinates.latitude);
+            const lon = parseFloat(coordinates.longitude);
+            if (!isNaN(lat) && !isNaN(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+                updateData.coordinates = { latitude: lat, longitude: lon };
+            } else {
+                updateData.coordinates = null;
+            }
         } else {
             updateData.coordinates = null;
         }
     }
 
     if (cameraMake !== undefined) {
-        updateData.cameraMake = cameraMake ? cameraMake.trim() : null;
+        updateData.cameraMake = cameraMake ? cameraMake.trim().substring(0, 100) : null;
     }
 
     if (cameraModel !== undefined) {
-        updateData.cameraModel = cameraModel ? cameraModel.trim() : null;
+        updateData.cameraModel = cameraModel ? cameraModel.trim().substring(0, 100) : null;
     }
 
     if (focalLength !== undefined) {
         const focalValue = typeof focalLength === 'string' ? parseFloat(focalLength) : focalLength;
-        updateData.focalLength = focalValue && !isNaN(focalValue) && focalValue > 0 ? Math.round(focalValue * 10) / 10 : null;
+        updateData.focalLength = (focalValue && !isNaN(focalValue) && focalValue > 0 && focalValue <= FOCAL_LENGTH_MAX)
+            ? Math.round(focalValue * 10) / 10
+            : null;
     }
 
     if (aperture !== undefined) {
         const apertureValue = typeof aperture === 'string' ? parseFloat(aperture) : aperture;
-        updateData.aperture = apertureValue && !isNaN(apertureValue) && apertureValue > 0 ? Math.round(apertureValue * 10) / 10 : null;
+        updateData.aperture = (apertureValue && !isNaN(apertureValue) && apertureValue > 0 && apertureValue <= APERTURE_MAX)
+            ? Math.round(apertureValue * 10) / 10
+            : null;
     }
 
     if (shutterSpeed !== undefined) {
-        updateData.shutterSpeed = shutterSpeed ? shutterSpeed.trim() : null;
+        updateData.shutterSpeed = shutterSpeed ? shutterSpeed.trim().substring(0, 50) : null;
     }
 
     if (iso !== undefined) {
         const isoValue = typeof iso === 'string' ? parseInt(iso, 10) : iso;
-        updateData.iso = isoValue && !isNaN(isoValue) && isoValue > 0 ? Math.round(isoValue) : null;
+        updateData.iso = (isoValue && !isNaN(isoValue) && isoValue > 0 && isoValue <= ISO_MAX)
+            ? Math.round(isoValue)
+            : null;
     }
 
     if (tags !== undefined) {
-        // Handle tags: can be array, JSON string, or null/empty to clear
-        if (tags === null || (Array.isArray(tags) && tags.length === 0)) {
-            updateData.tags = [];
-        } else if (Array.isArray(tags)) {
-            // Clean and validate tags (trim, lowercase, remove duplicates, max 20 tags)
-            const parsedTags = tags
-                .map(tag => typeof tag === 'string' ? tag.trim().toLowerCase() : String(tag).trim().toLowerCase())
-                .filter(tag => tag.length > 0 && tag.length <= 50)
-                .filter((tag, index, self) => self.indexOf(tag) === index) // Remove duplicates
-                .slice(0, 20); // Max 20 tags
-            updateData.tags = parsedTags;
+        // Parse tags with efficient duplicate removal using Set
+        let tagsArray = [];
+
+        if (Array.isArray(tags)) {
+            tagsArray = tags;
         } else if (typeof tags === 'string') {
             try {
-                const tagsArray = JSON.parse(tags);
-                if (Array.isArray(tagsArray)) {
-                    const parsedTags = tagsArray
-                        .map(tag => typeof tag === 'string' ? tag.trim().toLowerCase() : String(tag).trim().toLowerCase())
-                        .filter(tag => tag.length > 0 && tag.length <= 50)
-                        .filter((tag, index, self) => self.indexOf(tag) === index)
-                        .slice(0, 20);
-                    updateData.tags = parsedTags;
-                } else {
-                    updateData.tags = [];
-                }
-            } catch (error) {
-                logger.warn('Invalid tags format:', error);
-                updateData.tags = [];
+                tagsArray = JSON.parse(tags);
+                if (!Array.isArray(tagsArray)) tagsArray = [];
+            } catch {
+                tagsArray = [];
             }
-        } else {
-            updateData.tags = [];
         }
+
+        // Clean tags: trim, lowercase, remove duplicates (using Set for O(n)), max 20
+        const uniqueTags = new Set();
+        const parsedTags = tagsArray
+            .map(tag => (typeof tag === 'string' ? tag : String(tag)).trim().toLowerCase())
+            .filter(tag => tag.length > 0 && tag.length <= TAG_MAX_LENGTH)
+            .filter(tag => {
+                if (uniqueTags.has(tag)) return false;
+                uniqueTags.add(tag);
+                return true;
+            })
+            .slice(0, TAG_MAX_COUNT);
+
+        updateData.tags = parsedTags;
     }
 
     // Update the image
@@ -405,11 +360,12 @@ export const updateImage = asyncHandler(async (req, res) => {
         })
         .lean();
 
-    // Clear cache for this image
+    // Clear caches (user's images and this specific image)
     clearCache(`/api/images/${imageId}`);
+    clearCache(`/api/images/user/${userId}`);
 
     res.status(200).json({
-        message: 'Cập nhật ảnh thành công',
+        message: 'Image updated successfully',
         image: updatedImage,
     });
 });

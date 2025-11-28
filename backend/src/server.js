@@ -52,8 +52,8 @@ if (env.NODE_ENV === 'production') {
             directives: {
                 defaultSrc: ["'self'"],
                 imgSrc: ["'self'", "https://res.cloudinary.com", "data:", "https:", "blob:"],
-                // Production: allow unsafe-inline and data URIs for bundled Vite scripts
-                scriptSrc: ["'self'", "'unsafe-inline'", "data:"],
+                // Production: use nonce for inline scripts instead of unsafe-inline
+                scriptSrc: ["'self'", "data:"],
                 // Allow inline styles and event handlers (needed for some libraries)
                 styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
                 // Allow inline event handlers (needed for some libraries)
@@ -87,12 +87,12 @@ app.use(compression({
     level: 6, // Balance between compression ratio and CPU usage (1-9, default is -1)
     threshold: 1024, // Only compress responses larger than 1KB
     filter: (req, res) => {
-        // Don't compress if client doesn't support it
+        // Don't compress if client explicitly requests no compression
         if (req.headers['x-no-compression']) {
             return false;
         }
-        // Use compression for all other requests
-        return compression.filter(req, res);
+        // Use default compression filter for other requests
+        return true;
     }
 }));
 app.use(express.json({ limit: '10mb' }));
@@ -101,64 +101,51 @@ app.use(cookieParser());
 app.use(
     cors({
         origin: (origin, callback) => {
-            // In development, allow localhost and CLIENT_URL
-            if (env.NODE_ENV === 'development') {
-                const allowedOrigins = [
-                    'http://localhost:3000',
-                    'http://localhost:5173',
-                    env.CLIENT_URL
-                ].filter(Boolean);
-                
-                // Allow requests with no origin (mobile apps, Postman, etc.)
-                if (!origin || allowedOrigins.includes(origin)) {
-                    callback(null, true);
-                } else {
-                    callback(null, true); // Allow in dev for flexibility
+            // Allow no Origin (same-origin navigation, curl, server-side requests)
+            if (!origin) return callback(null, true);
+
+            // Allow literal "null" in dev (file://, sandboxed frames)
+            if (origin === 'null' && env.NODE_ENV === 'development') {
+                return callback(null, true);
+            }
+
+            try {
+                const parsed = new URL(origin);
+                const hostname = parsed.hostname;
+
+                // Allow localhost / 127.0.0.1 on any port (development)
+                if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                    return callback(null, true);
                 }
-            } else {
-                // In production, allow CLIENT_URL, FRONTEND_URL, and common deployment platforms
-                const allowedOrigins = [
-                    env.CLIENT_URL,
-                    env.FRONTEND_URL,
-                ].filter(Boolean);
-                
-                // Allow requests with no origin (mobile apps, Postman, etc.)
-                if (!origin) {
-                    callback(null, true);
-                    return;
-                }
-                
-                // Check if origin matches allowed origins
+
+                // Allow configured exact origins (CLIENT_URL, FRONTEND_URL)
+                const allowedOrigins = [env.CLIENT_URL, env.FRONTEND_URL].filter(Boolean);
                 if (allowedOrigins.includes(origin)) {
-                    callback(null, true);
-                    return;
+                    return callback(null, true);
                 }
-                
-                // Allow Render preview URLs (pattern: *.onrender.com)
-                if (origin.includes('.onrender.com')) {
-                    callback(null, true);
-                    return;
+
+                // Allow common preview hosts / custom domain patterns
+                if (
+                    hostname.endsWith('.onrender.com') ||
+                    hostname.endsWith('.vercel.app') ||
+                    hostname.endsWith('uploadanh.cloud')
+                ) {
+                    return callback(null, true);
                 }
-                
-                // Allow Vercel preview URLs (pattern: *.vercel.app)
-                if (origin.includes('.vercel.app')) {
-                    callback(null, true);
-                    return;
-                }
-                
-                // Allow uploadanh.cloud domain (CloudFront frontend)
-                if (origin.includes('uploadanh.cloud')) {
-                    callback(null, true);
-                    return;
-                }
-                
-                // Reject all other origins
-                callback(new Error('Not allowed by CORS'));
+
+                // Don't throw an Error here (that triggers a 500 JSON error response).
+                // Return false so CORS headers aren't set and the browser will block cross-origin requests.
+                logger.warn(`CORS: Rejected origin: ${origin}`);
+                return callback(null, false);
+            } catch (err) {
+                logger.warn('CORS: Error parsing origin', { origin, err: err.message });
+                return callback(null, false);
             }
         },
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'X-XSRF-TOKEN', 'X-CSRF-Token'],
+        optionsSuccessStatus: 204,
     })
 );
 
@@ -173,6 +160,9 @@ app.use('/api', requestQueue);
 
 // CSRF protection - generate token for all routes
 app.use('/api', csrfToken);
+
+// Apply CSRF validation for state-changing requests
+app.use('/api', validateCsrf);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -196,17 +186,17 @@ app.post('/api/admin/analytics/track', async (req, res, next) => {
     // Try to authenticate if token is present
     const authHeader = req.headers["authorization"];
     const token = authHeader && authHeader.split(" ")[1];
-    
+
     if (token) {
         try {
             const jwt = await import("jsonwebtoken");
             const { env } = await import('./libs/env.js');
             const User = (await import('./models/User.js')).default;
             const { enrichUserWithAdminStatus } = await import('./utils/adminUtils.js');
-            
+
             const decoded = jwt.default.verify(token, env.ACCESS_TOKEN_SECRET);
             const user = await User.findById(decoded.userId).select("-hashedPassword").lean();
-            
+
             if (user) {
                 const enrichedUser = await enrichUserWithAdminStatus(user);
                 req.user = enrichedUser;

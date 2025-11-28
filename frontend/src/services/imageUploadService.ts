@@ -31,7 +31,7 @@ export const imageUploadService = {
       headers: {
         'Content-Type': imageFile.type || 'application/octet-stream',
       },
-      timeout: 120000,
+      timeout: 180000,
       onUploadProgress: (progressEvent) => {
         if (onUploadProgress && progressEvent.total) {
           const percentCompleted = Math.round(
@@ -52,7 +52,7 @@ export const imageUploadService = {
   ): Promise<FinalizeImageResponse> => {
     const res = await api.post('/images/finalize', data, {
       withCredentials: true,
-      timeout: 30000, // 30 seconds should be enough for metadata save
+      timeout: 120000, // allow up to 2 minutes for Sharp processing
     });
 
     return res.data;
