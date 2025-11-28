@@ -1,5 +1,6 @@
 import { CheckCircle2, Heart, FolderPlus, X } from 'lucide-react';
 import type { Image } from '@/types/image';
+import type { User } from '@/types/user';
 import { Avatar } from '../Avatar';
 import { DownloadSizeSelector, type DownloadSize } from './DownloadSizeSelector';
 import { FollowButton } from '../FollowButton';
@@ -7,7 +8,7 @@ import { useUserProfileCard } from './hooks/useUserProfileCard';
 
 interface ImageModalHeaderProps {
   image: Image;
-  user: any;
+  user: User | null;
   isMobile: boolean;
   renderAsPage: boolean;
   isFavorited: boolean;

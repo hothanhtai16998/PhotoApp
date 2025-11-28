@@ -129,6 +129,11 @@ export function LogoSelector({ onClose }: { onClose?: () => void }) {
   )
 }
 
+// Export function in separate file to avoid react-refresh warning
+// This function is used by Header component
+// Export function in separate file to avoid react-refresh warning
+// This function is used by Header component
+// eslint-disable-next-line react-refresh/only-export-components
 export function getStoredLogoStyle(): LogoStyle {
   const saved = localStorage.getItem(LOGO_STORAGE_KEY)
   return (saved as LogoStyle) || 'gradient-circle'

@@ -4,9 +4,10 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import type { UseFormRegister, UseFormHandleSubmit, UseFormWatch } from 'react-hook-form';
 import type { ProfileFormData } from '@/types/forms';
+import type { User } from '@/types/user';
 
 interface ProfileFormProps {
-  user: any;
+  user: User;
   avatarPreview: string | null;
   isUploadingAvatar: boolean;
   fileInputRef: React.RefObject<HTMLInputElement | null>;

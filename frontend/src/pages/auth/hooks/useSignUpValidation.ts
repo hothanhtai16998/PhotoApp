@@ -48,7 +48,9 @@ export const useSignUpValidation = (email: string, username: string) => {
     }
 
     // Reset status if email is empty
+    // Note: This setState in effect is intentional for validation logic
     if (!email) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEmailStatus({
         isValidFormat: false,
         isAvailable: null,
@@ -82,9 +84,9 @@ export const useSignUpValidation = (email: string, username: string) => {
           isAvailable: response.available,
           errorMessage: response.available ? null : (response.message || "Email đã tồn tại"),
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Email is not available
-        const message = error?.response?.data?.message || "Email đã tồn tại";
+        const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Email đã tồn tại";
         setEmailStatus({
           isValidFormat: true,
           isAvailable: false,
@@ -108,7 +110,9 @@ export const useSignUpValidation = (email: string, username: string) => {
     }
 
     // Reset status if username is empty
+    // Note: This setState in effect is intentional for validation logic
     if (!username) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUsernameStatus({
         isValidFormat: false,
         isAvailable: null,
@@ -142,9 +146,9 @@ export const useSignUpValidation = (email: string, username: string) => {
           isAvailable: response.available,
           errorMessage: response.available ? null : (response.message || "Tên tài khoản đã tồn tại"),
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Username is not available
-        const message = error?.response?.data?.message || "Tên tài khoản đã tồn tại";
+        const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Tên tài khoản đã tồn tại";
         setUsernameStatus({
           isValidFormat: true,
           isAvailable: false,
@@ -165,6 +169,7 @@ export const useSignUpValidation = (email: string, username: string) => {
     usernameStatus,
   };
 };
+
 
 
 

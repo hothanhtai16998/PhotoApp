@@ -278,7 +278,7 @@ export function AdminAnalytics() {
                             />
                             <Tooltip
                                 content={({ active, payload, label }) => {
-                                    if (active && payload && payload.length) {
+                                    if (active && payload?.length) {
                                         // Find the correct payload entries by dataKey
                                         // Area component uses dataKey="value", Line component uses dataKey="comparison"
                                         const valuePayload = payload.find(p => p.dataKey === 'value');
@@ -653,7 +653,7 @@ export function AdminAnalytics() {
                                     />
                                     <Tooltip
                                         content={({ active, payload }) => {
-                                            if (active && payload && payload.length) {
+                                            if (active && payload?.length) {
                                                 const data = payload[0].payload;
                                                 return (
                                                     <div style={{

@@ -38,3 +38,4 @@ export const EditImageTabs = ({ activeTab, onTabChange, onEditClick }: EditImage
   );
 };
 
+

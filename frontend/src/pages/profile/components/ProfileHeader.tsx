@@ -136,7 +136,7 @@ export function ProfileHeader({
                 )}
 
                 {/* Profile Completion - Only show for own profile and when not 100% */}
-                {isOwnProfile && userStats && userStats.profileCompletion && userStats.profileCompletion.percentage < 100 && (
+                {isOwnProfile && userStats?.profileCompletion && userStats.profileCompletion.percentage < 100 && (
                     <ProfileCompletion
                         completion={userStats.profileCompletion}
                         onEditProfile={onEditProfile}

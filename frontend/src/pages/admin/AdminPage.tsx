@@ -441,10 +441,6 @@ function AdminPage() {
         }
     };
 
-    if (!user?.isAdmin && !user?.isSuperAdmin) {
-        return null;
-    }
-
     return (
         <>
             <Header />

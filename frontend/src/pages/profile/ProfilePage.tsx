@@ -29,7 +29,7 @@ function ProfilePage() {
     const navigate = useNavigate();
     const params = useParams<{ username?: string; userId?: string }>();
     const [searchParams, setSearchParams] = useSearchParams();
-    
+
     // Profile store
     const {
         profileUser,
@@ -147,7 +147,7 @@ function ProfilePage() {
         } catch (_error) {
             // Error already handled in store
         }
-    }, [displayUserId, fetchUserImages]);
+    }, [displayUserId, fetchUserImages, statsUserId]);
 
     // Wrapper to handle race condition checks and own profile check
     const fetchCollectionsWrapper = useCallback(async (signal?: AbortSignal) => {
@@ -168,7 +168,7 @@ function ProfilePage() {
         } catch (_error) {
             // Error already handled in store
         }
-    }, [displayUserId, isOwnProfile, fetchCollections]);
+    }, [displayUserId, isOwnProfile, fetchCollections, statsUserId]);
 
     // Wrapper to handle race condition checks
     const fetchFollowStatsWrapper = useCallback(async (signal?: AbortSignal) => {
@@ -184,7 +184,7 @@ function ProfilePage() {
         } catch (_error) {
             // Error already handled in store
         }
-    }, [displayUserId, fetchFollowStats]);
+    }, [displayUserId, fetchFollowStats, statsUserId]);
 
     // Wrapper to handle race condition checks
     const fetchUserStatsWrapper = useCallback(async (signal?: AbortSignal) => {
@@ -332,9 +332,9 @@ function ProfilePage() {
             sessionStorage.setItem('imagePage_fromGrid', 'true');
             // Navigate to ImagePage with images state
             navigate(`/photos/${imageParamFromUrl}`, {
-                state: { 
+                state: {
                     images: displayImages,
-                    fromGrid: true 
+                    fromGrid: true
                 },
                 replace: true // Replace current URL to avoid back button issues
             });
@@ -370,7 +370,7 @@ function ProfilePage() {
                 return imgShortId === shortId;
             }) || null;
         }
-    }, [imageParamFromUrl, displayImages]);
+    }, [imageParamFromUrl, displayImages, isMobile]);
 
     // Get current image IDs for comparison
     const currentImageIds = useMemo(() => new Set(displayImages.map(img => img._id)), [displayImages]);
@@ -456,10 +456,6 @@ function ProfilePage() {
         }
     }, []);
 
-    if (!currentUser) {
-        return null;
-    }
-
     if (profileUserLoading) {
         return (
             <>
@@ -473,23 +469,20 @@ function ProfilePage() {
         );
     }
 
-    const displayUser = profileUser || (currentUser ? {
-        _id: currentUser._id,
-        username: currentUser.username,
-        displayName: currentUser.displayName || currentUser.username,
-        avatarUrl: currentUser.avatarUrl,
-        bio: currentUser.bio,
-        location: currentUser.location,
-        website: currentUser.website,
-        instagram: currentUser.instagram,
-        twitter: currentUser.twitter,
-        facebook: currentUser.facebook,
-        createdAt: currentUser.createdAt || new Date().toISOString(),
-    } : null);
-
-    if (!displayUser) {
-        return null;
-    }
+    // currentUser is guaranteed to exist after redirect check in useEffect
+    const displayUser = profileUser || {
+        _id: currentUser!._id,
+        username: currentUser!.username,
+        displayName: currentUser!.displayName || currentUser!.username,
+        avatarUrl: currentUser!.avatarUrl,
+        bio: currentUser!.bio,
+        location: currentUser!.location,
+        website: currentUser!.website,
+        instagram: currentUser!.instagram,
+        twitter: currentUser!.twitter,
+        facebook: currentUser!.facebook,
+        createdAt: currentUser!.createdAt || new Date().toISOString(),
+    };
 
     return (
         <>
@@ -563,9 +556,9 @@ function ProfilePage() {
                                                         // Pass images via state for navigation
                                                         const slug = generateImageSlug(image.imageTitle, image._id);
                                                         navigate(`/photos/${slug}`, {
-                                                            state: { 
+                                                            state: {
                                                                 images: displayImages,
-                                                                fromGrid: true 
+                                                                fromGrid: true
                                                             }
                                                         });
                                                         return;

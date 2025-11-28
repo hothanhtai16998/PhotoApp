@@ -205,10 +205,6 @@ function FavoritesPage() {
         </div>
     );
 
-    if (!user || !accessToken) {
-        return null;
-    }
-
     return (
         <>
             <Header />

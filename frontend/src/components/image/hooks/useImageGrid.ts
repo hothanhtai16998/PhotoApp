@@ -5,17 +5,29 @@ import { useRequestCancellationOnChange } from '@/hooks/useRequestCancellation';
 import { applyImageFilters } from '@/utils/imageFilters';
 import type { Image } from '@/types/image';
 import type { SearchFilters } from '@/components/SearchFilters';
+import type { Pagination } from '@/types/common';
+
+interface FetchImagesParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  category?: string;
+  location?: string;
+  color?: string;
+  tag?: string;
+  _refresh?: boolean;
+}
 
 interface UseImageGridProps {
   displayImages: Image[];
   imageTypes: Map<string, 'portrait' | 'landscape'>;
   images: Image[];
   loading: boolean;
-  pagination: any;
+  pagination: Pagination | null;
   currentSearch: string | undefined;
   currentCategory: string | undefined;
   currentLocation: string | undefined;
-  fetchImages: (params?: any, signal?: AbortSignal) => Promise<void>;
+  fetchImages: (params?: FetchImagesParams, signal?: AbortSignal) => Promise<void>;
 }
 
 export const useImageGrid = ({

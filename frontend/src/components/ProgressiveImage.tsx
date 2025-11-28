@@ -318,7 +318,13 @@ const ProgressiveImage = memo(({
 
     // Optimize rootMargin based on connection speed
     // Use larger margin for fast connections, smaller for slow
-    const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+    interface NavigatorWithConnection extends Navigator {
+      connection?: { effectiveType?: string };
+      mozConnection?: { effectiveType?: string };
+      webkitConnection?: { effectiveType?: string };
+    }
+    const nav = navigator as NavigatorWithConnection;
+    const connection = nav.connection || nav.mozConnection || nav.webkitConnection;
     const isSlowConnection = connection && (connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g');
     const rootMargin = isSlowConnection ? '100px' : '300px'; // Smaller margin for slow connections
 

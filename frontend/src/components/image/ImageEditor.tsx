@@ -793,7 +793,7 @@ export const ImageEditor = ({ imageUrl, imageTitle, onSave, onCancel }: ImageEdi
   // Save preset
   const handleSavePreset = useCallback(() => {
     const presetName = prompt('Nhập tên preset:');
-    if (presetName && presetName.trim()) {
+    if (presetName?.trim()) {
       const currentState: EditState = {
         filters: { ...filters },
         crop: crop ? { ...crop } : null,

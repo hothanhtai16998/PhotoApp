@@ -117,7 +117,7 @@ const ImageGrid = memo(() => {
       const imgShortId = img._id.slice(-12);
       return imgShortId === shortId;
     }) || null;
-  }, [imageSlugFromUrl, images]);
+  }, [imageSlugFromUrl, images, isMobileState]);
 
   // Update image in the store when stats change
   const handleImageUpdate = useCallback((updatedImage: Image) => {
@@ -314,7 +314,13 @@ const ImageGrid = memo(() => {
     const observers: IntersectionObserver[] = [];
 
     // Optimize rootMargin based on connection speed
-    const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+    interface NavigatorWithConnection extends Navigator {
+      connection?: { effectiveType?: string };
+      mozConnection?: { effectiveType?: string };
+      webkitConnection?: { effectiveType?: string };
+    }
+    const nav = navigator as NavigatorWithConnection;
+    const connection = nav.connection || nav.mozConnection || nav.webkitConnection;
     const isSlowConnection = connection && (connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g');
     const rootMargin = isSlowConnection ? '200px' : '400px'; // Preload 200-400px before viewport
 

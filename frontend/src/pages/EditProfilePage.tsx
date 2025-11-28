@@ -54,10 +54,6 @@ function EditProfilePage() {
         }
     }, [user, navigate, setValue]);
 
-    if (!user) {
-        return null;
-    }
-
     // Filter menu items based on user type
     const allMenuItems = [
         { id: 'edit-profile', label: 'Chỉnh sửa thông tin' },

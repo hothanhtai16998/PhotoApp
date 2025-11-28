@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { Image } from '@/types/image';
+import type { Collection } from '@/types/collection';
 import { useCollectionImageStore } from '@/stores/useCollectionImageStore';
 import { generateImageSlug, extractIdFromSlug } from '@/lib/utils';
 
 interface UseCollectionImagesProps {
-  collection: any;
+  collection: Collection | null;
   collectionId: string | undefined;
   isOwner: boolean;
   isMobile: boolean;

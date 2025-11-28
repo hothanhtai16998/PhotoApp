@@ -112,7 +112,7 @@ export function useBatchedFavoriteCheck(imageId: string | undefined): boolean {
         // Make batch request
         favoriteService.checkFavorites(imageIds)
           .then((response) => {
-            if (response && response.favorites && typeof response.favorites === 'object') {
+            if (response?.favorites && typeof response.favorites === 'object') {
               // Distribute results to all callbacks
               for (const id of imageIds) {
                 const callbacks = pendingChecks.get(id);

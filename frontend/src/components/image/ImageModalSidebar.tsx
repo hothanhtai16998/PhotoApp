@@ -1,5 +1,6 @@
 import { MapPin, ExternalLink, Tag, Heart, FolderPlus, Edit2 } from 'lucide-react';
 import type { Image } from '@/types/image';
+import type { User } from '@/types/user';
 import { useFormattedDate } from '@/hooks/useFormattedDate';
 import { useNavigate } from 'react-router-dom';
 import { useImageStore } from '@/stores/useImageStore';
@@ -13,7 +14,7 @@ interface ImageModalSidebarProps {
   downloads: number;
   isFavorited: boolean;
   isTogglingFavorite: boolean;
-  user: any;
+  user: User | null;
   handleToggleFavorite: () => void;
   handleOpenCollection: () => void;
   handleEdit: () => void;

@@ -3,11 +3,12 @@ import { Heart, Download, CheckSquare2, X } from 'lucide-react';
 import { CollectionShare } from '@/components/collection/CollectionShare';
 import ReportButton from '@/components/ReportButton';
 import type { Collection } from '@/types/collection';
+import type { User } from '@/types/user';
 
 interface CollectionHeaderProps {
   collection: Collection | null;
   imagesCount: number;
-  user: any;
+  user: User | null;
   isFavorited: boolean;
   togglingFavorite: boolean;
   selectionMode: boolean;

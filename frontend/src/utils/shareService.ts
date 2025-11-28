@@ -82,7 +82,7 @@ export const shareService = {
    */
   copyToClipboard: async (text: string): Promise<boolean> => {
     try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
+      if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
         return true;
       } else {
