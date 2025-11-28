@@ -22,6 +22,18 @@ const extensionMap = {
     'svg+xml': 'svg',
 };
 
+// Safe wrapper for optional async helpers (prevents "reading 'catch' of undefined")
+const safeAsync = (fn, ...args) => {
+    try {
+        if (typeof fn === 'function') {
+            return Promise.resolve(fn(...args));
+        }
+    } catch (err) {
+        return Promise.reject(err);
+    }
+    return Promise.resolve();
+};
+
 /**
  * Generate secure random upload ID
  */
@@ -271,10 +283,17 @@ export const uploadImage = asyncHandler(async (req, res) => {
         await newImage.populate('uploadedBy', 'username displayName avatarUrl');
         await newImage.populate('imageCategory', 'name description');
 
-        // Clear cache asynchronously
-        clearCache('/api/images').catch(err => {
-            logger.warn('Failed to clear cache:', err.message);
-        });
+        // Clear cache asynchronously (safe)
+        safeAsync(clearCache, '/api/images')
+            .catch(err => logger.warn('Failed to clear cache:', err?.message || err));
+
+        // Create success notification (async)
+        safeAsync(Notification?.create, {
+            recipient: userId,
+            type: 'upload_completed',
+            image: newImage._id,
+            metadata: { imageTitle: trimmedTitle },
+        }).catch(err => logger.error('Failed to create notification:', err?.message || err));
 
         res.status(201).json({
             message: 'Thêm ảnh thành công',
@@ -414,24 +433,21 @@ export const finalizeImageUpload = asyncHandler(async (req, res) => {
         await newImage.populate('imageCategory', 'name description');
 
         // Clear cache
-        clearCache('/api/images').catch(err => {
-            logger.warn('Failed to clear cache:', err.message);
+        safeAsync(clearCache, '/api/images').catch(err => {
+            logger.warn('Failed to clear cache:', err?.message || err);
         });
 
         // Clean up raw upload (async, don't wait)
-        deleteObjectByKey(uploadKey).catch(err => {
-            logger.warn(`Failed to delete raw upload ${uploadKey}:`, err.message);
-        });
+        safeAsync(deleteObjectByKey, uploadKey)
+            .catch(err => logger.warn(`Failed to delete raw upload ${uploadKey}:`, err?.message || err));
 
         // Create success notification (async)
-        Notification.create({
+        safeAsync(Notification?.create, {
             recipient: userId,
             type: 'upload_completed',
             image: newImage._id,
             metadata: { imageTitle: trimmedTitle },
-        }).catch(err => {
-            logger.error('Failed to create notification:', err.message);
-        });
+        }).catch(err => logger.error('Failed to create notification:', err?.message || err));
 
         res.status(201).json({
             message: 'Thêm ảnh thành công',
@@ -442,22 +458,21 @@ export const finalizeImageUpload = asyncHandler(async (req, res) => {
 
         // Rollback processed images
         if (uploadResult?.publicId) {
-            deleteImageFromS3(uploadResult.publicId, 'photo-app-images').catch(err => {
-                logger.error('Rollback failed:', err.message);
-            });
+            safeAsync(deleteImageFromS3, uploadResult.publicId, 'photo-app-images')
+                .catch(err => {
+                    logger.error('Rollback failed:', err?.message || err);
+                });
         }
 
         // Create failure notification (async)
-        Notification.create({
+        safeAsync(Notification?.create, {
             recipient: userId,
             type: 'upload_failed',
             metadata: {
                 imageTitle: trimmedTitle || 'Unknown',
                 error: error.message,
             },
-        }).catch(err => {
-            logger.error('Failed to create failure notification:', err.message);
-        });
+        }).catch(err => logger.error('Failed to create failure notification:', err?.message || err));
 
         throw error;
     }
