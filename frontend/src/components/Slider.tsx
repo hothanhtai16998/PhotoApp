@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { imageService } from "@/services/imageService";
 import type { Image } from "@/types/image";
+import { sliderConfig } from "@/config/sliderConfig";
 import "./Slider.css";
 
-// Date-based randomization: same 10 images per day
+// Date-based randomization: same images per day
 function getDailyRandomImages(images: Image[], count: number): Image[] {
   // Use date as seed for consistent daily selection
   const today = new Date();
@@ -48,7 +49,7 @@ function Slider() {
   const touchStartY = useRef<number | null>(null);
 
 
-  // Fetch all images and select 10 random ones for today
+  // Fetch all images and select random ones for today
   useEffect(() => {
     const fetchImages = async () => {
       setLoading(true);
@@ -57,11 +58,11 @@ function Slider() {
         const allImages: Image[] = [];
         let page = 1;
         let hasMore = true;
-        const maxPages = 10; // Limit to 10 pages (1000 images max) to avoid infinite loops
+        const { maxPages, apiLimit, imageCount } = sliderConfig;
 
         while (hasMore && page <= maxPages) {
           const response = await imageService.fetchImages({
-            limit: 100, // Maximum allowed by API
+            limit: apiLimit, // Maximum allowed by API
             page: page,
           });
 
@@ -72,7 +73,7 @@ function Slider() {
               hasMore = page < response.pagination.pages;
             } else {
               // If no pagination info, stop if we got less than limit
-              hasMore = response.images.length === 100;
+              hasMore = response.images.length === apiLimit;
             }
             page++;
           } else {
@@ -81,8 +82,8 @@ function Slider() {
         }
 
         if (allImages.length > 0) {
-          // Get 10 random images for today
-          const dailyImages = getDailyRandomImages(allImages, 10);
+          // Get random images for today
+          const dailyImages = getDailyRandomImages(allImages, imageCount);
           setImages(dailyImages);
         } else {
           setImages([]);
@@ -102,7 +103,7 @@ function Slider() {
     if (isTransitioning || images.length === 0) return;
     setIsTransitioning(true);
     setCurrentSlide(index % images.length);
-    setTimeout(() => setIsTransitioning(false), 600);
+    setTimeout(() => setIsTransitioning(false), sliderConfig.transition.durationMs);
   }, [isTransitioning, images.length]);
 
   const nextSlide = useCallback(() => {
@@ -140,7 +141,8 @@ function Slider() {
       // Save current progress before pausing
       if (progressStartTimeRef.current !== null) {
         const elapsed = Date.now() - progressStartTimeRef.current;
-        pausedProgressRef.current = Math.min((elapsed / 6200) * 100, 100);
+        const { intervalMs } = sliderConfig.autoPlay;
+        pausedProgressRef.current = Math.min((elapsed / intervalMs) * 100, 100);
       }
       // Pause intervals
       if (autoPlayIntervalRef.current) {
@@ -167,7 +169,8 @@ function Slider() {
 
     // Calculate start time based on paused progress (if resuming) or start fresh
     const startProgress = pausedProgressRef.current;
-    const startTime = Date.now() - (startProgress / 100) * 6200;
+    const { intervalMs, progressUpdateIntervalMs } = sliderConfig.autoPlay;
+    const startTime = Date.now() - (startProgress / 100) * intervalMs;
     progressStartTimeRef.current = startTime;
 
     // Progress bar animation - synchronized with auto-play
@@ -179,13 +182,13 @@ function Slider() {
         return;
       }
       const elapsed = Date.now() - progressStartTimeRef.current;
-      const progress = Math.min((elapsed / 6200) * 100, 100);
+      const progress = Math.min((elapsed / intervalMs) * 100, 100);
       setAutoPlayProgress(progress);
-    }, 16); // Update every 16ms (~60fps) for smooth animation
+    }, progressUpdateIntervalMs); // Update every 16ms (~60fps) for smooth animation
 
-    // Auto-play interval - change slide every 6.2 seconds
+    // Auto-play interval - change slide at configured interval
     // Calculate delay based on remaining time if resuming from pause
-    const remainingTime = 6200 - (startProgress / 100) * 6200;
+    const remainingTime = intervalMs - (startProgress / 100) * intervalMs;
 
     const scheduleNextSlide = () => {
       setAutoPlayProgress(100); // Ensure it reaches 100% before changing
@@ -213,11 +216,11 @@ function Slider() {
       timeoutId = setTimeout(() => {
         scheduleNextSlide();
         // Then set up the regular interval
-        autoPlayIntervalRef.current = setInterval(scheduleNextSlide, 6200);
+        autoPlayIntervalRef.current = setInterval(scheduleNextSlide, intervalMs);
       }, remainingTime);
     } else {
       // Start fresh - use regular interval
-      autoPlayIntervalRef.current = setInterval(scheduleNextSlide, 6200);
+      autoPlayIntervalRef.current = setInterval(scheduleNextSlide, intervalMs);
     }
 
     return () => {

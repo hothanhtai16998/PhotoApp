@@ -16,14 +16,12 @@ export interface SearchBarRef {
   focus: () => void;
 }
 
+import { searchConfig } from '@/config/searchConfig';
+
 interface SearchHistoryItem {
   query: string
   timestamp: number
 }
-
-const MAX_HISTORY_ITEMS = 5
-const SEARCH_DEBOUNCE_MS = 300
-const SUGGESTIONS_DEBOUNCE_MS = 200 // Faster debounce for suggestions
 
 export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
   const { fetchImages, currentSearch } = useImageStore()
@@ -42,7 +40,7 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
   // Load filters from localStorage
   const loadFiltersFromStorage = (): SearchFiltersType => {
     try {
-      const stored = localStorage.getItem('photoApp_searchFilters');
+      const stored = localStorage.getItem(searchConfig.filtersStorageKey);
       if (stored) {
         return JSON.parse(stored);
       }
@@ -76,7 +74,7 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
       const stored = localStorage.getItem('photoApp_searchHistory')
       if (stored) {
         const history = JSON.parse(stored) as SearchHistoryItem[]
-        setSearchHistory(history.slice(0, MAX_HISTORY_ITEMS))
+        setSearchHistory(history.slice(0, searchConfig.maxHistoryItems))
       }
     } catch (error) {
       console.error('Failed to load search history:', error)
@@ -131,7 +129,7 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
         } finally {
           setLoadingSuggestions(false)
         }
-      }, SUGGESTIONS_DEBOUNCE_MS)
+      }, searchConfig.suggestionsDebounceMs)
     } else {
       setApiSuggestions([])
       setLoadingSuggestions(false)
@@ -164,8 +162,8 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
       history = history.filter(item => item.query.toLowerCase() !== query.toLowerCase())
       history.unshift({ query: query.trim(), timestamp: Date.now() })
       
-      // Keep only MAX_HISTORY_ITEMS
-      history = history.slice(0, MAX_HISTORY_ITEMS)
+      // Keep only max history items
+      history = history.slice(0, searchConfig.maxHistoryItems)
       
       localStorage.setItem('photoApp_searchHistory', JSON.stringify(history))
       setSearchHistory(history)
@@ -194,7 +192,7 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
           })
         }
       }
-    }, SEARCH_DEBOUNCE_MS)
+    }, searchConfig.searchDebounceMs)
 
     return () => {
       if (debounceTimerRef.current) {
@@ -492,7 +490,7 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
               setFilters(newFilters);
               // Save to localStorage
               try {
-                localStorage.setItem('photoApp_searchFilters', JSON.stringify(newFilters));
+                localStorage.setItem(searchConfig.filtersStorageKey, JSON.stringify(newFilters));
                 // Dispatch custom event to notify ImageGrid of filter change
                 window.dispatchEvent(new Event('filterChange'));
               } catch (error) {
@@ -518,7 +516,7 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
               };
               setFilters(defaultFilters);
               try {
-                localStorage.removeItem('photoApp_searchFilters');
+                localStorage.removeItem(searchConfig.filtersStorageKey);
                 // Dispatch custom event to notify ImageGrid of filter change
                 window.dispatchEvent(new Event('filterChange'));
               } catch (error) {

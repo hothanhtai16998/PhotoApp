@@ -11,6 +11,7 @@ import { useImageGrid } from './image/hooks/useImageGrid';
 import { applyImageFilters } from '@/utils/imageFilters';
 import { useImageStore } from '@/stores/useImageStore';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { imageGridConfig } from '@/config/imageGridConfig';
 import './ImageGrid.css';
 
 // Lazy load ImageModal - conditionally rendered
@@ -312,7 +313,9 @@ const ImageGrid = memo(() => {
     const nav = navigator as NavigatorWithConnection;
     const connection = nav.connection || nav.mozConnection || nav.webkitConnection;
     const isSlowConnection = connection && (connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g');
-    const rootMargin = isSlowConnection ? '200px' : '400px'; // Preload 200-400px before viewport
+    const rootMargin = isSlowConnection 
+      ? imageGridConfig.preload.slowConnectionMargin 
+      : imageGridConfig.preload.normalConnectionMargin;
 
     imageElements.forEach((element) => {
       const imageId = element.getAttribute('data-image-id');
@@ -339,7 +342,7 @@ const ImageGrid = memo(() => {
         },
         {
           rootMargin,
-          threshold: 0.01, // Trigger when 1% visible
+          threshold: imageGridConfig.intersectionThreshold,
         }
       );
 
@@ -347,9 +350,9 @@ const ImageGrid = memo(() => {
       observers.push(observer);
     });
 
-    // Preload first 12 images immediately (above the fold)
+    // Preload first images immediately (above the fold)
     // These are critical for initial render
-    const eagerImages = images.slice(0, 12).filter(img => 
+    const eagerImages = images.slice(0, imageGridConfig.eagerImageCount).filter(img => 
       !imageTypes.has(img._id) && 
       !pendingPreloads.has(img._id) &&
       (img.thumbnailUrl || img.smallUrl || img.imageUrl)
@@ -464,7 +467,7 @@ const ImageGrid = memo(() => {
   // Loading skeleton component
   const ImageGridSkeleton = () => (
     <div className="masonry-grid" aria-label="Đang tải ảnh" aria-live="polite">
-      {Array.from({ length: 12 }).map((_, index) => (
+      {Array.from({ length: imageGridConfig.eagerImageCount }).map((_, index) => (
         <div
           key={`skeleton-${index}`}
           className={`masonry-item ${index % 3 === 0 ? 'portrait' : 'landscape'}`}
@@ -618,7 +621,7 @@ const ImageGrid = memo(() => {
             
             // Load first 12 images eagerly (above the fold + buffer)
             // This improves LCP (Largest Contentful Paint) for initial view
-            const isEager = index < 12;
+            const isEager = index < imageGridConfig.eagerImageCount;
             
             return (
               <ImageGridItem

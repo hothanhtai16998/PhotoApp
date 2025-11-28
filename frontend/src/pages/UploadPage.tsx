@@ -14,6 +14,7 @@ import { getErrorMessage } from '@/lib/utils';
 import { toast } from 'sonner';
 import { imageService } from '@/services/imageService';
 import { uploadSchema, type UploadFormValues } from '@/types/forms';
+import { uploadConfig } from '@/config/uploadConfig';
 import './UploadPage.css';
 
 function UploadPage() {
@@ -35,7 +36,7 @@ function UploadPage() {
 
     // Fetch images by category for display
     useEffect(() => {
-        const categories = ['Nature', 'Portrait', 'Architecture', 'Travel', 'Street', 'Abstract'];
+        const { categories, imagesPerCategory, maxCategories, minImagesPerCategory } = uploadConfig;
         
         const processCategoryImages = (allImages: Image[]) => {
             const categoryData = [];
@@ -47,9 +48,9 @@ function UploadPage() {
                         ? img.imageCategory 
                         : img.imageCategory?.name;
                     return categoryName && categoryName.toLowerCase() === category.toLowerCase();
-                }).slice(0, 4);
+                }).slice(0, imagesPerCategory);
                 
-                if (categoryImgs.length >= 2) {
+                if (categoryImgs.length >= minImagesPerCategory) {
                     categoryData.push({ category, images: categoryImgs });
                 }
             }
@@ -57,16 +58,16 @@ function UploadPage() {
             // If we don't have enough category images, use general images and group them
             if (categoryData.length === 0 && allImages.length > 0) {
                 const shuffled = [...allImages].sort(() => 0.5 - Math.random());
-                // Create 3 groups from shuffled images
-                for (let i = 0; i < 3 && shuffled.length >= 4; i++) {
+                // Create groups from shuffled images
+                for (let i = 0; i < maxCategories && shuffled.length >= imagesPerCategory; i++) {
                     categoryData.push({ 
                         category: categories[i] || 'Featured', 
-                        images: shuffled.slice(i * 4, (i + 1) * 4) 
+                        images: shuffled.slice(i * imagesPerCategory, (i + 1) * imagesPerCategory) 
                     });
                 }
             }
             
-            setCategoryImages(categoryData.slice(0, 3)); // Show 3 categories
+            setCategoryImages(categoryData.slice(0, maxCategories));
         };
 
         const fetchCategoryImages = async () => {

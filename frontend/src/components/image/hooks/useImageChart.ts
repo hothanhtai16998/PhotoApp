@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { Image } from '@/types/image';
+import { chartConfig } from '@/config/chartConfig';
 
 interface ChartDataPoint {
   date: Date;
@@ -67,9 +68,10 @@ export const useImageChart = (image: Image): UseImageChartReturn => {
     const remainingViews = Math.max(0, (image.views || 0) - totalTrackedViews);
     const remainingDownloads = Math.max(0, (image.downloads || 0) - totalTrackedDownloads);
 
-    const data = Array.from({ length: 14 }, (_, i) => {
-      // Calculate date: i=0 is 13 days ago, i=13 is today (0 days ago)
-      const daysAgo = 13 - i;
+    const { daysToDisplay, daysAgoOffset } = chartConfig;
+    const data = Array.from({ length: daysToDisplay }, (_, i) => {
+      // Calculate date: i=0 is daysAgoOffset days ago, i=daysAgoOffset is today (0 days ago)
+      const daysAgo = daysAgoOffset - i;
       const date = new Date(today);
       date.setDate(today.getDate() - daysAgo);
 
