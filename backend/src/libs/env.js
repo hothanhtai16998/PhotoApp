@@ -37,7 +37,7 @@ export const env = {
 	EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME,
 	EMAIL_FROM: process.env.EMAIL_FROM,
 	// AWS S3 Configuration
-	AWS_REGION: process.env.AWS_REGION,
+	AWS_REGION: process.env.AWS_REGION || 'ap-southeast-2',
 	AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
 	AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
 	AWS_S3_BUCKET_NAME: process.env.AWS_S3_BUCKET_NAME,

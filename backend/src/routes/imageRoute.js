@@ -30,12 +30,12 @@ const router = express.Router();
 
 // Public route - get all images (with optional search/category filters)
 // Cache for 30 seconds - images change frequently but short cache helps with repeated requests
-router.get('/', 
+router.get('/',
     cacheMiddleware(30 * 1000, (req) => {
         // Include query params in cache key for proper cache separation
         return `/api/images?${new URLSearchParams(req.query).toString()}`;
     }),
-    validateGetImages, 
+    validateGetImages,
     getAllImages
 );
 
@@ -53,16 +53,16 @@ router.get('/:imageId/download', optionalAuth, downloadImage);
 
 // Protected routes (with CSRF protection for state-changing operations)
 // Pre-upload: Upload image to S3 only (no database record)
-router.post('/pre-upload', protectedRoute, validateCsrf, uploadLimiter, preUploadImage);
+router.post('/preupload', protectedRoute, uploadLimiter, preUploadImage);
 // Finalize: Link metadata to pre-uploaded image and create database record
-router.post('/finalize', protectedRoute, validateCsrf, finalizeImageUpload);
+router.post('/finalize', protectedRoute, finalizeImageUpload);
 // Bulk upload notification
-router.post('/bulk-upload-notification', protectedRoute, validateCsrf, createBulkUploadNotification);
+router.post('/bulk-upload-notification', protectedRoute, createBulkUploadNotification);
 // Legacy upload endpoint (kept for backward compatibility)
-router.post('/upload', protectedRoute, validateCsrf, uploadLimiter, singleUpload, validateImageUpload, uploadImage);
-router.patch('/:imageId', protectedRoute, validateCsrf, updateImage);
-router.patch('/:imageId/replace', protectedRoute, validateCsrf, uploadLimiter, singleUpload, replaceImage);
-router.patch('/batch/replace', protectedRoute, validateCsrf, uploadLimiter, multipleUpload, batchReplaceImages);
+router.post('/upload', protectedRoute, uploadLimiter, singleUpload, validateImageUpload, uploadImage);
+router.patch('/:imageId', protectedRoute, updateImage);
+router.patch('/:imageId/replace', protectedRoute, uploadLimiter, singleUpload, replaceImage);
+router.patch('/batch/replace', protectedRoute, uploadLimiter, multipleUpload, batchReplaceImages);
 router.get('/user/:userId', protectedRoute, validateUserId, validateGetImages, getImagesByUserId);
 
 export default router;

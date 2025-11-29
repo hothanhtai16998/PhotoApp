@@ -1,8 +1,9 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, GetObjectCommand, DeleteObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { env } from './env.js';
+import { Upload } from '@aws-sdk/lib-storage';
 import sharp from 'sharp';
-
+import { logger } from '../utils/logger.js';
 // Initialize S3 client
 const s3Client = new S3Client({
 	region: env.AWS_REGION,
@@ -19,91 +20,91 @@ const s3Client = new S3Client({
  * @param {string} filename - Base filename (without extension)
  * @returns {Promise<Object>} Object with URLs for different sizes
  */
-export const uploadImageWithSizes = async (imageBuffer, folder = 'photo-app-images', filename) => {
-	try {
-		// Generate unique filename with timestamp
-		const timestamp = Date.now();
-		const baseFilename = filename || `image-${timestamp}`;
+// export const uploadImageWithSizes = async (imageBuffer, folder = 'photo-app-images', filename) => {
+// 	try {
+// 		// Generate unique filename with timestamp
+// 		const timestamp = Date.now();
+// 		const baseFilename = filename || `image-${timestamp}`;
 
-		// Process images with Sharp to create multiple sizes in both WebP and AVIF formats
-		// Use auto-rotate to respect EXIF orientation data (fixes portrait images)
-		// Sharp's rotate() without parameters auto-rotates based on EXIF orientation tag
-		
-		// Prepare base pipelines once per size, then clone for each format to avoid redundant resizing work.
-		const thumbnailBase = sharp(imageBuffer, { failOnError: false })
-			.rotate()
-			.resize(200, null, { withoutEnlargement: true });
+// 		// Process images with Sharp to create multiple sizes in both WebP and AVIF formats
+// 		// Use auto-rotate to respect EXIF orientation data (fixes portrait images)
+// 		// Sharp's rotate() without parameters auto-rotates based on EXIF orientation tag
 
-		const smallBase = sharp(imageBuffer, { failOnError: false })
-			.rotate()
-			.resize(800, null, { withoutEnlargement: true });
+// 		// Prepare base pipelines once per size, then clone for each format to avoid redundant resizing work.
+// 		const thumbnailBase = sharp(imageBuffer, { failOnError: false })
+// 			.rotate()
+// 			.resize(200, null, { withoutEnlargement: true });
 
-		const regularBase = sharp(imageBuffer, { failOnError: false })
-			.rotate()
-			.resize(1080, null, { withoutEnlargement: true });
+// 		const smallBase = sharp(imageBuffer, { failOnError: false })
+// 			.rotate()
+// 			.resize(800, null, { withoutEnlargement: true });
 
-		const originalBase = sharp(imageBuffer, { failOnError: false })
-			.rotate();
+// 		const regularBase = sharp(imageBuffer, { failOnError: false })
+// 			.rotate()
+// 			.resize(1080, null, { withoutEnlargement: true });
 
-		// Kick off all Sharp transforms in parallel to reduce total processing time.
-		// Each transform works on its own Sharp pipeline, so running them concurrently
-		// maximizes CPU usage and avoids the previous sequential bottleneck.
-		const [
-			thumbnailWebp,
-			thumbnailAvif,
-			smallWebp,
-			smallAvif,
-			regularWebp,
-			regularAvif,
-			originalWebp,
-			originalAvif,
-		] = await Promise.all([
-			thumbnailBase.clone().webp({ quality: 60 }).toBuffer(),
-			thumbnailBase.clone().avif({ quality: 60 }).toBuffer(),
-			smallBase.clone().webp({ quality: 80 }).toBuffer(),
-			smallBase.clone().avif({ quality: 80 }).toBuffer(),
-			regularBase.clone().webp({ quality: 85 }).toBuffer(),
-			regularBase.clone().avif({ quality: 85 }).toBuffer(),
-			originalBase.clone().webp({ quality: 85 }).toBuffer(),
-			originalBase.clone().avif({ quality: 85 }).toBuffer(),
-		]);
+// 		const originalBase = sharp(imageBuffer, { failOnError: false })
+// 			.rotate();
 
-		// Upload all sizes and formats to S3
-		const uploadPromises = [
-			// WebP versions (fallback for older browsers)
-			uploadToS3(thumbnailWebp, `${folder}/${baseFilename}-thumbnail.webp`, 'image/webp'),
-			uploadToS3(smallWebp, `${folder}/${baseFilename}-small.webp`, 'image/webp'),
-			uploadToS3(regularWebp, `${folder}/${baseFilename}-regular.webp`, 'image/webp'),
-			uploadToS3(originalWebp, `${folder}/${baseFilename}-original.webp`, 'image/webp'),
-			// AVIF versions (better compression for modern browsers)
-			uploadToS3(thumbnailAvif, `${folder}/${baseFilename}-thumbnail.avif`, 'image/avif'),
-			uploadToS3(smallAvif, `${folder}/${baseFilename}-small.avif`, 'image/avif'),
-			uploadToS3(regularAvif, `${folder}/${baseFilename}-regular.avif`, 'image/avif'),
-			uploadToS3(originalAvif, `${folder}/${baseFilename}-original.avif`, 'image/avif'),
-		];
+// 		// Kick off all Sharp transforms in parallel to reduce total processing time.
+// 		// Each transform works on its own Sharp pipeline, so running them concurrently
+// 		// maximizes CPU usage and avoids the previous sequential bottleneck.
+// 		const [
+// 			thumbnailWebp,
+// 			thumbnailAvif,
+// 			smallWebp,
+// 			smallAvif,
+// 			regularWebp,
+// 			regularAvif,
+// 			originalWebp,
+// 			originalAvif,
+// 		] = await Promise.all([
+// 			thumbnailBase.clone().webp({ quality: 60 }).toBuffer(),
+// 			thumbnailBase.clone().avif({ quality: 60 }).toBuffer(),
+// 			smallBase.clone().webp({ quality: 80 }).toBuffer(),
+// 			smallBase.clone().avif({ quality: 80 }).toBuffer(),
+// 			regularBase.clone().webp({ quality: 85 }).toBuffer(),
+// 			regularBase.clone().avif({ quality: 85 }).toBuffer(),
+// 			originalBase.clone().webp({ quality: 85 }).toBuffer(),
+// 			originalBase.clone().avif({ quality: 85 }).toBuffer(),
+// 		]);
 
-		const [
-			thumbnailUrl, smallUrl, regularUrl, originalUrl,
-			thumbnailAvifUrl, smallAvifUrl, regularAvifUrl, originalAvifUrl
-		] = await Promise.all(uploadPromises);
+// 		// Upload all sizes and formats to S3
+// 		const uploadPromises = [
+// 			// WebP versions (fallback for older browsers)
+// 			uploadToS3(thumbnailWebp, `${folder}/${baseFilename}-thumbnail.webp`, 'image/webp'),
+// 			uploadToS3(smallWebp, `${folder}/${baseFilename}-small.webp`, 'image/webp'),
+// 			uploadToS3(regularWebp, `${folder}/${baseFilename}-regular.webp`, 'image/webp'),
+// 			uploadToS3(originalWebp, `${folder}/${baseFilename}-original.webp`, 'image/webp'),
+// 			// AVIF versions (better compression for modern browsers)
+// 			uploadToS3(thumbnailAvif, `${folder}/${baseFilename}-thumbnail.avif`, 'image/avif'),
+// 			uploadToS3(smallAvif, `${folder}/${baseFilename}-small.avif`, 'image/avif'),
+// 			uploadToS3(regularAvif, `${folder}/${baseFilename}-regular.avif`, 'image/avif'),
+// 			uploadToS3(originalAvif, `${folder}/${baseFilename}-original.avif`, 'image/avif'),
+// 		];
 
-		return {
-			publicId: baseFilename, // Store only filename, not full path
-			// WebP URLs (for backward compatibility and fallback)
-			imageUrl: originalUrl,
-			thumbnailUrl,
-			smallUrl,
-			regularUrl,
-			// AVIF URLs (for modern browsers)
-			imageAvifUrl: originalAvifUrl,
-			thumbnailAvifUrl,
-			smallAvifUrl,
-			regularAvifUrl,
-		};
-	} catch (error) {
-		throw new Error(`Failed to process and upload image: ${error.message}`);
-	}
-};
+// 		const [
+// 			thumbnailUrl, smallUrl, regularUrl, originalUrl,
+// 			thumbnailAvifUrl, smallAvifUrl, regularAvifUrl, originalAvifUrl
+// 		] = await Promise.all(uploadPromises);
+
+// 		return {
+// 			publicId: baseFilename, // Store only filename, not full path
+// 			// WebP URLs (for backward compatibility and fallback)
+// 			imageUrl: originalUrl,
+// 			thumbnailUrl,
+// 			smallUrl,
+// 			regularUrl,
+// 			// AVIF URLs (for modern browsers)
+// 			imageAvifUrl: originalAvifUrl,
+// 			thumbnailAvifUrl,
+// 			smallAvifUrl,
+// 			regularAvifUrl,
+// 		};
+// 	} catch (error) {
+// 		throw new Error(`Failed to process and upload image: ${error.message}`);
+// 	}
+// };
 
 /**
  * Upload a single file to S3
@@ -144,6 +145,44 @@ const uploadToS3 = async (buffer, key, contentType) => {
 		throw new Error(`Failed to upload to S3 (${errorCode}): ${errorMessage}`);
 	}
 };
+
+/**
+ * Upload image with multiple sizes using parallel multipart (lib-storage)
+ */
+export async function uploadImageWithSizes(buffer, bucket, filename) {
+	try {
+		// Process sizes in parallel using sharp
+		const [thumbnailBuffer, smallBuffer, regularBuffer, avifBuffer] = await Promise.all([
+			sharp(buffer).resize(200, 200, { fit: 'cover' }).webp().toBuffer(),
+			sharp(buffer).resize(500, 500, { fit: 'cover' }).webp().toBuffer(),
+			sharp(buffer).resize(1000, 1000, { fit: 'inside' }).webp().toBuffer(),
+			sharp(buffer).webp().toBuffer(),
+		]);
+
+		// Upload all sizes in parallel using existing uploadToS3 function
+		const [thumb, small, regular, original] = await Promise.all([
+			uploadToS3(thumbnailBuffer, `${bucket}/${filename}-thumbnail.webp`, 'image/webp'),
+			uploadToS3(smallBuffer, `${bucket}/${filename}-small.webp`, 'image/webp'),
+			uploadToS3(regularBuffer, `${bucket}/${filename}-regular.webp`, 'image/webp'),
+			uploadToS3(avifBuffer, `${bucket}/${filename}.webp`, 'image/webp'),
+		]);
+
+		return {
+			publicId: filename,
+			thumbnailUrl: thumb,
+			smallUrl: small,
+			regularUrl: regular,
+			imageUrl: original,
+			imageAvifUrl: original,
+			thumbnailAvifUrl: thumb,
+			smallAvifUrl: small,
+			regularAvifUrl: regular,
+		};
+	} catch (err) {
+		console.error('uploadImageWithSizes failed:', err?.message);
+		throw err;
+	}
+}
 
 /**
  * Upload avatar to S3 (single size, 200x200)
@@ -195,7 +234,7 @@ export const deleteImageFromS3 = async (publicId, folder = 'photo-app-images') =
 		const sizes = ['thumbnail', 'small', 'regular', 'original'];
 		const formats = ['webp', 'avif']; // Delete both WebP and AVIF versions
 
-		const deletePromises = sizes.flatMap((size) => 
+		const deletePromises = sizes.flatMap((size) =>
 			formats.map((format) => {
 				const key = `${folder}/${publicId}-${size}.${format}`;
 				const command = new DeleteObjectCommand({
@@ -290,19 +329,29 @@ export const generatePresignedUploadUrl = async (key, contentType, expiresIn = 3
 	return getSignedUrl(s3Client, command, { expiresIn });
 };
 
+
+
 /**
- * Delete an arbitrary object by key (used for temporary raw uploads)
- * @param {string} key - Full S3 object key
+ * Get object from S3 and return the stream/body
  */
-export const deleteObjectByKey = async (key) => {
-	try {
-		const command = new DeleteObjectCommand({
-			Bucket: env.AWS_S3_BUCKET_NAME,
-			Key: key,
-		});
-		await s3Client.send(command);
-	} catch (error) {
-		console.error(`Failed to delete object ${key}: ${error.message}`);
-	}
-};
+export async function getObjectFromS3(key) {
+	const params = {
+		Bucket: env.AWS_S3_BUCKET_NAME, // Use env, not process.env
+		Key: key,
+	};
+	const command = new GetObjectCommand(params);
+	return await s3Client.send(command);
+}
+
+/**
+ * Delete object from S3 by key
+ */
+export async function deleteObjectByKey(key) {
+	const params = {
+		Bucket: env.AWS_S3_BUCKET_NAME, // Use env, not process.env
+		Key: key,
+	};
+	const command = new DeleteObjectCommand(params);
+	return await s3Client.send(command);
+}
 

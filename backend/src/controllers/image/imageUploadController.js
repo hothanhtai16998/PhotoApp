@@ -1,23 +1,33 @@
 import mongoose from 'mongoose';
 import crypto from 'crypto';
-import { uploadImageWithSizes, deleteImageFromS3, getImageFromS3, generatePresignedUploadUrl, deleteObjectByKey } from '../../libs/s3.js';
+import { asyncHandler } from '../../middlewares/asyncHandler.js';
+import { addJob } from '../../workers/jobQueue.js';
+import { findCategory } from '../../utils/imageHelpers.js';
+
 import Image from '../../models/Image.js';
 import Category from '../../models/Category.js';
 import Notification from '../../models/Notification.js';
-import { asyncHandler } from '../../middlewares/asyncHandler.js';
-import { logger } from '../../utils/logger.js';
-import { clearCache } from '../../middlewares/cacheMiddleware.js';
+
+import {
+    uploadImageWithSizes,
+    deleteImageFromS3,
+    generatePresignedUploadUrl,
+    deleteObjectByKey
+} from '../../libs/s3.js';
+
 import { extractDominantColors } from '../../utils/colorExtractor.js';
 import { extractExifData } from '../../utils/exifExtractor.js';
-import { Queue } from 'bullmq';
-import IORedis from 'ioredis';
+import { clearCache } from '../../middlewares/cacheMiddleware.js';
+import { logger } from '../../utils/logger.js';
 
-const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25MB
+// small constants used in this controller
+const MAX_FILE_BYTES = 25 * 1024 * 1024; // 25MB
+const MAX_FILE_SIZE_BYTES = MAX_FILE_BYTES; // alias for older/other usages
 const MAX_IMAGE_TITLE_LENGTH = 255;
 const MAX_TAG_LENGTH = 50;
 const MAX_TAGS_PER_IMAGE = 20;
 const RAW_UPLOAD_FOLDER = 'photo-app-raw';
-const UPLOAD_ID_PATTERN = /^image-\d+-[a-z0-9]{8}$/;
+const UPLOAD_ID_PATTERN = /^image-\d+-[a-f0-9]{8}$/;
 
 const extensionMap = {
     jpeg: 'jpg',
@@ -33,6 +43,7 @@ const safeAsync = (fn, ...args) => {
     } catch (err) {
         return Promise.reject(err);
     }
+    // If fn is not provided, return a resolved promise so callers can safely chain .catch
     return Promise.resolve();
 };
 
@@ -41,8 +52,9 @@ const safeAsync = (fn, ...args) => {
  */
 const generateUploadId = () => {
     const timestamp = Date.now();
-    const randomBytes = crypto.randomBytes(4).toString('hex'); // 8 hex chars
-    return `image-${timestamp}-${randomBytes}`;
+    // 4 bytes -> 8 hex chars, safe and short
+    const rand = crypto.randomBytes(4).toString('hex');
+    return `image-${timestamp}-${rand}`;
 };
 
 const getFileExtension = (fileName = '', fileType = '') => {
@@ -97,29 +109,29 @@ const validateCoordinates = (coordinates) => {
 /**
  * Find category by ID or name
  */
-const findCategory = async (categoryInput) => {
-    const trimmed = String(categoryInput || '').trim();
+// const findCategory = async (categoryInput) => {
+//     const trimmed = String(categoryInput || '').trim();
 
-    if (!trimmed) {
-        throw new Error('Danh mục không được để trống');
-    }
+//     if (!trimmed) {
+//         throw new Error('Danh mục không được để trống');
+//     }
 
-    let categoryDoc;
-    if (mongoose.Types.ObjectId.isValid(trimmed)) {
-        categoryDoc = await Category.findById(trimmed);
-    } else {
-        categoryDoc = await Category.findOne({
-            name: { $regex: new RegExp(`^${trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
-            isActive: true,
-        });
-    }
+//     let categoryDoc;
+//     if (mongoose.Types.ObjectId.isValid(trimmed)) {
+//         categoryDoc = await Category.findById(trimmed);
+//     } else {
+//         categoryDoc = await Category.findOne({
+//             name: { $regex: new RegExp(`^${trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+//             isActive: true,
+//         });
+//     }
 
-    if (!categoryDoc) {
-        throw new Error('Danh mục ảnh không tồn tại hoặc đã bị xóa');
-    }
+//     if (!categoryDoc) {
+//         throw new Error('Danh mục ảnh không tồn tại hoặc đã bị xóa');
+//     }
 
-    return categoryDoc;
-};
+//     return categoryDoc;
+// };
 
 /**
  * Parse and validate tags
@@ -240,7 +252,7 @@ export const uploadImage = asyncHandler(async (req, res) => {
 
     if (!req.file.mimetype.startsWith('image/')) {
         return res.status(400).json({
-            message: 'Tệp phải có định dạng là ảnh',
+            message: 'Tệp được chọn không phải là ảnh',
         });
     }
 
@@ -364,53 +376,45 @@ export const preUploadImage = asyncHandler(async (req, res) => {
     }
 });
 
-// create queue (singleton)
-const connection = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379');
-const imageProcessingQueue = new Queue('image-processing', { connection });
-
 export const finalizeImageUpload = asyncHandler(async (req, res) => {
-    const userId = req.user._id;
+    const userId = req.user?._id;
     const isAdmin = req.user?.isAdmin || req.user?.isSuperAdmin;
     const { uploadId, uploadKey, imageTitle, imageCategory, location, cameraModel, coordinates, tags } = req.body;
 
-    // quick validation (same as before)
-    if (!uploadId || !uploadKey || !UPLOAD_ID_PATTERN.test(uploadId)) {
-        return res.status(400).json({ message: 'Invalid upload ID format' });
+    // Quick validation only — no downloads/processing here
+    if (!uploadId || !uploadKey) {
+        return res.status(400).json({ success: false, message: 'uploadId and uploadKey required' });
     }
+
     const trimmedTitle = String(imageTitle || '').trim();
     if (!trimmedTitle) {
-        return res.status(400).json({ message: 'Tiêu đề ảnh không được để trống' });
+        return res.status(400).json({ success: false, message: 'imageTitle required' });
     }
 
-    // validate category synchronously or minimally (optional)
-    let categoryDoc;
-    try {
-        categoryDoc = await findCategory(imageCategory);
-    } catch (err) {
-        return res.status(400).json({ message: err.message });
+    // Validate category exists (but don't fetch full doc)
+    if (!mongoose.Types.ObjectId.isValid(imageCategory) && typeof imageCategory !== 'string') {
+        return res.status(400).json({ success: false, message: 'imageCategory invalid' });
     }
 
-    // enqueue background job: do not download/process here
-    const job = await imageProcessingQueue.add('processUpload', {
+    // Enqueue background job — server does NOT download/process here
+    addJob({
         uploadKey,
         uploadId,
         userId: userId.toString(),
         isAdmin: !!isAdmin,
         imageTitle: trimmedTitle,
-        imageCategory: categoryDoc._id.toString(),
+        imageCategory,
         location,
         cameraModel,
         coordinates,
-        tags
-    }, {
-        removeOnComplete: 1000,
-        removeOnFail: 1000
+        tags,
     });
 
-    // respond quickly
+    // Return 202 Accepted immediately
     return res.status(202).json({
-        message: 'Upload accepted, processing started',
-        jobId: job.id
+        success: true,
+        message: 'Upload accepted — processing in background',
+        processingTime: 'typically 30-60 seconds',
     });
 });
 

@@ -32,6 +32,7 @@ import { logger } from './utils/logger.js';
 import { startSessionCleanup, stopSessionCleanup } from './utils/sessionCleanup.js';
 import { checkSocialScraper } from './controllers/socialShareController.js';
 import 'dotenv/config';
+import csurf from 'csurf';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -159,10 +160,19 @@ app.use('/api', apiLimiter);
 app.use('/api', requestQueue);
 
 // CSRF protection - generate token for all routes
-app.use('/api', csrfToken);
+// app.use('/api', csrfToken);
 
 // Apply CSRF validation for state-changing requests
-app.use('/api', validateCsrf);
+// app.use('/api', validateCsrf);
+
+// CSRF protection for non-API routes
+const csrfProtection = csurf({ cookie: true });
+
+// Apply CSRF only to non-API routes
+app.use((req, res, next) => {
+    if (req.path.startsWith('/api/')) return next();
+    return csrfProtection(req, res, next);
+});
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -255,6 +265,29 @@ if (env.NODE_ENV === 'production') {
 
 // Error handling middleware (must be last)
 app.use(errorHandler);
+
+// Detailed error handler for local debugging only
+if (process.env.NODE_ENV === 'development') {
+    app.use((err, req, res, next) => {
+        console.error('DEV ERROR:', err);
+        res.status(err.status || 500).json({
+            success: false,
+            message: err.message || 'Internal Server Error',
+            errorCode: err.code || 'INTERNAL_ERROR',
+            stack: err.stack,
+        });
+    });
+} else {
+    // Production: generic error response
+    app.use((err, req, res, next) => {
+        console.error(err);
+        res.status(err.status || 500).json({
+            success: false,
+            message: 'Something went wrong. Please try again later.',
+            errorCode: 'INTERNAL_ERROR',
+        });
+    });
+}
 
 // Start server and connect to database
 const startServer = async () => {

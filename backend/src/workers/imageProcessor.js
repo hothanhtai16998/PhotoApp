@@ -1,77 +1,64 @@
-import { Worker } from 'bullmq';
-import IORedis from 'ioredis';
-import { getObjectFromS3, streamToBuffer, uploadImageWithSizes, deleteObjectByKey } from '../libs/s3.js';
+import os from 'os';
+import sharp from 'sharp';
 import Image from '../models/Image.js';
 import Notification from '../models/Notification.js';
-import { extractDominantColors } from '../utils/colorExtractor.js';
-import { extractExifData } from '../utils/exifExtractor.js';
-import { findCategory, parseTags, validateCoordinates } from '../utils/imageHelpers.js'; // extract helper functions
-import { logger } from '../utils/logger.js';
-import { Worker as ThreadWorker } from 'worker_threads';
-import path from 'path';
-import os from 'os';
+import { getObjectFromS3, uploadImageWithSizes, deleteObjectByKey } from '../libs/s3.js';
+import { streamToBuffer, extractMetadata } from '../utils/imageHelpers.js';
+import { parseTags, validateCoordinates } from '../utils/imageHelpers.js';
+import { clearCache } from '../middlewares/cacheMiddleware.js';
 
-const connection = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379');
+// Safe logger fallback
+const log = (msg, data) => console.log(`[UPLOAD] ${msg}`, data || '');
+const logError = (msg, data) => console.error(`[ERROR] ${msg}`, data || '');
 
-const NUM_WORKERS = Math.max(2, Math.floor(os.cpus().length / 2));
-const workerPool = [];
+// Configure sharp
+const threadCount = Math.max(1, Math.floor(os.cpus().length / 2));
+sharp.concurrency(threadCount);
+log(`Sharp concurrency: ${threadCount} threads`);
 
-// Initialize worker thread pool for image processing
-for (let i = 0; i < NUM_WORKERS; i++) {
-    workerPool.push(
-        new ThreadWorker(new URL('./imageResizeWorker.js', import.meta.url))
-    );
-}
-
-const processImageInThread = (imageBuffer) => {
-    return new Promise((resolve, reject) => {
-        const worker = workerPool[Math.floor(Math.random() * workerPool.length)];
-        const handler = (msg) => {
-            worker.off('message', handler);
-            worker.off('error', reject);
-            if (msg.error) reject(new Error(msg.error));
-            else resolve(msg.result);
-        };
-        worker.on('message', handler);
-        worker.on('error', reject);
-        worker.postMessage({ buffer: imageBuffer });
-    });
-};
-
-const worker = new Worker('image-processing', async job => {
-    const data = job.data;
-    const { uploadKey, userId, isAdmin, imageTitle, imageCategory, location, cameraModel, coordinates, tags } = data;
+export async function processUploadJob(job) {
+    const jobStart = Date.now();
+    const { uploadKey, userId, isAdmin, imageTitle, imageCategory, location, cameraModel, coordinates, tags } = job;
 
     try {
-        // download raw upload as stream and buffer (streaming into sharp is possible too)
-        const raw = await getObjectFromS3(uploadKey);
-        if (!raw.Body) throw new Error('No raw object body');
+        // === Download raw file from S3 ===
+        log(`📥 Downloading ${uploadKey}...`);
+        const downloadStart = Date.now();
+        const rawStream = await getObjectFromS3(uploadKey);
+        if (!rawStream?.Body) throw new Error('Raw upload not found in S3');
+        const buffer = await streamToBuffer(rawStream.Body);
+        const downloadMs = Date.now() - downloadStart;
+        log(`✅ Downloaded ${(buffer.length / 1024).toFixed(2)}KB in ${downloadMs}ms`);
 
-        const buffer = await streamToBuffer(raw.Body);
+        // === Extract metadata ===
+        log(`🔍 Extracting metadata...`);
+        const metadataStart = Date.now();
+        const { dominantColors, exifData } = await extractMetadata(buffer);
+        const metadataMs = Date.now() - metadataStart;
+        log(`✅ Metadata extracted in ${metadataMs}ms`);
 
-        // extract metadata in parallel
-        const [dominantColors, exifData] = await Promise.all([
-            extractDominantColors(buffer, 3).catch(e => { logger.warn(e.message); return []; }),
-            extractExifData(buffer).catch(e => { logger.warn(e.message); return {}; })
-        ]);
+        // === Upload processed sizes ===
+        log(`📤 Uploading resized images to S3...`);
+        const uploadStart = Date.now();
+        const uploadResult = await uploadImageWithSizes(buffer, 'photo-app-images', uploadKey.replace(/[\/\\]/g, '-'));
+        const uploadMs = Date.now() - uploadStart;
+        log(`✅ Uploaded to S3 in ${uploadMs}ms`);
 
-        // upload processed sizes (this should use optimized uploadImageWithSizes implementation)
-        const uploadResult = await processImageInThread(buffer);
-
-        // create DB doc
+        // === Create DB document ===
+        log(`💾 Creating database record...`);
+        const dbStart = Date.now();
         const parsedTags = parseTags(tags);
         const parsedCoords = validateCoordinates(coordinates);
-        const categoryId = imageCategory; // already validated earlier in controller
 
-        const imageDoc = await Image.create({
+        const newImage = await Image.create({
             imageUrl: uploadResult.imageUrl,
             thumbnailUrl: uploadResult.thumbnailUrl,
             smallUrl: uploadResult.smallUrl,
             regularUrl: uploadResult.regularUrl,
             imageAvifUrl: uploadResult.imageAvifUrl,
             publicId: uploadResult.publicId,
-            imageTitle: imageTitle.substring(0, 255),
-            imageCategory: categoryId,
+            imageTitle: imageTitle?.substring(0, 255),
+            imageCategory,
             uploadedBy: userId,
             location: location?.trim() || undefined,
             coordinates: parsedCoords,
@@ -81,31 +68,39 @@ const worker = new Worker('image-processing', async job => {
             aperture: exifData.aperture || undefined,
             shutterSpeed: exifData.shutterSpeed || undefined,
             iso: exifData.iso || undefined,
-            dominantColors: dominantColors.length ? dominantColors : undefined,
-            tags: parsedTags.length ? parsedTags : undefined,
+            dominantColors: dominantColors?.length ? dominantColors : undefined,
+            tags: parsedTags?.length ? parsedTags : undefined,
             moderationStatus: isAdmin ? 'approved' : 'pending',
             isModerated: !!isAdmin,
-            ...(isAdmin ? { moderatedAt: new Date(), moderatedBy: userId } : {})
+            ...(isAdmin ? { moderatedAt: new Date(), moderatedBy: userId } : {}),
         });
+        const dbMs = Date.now() - dbStart;
+        log(`✅ Database record created in ${dbMs}ms`);
 
-        // clear listing cache (safe)
-        try { await Promise.resolve(require('../middlewares/cacheMiddleware').clearCache('/api/images')); } catch (e) { }
+        // === Cleanup ===
+        Promise.resolve(clearCache('/api/images')).catch(() => { });
+        Promise.resolve(deleteObjectByKey(uploadKey)).catch(() => { });
 
-        // delete raw upload
-        deleteObjectByKey(uploadKey).catch(e => logger.warn('Failed to delete raw upload', e.message));
+        // === Notify user ===
+        Promise.resolve(Notification.create({
+            recipient: userId,
+            type: 'upload_completed',
+            image: newImage._id,
+            metadata: { imageTitle },
+        })).catch(() => { });
 
-        // notify user
-        Notification.create({ recipient: userId, type: 'upload_completed', image: imageDoc._id }).catch(() => { });
+        const totalMs = Date.now() - jobStart;
+        log(`🎉 COMPLETE! Total: ${totalMs}ms (download: ${downloadMs}ms, metadata: ${metadataMs}ms, upload: ${uploadMs}ms, db: ${dbMs}ms)`);
 
-        return { success: true, imageId: imageDoc._id };
+        return { ok: true, imageId: newImage._id };
     } catch (err) {
-        logger.error('Image processing job failed', { err: err.message, jobId: job.id });
-        // notify user of failure
-        Notification.create({ recipient: userId, type: 'upload_failed', metadata: { error: err.message } }).catch(() => { });
+        // Notify user of failure (safe wrap)
+        Promise.resolve(Notification.create({
+            recipient: userId,
+            type: 'upload_failed',
+            metadata: { imageTitle, error: err?.message || 'Unknown error' },
+        })).catch(() => { });
+
         throw err;
     }
-}, { connection });
-
-// optional: worker event logs
-worker.on('completed', job => logger.info('Job completed', { id: job.id }));
-worker.on('failed', (job, err) => logger.error('Job failed', { id: job?.id, error: err?.message }));
+}
