@@ -15,7 +15,7 @@ export const imageUploadService = {
   ): Promise<PreUploadResponse> => {
     // NOTE: backend route is /api/images/preupload (no dash) so call '/images/preupload'
     const metadataRes = await api.post(
-      '/images/preupload',
+      '/images/pre-upload',
       {
         fileName: imageFile.name || 'upload.jpg',
         fileType: imageFile.type || 'application/octet-stream',
