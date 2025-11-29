@@ -53,7 +53,7 @@ router.get('/:imageId/download', optionalAuth, downloadImage);
 
 // Protected routes (with CSRF protection for state-changing operations)
 // Pre-upload: Upload image to S3 only (no database record)
-router.post('/preupload', protectedRoute, uploadLimiter, preUploadImage);
+router.post('/pre-upload', protectedRoute, uploadLimiter, preUploadImage);
 // Finalize: Link metadata to pre-uploaded image and create database record
 router.post('/finalize', protectedRoute, finalizeImageUpload);
 // Bulk upload notification

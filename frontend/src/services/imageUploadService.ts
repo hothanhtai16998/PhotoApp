@@ -13,25 +13,28 @@ export const imageUploadService = {
     imageFile: File,
     onUploadProgress?: (progress: number) => void
   ): Promise<PreUploadResponse> => {
+    // NOTE: backend route is /api/images/preupload (no dash) so call '/images/preupload'
     const metadataRes = await api.post(
-      '/images/pre-upload',
+      '/images/preupload',
       {
         fileName: imageFile.name || 'upload.jpg',
         fileType: imageFile.type || 'application/octet-stream',
         fileSize: imageFile.size,
       },
       {
-        withCredentials: true,
+        withCredentials: true, // keep if your API needs cookies; otherwise your api client may use token
       }
     );
 
     const preUploadData: PreUploadResponse = metadataRes.data;
 
+    // PUT to presigned URL must not include cookies/credentials
     await axios.put(preUploadData.uploadUrl, imageFile, {
       headers: {
         'Content-Type': imageFile.type || 'application/octet-stream',
       },
       timeout: 180000,
+      withCredentials: false, // important for S3 presigned PUT
       onUploadProgress: (progressEvent) => {
         if (onUploadProgress && progressEvent.total) {
           const percentCompleted = Math.round(
@@ -127,8 +130,3 @@ export const imageUploadService = {
     }
   },
 };
-
-
-
-
-
