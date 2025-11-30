@@ -145,10 +145,10 @@ const ImageModal = ({
     if (!renderAsPage) {
       // Store current scroll position
       const scrollY = window.scrollY;
-      
+
       // Calculate scrollbar width to prevent layout shift
       const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-      
+
       // Use both overflow hidden AND position fixed for maximum scroll prevention
       // This ensures scroll is prevented on all browsers and devices
       document.documentElement.style.overflow = 'hidden';
@@ -189,7 +189,7 @@ const ImageModal = ({
 
       // Prevent scroll events from reaching body - more aggressive approach
       const preventBodyScroll = (e: Event) => {
-        const target = e.target as HTMLElement;
+        const target = e.target as Element;
         // Allow scrolling within modal content only
         const modalContent = target.closest('.image-modal-content');
         if (modalContent) {
@@ -206,7 +206,7 @@ const ImageModal = ({
 
       // Prevent scroll events on document and window
       const preventScroll = (e: Event) => {
-        const target = e.target as HTMLElement;
+        const target = e.target as Element;
         // Only allow scrolling within modal content
         const modalContent = target.closest('.image-modal-content');
         if (modalContent) {
@@ -220,12 +220,12 @@ const ImageModal = ({
         e.stopPropagation();
         return false;
       };
-      
+
       // Additional handler specifically for scroll events (not wheel/touch)
       const preventScrollEvent = (e: Event) => {
         // For scroll events, we need to check if it's the window/document scrolling
         // If it's not the modal content scrolling, prevent it
-        const target = e.target as HTMLElement;
+        const target = e.target as Element;
         if (target === document.documentElement || target === document.body) {
           // This is a body/document scroll - prevent it
           e.preventDefault();
@@ -257,13 +257,13 @@ const ImageModal = ({
       document.documentElement.addEventListener('scroll', preventScrollEvent, { passive: false, capture: true });
       document.body.addEventListener('scroll', preventScrollEvent, { passive: false, capture: true });
       window.addEventListener('scroll', preventScrollEvent, { passive: false, capture: true });
-      
+
       // Use preventScroll for wheel and touchmove
       document.addEventListener('wheel', preventScroll, { passive: false, capture: true });
       document.addEventListener('touchmove', preventScroll, { passive: false, capture: true });
       window.addEventListener('wheel', preventBodyScroll, { passive: false, capture: true });
       window.addEventListener('touchmove', preventBodyScroll, { passive: false, capture: true });
-      
+
       // Also prevent on body and documentElement directly
       document.body.addEventListener('wheel', preventScroll, { passive: false, capture: true });
       document.body.addEventListener('touchmove', preventScroll, { passive: false, capture: true });
@@ -275,12 +275,12 @@ const ImageModal = ({
         const target = e.target as HTMLElement;
         // Allow keyboard scrolling within modal content and input fields
         if (target.closest('.image-modal-content') ||
-            target.tagName === 'INPUT' ||
-            target.tagName === 'TEXTAREA' ||
-            target.isContentEditable) {
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable) {
           return;
         }
-        
+
         // Prevent keyboard scrolling on body
         if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) {
           e.preventDefault();
@@ -297,7 +297,7 @@ const ImageModal = ({
           overlay.removeEventListener('wheel', handleOverlayWheel);
           overlay.removeEventListener('touchmove', handleOverlayTouchMove);
         }
-        
+
         document.removeEventListener('scroll', preventScrollEvent, { capture: true } as EventListenerOptions);
         document.documentElement.removeEventListener('scroll', preventScrollEvent, { capture: true } as EventListenerOptions);
         document.body.removeEventListener('scroll', preventScrollEvent, { capture: true } as EventListenerOptions);
@@ -322,7 +322,7 @@ const ImageModal = ({
         document.body.style.width = '';
         document.body.classList.remove('image-modal-open');
         document.body.style.paddingRight = '';
-        
+
         // Restore scroll position
         window.scrollTo(0, scrollY);
       };

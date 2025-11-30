@@ -32,7 +32,6 @@ import { logger } from './utils/logger.js';
 import { startSessionCleanup, stopSessionCleanup } from './utils/sessionCleanup.js';
 import { checkSocialScraper } from './controllers/socialShareController.js';
 import 'dotenv/config';
-import csurf from 'csurf';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -159,20 +158,11 @@ app.use('/api', apiLimiter);
 // Apply request queuing (after rate limiting, for GET requests that hit limits)
 app.use('/api', requestQueue);
 
-// CSRF protection - generate token for all routes
-// app.use('/api', csrfToken);
+// CSRF protection - generate token for ALL requests
+app.use('/api', csrfToken);
 
-// Apply CSRF validation for state-changing requests
-// app.use('/api', validateCsrf);
-
-// CSRF protection for non-API routes
-const csrfProtection = csurf({ cookie: true });
-
-// Apply CSRF only to non-API routes
-app.use((req, res, next) => {
-    if (req.path.startsWith('/api/')) return next();
-    return csrfProtection(req, res, next);
-});
+// Apply CSRF validation for state-changing requests (POST, PUT, DELETE, PATCH)
+app.use('/api', validateCsrf);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

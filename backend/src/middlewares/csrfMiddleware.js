@@ -1,16 +1,21 @@
 import crypto from 'crypto';
-import { asyncHandler } from './asyncHandler.js';
 import { logger } from '../utils/logger.js';
 import { env } from '../libs/env.js';
 
 /**
- * CSRF Protection Middleware
- * Uses double-submit cookie pattern for CSRF protection
+ * CSRF Protection Middleware - Double-Submit Cookie Pattern
  * 
- * This middleware:
- * 1. Generates a CSRF token and sets it as a cookie
- * 2. Validates the token on state-changing requests
- * 3. Works with cookie-based authentication
+ * Flow:
+ * 1. Frontend makes ANY request -> Server generates CSRF token if missing
+ * 2. Token stored in cookie (auto-sent by browser) + sent in response header
+ * 3. Frontend reads token from response header or cookie
+ * 4. Frontend includes token in X-XSRF-TOKEN header on POST/PUT/DELETE/PATCH
+ * 5. Server validates: cookie token === header token
+ * 
+ * Why this works:
+ * - Cookies are auto-sent by browser (attacker can read from their own request)
+ * - Headers are NOT auto-sent by browser (attacker cannot read due to Same-Origin Policy)
+ * - Only legitimate frontend code can read the response and send token back in header
  */
 
 const CSRF_TOKEN_COOKIE = 'XSRF-TOKEN';
@@ -24,116 +29,138 @@ const generateToken = () => {
 };
 
 /**
- * Middleware to generate and set CSRF token
- * Should be applied to all routes that need CSRF protection
+ * CSRF Token Generation Middleware
+ * Applied to ALL requests - generates token if it doesn't exist
+ * This ensures every authenticated user always has a valid token
  */
 export const csrfToken = (req, res, next) => {
-    // Only generate token for GET requests or if token doesn't exist
-    if (req.method === 'GET' || !req.cookies[CSRF_TOKEN_COOKIE]) {
+    // Check if token already exists in cookie
+    if (!req.cookies[CSRF_TOKEN_COOKIE]) {
+        // Generate new token
         const token = generateToken();
-        
         const isProduction = env.NODE_ENV === 'production';
+
+        // Set cookie (will be auto-sent on all future requests)
         res.cookie(CSRF_TOKEN_COOKIE, token, {
-            httpOnly: false, // Must be readable by JavaScript for double-submit pattern
-            secure: isProduction,
-            sameSite: isProduction ? 'none' : 'lax',
+            httpOnly: false, // JavaScript must be able to read for double-submit
+            secure: isProduction, // HTTPS only in production
+            sameSite: isProduction ? 'strict' : 'lax', // Prevent cross-site cookie sending
             maxAge: 24 * 60 * 60 * 1000, // 24 hours
+            path: '/', // Available to entire app
         });
-        
-        // Also set in response header for easy access
-        res.setHeader('X-CSRF-Token', token);
+
+        logger.info('CSRF token generated', { path: req.path });
     }
-    
+
+    // Send token in response header for frontend convenience
+    // Frontend can use this immediately without reading cookie
+    const currentToken = req.cookies[CSRF_TOKEN_COOKIE];
+    if (currentToken) {
+        res.setHeader('X-CSRF-Token', currentToken);
+    }
+
     next();
 };
 
 /**
- * Middleware to validate CSRF token
- * Should be applied to state-changing operations (POST, PUT, DELETE, PATCH)
+ * CSRF Token Validation Middleware
+ * Applied to state-changing requests (POST, PUT, DELETE, PATCH)
+ * Validates that header token matches cookie token
  */
-export const validateCsrf = asyncHandler(async (req, res, next) => {
-    // Skip CSRF validation for GET, HEAD, OPTIONS requests
+export const validateCsrf = (req, res, next) => {
+    // Skip validation for safe HTTP methods
     if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
         return next();
     }
 
-    // Skip CSRF validation for public endpoints (signup, signin, refresh, analytics tracking)
-    // Use originalUrl to get the full path (req.path is relative when using mounted routers)
-    const fullPath = req.originalUrl.split('?')[0]; // Remove query string
+    // Skip validation for public endpoints (no authentication required)
+    const fullPath = req.originalUrl.split('?')[0];
     const publicPaths = [
-        '/api/auth/signup', 
-        '/api/auth/signin', 
+        '/api/auth/signup',
+        '/api/auth/signin',
         '/api/auth/refresh',
-        '/api/admin/analytics/track' // Public tracking endpoint
+        '/api/admin/analytics/track',
     ];
-    if (publicPaths.some(path => fullPath.startsWith(path))) {
+
+    if (publicPaths.some((path) => fullPath.startsWith(path))) {
         return next();
     }
 
-    // Get token from cookie
+    // For protected endpoints: validate CSRF token
     const cookieToken = req.cookies[CSRF_TOKEN_COOKIE];
-    
-    // Get token from header (preferred) or body
-    const headerToken = req.headers[CSRF_TOKEN_HEADER.toLowerCase()] || req.headers['x-csrf-token'];
-    const bodyToken = req.body?._csrf;
+    const headerToken = req.get(CSRF_TOKEN_HEADER) || req.get('x-csrf-token');
 
-    const submittedToken = headerToken || bodyToken;
-
-    // Validate token
-    if (!cookieToken || !submittedToken) {
-        logger.warn('CSRF token missing', {
+    // Both must exist
+    if (!cookieToken) {
+        logger.warn('CSRF validation failed - no cookie token', {
             path: fullPath,
             method: req.method,
-            hasCookie: !!cookieToken,
-            hasSubmitted: !!submittedToken,
         });
-        
         return res.status(403).json({
             success: false,
-            message: 'CSRF token missing. Please refresh the page and try again.',
+            message: 'CSRF token missing. Please refresh and try again.',
             errorCode: 'CSRF_TOKEN_MISSING',
         });
     }
 
-    if (cookieToken !== submittedToken) {
-        logger.warn('CSRF token mismatch', {
+    if (!headerToken) {
+        logger.warn('CSRF validation failed - no header token', {
             path: fullPath,
             method: req.method,
-            ip: req.ip,
         });
-        
         return res.status(403).json({
             success: false,
-            message: 'Invalid CSRF token. Please refresh the page and try again.',
+            message: 'CSRF token missing in request. Please refresh and try again.',
+            errorCode: 'CSRF_TOKEN_MISSING',
+        });
+    }
+
+    // Tokens must match
+    if (cookieToken !== headerToken) {
+        logger.warn('CSRF validation failed - token mismatch', {
+            path: fullPath,
+            method: req.method,
+        });
+        return res.status(403).json({
+            success: false,
+            message: 'Invalid CSRF token. Please refresh and try again.',
             errorCode: 'CSRF_TOKEN_INVALID',
         });
     }
 
-    // Token is valid, continue
+    // Valid - continue
     next();
-});
+};
 
 /**
- * Get CSRF token endpoint (for frontend to retrieve token)
+ * Endpoint to retrieve current CSRF token
+ * Used by frontend to initialize token on page load
  */
 export const getCsrfToken = (req, res) => {
     const token = req.cookies[CSRF_TOKEN_COOKIE];
-    
-    if (!token) {
-        // Generate new token if doesn't exist
-        const newToken = generateToken();
-        const isProduction = env.NODE_ENV === 'production';
-        
-        res.cookie(CSRF_TOKEN_COOKIE, newToken, {
-            httpOnly: false,
-            secure: isProduction,
-            sameSite: isProduction ? 'none' : 'lax',
-            maxAge: 24 * 60 * 60 * 1000,
+
+    if (token) {
+        return res.status(200).json({
+            success: true,
+            csrfToken: token,
         });
-        
-        return res.json({ csrfToken: newToken });
     }
-    
-    res.json({ csrfToken: token });
+
+    // If no token exists, generate one
+    const newToken = generateToken();
+    const isProduction = env.NODE_ENV === 'production';
+
+    res.cookie(CSRF_TOKEN_COOKIE, newToken, {
+        httpOnly: false,
+        secure: isProduction,
+        sameSite: isProduction ? 'strict' : 'lax',
+        maxAge: 24 * 60 * 60 * 1000,
+        path: '/',
+    });
+
+    res.status(200).json({
+        success: true,
+        csrfToken: newToken,
+    });
 };
 
