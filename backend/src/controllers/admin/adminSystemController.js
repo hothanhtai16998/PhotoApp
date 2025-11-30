@@ -159,6 +159,9 @@ export const createSystemAnnouncement = asyncHandler(async (req, res) => {
             recipients = allUsers.map(user => user._id);
         }
 
+        const titleStr = String(title);
+        const messageStr = String(message);
+
         // Create notifications for all recipients
         const notificationPromises = recipients.map(recipientId =>
             Notification.create({
@@ -166,8 +169,8 @@ export const createSystemAnnouncement = asyncHandler(async (req, res) => {
                 type: type,
                 actor: req.user._id,
                 metadata: {
-                    title: title,
-                    message: message,
+                    title: titleStr,
+                    message: messageStr,
                     announcementType: type,
                 },
             })

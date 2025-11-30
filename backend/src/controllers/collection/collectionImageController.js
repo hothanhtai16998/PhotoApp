@@ -247,6 +247,10 @@ export const getCollectionsContainingImage = async (req, res) => {
         const { imageId } = req.params;
         const userId = req.user._id;
 
+        if (!mongoose.Types.ObjectId.isValid(imageId)) {
+            return res.status(400).json({ success: false, message: 'Invalid image ID' });
+        }
+
         const collections = await Collection.find({
             createdBy: userId,
             images: imageId,
@@ -292,6 +296,12 @@ export const reorderCollectionImages = async (req, res) => {
 
         if (!mongoose.Types.ObjectId.isValid(collectionId)) {
             return res.status(400).json({ success: false, message: 'Invalid collection ID' });
+        }
+
+        // Validate imageIds are valid ObjectIds
+        const invalidIds = (Array.isArray(imageIds) ? imageIds : []).filter(id => !mongoose.Types.ObjectId.isValid(String(id || '')));
+        if (invalidIds.length > 0) {
+            return res.status(400).json({ success: false, message: 'One or more imageIds are invalid', invalidIds });
         }
 
         // Verify collection exists and belongs to user

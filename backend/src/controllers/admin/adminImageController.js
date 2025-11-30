@@ -16,14 +16,14 @@ export const getAllImagesAdmin = asyncHandler(async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 20), 100);
     const skip = (page - 1) * limit;
-    const search = req.query.search?.trim();
-    const category = req.query.category?.trim();
-    const userId = req.query.userId?.trim();
+    const search = String(req.query.search || '').trim();
+    const category = String(req.query.category || '').trim();
+    const userId = String(req.query.userId || '').trim();
 
     const query = {};
 
     if (search) {
-        const esc = escapeRegex(search);
+        const esc = escapeRegex(String(search || '').trim());
         query.$or = [
             { imageTitle: { $regex: esc, $options: 'i' } },
             { location: { $regex: esc, $options: 'i' } },
@@ -32,7 +32,7 @@ export const getAllImagesAdmin = asyncHandler(async (req, res) => {
 
     if (category) {
         // Find category by name (case-insensitive)
-        const escaped = escapeRegex(category);
+        const escaped = escapeRegex(String(category || '').trim());
         const categoryDoc = await Category.findOne({
             name: { $regex: new RegExp(`^${escaped}$`, 'i') },
             isActive: true,
@@ -59,7 +59,7 @@ export const getAllImagesAdmin = asyncHandler(async (req, res) => {
         query.imageCategory = { $exists: true, $ne: null };
     }
 
-    if (userId) {
+    if (userId && mongoose.Types.ObjectId.isValid(userId)) {
         query.uploadedBy = userId;
     }
 
@@ -87,12 +87,13 @@ export const getAllImagesAdmin = asyncHandler(async (req, res) => {
     // This catches any edge cases where ObjectId might match but category name doesn't
     // This is a safety net to ensure images only appear in their correct category
     if (category) {
+        const normalizedCategory = String(category || '').toLowerCase().trim();
         images = images.filter(img => {
             if (!img.imageCategory || typeof img.imageCategory !== 'object' || !img.imageCategory.name) {
                 return false; // Filter out images with invalid categories
             }
             // Case-insensitive match to ensure exact category match
-            return img.imageCategory.name.toLowerCase() === category.toLowerCase();
+            return String(img.imageCategory.name || '').toLowerCase().trim() === normalizedCategory;
         });
     }
 
@@ -191,7 +192,8 @@ export const updateImage = asyncHandler(async (req, res) => {
     const updateData = {};
 
     if (location !== undefined) {
-        updateData.location = location?.trim() || null;
+        const loc = String(location || '').trim();
+        updateData.location = loc.length ? loc : null;
     }
 
     if (coordinates !== undefined) {
@@ -200,12 +202,12 @@ export const updateImage = asyncHandler(async (req, res) => {
         if (coordinates) {
             try {
                 parsedCoordinates = typeof coordinates === 'string' ? JSON.parse(coordinates) : coordinates;
-                if (parsedCoordinates.latitude && parsedCoordinates.longitude) {
-                    const lat = parseFloat(parsedCoordinates.latitude);
-                    const lng = parseFloat(parsedCoordinates.longitude);
-                    if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                        updateData.coordinates = { latitude: lat, longitude: lng };
-                    }
+                const latRaw = parsedCoordinates?.latitude;
+                const lngRaw = parsedCoordinates?.longitude;
+                const lat = latRaw !== undefined ? parseFloat(latRaw) : NaN;
+                const lng = lngRaw !== undefined ? parseFloat(lngRaw) : NaN;
+                if (!Number.isNaN(lat) && !Number.isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                    updateData.coordinates = { latitude: lat, longitude: lng };
                 }
             } catch (error) {
                 logger.warn('Invalid coordinates format:', error);
@@ -216,11 +218,12 @@ export const updateImage = asyncHandler(async (req, res) => {
     }
 
     if (imageTitle !== undefined) {
-        updateData.imageTitle = imageTitle?.trim() || image.imageTitle;
+        updateData.imageTitle = String(imageTitle || image.imageTitle).trim();
     }
 
     if (cameraModel !== undefined) {
-        updateData.cameraModel = cameraModel?.trim() || null;
+        const cm = String(cameraModel || '').trim();
+        updateData.cameraModel = cm.length ? cm : null;
     }
 
     // Update image
@@ -272,7 +275,7 @@ export const moderateImage = asyncHandler(async (req, res) => {
     image.moderationStatus = status;
     image.moderatedAt = new Date();
     image.moderatedBy = req.user._id;
-    image.moderationNotes = notes?.trim() || undefined;
+    image.moderationNotes = notes !== undefined ? String(notes).trim() || undefined : undefined;
     await image.save();
 
     res.status(200).json({

@@ -292,6 +292,10 @@ export const getFollowCounts = asyncHandler(async (req, res) => {
  */
 export const getUserFollowStats = asyncHandler(async (req, res) => {
     const { userId } = req.params;
+    // Validate userId format
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ success: false, message: 'Invalid user ID', errorCode: 'INVALID_ID' });
+    }
 
     // Validate user exists
     const user = await User.findById(userId);

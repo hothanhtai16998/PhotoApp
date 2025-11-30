@@ -107,6 +107,11 @@ export const replaceImage = asyncHandler(async (req, res) => {
         return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
 
+    // Quick validation of imageId format
+    if (!mongoose.Types.ObjectId.isValid(imageId)) {
+        return res.status(400).json({ success: false, message: 'Invalid imageId' });
+    }
+
     const result = await replaceSingleImage({
         imageId,
         fileBuffer: file.buffer,
@@ -139,6 +144,12 @@ export const batchReplaceImages = asyncHandler(async (req, res) => {
         }
     }
     if (!Array.isArray(imageIds)) imageIds = [];
+
+    // Pre-validate imageIds to avoid starting work on malformed ids
+    const invalidIds = imageIds.filter(id => !mongoose.Types.ObjectId.isValid(String(id || '')));
+    if (invalidIds.length > 0) {
+        return res.status(400).json({ success: false, message: 'One or more imageIds are invalid', invalidIds });
+    }
 
     if (imageIds.length === 0 || files.length === 0) {
         return res.status(400).json({ success: false, message: 'imageIds and files are required' });

@@ -74,14 +74,14 @@ export const createTemplate = asyncHandler(async (req, res) => {
     const userId = req.user._id;
     const { name, description, templateName, category, defaultTags, defaultIsPublic, iconUrl } = req.body;
 
-    if (!name || name.trim().length === 0) {
+    if (!name || String(name || '').trim().length === 0) {
         return res.status(400).json({
             success: false,
             message: 'Template name is required',
         });
     }
 
-    if (!templateName || templateName.trim().length === 0) {
+    if (!templateName || String(templateName || '').trim().length === 0) {
         return res.status(400).json({
             success: false,
             message: 'Template display name is required',
@@ -92,21 +92,21 @@ export const createTemplate = asyncHandler(async (req, res) => {
     let processedTags = [];
     if (Array.isArray(defaultTags)) {
         processedTags = defaultTags
-            .map(tag => String(tag).trim().toLowerCase())
+            .map(tag => String(tag || '').trim().toLowerCase())
             .filter(tag => tag.length > 0)
             .slice(0, 10);
     }
 
     const template = new CollectionTemplate({
-        name: name.trim(),
-        description: description?.trim() || '',
-        templateName: templateName.trim(),
+        name: String(name || '').trim(),
+        description: String(description || '').trim() || '',
+        templateName: String(templateName || '').trim(),
         category: category || 'other',
         defaultTags: processedTags,
         defaultIsPublic: defaultIsPublic !== undefined ? defaultIsPublic : true,
         createdBy: userId,
         isSystemTemplate: false,
-        iconUrl: iconUrl?.trim() || undefined,
+        iconUrl: String(iconUrl || '').trim() || undefined,
     });
 
     await template.save();
@@ -150,14 +150,14 @@ export const createCollectionFromTemplate = asyncHandler(async (req, res) => {
     }
 
     // Use template defaults, but allow overrides
-    const collectionName = name?.trim() || template.templateName;
-    const collectionDescription = description?.trim() || template.description || '';
+    const collectionName = String(name || '').trim() || template.templateName;
+    const collectionDescription = String(description || '').trim() || template.description || '';
     const collectionIsPublic = isPublic !== undefined ? isPublic : template.defaultIsPublic;
 
     // Merge template tags with provided tags
     const templateTags = template.defaultTags || [];
     const providedTags = Array.isArray(tags)
-        ? tags.map(tag => String(tag).trim().toLowerCase()).filter(tag => tag.length > 0)
+        ? tags.map(tag => String(tag || '').trim().toLowerCase()).filter(tag => tag.length > 0)
         : [];
     const mergedTags = [...new Set([...templateTags, ...providedTags])].slice(0, 10);
 
@@ -226,18 +226,18 @@ export const updateTemplate = asyncHandler(async (req, res) => {
     }
 
     // Update fields
-    if (name !== undefined) template.name = name.trim();
-    if (description !== undefined) template.description = description?.trim() || '';
-    if (templateName !== undefined) template.templateName = templateName.trim();
+    if (name !== undefined) template.name = String(name || '').trim();
+    if (description !== undefined) template.description = String(description || '').trim() || '';
+    if (templateName !== undefined) template.templateName = String(templateName || '').trim();
     if (category !== undefined) template.category = category;
     if (defaultIsPublic !== undefined) template.defaultIsPublic = defaultIsPublic;
-    if (iconUrl !== undefined) template.iconUrl = iconUrl?.trim() || undefined;
+    if (iconUrl !== undefined) template.iconUrl = String(iconUrl || '').trim() || undefined;
 
     // Process tags
     if (defaultTags !== undefined) {
         template.defaultTags = Array.isArray(defaultTags)
             ? defaultTags
-                .map(tag => String(tag).trim().toLowerCase())
+                .map(tag => String(tag || '').trim().toLowerCase())
                 .filter(tag => tag.length > 0)
                 .slice(0, 10)
             : [];
@@ -294,6 +294,10 @@ export const saveCollectionAsTemplate = asyncHandler(async (req, res) => {
     const { templateName, category } = req.body;
 
     // Get collection
+    if (!mongoose.Types.ObjectId.isValid(collectionId)) {
+        return res.status(400).json({ success: false, message: 'Invalid collection ID' });
+    }
+
     const collection = await Collection.findOne({
         _id: collectionId,
         createdBy: userId,
@@ -306,7 +310,7 @@ export const saveCollectionAsTemplate = asyncHandler(async (req, res) => {
         });
     }
 
-    if (!templateName || templateName.trim().length === 0) {
+    if (!templateName || String(templateName || '').trim().length === 0) {
         return res.status(400).json({
             success: false,
             message: 'Template name is required',
@@ -317,7 +321,7 @@ export const saveCollectionAsTemplate = asyncHandler(async (req, res) => {
     const template = new CollectionTemplate({
         name: collection.name,
         description: collection.description || '',
-        templateName: templateName.trim(),
+        templateName: String(templateName || '').trim(),
         category: category || 'other',
         defaultTags: collection.tags || [],
         defaultIsPublic: collection.isPublic,

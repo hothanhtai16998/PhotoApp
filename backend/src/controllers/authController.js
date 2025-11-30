@@ -90,11 +90,11 @@ export const signUp = asyncHandler(async (req, res) => {
     });
 
     if (existingUser) {
-        if (existingUser.username === username) {
+        // Compare normalized values to avoid case-sensitivity issues
+        if (existingUser.username && normalizedUsername && normalizeUsername(existingUser.username) === normalizedUsername) {
             return res.status(409).json({ message: "Tên tài khoản đã tồn tại" });
         }
-        // If email exists and user is OAuth user, provide helpful message
-        if (existingUser.email === email.toLowerCase()) {
+        if (existingUser.email && normalizedEmail && normalizeEmail(existingUser.email) === normalizedEmail) {
             if (existingUser.isOAuthUser) {
                 return res.status(409).json({
                     message: "Email này đã đăng ký với tài khoản Google, xin vui lòng đăng nhập bằng Google."
@@ -119,8 +119,8 @@ export const signUp = asyncHandler(async (req, res) => {
         email: normalizedEmail,
         displayName,
         isOAuthUser: false,
-        phone: phone?.trim() || undefined,
-        bio: bio?.trim() || undefined,
+        phone: String(phone || '').trim() || undefined,
+        bio: String(bio || '').trim() || undefined,
     });
 
     return res.status(201).json({
@@ -133,16 +133,19 @@ export const signIn = asyncHandler(async (req, res) => {
 
     // Note: Input validation is handled by validationMiddleware
 
-    // Normalize username (allow username or email input)
-    const normalizedIdentifier = normalizeUsername(username || username);
+    // Normalize identifier (allow either username or email)
+    const identifier = String(username || '').trim();
+    let query;
+    if (identifier.includes('@')) {
+        const normalized = normalizeEmail(identifier);
+        query = { email: normalized };
+    } else {
+        const normalized = normalizeUsername(identifier);
+        query = { username: normalized };
+    }
 
-    // Find user by username or email
-    const user = await User.findOne({
-        $or: [
-            { username: normalizedIdentifier },
-            { email: normalizeEmail(username) },
-        ],
-    });
+    // Find user by the selected identifier
+    const user = await User.findOne(query);
 
     if (!user) {
         return res.status(401).json({
@@ -452,9 +455,9 @@ export const googleCallback = asyncHandler(async (req, res) => {
 
             user = await User.create({
                 username,
-                email: googleUser.email || `${googleUser.id}@google.com`,
-                displayName: googleUser.name || 'Google User',
-                avatarUrl: googleUser.picture,
+                email: normalizeEmail(googleUser.email || `${googleUser.id}@google.com`),
+                displayName: String(googleUser.name || 'Google User'),
+                avatarUrl: googleUser.picture ? String(googleUser.picture) : undefined,
                 isOAuthUser: true,
                 // No password for OAuth users
             });

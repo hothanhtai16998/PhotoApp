@@ -154,7 +154,7 @@ export const createAdminRole = asyncHandler(async (req, res) => {
         const ipv6CompressedRegex = /^::1$|^::$|^([0-9a-fA-F]{1,4}:)+::([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}(\/\d{1,3})?$/;
 
         validatedIPs = allowedIPs.filter(ip => {
-            const trimmed = ip.trim();
+            const trimmed = String(ip || '').trim();
             return ipv4Regex.test(trimmed) || ipv6Regex.test(trimmed) || ipv6CompressedRegex.test(trimmed);
         });
 
@@ -189,7 +189,7 @@ export const createAdminRole = asyncHandler(async (req, res) => {
             permissions: adminRole.permissions,
             grantedBy: adminRole.grantedBy,
         },
-        reason: req.body.reason || null,
+        reason: req.body.reason ? String(req.body.reason) : null,
         ipAddress: getClientIp(req),
     });
 
@@ -348,7 +348,7 @@ export const updateAdminRole = asyncHandler(async (req, res) => {
             role: updatedRole.role,
             permissions: updatedRole.permissions.toObject(),
         },
-        reason: reason || null,
+        reason: reason ? String(reason) : null,
         ipAddress: getClientIp(req),
     });
 
@@ -402,7 +402,7 @@ export const deleteAdminRole = asyncHandler(async (req, res) => {
         performedBy: req.user,
         targetUser: targetUser || { _id: userId },
         oldRole,
-        reason: reason || null,
+        reason: reason ? String(reason) : null,
         ipAddress: getClientIp(req),
     });
 

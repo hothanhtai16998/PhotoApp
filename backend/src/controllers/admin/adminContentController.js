@@ -13,7 +13,7 @@ export const getAllFavorites = asyncHandler(async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 20), 100);
     const skip = (page - 1) * limit;
-    const search = req.query.search || '';
+    const search = String(req.query.search || '').trim();
 
     // Build query
     let userQuery = {};
@@ -196,17 +196,18 @@ export const rejectContent = asyncHandler(async (req, res) => {
     image.moderatedAt = new Date();
     image.moderatedBy = req.user._id;
     if (reason) {
-        image.moderationNotes = reason;
+        const reasonStr = String(reason);
+        image.moderationNotes = reasonStr;
     }
     await image.save();
 
     // Log action
     await SystemLog.create({
         level: 'info',
-        message: `Content rejected: ${contentId}${reason ? ` - Reason: ${reason}` : ''}`,
+        message: `Content rejected: ${contentId}${reason ? ` - Reason: ${String(reason)}` : ''}`,
         userId: req.user._id,
         action: 'rejectContent',
-        metadata: { contentId, reason },
+        metadata: { contentId, reason: reason ? String(reason) : undefined },
     });
 
     res.json({

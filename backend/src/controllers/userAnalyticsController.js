@@ -31,10 +31,10 @@ export const getUserAnalytics = asyncHandler(async (req, res) => {
     userImages.forEach(image => {
         // Process dailyViews
         if (image.dailyViews) {
-            const dailyViewsObj = image.dailyViews instanceof Map 
-                ? Object.fromEntries(image.dailyViews) 
+            const dailyViewsObj = image.dailyViews instanceof Map
+                ? Object.fromEntries(image.dailyViews)
                 : image.dailyViews;
-            
+
             Object.entries(dailyViewsObj).forEach(([date, count]) => {
                 if (date >= startDate.toISOString().split('T')[0] && date <= endDate.toISOString().split('T')[0]) {
                     viewsOverTime[date] = (viewsOverTime[date] || 0) + count;
@@ -44,10 +44,10 @@ export const getUserAnalytics = asyncHandler(async (req, res) => {
 
         // Process dailyDownloads
         if (image.dailyDownloads) {
-            const dailyDownloadsObj = image.dailyDownloads instanceof Map 
-                ? Object.fromEntries(image.dailyDownloads) 
+            const dailyDownloadsObj = image.dailyDownloads instanceof Map
+                ? Object.fromEntries(image.dailyDownloads)
                 : image.dailyDownloads;
-            
+
             Object.entries(dailyDownloadsObj).forEach(([date, count]) => {
                 if (date >= startDate.toISOString().split('T')[0] && date <= endDate.toISOString().split('T')[0]) {
                     downloadsOverTime[date] = (downloadsOverTime[date] || 0) + count;
@@ -94,9 +94,9 @@ export const getUserAnalytics = asyncHandler(async (req, res) => {
     userImages.forEach(image => {
         if (image.location) {
             // Extract country/region from location (simple approach)
-            const locationParts = image.location.split(',').map(s => s.trim());
+            const locationParts = (image.location || '').split(',').map(s => String(s || '').trim());
             const country = locationParts[locationParts.length - 1] || image.location;
-            
+
             if (!geographicDistribution[country]) {
                 geographicDistribution[country] = {
                     location: country,
@@ -105,7 +105,7 @@ export const getUserAnalytics = asyncHandler(async (req, res) => {
                     totalDownloads: 0,
                 };
             }
-            
+
             geographicDistribution[country].imageCount += 1;
             geographicDistribution[country].totalViews += image.views || 0;
             geographicDistribution[country].totalDownloads += image.downloads || 0;
@@ -120,7 +120,7 @@ export const getUserAnalytics = asyncHandler(async (req, res) => {
     const categoryPerformance = {};
     userImages.forEach(image => {
         const categoryName = image.imageCategory?.name || 'Unknown';
-        
+
         if (!categoryPerformance[categoryName]) {
             categoryPerformance[categoryName] = {
                 category: categoryName,
@@ -130,7 +130,7 @@ export const getUserAnalytics = asyncHandler(async (req, res) => {
                 avgViews: 0,
             };
         }
-        
+
         categoryPerformance[categoryName].imageCount += 1;
         categoryPerformance[categoryName].totalViews += image.views || 0;
         categoryPerformance[categoryName].totalDownloads += image.downloads || 0;

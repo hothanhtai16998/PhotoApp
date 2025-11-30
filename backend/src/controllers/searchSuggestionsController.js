@@ -15,7 +15,7 @@ const escapeRegex = (str) => String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
  * - Categories
  */
 export const getSearchSuggestions = asyncHandler(async (req, res) => {
-    const query = req.query.q?.trim() || '';
+    const query = String(req.query.q || '').trim() || '';
     const limit = Math.min(parseInt(req.query.limit) || 10, 20); // Max 20 suggestions
 
     if (!query || query.length < 1) {
@@ -41,7 +41,7 @@ export const getSearchSuggestions = asyncHandler(async (req, res) => {
             .lean();
 
         titleMatches.forEach(img => {
-            const title = img.imageTitle.trim();
+            const title = String(img.imageTitle || '').trim();
             if (title && !seen.has(title.toLowerCase())) {
                 suggestions.push({
                     type: 'title',
@@ -78,7 +78,7 @@ export const getSearchSuggestions = asyncHandler(async (req, res) => {
         ]);
 
         tagMatches.forEach(tag => {
-            const tagText = tag._id.trim();
+            const tagText = String(tag._id || '').trim();
             if (tagText && !seen.has(tagText.toLowerCase())) {
                 suggestions.push({
                     type: 'tag',
@@ -97,10 +97,10 @@ export const getSearchSuggestions = asyncHandler(async (req, res) => {
         });
 
         locationMatches
-            .filter(location => location && location.trim())
+            .filter(location => String(location || '').trim())
             .slice(0, 5)
             .forEach(location => {
-                const locationText = location.trim();
+                const locationText = String(location || '').trim();
                 if (!seen.has(locationText.toLowerCase())) {
                     suggestions.push({
                         type: 'location',
@@ -122,7 +122,7 @@ export const getSearchSuggestions = asyncHandler(async (req, res) => {
             .lean();
 
         categoryMatches.forEach(cat => {
-            const catName = cat.name.trim();
+            const catName = String(cat.name || '').trim();
             if (catName && !seen.has(catName.toLowerCase())) {
                 suggestions.push({
                     type: 'category',

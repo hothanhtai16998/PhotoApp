@@ -262,58 +262,67 @@ export const updateImage = asyncHandler(async (req, res) => {
     const updateData = {};
 
     if (imageTitle !== undefined) {
-        updateData.imageTitle = imageTitle ? imageTitle.trim().substring(0, 255) : '';
+        updateData.imageTitle = String(imageTitle || '').trim().substring(0, 255);
     }
 
     if (location !== undefined) {
-        updateData.location = location ? location.trim().substring(0, 200) : null;
+        const loc = String(location || '').trim();
+        updateData.location = loc.length ? loc.substring(0, 200) : null;
     }
 
     if (coordinates !== undefined) {
-        if (coordinates?.latitude && coordinates?.longitude) {
-            const lat = parseFloat(coordinates.latitude);
-            const lon = parseFloat(coordinates.longitude);
-            if (!isNaN(lat) && !isNaN(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
-                updateData.coordinates = { latitude: lat, longitude: lon };
-            } else {
-                updateData.coordinates = null;
-            }
+        const latRaw = coordinates?.latitude;
+        const lonRaw = coordinates?.longitude;
+        const lat = latRaw !== undefined ? parseFloat(latRaw) : NaN;
+        const lon = lonRaw !== undefined ? parseFloat(lonRaw) : NaN;
+
+        if (!Number.isNaN(lat) && !Number.isNaN(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+            updateData.coordinates = { latitude: lat, longitude: lon };
         } else {
             updateData.coordinates = null;
         }
     }
 
     if (cameraMake !== undefined) {
-        updateData.cameraMake = cameraMake ? cameraMake.trim().substring(0, 100) : null;
+        const make = String(cameraMake || '').trim();
+        updateData.cameraMake = make.length ? make.substring(0, 100) : null;
     }
 
     if (cameraModel !== undefined) {
-        updateData.cameraModel = cameraModel ? cameraModel.trim().substring(0, 100) : null;
+        const model = String(cameraModel || '').trim();
+        updateData.cameraModel = model.length ? model.substring(0, 100) : null;
     }
 
     if (focalLength !== undefined) {
         const focalValue = typeof focalLength === 'string' ? parseFloat(focalLength) : focalLength;
-        updateData.focalLength = (focalValue && !isNaN(focalValue) && focalValue > 0 && focalValue <= FOCAL_LENGTH_MAX)
-            ? Math.round(focalValue * 10) / 10
-            : null;
+        if (!Number.isNaN(focalValue) && focalValue > 0 && focalValue <= FOCAL_LENGTH_MAX) {
+            updateData.focalLength = Math.round(focalValue * 10) / 10;
+        } else {
+            updateData.focalLength = null;
+        }
     }
 
     if (aperture !== undefined) {
         const apertureValue = typeof aperture === 'string' ? parseFloat(aperture) : aperture;
-        updateData.aperture = (apertureValue && !isNaN(apertureValue) && apertureValue > 0 && apertureValue <= APERTURE_MAX)
-            ? Math.round(apertureValue * 10) / 10
-            : null;
+        if (!Number.isNaN(apertureValue) && apertureValue > 0 && apertureValue <= APERTURE_MAX) {
+            updateData.aperture = Math.round(apertureValue * 10) / 10;
+        } else {
+            updateData.aperture = null;
+        }
     }
 
     if (shutterSpeed !== undefined) {
-        updateData.shutterSpeed = shutterSpeed ? shutterSpeed.trim().substring(0, 50) : null;
+        const s = String(shutterSpeed || '').trim();
+        updateData.shutterSpeed = s.length ? s.substring(0, 50) : null;
     }
 
     if (iso !== undefined) {
         const isoValue = typeof iso === 'string' ? parseInt(iso, 10) : iso;
-        updateData.iso = (isoValue && !isNaN(isoValue) && isoValue > 0 && isoValue <= ISO_MAX)
-            ? Math.round(isoValue)
-            : null;
+        if (!Number.isNaN(isoValue) && isoValue > 0 && isoValue <= ISO_MAX) {
+            updateData.iso = Math.round(isoValue);
+        } else {
+            updateData.iso = null;
+        }
     }
 
     if (tags !== undefined) {

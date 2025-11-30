@@ -41,7 +41,7 @@ const validateInputLength = (field, value, rules) => {
  * Public endpoint for collaboration features
  */
 export const searchUsers = asyncHandler(async (req, res) => {
-    const search = req.query.search?.trim();
+    const search = String(req.query.search || '').trim();
     const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 10), 20);
     const skip = Math.max(0, parseInt(req.query.skip) || 0);
 
@@ -207,8 +207,8 @@ export const changeInfo = asyncHandler(async (req, res) => {
     // Validate and update displayName
     if (firstName !== undefined || lastName !== undefined) {
         try {
-            const firstNameValue = firstName?.trim() || '';
-            const lastNameValue = lastName?.trim() || '';
+            const firstNameValue = String(firstName || '').trim();
+            const lastNameValue = String(lastName || '').trim();
             const newDisplayName = `${firstNameValue} ${lastNameValue}`.trim();
 
             validateInputLength('Display name', newDisplayName, VALIDATION_RULES.displayName);
@@ -225,8 +225,8 @@ export const changeInfo = asyncHandler(async (req, res) => {
     // Validate and update email
     if (email !== undefined) {
         try {
-            const newEmail = email.toLowerCase().trim();
-            const oldEmail = (currentUser.email || '').toLowerCase().trim();
+            const newEmail = String(email || '').toLowerCase().trim();
+            const oldEmail = String(currentUser.email || '').toLowerCase().trim();
 
             if (newEmail !== oldEmail) {
                 // Prevent OAuth users from changing email
@@ -351,7 +351,7 @@ export const changeInfo = asyncHandler(async (req, res) => {
     if (instagram !== undefined) {
         try {
             validateInputLength('Instagram', instagram, VALIDATION_RULES.instagram);
-            const rawInstagram = instagram.trim().replace(/^@/, '');
+            const rawInstagram = String(instagram || '').trim().replace(/^@/, '');
             const newInstagram = normalizeValue(rawInstagram);
             const oldInstagram = normalizeValue(currentUser.instagram);
             if (newInstagram !== oldInstagram) {
@@ -366,7 +366,7 @@ export const changeInfo = asyncHandler(async (req, res) => {
     if (twitter !== undefined) {
         try {
             validateInputLength('Twitter', twitter, VALIDATION_RULES.twitter);
-            const rawTwitter = twitter.trim().replace(/^@/, '');
+            const rawTwitter = String(twitter || '').trim().replace(/^@/, '');
             const newTwitter = normalizeValue(rawTwitter);
             const oldTwitter = normalizeValue(currentUser.twitter);
             if (newTwitter !== oldTwitter) {
@@ -523,9 +523,9 @@ export const getUserStats = asyncHandler(async (req, res) => {
 
         // Calculate profile completion
         const completionCriteria = {
-            hasAvatar: !!(user.avatarUrl && user.avatarUrl.trim() !== ''),
-            hasBio: !!(user.bio && user.bio.trim() !== ''),
-            hasPhone: !!(user.phone && user.phone.trim() !== ''),
+            hasAvatar: !!(user.avatarUrl && String(user.avatarUrl).trim() !== ''),
+            hasBio: !!(user.bio && String(user.bio).trim() !== ''),
+            hasPhone: !!(user.phone && String(user.phone).trim() !== ''),
             hasImages: totalImages > 0,
             hasCollections: totalCollections > 0,
         };

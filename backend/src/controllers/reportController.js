@@ -96,7 +96,7 @@ export const createReport = asyncHandler(async (req, res) => {
         type,
         targetId,
         reason,
-        description: description?.trim() || '',
+        description: String(description || '').trim() || '',
         status: 'pending',
     });
 
@@ -121,7 +121,7 @@ export const createReport = asyncHandler(async (req, res) => {
                     metadata: {
                         reportId: report._id.toString(),
                         reason: reason,
-                        description: description?.trim() || '',
+                        description: String(description || '').trim() || '',
                         targetType: type,
                     },
                 };
@@ -257,7 +257,7 @@ export const updateReportStatus = asyncHandler(async (req, res) => {
         report.reviewedAt = new Date();
     }
     if (resolution) {
-        report.resolution = resolution.trim();
+        report.resolution = String(resolution).trim();
     }
 
     await report.save();

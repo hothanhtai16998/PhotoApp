@@ -14,11 +14,11 @@ export const getAllImages = asyncHandler(async (req, res) => {
         PAGINATION.MAX_LIMIT
     );
     const skip = (page - 1) * limit;
-    const search = req.query.search?.trim();
-    const category = req.query.category?.trim();
-    const location = req.query.location?.trim();
-    const color = req.query.color?.trim(); // Color filter
-    const tag = req.query.tag?.trim(); // Tag filter
+    const search = String(req.query.search || '').trim();
+    const category = String(req.query.category || '').trim();
+    const location = String(req.query.location || '').trim();
+    const color = String(req.query.color || '').trim(); // Color filter
+    const tag = String(req.query.tag || '').trim(); // Tag filter
 
     // Build query
     const query = {};
@@ -34,7 +34,7 @@ export const getAllImages = asyncHandler(async (req, res) => {
     }
     if (category) {
         // Find category by name (case-insensitive) - must be active
-        const escaped = escapeRegex(category.trim());
+        const escaped = escapeRegex(String(category || '').trim());
         const categoryDoc = await Category.findOne({
             name: { $regex: new RegExp(`^${escaped}$`, 'i') },
             isActive: true,
@@ -61,7 +61,7 @@ export const getAllImages = asyncHandler(async (req, res) => {
     }
     if (location) {
         // Filter by location (case-insensitive partial match)
-        const escapedLocation = escapeRegex(location);
+        const escapedLocation = escapeRegex(String(location || '').trim());
         query.location = { $regex: new RegExp(escapedLocation, 'i') };
     }
     if (color && color !== 'all') {
@@ -71,7 +71,7 @@ export const getAllImages = asyncHandler(async (req, res) => {
     }
     if (tag) {
         // Filter by tag (case-insensitive)
-        const escapedTag = escapeRegex(tag.trim());
+        const escapedTag = escapeRegex(String(tag || '').trim());
         query.tags = { $regex: new RegExp(`^${escapedTag}$`, 'i') };
     }
 
@@ -202,7 +202,7 @@ export const getAllImages = asyncHandler(async (req, res) => {
     // This catches any edge cases where ObjectId might match but category name doesn't
     // This is a safety net to ensure images only appear in their correct category
     if (category) {
-        const normalizedCategory = category.toLowerCase().trim();
+        const normalizedCategory = String(category || '').toLowerCase().trim();
         const originalCount = images.length;
 
         images = images.filter(img => {
@@ -214,7 +214,7 @@ export const getAllImages = asyncHandler(async (req, res) => {
                 return false; // Filter out images with invalid or inactive categories
             }
             // Case-insensitive exact match to ensure category name matches
-            const imageCategoryName = img.imageCategory.name.toLowerCase().trim();
+            const imageCategoryName = String(img.imageCategory.name || '').toLowerCase().trim();
             return imageCategoryName === normalizedCategory;
         });
     }

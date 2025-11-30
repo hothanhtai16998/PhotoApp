@@ -104,12 +104,13 @@ export const updateUser = asyncHandler(async (req, res) => {
     const updateData = {};
 
     if (displayName !== undefined) {
-        updateData.displayName = displayName.trim();
+        updateData.displayName = String(displayName || '').trim();
     }
 
     if (email !== undefined && email !== user.email) {
+        const normalizedEmail = String(email).toLowerCase().trim();
         const existingUser = await User.findOne({
-            email: email.toLowerCase().trim(),
+            email: normalizedEmail,
             _id: { $ne: userId },
         });
 
@@ -119,11 +120,12 @@ export const updateUser = asyncHandler(async (req, res) => {
             });
         }
 
-        updateData.email = email.toLowerCase().trim();
+        updateData.email = normalizedEmail;
     }
 
     if (bio !== undefined) {
-        updateData.bio = bio.trim() || undefined;
+        const bioVal = String(bio || '').trim();
+        updateData.bio = bioVal.length ? bioVal : undefined;
     }
 
     // isAdmin and isSuperAdmin should not be updated through this endpoint
@@ -237,7 +239,7 @@ export const banUser = asyncHandler(async (req, res) => {
     user.isBanned = true;
     user.bannedAt = new Date();
     user.bannedBy = req.user._id;
-    user.banReason = reason?.trim() || 'Không có lý do';
+    user.banReason = reason !== undefined ? String(reason).trim() || 'Không có lý do' : 'Không có lý do';
     await user.save();
 
     // Create user_banned_admin notification
@@ -247,7 +249,7 @@ export const banUser = asyncHandler(async (req, res) => {
             type: 'user_banned_admin',
             actor: req.user._id,
             metadata: {
-                reason: user.banReason,
+                reason: String(user.banReason),
                 bannedBy: req.user.displayName || req.user.username,
             },
         });

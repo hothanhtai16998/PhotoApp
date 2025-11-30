@@ -32,8 +32,15 @@ export const incrementView = asyncHandler(async (req, res) => {
         });
     }
 
-    // Convert dailyViews Map to plain object for JSON response
-    const dailyViewsObj = image.dailyViews ? Object.fromEntries(image.dailyViews) : {};
+    // Convert dailyViews (Map or plain object) to plain object for JSON response
+    let dailyViewsObj = {};
+    if (image.dailyViews) {
+        if (image.dailyViews instanceof Map) {
+            dailyViewsObj = Object.fromEntries(image.dailyViews);
+        } else if (typeof image.dailyViews === 'object') {
+            dailyViewsObj = image.dailyViews;
+        }
+    }
 
     res.status(200).json({
         views: image.views,
@@ -71,8 +78,15 @@ export const incrementDownload = asyncHandler(async (req, res) => {
         });
     }
 
-    // Convert dailyDownloads Map to plain object for JSON response
-    const dailyDownloadsObj = image.dailyDownloads ? Object.fromEntries(image.dailyDownloads) : {};
+    // Convert dailyDownloads (Map or plain object) to plain object for JSON response
+    let dailyDownloadsObj = {};
+    if (image.dailyDownloads) {
+        if (image.dailyDownloads instanceof Map) {
+            dailyDownloadsObj = Object.fromEntries(image.dailyDownloads);
+        } else if (typeof image.dailyDownloads === 'object') {
+            dailyDownloadsObj = image.dailyDownloads;
+        }
+    }
 
     res.status(200).json({
         downloads: image.downloads,

@@ -43,15 +43,16 @@ export const createCategory = asyncHandler(async (req, res) => {
 
     const { name, description } = req.body;
 
-    if (!name || !name.trim()) {
+    if (!name || String(name).trim().length === 0) {
         return res.status(400).json({
             message: 'Tên danh mục không được để trống',
         });
     }
 
-    // Check if category already exists
+    // Check if category already exists (escape user input for regex)
+    const escapedName = String(name || '').trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const existingCategory = await Category.findOne({
-        name: { $regex: new RegExp(`^${name.trim()}$`, 'i') },
+        name: { $regex: new RegExp(`^${escapedName}$`, 'i') },
     });
 
     if (existingCategory) {
@@ -96,12 +97,13 @@ export const updateCategory = asyncHandler(async (req, res) => {
     const updateData = {};
 
     // Update name if provided
-    if (name !== undefined && name.trim() !== category.name) {
-        const newName = name.trim();
+    if (name !== undefined && String(name || '').trim() !== category.name) {
+        const newName = String(name || '').trim();
 
         // Check if new name already exists
+        const escapedNewName = String(newName).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const existingCategory = await Category.findOne({
-            name: { $regex: new RegExp(`^${newName}$`, 'i') },
+            name: { $regex: new RegExp(`^${escapedNewName}$`, 'i') },
             _id: { $ne: categoryId },
         });
 
@@ -119,7 +121,7 @@ export const updateCategory = asyncHandler(async (req, res) => {
     }
 
     if (description !== undefined) {
-        updateData.description = description.trim() || '';
+        updateData.description = String(description || '').trim() || '';
     }
 
     if (isActive !== undefined) {
