@@ -1,9 +1,12 @@
+import mongoose from 'mongoose';
 import User from '../../models/User.js';
 import Image from '../../models/Image.js';
 import Notification from '../../models/Notification.js';
 import { asyncHandler } from '../../middlewares/asyncHandler.js';
 import { logger } from '../../utils/logger.js';
 import { deleteImageFromS3 } from '../../libs/s3.js';
+
+const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
 
 // User Management
 export const getAllUsers = asyncHandler(async (req, res) => {
@@ -15,10 +18,11 @@ export const getAllUsers = asyncHandler(async (req, res) => {
 
     const query = {};
     if (search) {
+        const esc = escapeRegex(search);
         query.$or = [
-            { username: { $regex: search, $options: 'i' } },
-            { email: { $regex: search, $options: 'i' } },
-            { displayName: { $regex: search, $options: 'i' } },
+            { username: { $regex: esc, $options: 'i' } },
+            { email: { $regex: esc, $options: 'i' } },
+            { displayName: { $regex: esc, $options: 'i' } },
         ];
     }
 
@@ -46,6 +50,10 @@ export const getAllUsers = asyncHandler(async (req, res) => {
 export const getUserById = asyncHandler(async (req, res) => {
     const { userId } = req.params;
 
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+    }
+
     const user = await User.findById(userId).select('-hashedPassword').lean();
 
     if (!user) {
@@ -70,6 +78,10 @@ export const updateUser = asyncHandler(async (req, res) => {
     const { displayName, email, bio } = req.body;
 
     // Permission check is handled by requirePermission('editUsers') middleware
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+    }
 
     const user = await User.findById(userId);
 
@@ -133,6 +145,10 @@ export const deleteUser = asyncHandler(async (req, res) => {
 
     // Permission check is handled by requirePermission('deleteUsers') middleware
 
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+    }
+
     const user = await User.findById(userId);
 
     if (!user) {
@@ -187,6 +203,10 @@ export const banUser = asyncHandler(async (req, res) => {
     const { reason } = req.body;
 
     // Permission check is handled by requirePermission('banUsers') middleware
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+    }
 
     const user = await User.findById(userId);
 
@@ -253,6 +273,10 @@ export const unbanUser = asyncHandler(async (req, res) => {
     const { userId } = req.params;
 
     // Permission check is handled by requirePermission('unbanUsers') middleware
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+    }
 
     const user = await User.findById(userId);
 

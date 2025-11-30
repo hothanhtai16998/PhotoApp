@@ -1,4 +1,5 @@
 import { asyncHandler } from '../middlewares/asyncHandler.js';
+import mongoose from 'mongoose';
 import CollectionTemplate from '../models/CollectionTemplate.js';
 import Collection from '../models/Collection.js';
 import { logger } from '../utils/logger.js';
@@ -38,6 +39,10 @@ export const getTemplates = asyncHandler(async (req, res) => {
 export const getTemplateById = asyncHandler(async (req, res) => {
     const { templateId } = req.params;
     const userId = req.user._id;
+
+    if (!mongoose.Types.ObjectId.isValid(templateId)) {
+        return res.status(400).json({ success: false, message: 'Invalid template ID' });
+    }
 
     const template = await CollectionTemplate.findOne({
         _id: templateId,
@@ -124,6 +129,10 @@ export const createCollectionFromTemplate = asyncHandler(async (req, res) => {
     const { templateId } = req.params;
     const { name, description, isPublic, tags } = req.body;
 
+    if (!mongoose.Types.ObjectId.isValid(templateId)) {
+        return res.status(400).json({ success: false, message: 'Invalid template ID' });
+    }
+
     // Get template
     const template = await CollectionTemplate.findOne({
         _id: templateId,
@@ -144,10 +153,10 @@ export const createCollectionFromTemplate = asyncHandler(async (req, res) => {
     const collectionName = name?.trim() || template.templateName;
     const collectionDescription = description?.trim() || template.description || '';
     const collectionIsPublic = isPublic !== undefined ? isPublic : template.defaultIsPublic;
-    
+
     // Merge template tags with provided tags
     const templateTags = template.defaultTags || [];
-    const providedTags = Array.isArray(tags) 
+    const providedTags = Array.isArray(tags)
         ? tags.map(tag => String(tag).trim().toLowerCase()).filter(tag => tag.length > 0)
         : [];
     const mergedTags = [...new Set([...templateTags, ...providedTags])].slice(0, 10);
@@ -199,6 +208,10 @@ export const updateTemplate = asyncHandler(async (req, res) => {
     const userId = req.user._id;
     const { name, description, templateName, category, defaultTags, defaultIsPublic, iconUrl } = req.body;
 
+    if (!mongoose.Types.ObjectId.isValid(templateId)) {
+        return res.status(400).json({ success: false, message: 'Invalid template ID' });
+    }
+
     const template = await CollectionTemplate.findOne({
         _id: templateId,
         createdBy: userId,
@@ -248,6 +261,10 @@ export const updateTemplate = asyncHandler(async (req, res) => {
 export const deleteTemplate = asyncHandler(async (req, res) => {
     const { templateId } = req.params;
     const userId = req.user._id;
+
+    if (!mongoose.Types.ObjectId.isValid(templateId)) {
+        return res.status(400).json({ success: false, message: 'Invalid template ID' });
+    }
 
     const template = await CollectionTemplate.findOneAndDelete({
         _id: templateId,

@@ -1,4 +1,5 @@
 import { asyncHandler } from '../middlewares/asyncHandler.js';
+import mongoose from 'mongoose';
 import Notification from '../models/Notification.js';
 import { logger } from '../utils/logger.js';
 
@@ -40,6 +41,10 @@ export const getNotifications = asyncHandler(async (req, res) => {
 export const markNotificationAsRead = asyncHandler(async (req, res) => {
     const userId = req.user._id;
     const { notificationId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(notificationId)) {
+        return res.status(400).json({ success: false, message: 'Invalid notification ID' });
+    }
 
     const notification = await Notification.findOne({
         _id: notificationId,
@@ -92,6 +97,10 @@ export const markAllNotificationsAsRead = asyncHandler(async (req, res) => {
 export const deleteNotification = asyncHandler(async (req, res) => {
     const userId = req.user._id;
     const { notificationId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(notificationId)) {
+        return res.status(400).json({ success: false, message: 'Invalid notification ID' });
+    }
 
     const notification = await Notification.findOneAndDelete({
         _id: notificationId,

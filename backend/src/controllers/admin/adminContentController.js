@@ -1,7 +1,10 @@
+import mongoose from 'mongoose';
 import User from '../../models/User.js';
 import Image from '../../models/Image.js';
 import SystemLog from '../../models/SystemLog.js';
 import { asyncHandler } from '../../middlewares/asyncHandler.js';
+
+const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
 
 // Favorites Management
 export const getAllFavorites = asyncHandler(async (req, res) => {
@@ -15,11 +18,12 @@ export const getAllFavorites = asyncHandler(async (req, res) => {
     // Build query
     let userQuery = {};
     if (search) {
+        const esc = escapeRegex(search);
         userQuery = {
             $or: [
-                { username: { $regex: search, $options: 'i' } },
-                { displayName: { $regex: search, $options: 'i' } },
-                { email: { $regex: search, $options: 'i' } },
+                { username: { $regex: esc, $options: 'i' } },
+                { displayName: { $regex: esc, $options: 'i' } },
+                { email: { $regex: esc, $options: 'i' } },
             ],
         };
     }
@@ -74,6 +78,9 @@ export const deleteFavorite = asyncHandler(async (req, res) => {
     // Permission check is handled by requirePermission('manageFavorites') middleware
 
     const { userId, imageId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(imageId)) {
+        return res.status(400).json({ message: 'Invalid userId or imageId' });
+    }
 
     const user = await User.findById(userId);
     if (!user) {
@@ -135,6 +142,9 @@ export const approveContent = asyncHandler(async (req, res) => {
     // Permission check is handled by requirePermission('moderateContent') middleware
 
     const { contentId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(contentId)) {
+        return res.status(400).json({ message: 'Invalid content ID' });
+    }
 
     const image = await Image.findById(contentId);
     if (!image) {
@@ -169,6 +179,9 @@ export const rejectContent = asyncHandler(async (req, res) => {
 
     const { contentId } = req.params;
     const { reason } = req.body;
+    if (!mongoose.Types.ObjectId.isValid(contentId)) {
+        return res.status(400).json({ message: 'Invalid content ID' });
+    }
 
     const image = await Image.findById(contentId);
     if (!image) {

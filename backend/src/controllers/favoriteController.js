@@ -13,6 +13,14 @@ export const toggleFavorite = asyncHandler(async (req, res) => {
     const userId = req.user._id;
     const { imageId } = req.params;
 
+    if (!mongoose.Types.ObjectId.isValid(imageId)) {
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid image ID',
+            errorCode: 'INVALID_ID',
+        });
+    }
+
     // Validate image exists
     const image = await Image.findById(imageId);
     if (!image) {

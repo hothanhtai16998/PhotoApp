@@ -113,7 +113,7 @@
     overflow: hidden !important;
     z-index: 1499;
   }
-  
+
   .category-navigation-container.is-sticky {
     top: var(--header-height, 60px) !important;
   }
@@ -152,7 +152,7 @@
     overflow: hidden !important;
     z-index: 1499;
   }
-  
+
   .category-navigation-container.is-sticky {
     top: var(--header-height, 60px) !important;
   }

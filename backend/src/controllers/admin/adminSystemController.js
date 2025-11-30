@@ -7,6 +7,8 @@ import { asyncHandler } from '../../middlewares/asyncHandler.js';
 import { logger } from '../../utils/logger.js';
 import { getCacheStats as getPermissionCacheStats } from '../../utils/permissionCache.js';
 
+const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
+
 // System Logs
 export const getSystemLogs = asyncHandler(async (req, res) => {
     // Permission check is handled by requirePermission('viewLogs') middleware
@@ -27,7 +29,7 @@ export const getSystemLogs = asyncHandler(async (req, res) => {
         query.action = action;
     }
     if (search) {
-        query.message = { $regex: search, $options: 'i' };
+        query.message = { $regex: escapeRegex(search), $options: 'i' };
     }
 
     const [logs, total] = await Promise.all([

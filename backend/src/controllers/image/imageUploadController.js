@@ -63,7 +63,7 @@ const getFileExtension = (fileName = '', fileType = '') => {
         return nameExt;
     }
 
-    if (fileType.includes('/')) {
+    if (typeof fileType === 'string' && fileType.includes('/')) {
         const typePart = fileType.split('/')[1]?.toLowerCase();
         if (typePart && /^[a-z0-9+\-]+$/.test(typePart)) {
             return extensionMap[typePart] || typePart;
@@ -90,7 +90,7 @@ const validateCoordinates = (coordinates) => {
     try {
         const parsed = typeof coordinates === 'string' ? JSON.parse(coordinates) : coordinates;
 
-        if (!parsed.latitude || !parsed.longitude) return undefined;
+        if (parsed.latitude === undefined || parsed.longitude === undefined) return undefined;
 
         const lat = parseFloat(parsed.latitude);
         const lng = parseFloat(parsed.longitude);
@@ -198,6 +198,8 @@ const createImageDocument = async (uploadResult, userId, categoryDoc, metadata, 
     const isAdmin = input.isAdmin || false;
     const moderationStatus = isAdmin ? 'approved' : 'pending';
 
+    const safeTitle = String(imageTitle || '').substring(0, MAX_IMAGE_TITLE_LENGTH);
+
     const imageData = {
         imageUrl: uploadResult.imageUrl,
         thumbnailUrl: uploadResult.thumbnailUrl,
@@ -208,7 +210,7 @@ const createImageDocument = async (uploadResult, userId, categoryDoc, metadata, 
         smallAvifUrl: uploadResult.smallAvifUrl,
         regularAvifUrl: uploadResult.regularAvifUrl,
         publicId: uploadResult.publicId,
-        imageTitle: imageTitle.substring(0, MAX_IMAGE_TITLE_LENGTH),
+        imageTitle: safeTitle,
         imageCategory: categoryDoc._id,
         uploadedBy: userId,
         location: location?.trim() || undefined,
@@ -343,6 +345,11 @@ export const preUploadImage = asyncHandler(async (req, res) => {
         });
     }
 
+    // Basic filename sanity check
+    if (String(fileName).length > 255) {
+        return res.status(400).json({ message: 'Tên tệp quá dài' });
+    }
+
     if (!fileType.startsWith('image/')) {
         return res.status(400).json({
             message: 'Tệp phải có định dạng là ảnh',
@@ -386,13 +393,26 @@ export const finalizeImageUpload = asyncHandler(async (req, res) => {
         return res.status(400).json({ success: false, message: 'uploadId and uploadKey required' });
     }
 
+    // Validate uploadId format
+    if (!UPLOAD_ID_PATTERN.test(uploadId)) {
+        return res.status(400).json({ success: false, message: 'uploadId invalid' });
+    }
+
+    if (!userId) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
     const trimmedTitle = String(imageTitle || '').trim();
     if (!trimmedTitle) {
         return res.status(400).json({ success: false, message: 'imageTitle required' });
     }
 
-    // Validate category exists (but don't fetch full doc)
-    if (!mongoose.Types.ObjectId.isValid(imageCategory) && typeof imageCategory !== 'string') {
+    // Validate category exists (accept either a valid ObjectId or a non-empty string name)
+    if (typeof imageCategory === 'string') {
+        if (imageCategory.trim() === '') {
+            return res.status(400).json({ success: false, message: 'imageCategory invalid' });
+        }
+    } else if (!mongoose.Types.ObjectId.isValid(imageCategory)) {
         return res.status(400).json({ success: false, message: 'imageCategory invalid' });
     }
 

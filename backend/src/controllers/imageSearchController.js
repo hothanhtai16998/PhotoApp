@@ -4,6 +4,9 @@ import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { logger } from '../utils/logger.js';
 import { PAGINATION } from '../utils/constants.js';
 
+// Utility to escape user input for RegExp construction
+const escapeRegex = (str) => String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 export const getAllImages = asyncHandler(async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page) || PAGINATION.DEFAULT_PAGE);
     const limit = Math.min(
@@ -31,8 +34,9 @@ export const getAllImages = asyncHandler(async (req, res) => {
     }
     if (category) {
         // Find category by name (case-insensitive) - must be active
+        const escaped = escapeRegex(category.trim());
         const categoryDoc = await Category.findOne({
-            name: { $regex: new RegExp(`^${category.trim()}$`, 'i') },
+            name: { $regex: new RegExp(`^${escaped}$`, 'i') },
             isActive: true,
         });
         if (categoryDoc && categoryDoc._id) {
@@ -57,7 +61,8 @@ export const getAllImages = asyncHandler(async (req, res) => {
     }
     if (location) {
         // Filter by location (case-insensitive partial match)
-        query.location = { $regex: new RegExp(location, 'i') };
+        const escapedLocation = escapeRegex(location);
+        query.location = { $regex: new RegExp(escapedLocation, 'i') };
     }
     if (color && color !== 'all') {
         // Filter by dominant color
@@ -66,7 +71,8 @@ export const getAllImages = asyncHandler(async (req, res) => {
     }
     if (tag) {
         // Filter by tag (case-insensitive)
-        query.tags = { $regex: new RegExp(`^${tag.trim()}$`, 'i') };
+        const escapedTag = escapeRegex(tag.trim());
+        query.tags = { $regex: new RegExp(`^${escapedTag}$`, 'i') };
     }
 
     // Only show approved images on homepage (or images with no moderation status for backward compatibility)
@@ -79,7 +85,7 @@ export const getAllImages = asyncHandler(async (req, res) => {
             { moderationStatus: null }, // Also handle null values
         ]
     };
-    
+
     // Combine all conditions - if query has other conditions, use $and
     const hasOtherConditions = Object.keys(query).length > 0 && !query.$text;
     if (hasOtherConditions) {
@@ -168,7 +174,7 @@ export const getAllImages = asyncHandler(async (req, res) => {
                 dailyViewsObj = img.dailyViews;
             }
         }
-        
+
         let dailyDownloadsObj = {};
         if (img.dailyDownloads) {
             if (img.dailyDownloads instanceof Map) {

@@ -1,4 +1,5 @@
 import { asyncHandler } from '../middlewares/asyncHandler.js';
+import mongoose from 'mongoose';
 import CollectionVersion from '../models/CollectionVersion.js';
 import Collection from '../models/Collection.js';
 import { logger } from '../utils/logger.js';
@@ -10,6 +11,10 @@ import { createCollectionVersion } from '../utils/collectionVersionHelper.js';
 export const getCollectionVersions = asyncHandler(async (req, res) => {
     const { collectionId } = req.params;
     const userId = req.user._id;
+
+    if (!mongoose.Types.ObjectId.isValid(collectionId)) {
+        return res.status(400).json({ success: false, message: 'Invalid collection ID' });
+    }
 
     // Check if user has access to this collection
     const collection = await Collection.findOne({
@@ -46,6 +51,15 @@ export const getCollectionVersions = asyncHandler(async (req, res) => {
 export const getVersionByNumber = asyncHandler(async (req, res) => {
     const { collectionId, versionNumber } = req.params;
     const userId = req.user._id;
+
+    if (!mongoose.Types.ObjectId.isValid(collectionId)) {
+        return res.status(400).json({ success: false, message: 'Invalid collection ID' });
+    }
+
+    const parsedVersion = parseInt(versionNumber, 10);
+    if (Number.isNaN(parsedVersion) || parsedVersion < 0) {
+        return res.status(400).json({ success: false, message: 'Invalid version number' });
+    }
 
     // Check if user has access to this collection
     const collection = await Collection.findOne({
@@ -92,6 +106,15 @@ export const getVersionByNumber = asyncHandler(async (req, res) => {
 export const restoreCollectionVersion = asyncHandler(async (req, res) => {
     const { collectionId, versionNumber } = req.params;
     const userId = req.user._id;
+
+    if (!mongoose.Types.ObjectId.isValid(collectionId)) {
+        return res.status(400).json({ success: false, message: 'Invalid collection ID' });
+    }
+
+    const parsedVersion = parseInt(versionNumber, 10);
+    if (Number.isNaN(parsedVersion) || parsedVersion < 0) {
+        return res.status(400).json({ success: false, message: 'Invalid version number' });
+    }
 
     // Check if user has permission to edit this collection
     const collection = await Collection.findById(collectionId)

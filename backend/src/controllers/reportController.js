@@ -1,4 +1,5 @@
 import { asyncHandler } from '../middlewares/asyncHandler.js';
+import mongoose from 'mongoose';
 import Report from '../models/Report.js';
 import Image from '../models/Image.js';
 import Collection from '../models/Collection.js';
@@ -48,6 +49,10 @@ export const createReport = asyncHandler(async (req, res) => {
 
     // Check if target exists
     let target;
+    if (!mongoose.Types.ObjectId.isValid(targetId)) {
+        return res.status(400).json({ success: false, message: 'Invalid target ID' });
+    }
+
     if (type === 'image') {
         target = await Image.findById(targetId);
     } else if (type === 'collection') {
@@ -98,15 +103,15 @@ export const createReport = asyncHandler(async (req, res) => {
     // Create notification for all admins
     try {
         // Find all admins to notify
-        const admins = await User.find({ 
-            $or: [{ isAdmin: true }, { isSuperAdmin: true }] 
+        const admins = await User.find({
+            $or: [{ isAdmin: true }, { isSuperAdmin: true }]
         }).select('_id').lean();
-        
+
         if (admins.length > 0) {
-            const notificationType = type === 'image' ? 'image_reported' : 
-                                   type === 'collection' ? 'collection_reported' : 
-                                   'user_reported';
-            
+            const notificationType = type === 'image' ? 'image_reported' :
+                type === 'collection' ? 'collection_reported' :
+                    'user_reported';
+
             // Create notifications for all admins
             const notificationPromises = admins.map(admin => {
                 const notificationData = {
@@ -231,6 +236,10 @@ export const updateReportStatus = asyncHandler(async (req, res) => {
             success: false,
             message: 'Invalid status',
         });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(reportId)) {
+        return res.status(400).json({ success: false, message: 'Invalid report ID' });
     }
 
     const report = await Report.findById(reportId);

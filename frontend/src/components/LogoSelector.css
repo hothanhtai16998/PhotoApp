@@ -20,7 +20,8 @@
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
   animation: logoSelectorSlideIn 0.3s ease-out;
 }
 
@@ -116,7 +117,8 @@
 
 .logo-selector-item:hover {
   border-color: #6366f1;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
   transform: translateY(-2px);
 }
 
@@ -237,4 +239,3 @@
     justify-content: center;
   }
 }
-

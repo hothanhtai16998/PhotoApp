@@ -387,7 +387,7 @@
   text-align: right;
 }
 
-.image-editor-slider input[type="range"] {
+.image-editor-slider input[type='range'] {
   width: 100%;
   height: 6px;
   border-radius: 3px;
@@ -396,7 +396,7 @@
   -webkit-appearance: none;
 }
 
-.image-editor-slider input[type="range"]::-webkit-slider-thumb {
+.image-editor-slider input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 18px;
@@ -407,12 +407,12 @@
   transition: all 0.2s ease;
 }
 
-.image-editor-slider input[type="range"]::-webkit-slider-thumb:hover {
+.image-editor-slider input[type='range']::-webkit-slider-thumb:hover {
   background: #2563eb;
   transform: scale(1.1);
 }
 
-.image-editor-slider input[type="range"]::-moz-range-thumb {
+.image-editor-slider input[type='range']::-moz-range-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
@@ -422,7 +422,7 @@
   transition: all 0.2s ease;
 }
 
-.image-editor-slider input[type="range"]::-moz-range-thumb:hover {
+.image-editor-slider input[type='range']::-moz-range-thumb:hover {
   background: #2563eb;
   transform: scale(1.1);
 }
@@ -441,9 +441,9 @@
   color: #111;
 }
 
-.image-editor-input input[type="text"],
-.image-editor-input input[type="url"],
-.image-editor-input input[type="color"],
+.image-editor-input input[type='text'],
+.image-editor-input input[type='url'],
+.image-editor-input input[type='color'],
 .image-editor-select select {
   padding: 8px 12px;
   border: 1px solid #d4d4d4;
@@ -454,14 +454,14 @@
   transition: all 0.2s ease;
 }
 
-.image-editor-input input[type="color"] {
+.image-editor-input input[type='color'] {
   width: 100%;
   height: 40px;
   padding: 2px;
   cursor: pointer;
 }
 
-.image-editor-input input[type="text"]:focus,
+.image-editor-input input[type='text']:focus,
 .image-editor-select select:focus {
   outline: none;
   border-color: #3b82f6;
@@ -482,7 +482,7 @@
   cursor: pointer;
 }
 
-.image-editor-checkbox input[type="checkbox"] {
+.image-editor-checkbox input[type='checkbox'] {
   width: 18px;
   height: 18px;
   cursor: pointer;
@@ -730,4 +730,3 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
-

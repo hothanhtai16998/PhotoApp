@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Collection from '../../models/Collection.js';
 import Notification from '../../models/Notification.js';
 import { asyncHandler } from '../../middlewares/asyncHandler.js';
@@ -12,6 +13,10 @@ import axios from 'axios';
 export const trackCollectionShare = asyncHandler(async (req, res) => {
     try {
         const { collectionId } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(collectionId)) {
+            return res.status(400).json({ success: false, message: 'Invalid collection ID' });
+        }
         const userId = req.user._id;
 
         // Find collection
@@ -27,8 +32,8 @@ export const trackCollectionShare = asyncHandler(async (req, res) => {
         }
 
         // Don't notify if user is sharing their own collection
-        const createdBy = typeof collection.createdBy === 'object' 
-            ? collection.createdBy._id 
+        const createdBy = typeof collection.createdBy === 'object'
+            ? collection.createdBy._id
             : collection.createdBy;
 
         if (createdBy.toString() === userId.toString()) {
@@ -66,6 +71,10 @@ export const exportCollection = asyncHandler(async (req, res) => {
     const { collectionId } = req.params;
     const userId = req.user._id;
 
+    if (!mongoose.Types.ObjectId.isValid(collectionId)) {
+        return res.status(400).json({ success: false, message: 'Invalid collection ID' });
+    }
+
     // Find collection and verify ownership or public access
     const collection = await Collection.findOne({
         _id: collectionId,
@@ -97,7 +106,7 @@ export const exportCollection = asyncHandler(async (req, res) => {
         for (let i = 0; i < collection.images.length; i++) {
             const image = collection.images[i];
             const imageUrl = image.imageUrl || image.regularUrl || image.smallUrl;
-            
+
             if (!imageUrl) {
                 logger.warn(`Image ${image._id} has no URL, skipping`);
                 continue;
@@ -117,11 +126,11 @@ export const exportCollection = asyncHandler(async (req, res) => {
                         .replace(/[^a-z0-9]/gi, '_')
                         .toLowerCase()
                         .substring(0, 50);
-                    
+
                     // Get file extension from URL or default to jpg
                     const urlExtension = imageUrl.match(/\.([a-z]+)(?:\?|$)/i)?.[1] || 'jpg';
                     const filename = `${sanitizedTitle}.${urlExtension}`;
-                    
+
                     // Add to ZIP
                     zip.file(filename, buffer);
                 })

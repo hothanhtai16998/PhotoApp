@@ -1,9 +1,11 @@
+import mongoose from 'mongoose';
 import Image from '../../models/Image.js';
 import Category from '../../models/Category.js';
 import User from '../../models/User.js';
 import Notification from '../../models/Notification.js';
 import { asyncHandler } from '../../middlewares/asyncHandler.js';
 import { logger } from '../../utils/logger.js';
+const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
 import { deleteImageFromS3 } from '../../libs/s3.js';
 import { clearCache } from '../../middlewares/cacheMiddleware.js';
 
@@ -21,16 +23,18 @@ export const getAllImagesAdmin = asyncHandler(async (req, res) => {
     const query = {};
 
     if (search) {
+        const esc = escapeRegex(search);
         query.$or = [
-            { imageTitle: { $regex: search, $options: 'i' } },
-            { location: { $regex: search, $options: 'i' } },
+            { imageTitle: { $regex: esc, $options: 'i' } },
+            { location: { $regex: esc, $options: 'i' } },
         ];
     }
 
     if (category) {
         // Find category by name (case-insensitive)
+        const escaped = escapeRegex(category);
         const categoryDoc = await Category.findOne({
-            name: { $regex: new RegExp(`^${category}$`, 'i') },
+            name: { $regex: new RegExp(`^${escaped}$`, 'i') },
             isActive: true,
         });
         if (categoryDoc) {
@@ -108,6 +112,10 @@ export const deleteImage = asyncHandler(async (req, res) => {
 
     // Permission check is handled by requirePermission('deleteImages') middleware
 
+    if (!mongoose.Types.ObjectId.isValid(imageId)) {
+        return res.status(400).json({ message: 'Invalid image ID' });
+    }
+
     const image = await Image.findById(imageId);
 
     if (!image) {
@@ -166,6 +174,10 @@ export const updateImage = asyncHandler(async (req, res) => {
     const { location, coordinates, imageTitle, cameraModel } = req.body;
 
     // Permission check is handled by requirePermission('editImages') middleware
+
+    if (!mongoose.Types.ObjectId.isValid(imageId)) {
+        return res.status(400).json({ message: 'Invalid image ID' });
+    }
 
     const image = await Image.findById(imageId);
 
@@ -241,6 +253,10 @@ export const moderateImage = asyncHandler(async (req, res) => {
         return res.status(400).json({
             message: 'Trạng thái kiểm duyệt không hợp lệ. Phải là: approved, rejected, hoặc flagged',
         });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(imageId)) {
+        return res.status(400).json({ message: 'Invalid image ID' });
     }
 
     const image = await Image.findById(imageId);

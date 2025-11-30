@@ -424,7 +424,8 @@ export const changeInfo = asyncHandler(async (req, res) => {
 
             updateData.avatarUrl = uploadResult.avatarUrl;
             updateData.avatarId = uploadResult.publicId;
-            changedFields.push('avatar');
+            // Use avatarUrl as the user-facing changed field so notification filter works
+            changedFields.push('avatarUrl');
         } catch (error) {
             logger.error('Avatar upload failed', { userId, error: error.message });
             return res.status(500).json({
@@ -608,7 +609,13 @@ export const trackProfileView = asyncHandler(async (req, res) => {
 export const getUserByUsername = asyncHandler(async (req, res) => {
     const { username } = req.params;
 
-    const user = await User.findOne({ username: username.toLowerCase() })
+    if (!username) {
+        return res.status(400).json({ message: 'Username is required' });
+    }
+
+    const normalizedUsername = username.toLowerCase();
+
+    const user = await User.findOne({ username: normalizedUsername })
         .select('username displayName avatarUrl bio location website instagram twitter facebook createdAt')
         .lean();
 

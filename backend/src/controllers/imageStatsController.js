@@ -1,9 +1,14 @@
+import mongoose from 'mongoose';
 import Image from '../models/Image.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 
 // Increment view count for an image
 export const incrementView = asyncHandler(async (req, res) => {
     const imageId = req.params.imageId;
+
+    if (!mongoose.Types.ObjectId.isValid(imageId)) {
+        return res.status(400).json({ message: 'Invalid image ID' });
+    }
 
     // Get current date in UTC as YYYY-MM-DD string
     const now = new Date();
@@ -39,6 +44,10 @@ export const incrementView = asyncHandler(async (req, res) => {
 // Increment download count for an image
 export const incrementDownload = asyncHandler(async (req, res) => {
     const imageId = req.params.imageId;
+
+    if (!mongoose.Types.ObjectId.isValid(imageId)) {
+        return res.status(400).json({ message: 'Invalid image ID' });
+    }
 
     // Get current date in UTC as YYYY-MM-DD string
     const now = new Date();

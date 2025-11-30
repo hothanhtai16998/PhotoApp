@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Category from '../models/Category.js';
 import Image from '../models/Image.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
@@ -16,7 +17,7 @@ export const getAllCategories = asyncHandler(async (req, res) => {
 
 export const getAllCategoriesAdmin = asyncHandler(async (req, res) => {
     // Permission check is handled by requirePermission('viewCategories') middleware
-    
+
     const categories = await Category.find()
         .sort({ name: 1 })
         .lean();
@@ -39,7 +40,7 @@ export const getAllCategoriesAdmin = asyncHandler(async (req, res) => {
 
 export const createCategory = asyncHandler(async (req, res) => {
     // Permission check is handled by requirePermission('createCategories') middleware
-    
+
     const { name, description } = req.body;
 
     if (!name || !name.trim()) {
@@ -76,8 +77,12 @@ export const createCategory = asyncHandler(async (req, res) => {
 
 export const updateCategory = asyncHandler(async (req, res) => {
     // Permission check is handled by requirePermission('editCategories') middleware
-    
+
     const { categoryId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+        return res.status(400).json({ message: 'Invalid category ID' });
+    }
     const { name, description, isActive } = req.body;
 
     const category = await Category.findById(categoryId);
@@ -139,8 +144,12 @@ export const updateCategory = asyncHandler(async (req, res) => {
 
 export const deleteCategory = asyncHandler(async (req, res) => {
     // Permission check is handled by requirePermission('deleteCategories') middleware
-    
+
     const { categoryId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+        return res.status(400).json({ message: 'Invalid category ID' });
+    }
 
     const category = await Category.findById(categoryId);
 

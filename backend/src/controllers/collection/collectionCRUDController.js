@@ -29,17 +29,17 @@ export const getUserCollections = async (req, res) => {
             .select('-images') // Exclude images array to reduce payload
             .sort({ createdAt: -1 })
             .lean();
-        
+
         // Get image counts for each collection separately (more efficient)
         // Use $size operator to count images array without loading all images
         const collectionIds = collections.map(c => c._id);
-        const imageCounts = collectionIds.length > 0 
+        const imageCounts = collectionIds.length > 0
             ? await Collection.aggregate([
                 { $match: { _id: { $in: collectionIds.map(id => new mongoose.Types.ObjectId(id)) } } },
                 { $project: { _id: 1, imageCount: { $size: { $ifNull: ['$images', []] } } } }
             ])
             : [];
-        
+
         const imageCountMap = new Map(imageCounts.map(item => [item._id.toString(), item.imageCount || 0]));
 
         // Add image count to each collection from the aggregation result
@@ -68,6 +68,10 @@ export const getCollectionById = async (req, res) => {
     try {
         const { collectionId } = req.params;
         const userId = req.user._id;
+
+        if (!mongoose.Types.ObjectId.isValid(collectionId)) {
+            return res.status(400).json({ success: false, message: 'Invalid collection ID' });
+        }
 
         const collection = await Collection.findOne({
             _id: collectionId,
@@ -208,8 +212,12 @@ export const updateCollection = async (req, res) => {
         const { name, description, isPublic, coverImage, tags } = req.body;
 
         // Find collection and populate collaborators
+        if (!mongoose.Types.ObjectId.isValid(collectionId)) {
+            return res.status(400).json({ success: false, message: 'Invalid collection ID' });
+        }
+
         const collection = await Collection.findById(collectionId)
-        .populate('collaborators.user');
+            .populate('collaborators.user');
 
         if (!collection) {
             return res.status(404).json({
@@ -225,6 +233,15 @@ export const updateCollection = async (req, res) => {
                 message: 'Bạn không có quyền chỉnh sửa bộ sưu tập này',
             });
         }
+
+        // Capture original values before applying updates so we can create accurate change records
+        const original = {
+            name: collection.name,
+            description: collection.description,
+            isPublic: collection.isPublic,
+            coverImage: collection.coverImage ? collection.coverImage.toString() : null,
+            tags: Array.isArray(collection.tags) ? [...collection.tags] : [],
+        };
 
         if (name !== undefined) {
             if (name.trim().length === 0) {
@@ -252,7 +269,7 @@ export const updateCollection = async (req, res) => {
 
         if (coverImage !== undefined) {
             // Verify the cover image is in the collection
-            if (coverImage && !collection.images.includes(coverImage)) {
+            if (coverImage && !collection.images.map(i => i.toString()).includes(String(coverImage))) {
                 return res.status(400).json({
                     success: false,
                     message: 'Cover image must be in the collection',
@@ -274,22 +291,22 @@ export const updateCollection = async (req, res) => {
             collection.tags = processedTags;
         }
 
-        // Track what changed for versioning
+        // Track what changed for versioning (compare original -> new values)
         const changes = [];
-        if (name !== undefined && name.trim() !== collection.name) {
-            changes.push({ field: 'name', oldValue: collection.name, newValue: name.trim() });
+        if (name !== undefined && original.name !== collection.name) {
+            changes.push({ field: 'name', oldValue: original.name, newValue: collection.name });
         }
-        if (description !== undefined && description.trim() !== collection.description) {
-            changes.push({ field: 'description', oldValue: collection.description, newValue: description.trim() });
+        if (description !== undefined && original.description !== collection.description) {
+            changes.push({ field: 'description', oldValue: original.description, newValue: collection.description });
         }
-        if (isPublic !== undefined && isPublic !== collection.isPublic) {
-            changes.push({ field: 'isPublic', oldValue: collection.isPublic, newValue: isPublic });
+        if (isPublic !== undefined && original.isPublic !== collection.isPublic) {
+            changes.push({ field: 'isPublic', oldValue: original.isPublic, newValue: collection.isPublic });
         }
-        if (coverImage !== undefined && coverImage !== collection.coverImage?.toString()) {
-            changes.push({ field: 'coverImage', oldValue: collection.coverImage, newValue: coverImage });
+        if (coverImage !== undefined && String(original.coverImage) !== (collection.coverImage ? collection.coverImage.toString() : null)) {
+            changes.push({ field: 'coverImage', oldValue: original.coverImage, newValue: collection.coverImage });
         }
-        if (tags !== undefined) {
-            changes.push({ field: 'tags', oldValue: collection.tags, newValue: tags });
+        if (tags !== undefined && JSON.stringify(original.tags) !== JSON.stringify(collection.tags)) {
+            changes.push({ field: 'tags', oldValue: original.tags, newValue: collection.tags });
         }
 
         await collection.save();
@@ -315,9 +332,9 @@ export const updateCollection = async (req, res) => {
             // If collaborator updates, notify owner and other collaborators
             const collaborators = collection.collaborators || [];
             const notificationRecipients = new Set();
-            
+
             const isOwner = collection.createdBy.toString() === userId.toString();
-            
+
             if (isOwner) {
                 // Owner updated - notify all collaborators
                 collaborators.forEach(collab => {
@@ -331,7 +348,7 @@ export const updateCollection = async (req, res) => {
                 if (collection.createdBy.toString() !== userId.toString()) {
                     notificationRecipients.add(collection.createdBy.toString());
                 }
-                
+
                 collaborators.forEach(collab => {
                     const collabUserId = getUserId(collab.user);
                     if (collabUserId && collabUserId !== userId.toString()) {
@@ -346,9 +363,9 @@ export const updateCollection = async (req, res) => {
                 const coverChanged = changes.some(c => c.field === 'coverImage');
                 const nameChanged = changes.some(c => c.field === 'name');
                 const descriptionChanged = changes.some(c => c.field === 'description');
-                const otherChanges = changes.filter(c => 
-                    c.field !== 'coverImage' && 
-                    c.field !== 'name' && 
+                const otherChanges = changes.filter(c =>
+                    c.field !== 'coverImage' &&
+                    c.field !== 'name' &&
                     c.field !== 'description' &&
                     c.field !== 'tags'
                 );
@@ -429,6 +446,9 @@ export const deleteCollection = async (req, res) => {
     try {
         const { collectionId } = req.params;
         const userId = req.user._id;
+        if (!mongoose.Types.ObjectId.isValid(collectionId)) {
+            return res.status(400).json({ success: false, message: 'Invalid collection ID' });
+        }
 
         const collection = await Collection.findOne({
             _id: collectionId,

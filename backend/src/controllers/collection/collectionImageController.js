@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Collection from '../../models/Collection.js';
 import Image from '../../models/Image.js';
 import Notification from '../../models/Notification.js';
@@ -19,6 +20,10 @@ export const addImageToCollection = async (req, res) => {
                 success: false,
                 message: 'Image ID is required',
             });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(collectionId) || !mongoose.Types.ObjectId.isValid(imageId)) {
+            return res.status(400).json({ success: false, message: 'Invalid collection ID or image ID' });
         }
 
         // Verify collection exists and belongs to user
@@ -44,7 +49,7 @@ export const addImageToCollection = async (req, res) => {
         }
 
         // Check if image is already in collection
-        if (collection.images.includes(imageId)) {
+        if (collection.images.map(i => i.toString()).includes(String(imageId))) {
             return res.status(400).json({
                 success: false,
                 message: 'Image is already in this collection',
@@ -76,12 +81,13 @@ export const addImageToCollection = async (req, res) => {
         try {
             const collaborators = collection.collaborators || [];
             const notificationRecipients = new Set();
-            
+
             // Add owner if not the current user
-            if (collection.createdBy.toString() !== userId.toString()) {
-                notificationRecipients.add(collection.createdBy.toString());
+            const ownerId = getUserId(collection.createdBy);
+            if (ownerId && ownerId !== userId.toString()) {
+                notificationRecipients.add(ownerId);
             }
-            
+
             // Add collaborators
             collaborators.forEach(collab => {
                 const collabUserId = getUserId(collab.user);
@@ -152,9 +158,13 @@ export const removeImageFromCollection = async (req, res) => {
             });
         }
 
+        if (!mongoose.Types.ObjectId.isValid(collectionId) || !mongoose.Types.ObjectId.isValid(imageId)) {
+            return res.status(400).json({ success: false, message: 'Invalid collection ID or image ID' });
+        }
+
         // Remove image from collection
         collection.images = collection.images.filter(
-            id => id.toString() !== imageId
+            id => id.toString() !== String(imageId)
         );
 
         // If removed image was cover image, set new cover (first image or null)
@@ -179,12 +189,13 @@ export const removeImageFromCollection = async (req, res) => {
         try {
             const collaborators = collection.collaborators || [];
             const notificationRecipients = new Set();
-            
+
             // Add owner if not the current user
-            if (collection.createdBy.toString() !== userId.toString()) {
-                notificationRecipients.add(collection.createdBy.toString());
+            const ownerId = getUserId(collection.createdBy);
+            if (ownerId && ownerId !== userId.toString()) {
+                notificationRecipients.add(ownerId);
             }
-            
+
             // Add collaborators
             collaborators.forEach(collab => {
                 const collabUserId = getUserId(collab.user);
@@ -279,6 +290,10 @@ export const reorderCollectionImages = async (req, res) => {
             });
         }
 
+        if (!mongoose.Types.ObjectId.isValid(collectionId)) {
+            return res.status(400).json({ success: false, message: 'Invalid collection ID' });
+        }
+
         // Verify collection exists and belongs to user
         const collection = await Collection.findOne({
             _id: collectionId,
@@ -294,7 +309,7 @@ export const reorderCollectionImages = async (req, res) => {
 
         // Verify all image IDs are in the collection
         const collectionImageIds = collection.images.map(id => id.toString());
-        const allImagesInCollection = imageIds.every(id => 
+        const allImagesInCollection = imageIds.every(id =>
             collectionImageIds.includes(id.toString())
         );
 
@@ -314,7 +329,7 @@ export const reorderCollectionImages = async (req, res) => {
         }
 
         // Reorder images
-        collection.images = imageIds.map(id => 
+        collection.images = imageIds.map(id =>
             collection.images.find(imgId => imgId.toString() === id.toString())
         ).filter(Boolean);
 

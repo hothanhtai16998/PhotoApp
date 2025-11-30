@@ -17,51 +17,55 @@ const GOOGLE_CLIENT_SECRET = env.GOOGLE_CLIENT_SECRET || '';
 // In production, GOOGLE_REDIRECT_URI must be explicitly set in environment variables
 const GOOGLE_REDIRECT_URI = env.GOOGLE_REDIRECT_URI;
 
+// Helpers
+const normalizeEmail = (email) => (email ? String(email).toLowerCase().trim() : undefined);
+const normalizeUsername = (username) => (username ? String(username).toLowerCase().trim() : undefined);
+
 // Check if email is available
 export const checkEmailAvailability = asyncHandler(async (req, res) => {
     const { email } = req.query;
-    
+
     if (!email) {
         return res.status(400).json({ message: "Email is required" });
     }
-    
-    const normalizedEmail = email.toLowerCase().trim();
+
+    const normalizedEmail = normalizeEmail(email);
     const existingUser = await User.findOne({ email: normalizedEmail });
-    
+
     if (existingUser) {
         if (existingUser.isOAuthUser) {
-            return res.status(409).json({ 
+            return res.status(409).json({
                 available: false,
                 message: "Email này đã đăng ký với tài khoản Google, xin vui lòng đăng nhập bằng Google."
             });
         }
-        return res.status(409).json({ 
+        return res.status(409).json({
             available: false,
             message: "Email đã tồn tại"
         });
     }
-    
+
     return res.status(200).json({ available: true });
 });
 
 // Check if username is available
 export const checkUsernameAvailability = asyncHandler(async (req, res) => {
     const { username } = req.query;
-    
+
     if (!username) {
         return res.status(400).json({ message: "Username is required" });
     }
-    
-    const normalizedUsername = username.toLowerCase().trim();
+
+    const normalizedUsername = normalizeUsername(username);
     const existingUser = await User.findOne({ username: normalizedUsername });
-    
+
     if (existingUser) {
-        return res.status(409).json({ 
+        return res.status(409).json({
             available: false,
             message: "Tên tài khoản đã tồn tại"
         });
     }
-    
+
     return res.status(200).json({ available: true });
 });
 
@@ -76,9 +80,13 @@ export const signUp = asyncHandler(async (req, res) => {
         return res.status(400).json({ message: "Mật khẩu không được để trống" });
     }
 
+    // Normalize inputs
+    const normalizedEmail = normalizeEmail(email);
+    const normalizedUsername = normalizeUsername(username);
+
     // Check if username or email already exists
     const existingUser = await User.findOne({
-        $or: [{ username }, { email }],
+        $or: [{ username: normalizedUsername }, { email: normalizedEmail }],
     });
 
     if (existingUser) {
@@ -99,12 +107,17 @@ export const signUp = asyncHandler(async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Build displayName safely
+    const safeFirst = (firstName || '').toString().trim();
+    const safeLast = (lastName || '').toString().trim();
+    const displayName = `${safeFirst} ${safeLast}`.trim() || normalizedUsername || undefined;
+
     // Create new user
     await User.create({
-        username,
+        username: normalizedUsername,
         hashedPassword,
-        email,
-        displayName: `${firstName.trim()} ${lastName.trim()}`,
+        email: normalizedEmail,
+        displayName,
         isOAuthUser: false,
         phone: phone?.trim() || undefined,
         bio: bio?.trim() || undefined,
@@ -116,12 +129,20 @@ export const signUp = asyncHandler(async (req, res) => {
 });
 
 export const signIn = asyncHandler(async (req, res) => {
-    const { username, password } = req.body;
+    let { username, password } = req.body;
 
     // Note: Input validation is handled by validationMiddleware
 
-    // Find user by username
-    const user = await User.findOne({ username });
+    // Normalize username (allow username or email input)
+    const normalizedIdentifier = normalizeUsername(username || username);
+
+    // Find user by username or email
+    const user = await User.findOne({
+        $or: [
+            { username: normalizedIdentifier },
+            { email: normalizeEmail(username) },
+        ],
+    });
 
     if (!user) {
         return res.status(401).json({

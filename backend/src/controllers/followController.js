@@ -1,4 +1,5 @@
 import { asyncHandler } from '../middlewares/asyncHandler.js';
+import mongoose from 'mongoose';
 import Follow from '../models/Follow.js';
 import User from '../models/User.js';
 import Notification from '../models/Notification.js';
@@ -12,6 +13,13 @@ export const followUser = asyncHandler(async (req, res) => {
     const followerId = req.user._id;
     const followingId = req.params.userId;
 
+    if (!mongoose.Types.ObjectId.isValid(followingId)) {
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid user ID',
+            errorCode: 'INVALID_ID',
+        });
+    }
     // Validate that user is not trying to follow themselves
     if (followerId.toString() === followingId) {
         return res.status(400).json({
@@ -88,6 +96,14 @@ export const followUser = asyncHandler(async (req, res) => {
 export const unfollowUser = asyncHandler(async (req, res) => {
     const followerId = req.user._id;
     const followingId = req.params.userId;
+
+    if (!mongoose.Types.ObjectId.isValid(followingId)) {
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid user ID',
+            errorCode: 'INVALID_ID',
+        });
+    }
 
     // Find and delete the follow relationship
     const follow = await Follow.findOneAndDelete({
@@ -209,6 +225,14 @@ export const getFollowStatus = asyncHandler(async (req, res) => {
     const followerId = req.user._id;
     const followingId = req.params.userId;
 
+    if (!mongoose.Types.ObjectId.isValid(followingId)) {
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid user ID',
+            errorCode: 'INVALID_ID',
+        });
+    }
+
     // Check if following
     const isFollowing = await Follow.exists({
         follower: followerId,
@@ -235,6 +259,13 @@ export const getFollowStatus = asyncHandler(async (req, res) => {
 export const getFollowCounts = asyncHandler(async (req, res) => {
     const userId = req.params.userId;
 
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid user ID',
+            errorCode: 'INVALID_ID',
+        });
+    }
     // Validate user exists
     const user = await User.findById(userId);
     if (!user) {

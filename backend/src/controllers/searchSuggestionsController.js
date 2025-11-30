@@ -3,6 +3,9 @@ import Category from '../models/Category.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { logger } from '../utils/logger.js';
 
+// Escape user input when building RegExp
+const escapeRegex = (str) => String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 /**
  * Generate search suggestions based on query
  * Returns suggestions from:
@@ -28,8 +31,9 @@ export const getSearchSuggestions = asyncHandler(async (req, res) => {
 
     try {
         // 1. Search in image titles (fuzzy match)
+        const escapedQuery = escapeRegex(query);
         const titleMatches = await Image.find({
-            imageTitle: { $regex: new RegExp(query, 'i') },
+            imageTitle: { $regex: new RegExp(escapedQuery, 'i') },
             moderationStatus: 'approved', // Only show approved images
         })
             .select('imageTitle')
@@ -49,17 +53,18 @@ export const getSearchSuggestions = asyncHandler(async (req, res) => {
         });
 
         // 2. Search in tags
+        const escapedQuery2 = escapeRegex(query);
         const tagMatches = await Image.aggregate([
             {
                 $match: {
-                    tags: { $regex: new RegExp(query, 'i') },
+                    tags: { $regex: new RegExp(escapedQuery2, 'i') },
                     moderationStatus: 'approved',
                 },
             },
             { $unwind: '$tags' },
             {
                 $match: {
-                    tags: { $regex: new RegExp(query, 'i') },
+                    tags: { $regex: new RegExp(escapedQuery2, 'i') },
                 },
             },
             {
@@ -85,8 +90,9 @@ export const getSearchSuggestions = asyncHandler(async (req, res) => {
         });
 
         // 3. Search in locations
+        const escapedQuery3 = escapeRegex(query);
         const locationMatches = await Image.distinct('location', {
-            location: { $regex: new RegExp(query, 'i') },
+            location: { $regex: new RegExp(escapedQuery3, 'i') },
             moderationStatus: 'approved',
         });
 
@@ -106,8 +112,9 @@ export const getSearchSuggestions = asyncHandler(async (req, res) => {
             });
 
         // 4. Search in categories
+        const escapedQuery4 = escapeRegex(query);
         const categoryMatches = await Category.find({
-            name: { $regex: new RegExp(query, 'i') },
+            name: { $regex: new RegExp(escapedQuery4, 'i') },
             isActive: true,
         })
             .select('name')
@@ -162,7 +169,7 @@ export const getPopularSearches = asyncHandler(async (req, res) => {
     try {
         // For now, return popular tags and categories
         // In the future, this can be based on actual search query analytics
-        
+
         const popularTags = await Image.aggregate([
             {
                 $match: {

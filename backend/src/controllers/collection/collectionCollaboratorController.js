@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Collection from '../../models/Collection.js';
 import User from '../../models/User.js';
 import Notification from '../../models/Notification.js';
@@ -28,6 +29,10 @@ export const addCollaborator = asyncHandler(async (req, res) => {
             });
         }
 
+        if (!mongoose.Types.ObjectId.isValid(collectionId)) {
+            return res.status(400).json({ success: false, message: 'Invalid collection ID' });
+        }
+
         const collection = await Collection.findById(collectionId);
 
         if (!collection) {
@@ -46,7 +51,7 @@ export const addCollaborator = asyncHandler(async (req, res) => {
         }
 
         // Find user by email
-        const userToAdd = await User.findOne({ email: userEmail.toLowerCase() });
+        const userToAdd = await User.findOne({ email: userEmail.toLowerCase().trim() });
 
         if (!userToAdd) {
             return res.status(404).json({
@@ -136,6 +141,10 @@ export const addCollaborator = asyncHandler(async (req, res) => {
 export const removeCollaborator = asyncHandler(async (req, res) => {
     try {
         const { collectionId, collaboratorId } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(collectionId) || !mongoose.Types.ObjectId.isValid(collaboratorId)) {
+            return res.status(400).json({ success: false, message: 'Invalid collection ID or collaborator ID' });
+        }
         const userId = req.user._id;
 
         const collection = await Collection.findById(collectionId);
@@ -217,6 +226,10 @@ export const removeCollaborator = asyncHandler(async (req, res) => {
 export const updateCollaboratorPermission = asyncHandler(async (req, res) => {
     try {
         const { collectionId, collaboratorId } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(collectionId) || !mongoose.Types.ObjectId.isValid(collaboratorId)) {
+            return res.status(400).json({ success: false, message: 'Invalid collection ID or collaborator ID' });
+        }
         const userId = req.user._id;
         const { permission } = req.body;
 

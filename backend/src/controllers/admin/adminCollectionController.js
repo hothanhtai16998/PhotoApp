@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Collection from '../../models/Collection.js';
 import User from '../../models/User.js';
 import Image from '../../models/Image.js';
@@ -5,6 +6,8 @@ import Category from '../../models/Category.js';
 import AdminRole from '../../models/AdminRole.js';
 import { asyncHandler } from '../../middlewares/asyncHandler.js';
 import { logger } from '../../utils/logger.js';
+
+const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
 
 // Collection Management
 export const getAllCollectionsAdmin = asyncHandler(async (req, res) => {
@@ -17,9 +20,10 @@ export const getAllCollectionsAdmin = asyncHandler(async (req, res) => {
 
     const query = {};
     if (search) {
+        const esc = escapeRegex(search);
         query.$or = [
-            { name: { $regex: search, $options: 'i' } },
-            { description: { $regex: search, $options: 'i' } },
+            { name: { $regex: esc, $options: 'i' } },
+            { description: { $regex: esc, $options: 'i' } },
         ];
     }
 
@@ -56,6 +60,10 @@ export const updateCollectionAdmin = asyncHandler(async (req, res) => {
 
     const { collectionId } = req.params;
     const { name, description, isPublic } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(collectionId)) {
+        return res.status(400).json({ message: 'Invalid collection ID' });
+    }
 
     const collection = await Collection.findById(collectionId);
 
@@ -149,6 +157,10 @@ export const deleteCollectionAdmin = asyncHandler(async (req, res) => {
     // Permission check is handled by requirePermission('manageCollections') middleware
 
     const { collectionId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(collectionId)) {
+        return res.status(400).json({ message: 'Invalid collection ID' });
+    }
 
     const collection = await Collection.findById(collectionId);
 

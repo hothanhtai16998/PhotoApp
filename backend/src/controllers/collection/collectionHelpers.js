@@ -17,7 +17,8 @@ export const getUserId = (userField) => {
  */
 export const hasPermission = (collection, userId, requiredPermission) => {
     // Owner has all permissions
-    if (collection.createdBy.toString() === userId.toString()) {
+    const ownerId = getUserId(collection.createdBy);
+    if (ownerId === userId.toString()) {
         return true;
     }
 

@@ -1,46 +1,46 @@
 /* Unsplash-style Homepage */
 .homepage {
-	min-height: 100vh;
-	background: #fff;
-	width: 100%;
+  min-height: 100vh;
+  background: #fff;
+  width: 100%;
 }
 
 .homepage-hero {
-	text-align: center;
-	padding: 60px 2rem 40px;
-	padding-top: calc(var(--header-height, 65px) + 60px);
-	/* Fluid hero container to avoid forcing horizontal space on tablets */
-	max-width: min(1600px, 96%);
-	margin: 0 auto;
+  text-align: center;
+  padding: 60px 2rem 40px;
+  padding-top: calc(var(--header-height, 65px) + 60px);
+  /* Fluid hero container to avoid forcing horizontal space on tablets */
+  max-width: min(1600px, 96%);
+  margin: 0 auto;
 }
 
 .hero-title {
-	font-size: 2.75rem;
-	font-weight: 600;
-	line-height: 1.2;
-	margin: 0;
-	color: #111;
-	letter-spacing: -0.015em;
+  font-size: 2.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0;
+  color: #111;
+  letter-spacing: -0.015em;
 }
 
 .hero-subtitle {
-	font-size: 1rem;
-	font-weight: 400;
-	color: #767676;
-	margin: 0.5rem 0 0 0;
+  font-size: 1rem;
+  font-weight: 400;
+  color: #767676;
+  margin: 0.5rem 0 0 0;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-	.homepage-hero {
-		padding: 40px 1.5rem 30px;
-	}
+  .homepage-hero {
+    padding: 40px 1.5rem 30px;
+  }
 
-	.hero-title {
-		font-size: 2rem;
-	}
+  .hero-title {
+    font-size: 2rem;
+  }
 
-	.hero-subtitle {
-		font-size: 0.9375rem;
-	}
+  .hero-subtitle {
+    font-size: 0.9375rem;
+  }
 }

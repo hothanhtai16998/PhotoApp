@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import User from '../../models/User.js';
 import AdminRole from '../../models/AdminRole.js';
 import { asyncHandler } from '../../middlewares/asyncHandler.js';
@@ -31,6 +32,9 @@ export const getAllAdminRoles = asyncHandler(async (req, res) => {
 export const getAdminRole = asyncHandler(async (req, res) => {
     const { userId } = req.params;
 
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+    }
     // Users can view their own role, super admin can view any (computed from AdminRole)
     if (userId !== req.user._id.toString() && !req.user.isSuperAdmin) {
         return res.status(403).json({
@@ -83,6 +87,10 @@ export const createAdminRole = asyncHandler(async (req, res) => {
                 errors: validation.errors,
             });
         }
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
     }
 
     const user = await User.findById(userId);
@@ -196,6 +204,10 @@ export const updateAdminRole = asyncHandler(async (req, res) => {
 
     const { userId } = req.params;
     const { role, permissions, reason, expiresAt, active, allowedIPs } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+    }
 
     const adminRole = await AdminRole.findOne({ userId });
 
@@ -351,6 +363,10 @@ export const deleteAdminRole = asyncHandler(async (req, res) => {
 
     const { userId } = req.params;
     const { reason } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+    }
 
     const adminRole = await AdminRole.findOne({ userId });
 

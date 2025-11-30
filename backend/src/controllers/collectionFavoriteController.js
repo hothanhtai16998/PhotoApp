@@ -13,6 +13,14 @@ export const toggleCollectionFavorite = asyncHandler(async (req, res) => {
     const userId = req.user._id;
     const { collectionId } = req.params;
 
+    if (!mongoose.Types.ObjectId.isValid(collectionId)) {
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid collection ID',
+            errorCode: 'INVALID_ID',
+        });
+    }
+
     // Validate collection exists
     const collection = await Collection.findById(collectionId);
     if (!collection) {
