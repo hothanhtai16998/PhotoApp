@@ -30,7 +30,7 @@
   background: #fff;
   border-radius: 12px;
   width: 100%;
-  max-width: 500px;
+  max-width: min(500px, 96%);
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);

@@ -28,7 +28,9 @@
 }
 
 .header-container {
-  max-width: 1600px;
+  /* Make container fluid on narrow viewports while keeping the
+     original max width on large screens. */
+  max-width: min(1600px, 96%);
   margin: 0 auto;
   padding: 0 20px;
   display: flex;
@@ -96,11 +98,12 @@
 
 /* Search Bar Container */
 .search-bar-container {
+  /* Keep positioning but leave sizing to SearchBar.css to avoid
+     duplicate/conflicting width rules. This prevents cascade conflicts
+     and allows the SearchBar to use a responsive `clamp()` width. */
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  max-width: 600px;
-  width: 100%;
   z-index: 1500;
 }
 
@@ -507,9 +510,11 @@
   }
 
   .search-bar-container {
-    max-width: 400px;
-    width: calc(100% - 300px);
-    min-width: 250px;
+    max-width: min(400px, 96%);
+    /* Use clamp so the search bar scales between a reasonable minimum
+       and the media max without forcing large min-widths that cause overlap */
+    width: clamp(160px, 40%, 400px);
+    min-width: 140px;
   }
 
   .header-actions {

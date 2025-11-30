@@ -44,7 +44,7 @@
   background: #fff;
   border-radius: 16px;
   padding: 48px 40px;
-  max-width: 400px;
+  max-width: min(400px, 96%);
   width: 90%;
   text-align: center;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
@@ -132,7 +132,7 @@
   background: #fff;
   border-radius: 12px;
   width: 100%;
-  max-width: 1000px;
+  max-width: min(1000px, 96%);
   max-height: 90vh;
   display: flex;
   flex-direction: column;
@@ -379,7 +379,9 @@
   border-radius: 12px;
   padding: 80px 60px;
   text-align: center;
-  min-width: 400px;
+  /* Make the progress screen responsive on narrow devices */
+  max-width: min(400px, 96%);
+  width: 90%;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
@@ -437,8 +439,9 @@
   border-radius: 12px;
   padding: 60px 40px;
   text-align: center;
-  min-width: 500px;
-  max-width: 600px;
+  /* Responsive success dialog */
+  max-width: min(600px, 96%);
+  width: 90%;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   position: relative;
   overflow: hidden;

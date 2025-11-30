@@ -42,7 +42,7 @@
   left: 50%;
   transform: translateX(-50%) translateZ(0);
   width: 90%;
-  max-width: 1800px;
+  max-width: min(1800px, 96%);
   height: calc(100vh - 40px);
   z-index: 2001; /* Above overlay (2000), header (1500) and category nav (1499) */
   display: flex;
@@ -474,7 +474,7 @@
   margin: 40px auto 0;
   padding-top: 40px;
   border-top: 1px solid #e5e5e5;
-  max-width: 1400px;
+  max-width: min(1400px, 96%);
   width: 100%;
 }
 
@@ -1737,7 +1737,7 @@
   background: #fff;
   border-radius: 12px;
   width: 90%;
-  max-width: 600px;
+  max-width: min(600px, 96%);
   max-height: 90vh;
   display: flex;
   flex-direction: column;
@@ -2129,7 +2129,7 @@
 @media (max-width: 768px) {
   .user-profile-card {
     width: calc(100vw - 40px);
-    max-width: 320px;
+    max-width: min(320px, 96%);
     left: 50%;
     transform: translateX(-50%);
   }

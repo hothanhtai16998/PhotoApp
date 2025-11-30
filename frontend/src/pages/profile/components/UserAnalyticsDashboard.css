@@ -1,6 +1,6 @@
 .analytics-dashboard {
   padding: 24px;
-  max-width: 1400px;
+  max-width: min(1400px, 96%);
   margin: 0 auto;
 }
 

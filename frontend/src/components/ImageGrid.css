@@ -1,6 +1,8 @@
 /* Unsplash-style Image Grid */
 .image-grid-container {
-  max-width: 1600px;
+  /* Allow the image grid to remain centered but shrink a bit on
+     narrow viewports to avoid horizontal overflow. */
+  max-width: min(1600px, 96%);
   margin: 0 auto;
   width: 100%;
   padding: 0 12px;
@@ -704,7 +706,7 @@
   transition: opacity 0.2s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   z-index: 20;
-  max-width: 200px;
+  max-width: min(200px, 96%);
   overflow: hidden;
   text-overflow: ellipsis;
   backdrop-filter: blur(10px);
@@ -810,7 +812,7 @@
     top: auto !important;
     transform: none !important;
     opacity: 1 !important;
-    max-width: calc(100% - 200px); /* Leave space for user info */
+    max-width: calc(100% - 120px); /* Reduce reserved space on small screens */
   }
 }
 
@@ -884,7 +886,7 @@
   transform: translateY(-10px);
   transition: opacity 0.3s ease, transform 0.3s ease;
   pointer-events: none;
-  max-width: calc(100% - 100px);
+  max-width: calc(100% - 64px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -938,7 +940,7 @@
   white-space: nowrap;
   line-height: 1.2;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  max-width: 200px;
+  max-width: min(200px, 96%);
   overflow: hidden;
   text-overflow: ellipsis;
 }

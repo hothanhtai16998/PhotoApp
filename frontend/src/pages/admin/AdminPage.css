@@ -7,7 +7,7 @@
 }
 
 .admin-container {
-    max-width: 1600px;
+    max-width: min(1600px, 96%);
     margin: 0 auto;
     display: flex;
     gap: 20px;
@@ -566,7 +566,7 @@
     background: white;
     border-radius: 8px;
     width: 90%;
-    max-width: 500px;
+    max-width: min(500px, 96%);
     max-height: 90vh;
     overflow-y: auto;
 }

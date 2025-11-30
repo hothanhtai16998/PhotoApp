@@ -6,13 +6,13 @@
 }
 
 .collection-detail-collaborators-wrapper {
-	max-width: 1200px;
+	max-width: min(1200px, 96%);
 	margin: 0 auto;
 	padding: 0 24px;
 }
 
 .collection-detail-versions-wrapper {
-	max-width: 1200px;
+	max-width: min(1200px, 96%);
 	margin: 40px auto 60px;
 	padding: 0 24px;
 }
@@ -239,7 +239,7 @@
 }
 
 .collection-detail-header {
-	max-width: 1200px;
+	max-width: min(1200px, 96%);
 	margin: 0 auto;
 	padding: 24px 24px 32px;
 }
@@ -425,7 +425,7 @@
 .collection-detail-empty {
 	text-align: center;
 	padding: 120px 20px;
-	max-width: 500px;
+	max-width: min(500px, 96%);
 	margin: 0 auto;
 }
 
@@ -452,7 +452,7 @@
 }
 
 .collection-detail-images {
-	max-width: 1200px;
+	max-width: min(1200px, 96%);
 	margin: 0 auto;
 	padding: 0 24px 32px;
 }
@@ -706,6 +706,17 @@
 	width: auto;
 	min-width: 320px;
 	animation: slideUpFloat 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Small screens: allow the bulk action bar to shrink and avoid overflow */
+@media (max-width: 420px) {
+	.collection-bulk-action-bar {
+		min-width: auto !important;
+		width: calc(100% - 32px) !important;
+		left: 50% !important;
+		transform: translateX(-50%) !important;
+		padding: 12px 16px !important;
+	}
 }
 
 @keyframes slideUpFloat {

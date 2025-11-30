@@ -8,7 +8,8 @@
 }
 
 .profile-settings-container {
-	max-width: 1600px;
+	/* Fluid profile settings container */
+	max-width: min(1600px, 96%);
 	margin: 0 auto;
 	display: grid;
 	grid-template-columns: 240px 1fr;
@@ -64,7 +65,7 @@
 
 /* Right Main Content */
 .profile-main-content {
-	max-width: 700px;
+	max-width: min(700px, 96%);
 	padding-bottom: 60px;
 }
 
@@ -402,7 +403,7 @@
 	display: flex;
 	flex-direction: column;
 	gap: 24px;
-	max-width: 500px;
+	max-width: min(500px, 96%);
 }
 
 .change-password-form .form-field {

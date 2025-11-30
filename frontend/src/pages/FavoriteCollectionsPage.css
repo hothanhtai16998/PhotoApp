@@ -32,7 +32,7 @@
 }
 
 .favorite-collections-header {
-	max-width: 1200px;
+	max-width: min(1200px, 96%);
 	margin: 0 auto;
 	padding: 0 24px 32px;
 	display: flex;
@@ -106,7 +106,7 @@
 }
 
 .favorite-collections-grid {
-	max-width: 1200px;
+	max-width: min(1200px, 96%);
 	margin: 0 auto;
 	padding: 0 24px;
 	display: grid;
@@ -192,7 +192,7 @@
 }
 
 .favorite-collections-pagination {
-	max-width: 1200px;
+	max-width: min(1200px, 96%);
 	margin: 40px auto 0;
 	padding: 0 24px;
 	display: flex;

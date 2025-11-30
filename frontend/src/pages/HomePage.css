@@ -9,7 +9,8 @@
 	text-align: center;
 	padding: 60px 2rem 40px;
 	padding-top: calc(var(--header-height, 65px) + 60px);
-	max-width: 1600px;
+	/* Fluid hero container to avoid forcing horizontal space on tablets */
+	max-width: min(1600px, 96%);
 	margin: 0 auto;
 }
 

@@ -3,9 +3,11 @@
 	position: absolute;
 	left: 50%;
 	transform: translateX(-50%);
-	max-width: 600px;
-	width: calc(100% - 400px); /* Leave space for logo and buttons */
-	min-width: 300px;
+	max-width: min(600px, 96%);
+	/* Use a responsive clamp so the search bar scales smoothly across
+	   desktop -> tablet sizes without forcing a large fixed min-width
+	   or an inflexible calc() that can cause overlaps. */
+	width: clamp(220px, 45%, 600px);
 	z-index: 1;
 }
 

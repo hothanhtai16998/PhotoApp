@@ -25,8 +25,8 @@
 .edit-image-modal {
   background: #fff;
   border-radius: 12px;
-  width: 100%;
-  max-width: 600px;
+  width: 90%;
+  max-width: min(600px, 96%);
   max-height: 90vh;
   display: flex;
   flex-direction: column;
@@ -321,7 +321,7 @@
   transition: opacity 0.2s ease;
   pointer-events: none;
   width: max-content;
-  max-width: 250px;
+  max-width: min(250px, 96%);
   text-align: left;
   line-height: 1.4;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
