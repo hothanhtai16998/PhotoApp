@@ -3,8 +3,8 @@ import { Route, Routes } from "react-router";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AdminRoute from "./components/auth/AdminRoute";
 import { Skeleton } from "./components/ui/skeleton";
-import FloatingContactButton from "./components/FloatingContactButton";
 import { PageViewTracker } from "./components/PageViewTracker";
+import { ContactButton } from './components/ContactButton';
 
 // Lazy load pages for code splitting
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -71,7 +71,7 @@ function App() {
       </Routes>
 
       {/* Floating Contact Button - appears on all pages */}
-      <FloatingContactButton />
+      <ContactButton />
     </Suspense>
   )
 }

@@ -1,0 +1,119 @@
+.contact-button-container {
+  position: fixed;
+  bottom: 220px;
+  right: 30px;
+  z-index: 999;
+}
+
+.contact-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 50%;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  font-family: inherit;
+  color: #111;
+}
+
+.contact-button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  border-color: #d1d5db;
+}
+
+.contact-button:active {
+  transform: scale(0.95);
+}
+
+.contact-button-text {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.contact-social-menu {
+  position: absolute;
+  bottom: 80px;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.contact-social-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 50%;
+  color: #111;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.contact-social-icon:hover {
+  transform: scale(1.15) translateY(-5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.contact-social-icon.facebook:hover {
+  color: #1877f2;
+  border-color: #1877f2;
+}
+
+.contact-social-icon.twitter:hover {
+  color: #000;
+  border-color: #000;
+}
+
+.contact-social-icon.instagram:hover {
+  color: #e4405f;
+  border-color: #e4405f;
+}
+
+.contact-social-icon.tiktok:hover {
+  color: #000;
+  border-color: #000;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .contact-button-container {
+    bottom: 110px;
+    right: 20px;
+  }
+
+  .contact-button {
+    width: 50px;
+    height: 50px;
+  }
+
+  .contact-social-icon {
+    width: 45px;
+    height: 45px;
+  }
+}
