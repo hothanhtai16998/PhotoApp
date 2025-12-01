@@ -298,7 +298,7 @@ export const updateAdminRole = asyncHandler(async (req, res) => {
             const ipv6CompressedRegex = /^::1$|^::$|^([0-9a-fA-F]{1,4}:)+::([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}(\/\d{1,3})?$/;
 
             const validatedIPs = allowedIPs.filter(ip => {
-                const trimmed = ip.trim();
+                const trimmed = String(ip || '').trim();
                 return ipv4Regex.test(trimmed) || ipv6Regex.test(trimmed) || ipv6CompressedRegex.test(trimmed);
             });
 

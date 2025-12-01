@@ -8,6 +8,7 @@
 	   desktop -> tablet sizes without forcing a large fixed min-width
 	   or an inflexible calc() that can cause overlaps. */
   width: clamp(220px, 45%, 600px);
+  border-color: #111;
   z-index: 1;
 }
 

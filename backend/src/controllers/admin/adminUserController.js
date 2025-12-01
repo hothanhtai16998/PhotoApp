@@ -14,7 +14,7 @@ export const getAllUsers = asyncHandler(async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 20), 100);
     const skip = (page - 1) * limit;
-    const search = req.query.search?.trim();
+    const search = String(req.query.search || '').trim();
 
     const query = {};
     if (search) {

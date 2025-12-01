@@ -31,7 +31,7 @@
   z-index: 10;
   display: flex;
   align-items: center;
-  justify-content: center; /* Center the entire carousel */
+  justify-content: flex-end; /* Center the entire carousel */
   gap: 12px; /* Reduced gap */
 }
 
@@ -97,4 +97,10 @@
   margin: 0;
   min-width: 44px; /* Ensure minimum touch target */
   min-height: 44px;
+}
+
+@media (min-width: 480) {
+  .bottom-carousel- {
+    justify-content: center;
+  }
 }

@@ -1,6 +1,6 @@
 import { memo, useState, useRef, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Shield, Heart, Menu, X, User, LogOut, Info, Palette } from "lucide-react"
+import { Shield, Heart, Menu, X, User, LogOut, Info } from "lucide-react"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { useUserStore } from "@/stores/useUserStore"
 import { useImageStore } from "@/stores/useImageStore"
@@ -8,9 +8,8 @@ import UploadModal from "./UploadModal"
 import { SearchBar, type SearchBarRef } from "./SearchBar"
 import { Avatar } from "./Avatar"
 import NotificationBell from "./NotificationBell"
-import { Logo, type LogoStyle } from "./Logo"
-import { LogoSelector, getStoredLogoStyle } from "./LogoSelector"
-import { updateFavicon } from "@/utils/faviconUpdater"
+import LOGO_CONFIG from "@/config/logo"
+import { updateFaviconWithImage } from "@/utils/faviconUpdater"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,25 +26,11 @@ export const Header = memo(function Header() {
   const navigate = useNavigate()
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [logoStyle, setLogoStyle] = useState<LogoStyle>(getStoredLogoStyle())
-  const [logoSelectorOpen, setLogoSelectorOpen] = useState(false)
   const searchBarRef = useRef<SearchBarRef>(null)
 
   useEffect(() => {
-    // Update favicon on initial load
-    updateFavicon(logoStyle)
-    
-    const handleLogoStyleChange = (event: CustomEvent) => {
-      const newStyle = event.detail as LogoStyle
-      setLogoStyle(newStyle)
-      updateFavicon(newStyle)
-    }
-
-    window.addEventListener('logoStyleChanged', handleLogoStyleChange as EventListener)
-    return () => {
-      window.removeEventListener('logoStyleChanged', handleLogoStyleChange as EventListener)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Update favicon with configured logo on initial load
+    updateFaviconWithImage(LOGO_CONFIG.faviconLogo)
   }, [])
 
   const handleLogoClick = () => {
@@ -69,20 +54,17 @@ export const Header = memo(function Header() {
           {/* Logo */}
           <div className="header-logo-container">
             <Link to="/" className="header-logo" onClick={handleLogoClick}>
-              <Logo size={28} style={logoStyle} />
+              <img
+                src={LOGO_CONFIG.mainLogo}
+                alt={LOGO_CONFIG.altText}
+                className="header-logo-image"
+                style={{ height: `${LOGO_CONFIG.headerHeight}px`, width: 'auto' }}
+              />
             </Link>
-            <button
-              className="header-logo-selector-btn"
-              onClick={() => setLogoSelectorOpen(true)}
-              aria-label="Change logo style"
-              title="Change logo style"
-            >
-              <Palette size={14} />
-            </button>
           </div>
 
           {/* Mobile Menu Button */}
-          <button 
+          <button
             className="mobile-menu-button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Chuyển đổi menu"
@@ -104,8 +86,8 @@ export const Header = memo(function Header() {
                   <DropdownMenuTrigger asChild>
                     <button className="header-link user-menu-trigger" aria-label="Menu người dùng">
                       {user ? (
-                        <Avatar 
-                          user={user} 
+                        <Avatar
+                          user={user}
                           size={32}
                           className="header-user-avatar"
                           fallbackClassName="header-user-avatar-placeholder"
@@ -144,7 +126,7 @@ export const Header = memo(function Header() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem 
+                    <DropdownMenuItem
                       onClick={handleSignOut}
                       className="user-menu-item"
                       variant="destructive"
@@ -166,59 +148,57 @@ export const Header = memo(function Header() {
       </div>
 
       {/* Mobile Menu */}
-      {mobileMenuOpen && (
-        <div className="mobile-menu">
-          <div className="mobile-menu-content">
-            <Link to="/about" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
-              Về chúng tôi
-            </Link>
-            {accessToken ? (
-              <>
-                <button onClick={() => { setUploadModalOpen(true); setMobileMenuOpen(false); }} className="mobile-menu-link">
-                  Thêm ảnh
-                </button>
-                <div className="mobile-menu-notification-wrapper" onClick={(e) => e.stopPropagation()}>
-                  <NotificationBell />
-                </div>
-                <Link to="/favorites" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
-                  <Heart size={18} />
-                  <span>Yêu thích</span>
-                </Link>
-                {user?.isAdmin && (
-                  <Link to="/admin" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
-                    <Shield size={18} />
-                    <span>Admin</span>
+      {
+        mobileMenuOpen && (
+          <div className="mobile-menu">
+            <div className="mobile-menu-content">
+              <Link to="/about" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                Về chúng tôi
+              </Link>
+              {accessToken ? (
+                <>
+                  <button onClick={() => { setUploadModalOpen(true); setMobileMenuOpen(false); }} className="mobile-menu-link">
+                    Thêm ảnh
+                  </button>
+                  <div className="mobile-menu-notification-wrapper" onClick={(e) => e.stopPropagation()}>
+                    <NotificationBell />
+                  </div>
+                  <Link to="/favorites" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                    <Heart size={18} />
+                    <span>Yêu thích</span>
                   </Link>
-                )}
-                <Link to="/profile" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
-                  Tài khoản
-                </Link>
-                <button onClick={() => { handleSignOut(); setMobileMenuOpen(false); }} className="mobile-menu-link">
-                  Đăng xuất
-                </button>
-              </>
-            ) : (
-              <>
-                <Link to="/signin" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
-                  Đăng nhập
-                </Link>
-                <button onClick={() => { navigate('/signin'); setMobileMenuOpen(false); }} className="mobile-menu-button-action">
-                  Thêm ảnh
-                </button>
-              </>
-            )}
+                  {user?.isAdmin && (
+                    <Link to="/admin" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                      <Shield size={18} />
+                      <span>Admin</span>
+                    </Link>
+                  )}
+                  <Link to="/profile" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                    Tài khoản
+                  </Link>
+                  <button onClick={() => { handleSignOut(); setMobileMenuOpen(false); }} className="mobile-menu-link">
+                    Đăng xuất
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link to="/signin" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                    Đăng nhập
+                  </Link>
+                  <button onClick={() => { navigate('/signin'); setMobileMenuOpen(false); }} className="mobile-menu-button-action">
+                    Thêm ảnh
+                  </button>
+                </>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Upload Modal */}
       <UploadModal isOpen={uploadModalOpen} onClose={() => setUploadModalOpen(false)} />
 
-      {/* Logo Selector Modal */}
-      {logoSelectorOpen && (
-        <LogoSelector onClose={() => setLogoSelectorOpen(false)} />
-      )}
-    </header>
+    </header >
   )
 })
 

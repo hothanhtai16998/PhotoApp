@@ -3,9 +3,7 @@ import Category from '../models/Category.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { logger } from '../utils/logger.js';
 import { PAGINATION } from '../utils/constants.js';
-
-// Utility to escape user input for RegExp construction
-const escapeRegex = (str) => String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+import { safeTrim, escapeRegex } from '../utils/inputUtils.js';
 
 export const getAllImages = asyncHandler(async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page) || PAGINATION.DEFAULT_PAGE);
@@ -14,11 +12,11 @@ export const getAllImages = asyncHandler(async (req, res) => {
         PAGINATION.MAX_LIMIT
     );
     const skip = (page - 1) * limit;
-    const search = String(req.query.search || '').trim();
-    const category = String(req.query.category || '').trim();
-    const location = String(req.query.location || '').trim();
-    const color = String(req.query.color || '').trim(); // Color filter
-    const tag = String(req.query.tag || '').trim(); // Tag filter
+    const search = safeTrim(req.query.search);
+    const category = safeTrim(req.query.category);
+    const location = safeTrim(req.query.location);
+    const color = safeTrim(req.query.color); // Color filter
+    const tag = safeTrim(req.query.tag); // Tag filter
 
     // Build query
     const query = {};
@@ -34,7 +32,7 @@ export const getAllImages = asyncHandler(async (req, res) => {
     }
     if (category) {
         // Find category by name (case-insensitive) - must be active
-        const escaped = escapeRegex(String(category || '').trim());
+        const escaped = escapeRegex(category);
         const categoryDoc = await Category.findOne({
             name: { $regex: new RegExp(`^${escaped}$`, 'i') },
             isActive: true,
@@ -61,7 +59,7 @@ export const getAllImages = asyncHandler(async (req, res) => {
     }
     if (location) {
         // Filter by location (case-insensitive partial match)
-        const escapedLocation = escapeRegex(String(location || '').trim());
+        const escapedLocation = escapeRegex(location);
         query.location = { $regex: new RegExp(escapedLocation, 'i') };
     }
     if (color && color !== 'all') {
@@ -71,7 +69,7 @@ export const getAllImages = asyncHandler(async (req, res) => {
     }
     if (tag) {
         // Filter by tag (case-insensitive)
-        const escapedTag = escapeRegex(String(tag || '').trim());
+        const escapedTag = escapeRegex(tag);
         query.tags = { $regex: new RegExp(`^${escapedTag}$`, 'i') };
     }
 
@@ -202,7 +200,7 @@ export const getAllImages = asyncHandler(async (req, res) => {
     // This catches any edge cases where ObjectId might match but category name doesn't
     // This is a safety net to ensure images only appear in their correct category
     if (category) {
-        const normalizedCategory = String(category || '').toLowerCase().trim();
+        const normalizedCategory = safeTrim(category).toLowerCase();
         const originalCount = images.length;
 
         images = images.filter(img => {
@@ -214,7 +212,7 @@ export const getAllImages = asyncHandler(async (req, res) => {
                 return false; // Filter out images with invalid or inactive categories
             }
             // Case-insensitive exact match to ensure category name matches
-            const imageCategoryName = String(img.imageCategory.name || '').toLowerCase().trim();
+            const imageCategoryName = safeTrim(img.imageCategory.name).toLowerCase();
             return imageCategoryName === normalizedCategory;
         });
     }

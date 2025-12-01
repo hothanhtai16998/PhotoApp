@@ -1,6 +1,7 @@
 import Collection from '../../models/Collection.js';
 import Notification from '../../models/Notification.js';
 import { logger } from '../../utils/logger.js';
+import { safeTrim, isValidObjectId } from '../../utils/inputUtils.js';
 import { createCollectionVersion } from '../../utils/collectionVersionHelper.js';
 import { getUserId, hasPermission } from './collectionHelpers.js';
 import mongoose from 'mongoose';
@@ -69,7 +70,7 @@ export const getCollectionById = async (req, res) => {
         const { collectionId } = req.params;
         const userId = req.user._id;
 
-        if (!mongoose.Types.ObjectId.isValid(collectionId)) {
+        if (!isValidObjectId(collectionId)) {
             return res.status(400).json({ success: false, message: 'Invalid collection ID' });
         }
 
@@ -139,14 +140,14 @@ export const createCollection = async (req, res) => {
         const userId = req.user._id;
         const { name, description, isPublic, tags } = req.body;
 
-        if (!name || name.trim().length === 0) {
+        if (!name || safeTrim(name).length === 0) {
             return res.status(400).json({
                 success: false,
                 message: 'Collection name is required',
             });
         }
 
-        if (name.length > 100) {
+        if (safeTrim(name).length > 100) {
             return res.status(400).json({
                 success: false,
                 message: 'Collection name must be 100 characters or less',
@@ -157,15 +158,15 @@ export const createCollection = async (req, res) => {
         let processedTags = [];
         if (Array.isArray(tags)) {
             processedTags = tags
-                .map(tag => String(tag).trim().toLowerCase())
+                .map(tag => safeTrim(tag).toLowerCase())
                 .filter(tag => tag.length > 0)
                 .filter((tag, index, self) => self.indexOf(tag) === index) // Remove duplicates
                 .slice(0, 10); // Limit to 10 tags
         }
 
         const collection = new Collection({
-            name: name.trim(),
-            description: description?.trim() || '',
+            name: safeTrim(name),
+            description: safeTrim(description) || '',
             createdBy: userId,
             images: [],
             isPublic: isPublic !== undefined ? isPublic : true,
@@ -212,7 +213,7 @@ export const updateCollection = async (req, res) => {
         const { name, description, isPublic, coverImage, tags } = req.body;
 
         // Find collection and populate collaborators
-        if (!mongoose.Types.ObjectId.isValid(collectionId)) {
+        if (!isValidObjectId(collectionId)) {
             return res.status(400).json({ success: false, message: 'Invalid collection ID' });
         }
 
@@ -244,23 +245,24 @@ export const updateCollection = async (req, res) => {
         };
 
         if (name !== undefined) {
-            if (name.trim().length === 0) {
+            const trimmedName = safeTrim(name);
+            if (trimmedName.length === 0) {
                 return res.status(400).json({
                     success: false,
                     message: 'Collection name cannot be empty',
                 });
             }
-            if (name.length > 100) {
+            if (trimmedName.length > 100) {
                 return res.status(400).json({
                     success: false,
                     message: 'Collection name must be 100 characters or less',
                 });
             }
-            collection.name = name.trim();
+            collection.name = trimmedName;
         }
 
         if (description !== undefined) {
-            collection.description = description.trim();
+            collection.description = safeTrim(description);
         }
 
         if (isPublic !== undefined) {
@@ -283,7 +285,7 @@ export const updateCollection = async (req, res) => {
             let processedTags = [];
             if (Array.isArray(tags)) {
                 processedTags = tags
-                    .map(tag => String(tag).trim().toLowerCase())
+                    .map(tag => safeTrim(tag).toLowerCase())
                     .filter(tag => tag.length > 0)
                     .filter((tag, index, self) => self.indexOf(tag) === index) // Remove duplicates
                     .slice(0, 10); // Limit to 10 tags
@@ -437,7 +439,7 @@ export const updateCollection = async (req, res) => {
             message: 'Failed to update collection',
         });
     }
-};
+}
 
 /**
  * Delete a collection

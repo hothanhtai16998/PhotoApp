@@ -15,10 +15,10 @@ function HomePage() {
     const { currentSearch } = useImageStore();
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    
+
     // Check if modal is open (image param exists)
     const isModalOpen = !!searchParams.get('image');
-    
+
     // Global keyboard shortcuts
     useGlobalKeyboardShortcuts({
         onFocusSearch: () => {
@@ -31,7 +31,7 @@ function HomePage() {
         },
         isModalOpen,
     });
-    
+
     // If page is refreshed with ?image=slug, redirect to /photos/:slug to show as full page
     // This handles the refresh case (like Unsplash)
     useEffect(() => {
@@ -49,14 +49,14 @@ function HomePage() {
             }
         }
     }, [searchParams, navigate]);
-    
+
     // Scroll to top when search is activated to show results immediately
     useEffect(() => {
         if (currentSearch) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     }, [currentSearch]);
-    
+
     return (
         <>
             <Header />

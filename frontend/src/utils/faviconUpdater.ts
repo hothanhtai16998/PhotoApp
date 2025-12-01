@@ -1,7 +1,7 @@
 import { type LogoStyle } from '@/components/Logo'
 
 /**
- * Updates the favicon dynamically based on the selected logo style
+ * Updates the favicon dynamically based on the selected logo style or image
  */
 export function updateFavicon(style: LogoStyle): void {
   // Remove existing favicon links
@@ -25,6 +25,105 @@ export function updateFavicon(style: LogoStyle): void {
   appleLink.rel = 'apple-touch-icon'
   appleLink.href = url
   document.head.appendChild(appleLink)
+
+  // Clean up old blob URLs after a delay
+  setTimeout(() => {
+    existingLinks.forEach((oldLink) => {
+      const oldHref = oldLink.getAttribute('href')
+      if (oldHref?.startsWith('blob:')) {
+        URL.revokeObjectURL(oldHref)
+      }
+    })
+  }, 100)
+}
+
+/**
+ * Updates the favicon with a custom image URL
+ * Converts the image to a properly sized canvas for better favicon display
+ */
+export function updateFaviconWithImage(imageUrl: string): void {
+  // Remove existing favicon links
+  const existingLinks = document.querySelectorAll('link[rel*="icon"]')
+  existingLinks.forEach(link => link.remove())
+
+  // Create an image element to load the logo
+  const img = new Image()
+  img.crossOrigin = 'anonymous'
+  
+  img.onload = () => {
+    // Create canvas to resize and optimize the image for favicon
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    
+    if (!ctx) return
+    
+    // Set canvas size to standard favicon sizes
+    const sizes = [16, 32, 48, 64]
+    
+    sizes.forEach(size => {
+      canvas.width = size
+      canvas.height = size
+      
+      // Clear canvas
+      ctx.clearRect(0, 0, size, size)
+      
+      // Enable image smoothing for better quality
+      ctx.imageSmoothingEnabled = true
+      ctx.imageSmoothingQuality = 'high'
+      
+      // Draw image centered and scaled to fit
+      const scale = Math.min(size / img.width, size / img.height)
+      const x = (size - img.width * scale) / 2
+      const y = (size - img.height * scale) / 2
+      
+      ctx.drawImage(img, x, y, img.width * scale, img.height * scale)
+      
+      // Convert to data URL
+      const dataUrl = canvas.toDataURL('image/png')
+      
+      // Create and add favicon link
+      const link = document.createElement('link')
+      link.rel = 'icon'
+      link.type = 'image/png'
+      link.sizes = `${size}x${size}`
+      link.href = dataUrl
+      document.head.appendChild(link)
+    })
+    
+    // Add apple-touch-icon (larger size for iOS)
+    canvas.width = 180
+    canvas.height = 180
+    ctx.clearRect(0, 0, 180, 180)
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
+    
+    const scale = Math.min(180 / img.width, 180 / img.height)
+    const x = (180 - img.width * scale) / 2
+    const y = (180 - img.height * scale) / 2
+    
+    ctx.drawImage(img, x, y, img.width * scale, img.height * scale)
+    
+    const appleLink = document.createElement('link')
+    appleLink.rel = 'apple-touch-icon'
+    appleLink.href = canvas.toDataURL('image/png')
+    document.head.appendChild(appleLink)
+  }
+  
+  img.onerror = () => {
+    // Fallback: use the image directly if canvas conversion fails
+    const link = document.createElement('link')
+    link.rel = 'icon'
+    link.type = 'image/png'
+    link.href = imageUrl
+    document.head.appendChild(link)
+    
+    const appleLink = document.createElement('link')
+    appleLink.rel = 'apple-touch-icon'
+    appleLink.href = imageUrl
+    document.head.appendChild(appleLink)
+  }
+  
+  img.src = imageUrl
 
   // Clean up old blob URLs after a delay
   setTimeout(() => {
@@ -112,4 +211,3 @@ function getFaviconContent(style: LogoStyle, uniqueId: string): string {
       `
   }
 }
-

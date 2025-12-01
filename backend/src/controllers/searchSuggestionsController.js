@@ -2,9 +2,7 @@ import Image from '../models/Image.js';
 import Category from '../models/Category.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { logger } from '../utils/logger.js';
-
-// Escape user input when building RegExp
-const escapeRegex = (str) => String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+import { safeTrim, escapeRegex } from '../utils/inputUtils.js';
 
 /**
  * Generate search suggestions based on query
@@ -15,7 +13,7 @@ const escapeRegex = (str) => String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
  * - Categories
  */
 export const getSearchSuggestions = asyncHandler(async (req, res) => {
-    const query = String(req.query.q || '').trim() || '';
+    const query = safeTrim(req.query.q) || '';
     const limit = Math.min(parseInt(req.query.limit) || 10, 20); // Max 20 suggestions
 
     if (!query || query.length < 1) {
@@ -41,7 +39,7 @@ export const getSearchSuggestions = asyncHandler(async (req, res) => {
             .lean();
 
         titleMatches.forEach(img => {
-            const title = String(img.imageTitle || '').trim();
+            const title = safeTrim(img.imageTitle);
             if (title && !seen.has(title.toLowerCase())) {
                 suggestions.push({
                     type: 'title',
@@ -78,7 +76,7 @@ export const getSearchSuggestions = asyncHandler(async (req, res) => {
         ]);
 
         tagMatches.forEach(tag => {
-            const tagText = String(tag._id || '').trim();
+            const tagText = safeTrim(tag._id);
             if (tagText && !seen.has(tagText.toLowerCase())) {
                 suggestions.push({
                     type: 'tag',
@@ -97,10 +95,10 @@ export const getSearchSuggestions = asyncHandler(async (req, res) => {
         });
 
         locationMatches
-            .filter(location => String(location || '').trim())
+            .filter(location => safeTrim(location))
             .slice(0, 5)
             .forEach(location => {
-                const locationText = String(location || '').trim();
+                const locationText = safeTrim(location);
                 if (!seen.has(locationText.toLowerCase())) {
                     suggestions.push({
                         type: 'location',
@@ -122,7 +120,7 @@ export const getSearchSuggestions = asyncHandler(async (req, res) => {
             .lean();
 
         categoryMatches.forEach(cat => {
-            const catName = String(cat.name || '').trim();
+            const catName = safeTrim(cat.name);
             if (catName && !seen.has(catName.toLowerCase())) {
                 suggestions.push({
                     type: 'category',
