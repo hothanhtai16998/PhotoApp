@@ -1,0 +1,33 @@
+.masonry-grid {
+  display: flex;
+  gap: 24px; /* Gap between columns */
+  padding: 16px;
+}
+
+.masonry-column {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 24px; /* Gap between images in a column */
+}
+
+.masonry-item {
+  width: 100%;
+  height: auto;
+  position: relative;
+  overflow: hidden;
+}
+
+.masonry-item.portrait {
+  max-height: var(
+    --masonry-portrait-max-height,
+    600px
+  ); /* Use variable with fallback */
+}
+
+.masonry-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
