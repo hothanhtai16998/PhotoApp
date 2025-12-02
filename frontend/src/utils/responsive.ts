@@ -2,12 +2,12 @@ import { appConfig } from '@/config/appConfig';
 
 export function isMobileViewport(): boolean {
   if (typeof window === 'undefined') return false;
-  return window.innerWidth <= appConfig.breakpoints.md;
+  return window.innerWidth <= appConfig.mobileBreakpoint;
 }
 
 export function isDesktopViewport(): boolean {
   if (typeof window === 'undefined') return true;
-  return window.innerWidth > appConfig.breakpoints.md;
+  return window.innerWidth > appConfig.mobileBreakpoint;
 }
 
 export function currentBreakpoint(): keyof typeof appConfig.breakpoints {
