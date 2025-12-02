@@ -33,6 +33,13 @@ const ImageGrid = () => {
     const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
     const processedImages = useRef<Set<string>>(new Set());
     const currentImageIds = useRef<Set<string>>(new Set());
+    const [columnCount, setColumnCount] = useState(() => {
+        if (typeof window === 'undefined') return 3;
+        const width = window.innerWidth;
+        if (width < appConfig.breakpoints.md) return 1; // Mobile: 1 column
+        if (width < appConfig.breakpoints.lg) return 2; // Tablet: 2 columns
+        return 3; // Desktop: 3 columns
+    });
 
     // Category changes are handled internally by CategoryNavigation and the image store
 
@@ -216,6 +223,24 @@ const ImageGrid = () => {
         }
     }, [category, searchParams, navigate, actualPathname]);
 
+    // Update column count based on viewport size
+    useEffect(() => {
+        const updateColumnCount = () => {
+            const width = window.innerWidth;
+            if (width < appConfig.breakpoints.md) {
+                setColumnCount(1); // Mobile: 1 column
+            } else if (width < appConfig.breakpoints.lg) {
+                setColumnCount(2); // Tablet: 2 columns
+            } else {
+                setColumnCount(3); // Desktop: 3 columns
+            }
+        };
+
+        updateColumnCount();
+        window.addEventListener('resize', updateColumnCount);
+        return () => window.removeEventListener('resize', updateColumnCount);
+    }, []);
+
     return (
         <>
             <div className="container mx-auto">
@@ -227,7 +252,7 @@ const ImageGrid = () => {
                         ))}
                     </div>
                 ) : (
-                    <MasonryGrid images={images} onImageClick={handleImageClick} />
+                    <MasonryGrid images={images} onImageClick={handleImageClick} columnCount={columnCount} />
                 )}
                 <div ref={loadMoreRef} />
                 {isLoadingMore && <p className="text-center py-4">Đang tải...</p>}

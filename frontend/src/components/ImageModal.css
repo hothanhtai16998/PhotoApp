@@ -260,9 +260,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
+  padding: 8px 24px;
   background: #fff;
-  border-bottom: 1px solid #e5e5e5;
   flex-shrink: 0;
   position: relative;
   z-index: 1;
@@ -306,8 +305,7 @@
 
   /* Author banner styling for desktop page mode */
   .image-modal.image-modal-page .image-modal-author-banner {
-    padding: 16px 24px;
-    border-bottom: 1px solid #e5e5e5;
+    padding: 8px 24px;
   }
 
   .image-modal.image-modal-page .modal-author-banner-left {
