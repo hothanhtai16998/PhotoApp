@@ -38,7 +38,7 @@ export const filterByDateRange = (images: Image[], dateFrom: string, dateTo: str
 export const applyImageFilters = (
   images: Image[],
   filters: SearchFilters,
-  imageTypes: Map<string, 'portrait' | 'landscape'>
+  imageTypes: Map<string, 'portrait' | 'landscape' | 'square'>
 ): Image[] => {
   let filtered = [...images];
 
@@ -63,9 +63,7 @@ export const applyImageFilters = (
       } else if (filters.orientation === 'landscape') {
         return imgType === 'landscape';
       } else if (filters.orientation === 'square') {
-        // Square detection would need actual dimensions
-        // For now, we'll skip this or implement a check
-        return false; // Placeholder - would need image dimensions
+        return imgType === 'square';
       }
       return true;
     });

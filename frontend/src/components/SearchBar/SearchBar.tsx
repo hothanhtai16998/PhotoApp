@@ -169,8 +169,14 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
     // Handle focus/blur
     const handleFocus = useCallback(() => {
         setIsFocused(true);
-        setShowSuggestions(true);
-    }, []);
+        // On mobile, only show suggestions if there's a search query
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile && !searchQuery.trim()) {
+            setShowSuggestions(false);
+        } else {
+            setShowSuggestions(true);
+        }
+    }, [searchQuery]);
 
     const handleBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
         const relatedTarget = e.relatedTarget as HTMLElement | null;

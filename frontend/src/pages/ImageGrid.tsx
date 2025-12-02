@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, lazy, Suspense, useRef, useContext } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense, useRef, useContext, useMemo } from 'react';
 import { useSearchParams, useNavigate, useLocation, useParams } from 'react-router-dom';
 import type { Image } from '../types/image';
 import { imageService } from '../services/imageService';
@@ -14,6 +14,10 @@ import { INLINE_MODAL_FLAG_KEY } from '@/constants/modalKeys';
 import { getCategoryNameFromSlug } from '@/utils/categorySlug';
 import { categoryService } from '@/services/categoryService';
 import api from '@/lib/api';
+import { searchConfig } from '@/config/searchConfig';
+import type { SearchFiltersType } from '@/components/SearchBar/hooks/useSearchFilters';
+import { applyImageFilters } from '@/utils/imageFilters';
+import type { SearchFilters, ColorFilter } from '@/components/SearchFilters';
 
 const ImageModal = lazy(() => import('@/components/ImageModal'));
 const CollectionModal = lazy(() => import('@/components/CollectionModal'));
@@ -42,10 +46,54 @@ const ImageGrid = () => {
     const category = categorySlug
         ? (categoryName || 'all')
         : (categoryFromQuery || 'all');
+
+    // Load filters from localStorage
+    const [filters, setFilters] = useState<SearchFiltersType>(() => {
+        try {
+            const stored = localStorage.getItem(searchConfig.filtersStorageKey);
+            if (stored) {
+                return JSON.parse(stored);
+            }
+        } catch (error) {
+            console.error('Failed to load filters:', error);
+        }
+        return {
+            orientation: 'all',
+            color: 'all',
+            dateFrom: '',
+            dateTo: '',
+        };
+    });
+
+    // Listen for filter changes from SearchBar
+    useEffect(() => {
+        const handleFilterChange = () => {
+            try {
+                const stored = localStorage.getItem(searchConfig.filtersStorageKey);
+                if (stored) {
+                    const newFilters = JSON.parse(stored);
+                    setFilters(newFilters);
+                } else {
+                    setFilters({
+                        orientation: 'all',
+                        color: 'all',
+                        dateFrom: '',
+                        dateTo: '',
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load filters:', error);
+            }
+        };
+
+        window.addEventListener('filterChange', handleFilterChange);
+        return () => window.removeEventListener('filterChange', handleFilterChange);
+    }, []);
+
     const [selectedImage, setSelectedImage] = useState<Image | null>(null);
     const [collectionImage, setCollectionImage] = useState<Image | null>(null);
     const [showCollectionModal, setShowCollectionModal] = useState(false);
-    const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
+    const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape' | 'square'>>(new Map());
     const processedImages = useRef<Set<string>>(new Set());
     const currentImageIds = useRef<Set<string>>(new Set());
     const [columnCount, setColumnCount] = useState(() => {
@@ -147,7 +195,7 @@ const ImageGrid = () => {
         });
     }, [navigate, backgroundLocation]);
 
-    const fetchImages = useCallback(async (currentPage: number, categoryName: string) => {
+    const fetchImages = useCallback(async (currentPage: number, categoryName: string, colorFilter?: string) => {
         if (currentPage === 1) {
             setLoading(true);
         } else {
@@ -158,6 +206,7 @@ const ImageGrid = () => {
                 page: currentPage,
                 limit: 20,
                 category: categoryName === 'all' ? undefined : categoryName,
+                color: colorFilter && colorFilter !== 'all' ? colorFilter : undefined,
             });
             const newImages = response.images || [];
             setImages(prev => currentPage === 1 ? newImages : [...prev, ...newImages]);
@@ -178,8 +227,8 @@ const ImageGrid = () => {
         setImages([]);
         setPage(1);
         setHasMore(true);
-        fetchImages(1, category);
-    }, [category, fetchImages]);
+        fetchImages(1, category, filters.color);
+    }, [category, filters.color, fetchImages]);
 
     const lastInlineSlugRef = useRef<string | null>(null);
 
@@ -221,9 +270,9 @@ const ImageGrid = () => {
         if (!loading && hasMore && !isLoadingMore) {
             const nextPage = page + 1;
             setPage(nextPage);
-            fetchImages(nextPage, category);
+            fetchImages(nextPage, category, filters.color);
         }
-    }, [loading, hasMore, page, category, fetchImages, isLoadingMore]);
+    }, [loading, hasMore, page, category, filters.color, fetchImages, isLoadingMore]);
 
     const { loadMoreRef } = useInfiniteScroll({
         hasMore,
@@ -231,11 +280,36 @@ const ImageGrid = () => {
         onLoadMore: handleLoadMore,
     });
 
+    // Apply filters to images (orientation, date, etc.)
+    const filteredImages = useMemo(() => {
+        const searchFilters: SearchFilters = {
+            orientation: filters.orientation as 'all' | 'portrait' | 'landscape' | 'square',
+            color: filters.color as ColorFilter, // Color is filtered on backend
+            dateFrom: filters.dateFrom,
+            dateTo: filters.dateTo,
+        };
+        return applyImageFilters(images, searchFilters, imageTypes);
+    }, [images, filters, imageTypes]);
+
     const handleImageLoad = useCallback((imageId: string, img: HTMLImageElement) => {
         if (processedImages.current.has(imageId)) return;
         processedImages.current.add(imageId);
-        const isPortrait = img.naturalHeight > img.naturalWidth;
-        const imageType = isPortrait ? 'portrait' : 'landscape';
+
+        // Determine image orientation with tolerance for square images
+        const height = img.naturalHeight;
+        const width = img.naturalWidth;
+        const aspectRatio = height / width;
+        const tolerance = 0.05; // 5% tolerance for square images
+
+        let imageType: 'portrait' | 'landscape' | 'square';
+        if (Math.abs(aspectRatio - 1) < tolerance) {
+            imageType = 'square';
+        } else if (height > width) {
+            imageType = 'portrait';
+        } else {
+            imageType = 'landscape';
+        }
+
         setImageTypes(prev => {
             if (prev.has(imageId)) return prev;
             const newMap = new Map(prev);
@@ -386,7 +460,7 @@ const ImageGrid = () => {
                     </div>
                 ) : (
                     <MasonryGrid
-                        images={images}
+                        images={filteredImages}
                         onImageClick={handleImageClick}
                         columnCount={columnCount}
                         onDownload={handleDownload}
@@ -401,13 +475,13 @@ const ImageGrid = () => {
                 {selectedImage && (
                     <ImageModal
                         image={selectedImage}
-                        images={images}
+                        images={filteredImages}
                         onClose={handleCloseModal}
                         onImageSelect={handleModalImageSelect}
                         lockBodyScroll={false}
                         renderAsPage={false}
                         onDownload={() => { /* Download handled by ImageModal internally */ }}
-                        imageTypes={imageTypes}
+                        imageTypes={imageTypes as Map<string, 'portrait' | 'landscape'>}
                         onImageLoad={handleImageLoad}
                         currentImageIds={currentImageIds.current}
                         processedImages={processedImages}

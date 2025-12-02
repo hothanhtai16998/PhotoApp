@@ -1,6 +1,6 @@
 import { memo, useState, useRef, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Shield, Heart, Menu, X, User, LogOut, Info } from "lucide-react"
+import { Shield, Heart, Menu, X, User, LogOut, Info, Building2, Monitor, Users, Compass, FileText, ChevronDown } from "lucide-react"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { useUserStore } from "@/stores/useUserStore"
 import { useImageStore } from "@/stores/useImageStore"
@@ -63,15 +63,46 @@ export const Header = memo(function Header() {
             </Link>
           </div>
 
-          {/* Mobile Menu Button */}
-          <button
-            className="mobile-menu-button"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Chuyển đổi menu"
-            aria-expanded={mobileMenuOpen}
-          >
-            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+          {/* Mobile Header Actions - Icons visible on mobile */}
+          <div className="mobile-header-actions">
+            {accessToken ? (
+              <>
+                {/* User Icon/Avatar */}
+                <Link to="/profile" className="mobile-header-icon" aria-label="Tài khoản">
+                  {user ? (
+                    <Avatar
+                      user={user}
+                      size={32}
+                      className="mobile-header-avatar"
+                      fallbackClassName="mobile-header-avatar-placeholder"
+                    />
+                  ) : (
+                    <User size={20} />
+                  )}
+                </Link>
+                {/* Notification Bell */}
+                <div className="mobile-header-icon-wrapper">
+                  <NotificationBell />
+                </div>
+              </>
+            ) : (
+              <>
+                {/* User Icon for Sign In */}
+                <Link to="/signin" className="mobile-header-icon" aria-label="Đăng nhập">
+                  <User size={20} />
+                </Link>
+              </>
+            )}
+            {/* Mobile Menu Button */}
+            <button
+              className="mobile-menu-button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Chuyển đổi menu"
+              aria-expanded={mobileMenuOpen}
+            >
+              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
 
           {/* Search Bar */}
           <SearchBar ref={searchBarRef} />
@@ -147,53 +178,89 @@ export const Header = memo(function Header() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
-      {
-        mobileMenuOpen && (
-          <div className="mobile-menu">
+      {/* Mobile Menu Modal - Unsplash Style */}
+      {mobileMenuOpen && (
+          <div className="mobile-menu-modal">
+            {/* Close Button */}
+            <button
+              className="mobile-menu-close"
+              onClick={() => setMobileMenuOpen(false)}
+              aria-label="Đóng menu"
+            >
+              <X size={24} />
+            </button>
             <div className="mobile-menu-content">
-              <Link to="/about" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
-                Về chúng tôi
-              </Link>
-              {accessToken ? (
-                <>
-                  <button onClick={() => { setUploadModalOpen(true); setMobileMenuOpen(false); }} className="mobile-menu-link">
-                    Thêm ảnh
-                  </button>
-                  <div className="mobile-menu-notification-wrapper" onClick={(e) => e.stopPropagation()}>
-                    <NotificationBell />
-                  </div>
-                  <Link to="/favorites" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
-                    <Heart size={18} />
-                    <span>Yêu thích</span>
-                  </Link>
-                  {user?.isAdmin && (
-                    <Link to="/admin" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
-                      <Shield size={18} />
-                      <span>Admin</span>
+              {/* Navigation Sections */}
+              <div className="mobile-menu-section">
+                <Link to="/about" className="mobile-menu-nav-item" onClick={() => setMobileMenuOpen(false)}>
+                  <Building2 size={18} />
+                  <span>Công ty</span>
+                  <ChevronDown size={16} className="mobile-menu-arrow" />
+                </Link>
+                <Link to="/" className="mobile-menu-nav-item" onClick={() => setMobileMenuOpen(false)}>
+                  <Monitor size={18} />
+                  <span>Sản phẩm</span>
+                  <ChevronDown size={16} className="mobile-menu-arrow" />
+                </Link>
+                <Link to="/" className="mobile-menu-nav-item" onClick={() => setMobileMenuOpen(false)}>
+                  <Users size={18} />
+                  <span>Cộng đồng</span>
+                  <ChevronDown size={16} className="mobile-menu-arrow" />
+                </Link>
+                <Link to="/" className="mobile-menu-nav-item" onClick={() => setMobileMenuOpen(false)}>
+                  <Compass size={18} />
+                  <span>Khám phá</span>
+                  <ChevronDown size={16} className="mobile-menu-arrow" />
+                </Link>
+                <Link to="/about" className="mobile-menu-nav-item" onClick={() => setMobileMenuOpen(false)}>
+                  <FileText size={18} />
+                  <span>Pháp lý</span>
+                  <ChevronDown size={16} className="mobile-menu-arrow" />
+                </Link>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="mobile-menu-actions">
+                {accessToken ? (
+                  <>
+                    <button 
+                      onClick={() => { setUploadModalOpen(true); setMobileMenuOpen(false); }} 
+                      className="mobile-menu-button-primary"
+                    >
+                      Submit an image
+                    </button>
+                    <Link 
+                      to="/profile" 
+                      className="mobile-menu-button-secondary"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Tài khoản
                     </Link>
-                  )}
-                  <Link to="/profile" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
-                    Tài khoản
-                  </Link>
-                  <button onClick={() => { handleSignOut(); setMobileMenuOpen(false); }} className="mobile-menu-link">
-                    Đăng xuất
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link to="/signin" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
-                    Đăng nhập
-                  </Link>
-                  <button onClick={() => { navigate('/signin'); setMobileMenuOpen(false); }} className="mobile-menu-button-action">
-                    Thêm ảnh
-                  </button>
-                </>
-              )}
+                  </>
+                ) : (
+                  <>
+                    <button 
+                      onClick={() => { navigate('/signin'); setMobileMenuOpen(false); }} 
+                      className="mobile-menu-button-primary"
+                    >
+                      Submit an image
+                    </button>
+                    <Link 
+                      to="/signin" 
+                      className="mobile-menu-button-secondary"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Log in
+                    </Link>
+                    <p className="mobile-menu-signup-text">
+                      New to Unsplash? <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>Sign up for free</Link>
+                    </p>
+                  </>
+                )}
+              </div>
             </div>
           </div>
-        )
-      }
+      )}
 
       {/* Upload Modal */}
       <UploadModal isOpen={uploadModalOpen} onClose={() => setUploadModalOpen(false)} />
