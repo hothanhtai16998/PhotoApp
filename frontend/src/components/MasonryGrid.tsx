@@ -152,9 +152,7 @@ const MobileImageCard: React.FC<MobileImageCardProps> = ({
 
     // Removed handleActionClick - now handled inline
 
-    const handleAuthorClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
-    };
+    // Removed handleAuthorClick - now handled inline
 
     const handleBookmarkClick = useCallback(async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -239,11 +237,26 @@ const MobileImageCard: React.FC<MobileImageCardProps> = ({
     return (
         <figure className="masonry-card-mobile">
             {/* A. Author Section (Top) - Always Visible */}
-            <div className="card-author-section-mobile" onClick={handleAuthorClick}>
+            <div 
+                className="card-author-section-mobile" 
+                onClick={(e) => {
+                    e.stopPropagation();
+                    // Only allow navigation if clicking directly on the Link, not empty space
+                    if (e.target === e.currentTarget) {
+                        e.preventDefault();
+                        // Do nothing when clicking empty space
+                        return;
+                    }
+                }}
+            >
                 {image.uploadedBy && (
                     <Link
                         to={`/profile/${image.uploadedBy.username}`}
                         className="author-info-mobile"
+                        onClick={(e) => {
+                            // Allow navigation only when clicking the Link itself
+                            e.stopPropagation();
+                        }}
                     >
                         <img
                             src={image.uploadedBy.avatarUrl || '/default-avatar.png'}

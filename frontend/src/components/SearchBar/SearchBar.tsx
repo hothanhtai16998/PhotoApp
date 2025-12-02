@@ -211,11 +211,27 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
     );
 
     return (
-        <div className="search-bar-container">
+        <div 
+            className="search-bar-container"
+            onClick={(e) => {
+                // Prevent clicks on empty space from propagating
+                if (e.target === e.currentTarget) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                }
+            }}
+        >
             <form
                 onSubmit={(e) => {
                     e.preventDefault();
                     handleSearch(searchQuery);
+                }}
+                onClick={(e) => {
+                    // Only prevent navigation if clicking on empty space (not on input or buttons)
+                    if (e.target === e.currentTarget) {
+                        e.stopPropagation();
+                        e.preventDefault();
+                    }
                 }}
                 className="header-search"
                 role="search"
@@ -238,6 +254,9 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                     onKeyDown={handleKeyDown}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                    }}
                     className="search-input"
                     aria-label="Tìm kiếm ảnh"
                     aria-describedby="search-description"

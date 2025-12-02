@@ -133,13 +133,13 @@
 /* Responsive */
 @media (min-width: 768px) {
   .category-navigation-wrapper {
-    padding: 0 40px;
+    padding: 0 20px;
   }
 }
 
 @media (min-width: 1024px) {
   .category-navigation-wrapper {
-    padding: 0 60px;
+    padding: 0 30px;
   }
 }
 
@@ -165,7 +165,7 @@
   }
 
   .category-navigation-wrapper {
-    padding: 0 40px; /* Space for scroll buttons */
+    padding: 0 20px; /* Space for scroll buttons */
     width: 100%;
     max-width: 100%;
   }
@@ -204,7 +204,7 @@
   }
 
   .category-navigation-wrapper {
-    padding: 0 36px; /* Space for scroll buttons */
+    padding: 0 18px; /* Space for scroll buttons */
     width: 100%;
   }
 

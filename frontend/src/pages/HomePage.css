@@ -32,6 +32,9 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .container {
+    padding: 0;
+  }
   .homepage-hero {
     padding: 40px 1.5rem 30px;
   }
@@ -45,7 +48,7 @@
   }
 }
 
-@media (min-width: 390px) {
+@media (max-width: 390px) {
   .container {
     padding: 0;
   }

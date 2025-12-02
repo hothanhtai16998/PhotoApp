@@ -144,13 +144,13 @@
 
   .main-carousel-container {
     height: calc(
-      100vh - var(--header-height, 56px) - 70px
-    ); /* Account for search bar on mobile */
+      100vh - var(--header-height, 56px) - 220px
+    ); /* Account for search bar on mobile - reduced height */
   }
 
   .tripzo-page {
-    height: calc(100vh - var(--header-height, 56px) - 70px);
-    min-height: calc(100vh - var(--header-height, 56px) - 70px);
+    height: calc(100vh - var(--header-height, 56px) - 220px);
+    min-height: calc(100vh - var(--header-height, 56px) - 220px);
     margin-top: calc(
       var(--header-height, 56px) + 70px
     ); /* Push down for search bar */
@@ -159,12 +159,12 @@
 
 @media (max-width: 480px) {
   .main-carousel-container {
-    height: calc(100vh - var(--header-height, 56px) - 70px);
+    height: calc(100vh - var(--header-height, 56px) - 220px);
   }
 
   .tripzo-page {
-    height: calc(100vh - var(--header-height, 56px) - 70px);
-    min-height: calc(100vh - var(--header-height, 56px) - 70px);
+    height: calc(100vh - var(--header-height, 56px) - 220px);
+    min-height: calc(100vh - var(--header-height, 56px) - 220px);
     margin-top: calc(var(--header-height, 56px) + 70px);
   }
 }

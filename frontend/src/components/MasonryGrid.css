@@ -135,8 +135,9 @@
     gap: 10px;
     text-decoration: none;
     color: inherit;
-    flex: 1;
+    flex: 0 1 auto; /* Don't grow to fill space, only take needed space */
     min-width: 0;
+    max-width: 100%;
   }
 
   .author-avatar-mobile {
