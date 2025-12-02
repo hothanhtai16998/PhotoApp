@@ -65,6 +65,8 @@ async function replaceSingleImage({ imageId, fileBuffer, mimetype, fileSize, use
             smallAvifUrl: uploadResult.smallAvifUrl,
             regularAvifUrl: uploadResult.regularAvifUrl,
             publicId: uploadResult.publicId,
+            width: uploadResult.width,
+            height: uploadResult.height,
             dominantColors: Array.isArray(colors) && colors.length ? colors : undefined,
             updatedAt: new Date(),
         };

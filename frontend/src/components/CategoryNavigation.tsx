@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, memo } from "react"
-import { useNavigate, useLocation } from "react-router-dom"
 import { useImageStore } from "@/stores/useImageStore"
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom"
+import { useState, useEffect, useRef, memo } from "react"
 import { categoryService, type Category } from "@/services/categoryService"
 import { appConfig } from '@/config/appConfig';
 import { timingConfig } from '@/config/timingConfig';
@@ -10,6 +10,7 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
   const { fetchImages, currentCategory } = useImageStore()
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams();
   const [categories, setCategories] = useState<string[]>(['Tất cả'])
   const [headerHeight, setHeaderHeight] = useState(0)
   const [isSticky, setIsSticky] = useState(false)
@@ -191,6 +192,14 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
   }, [])
 
   const handleCategoryClick = (category: string) => {
+    const isTestPage = location.pathname.includes('UnsplashGridTestPage');
+
+    if (isTestPage) {
+      const newCategory = category !== 'Tất cả' ? category : 'all';
+      setSearchParams({ category: newCategory });
+      return;
+    }
+
     if (location.pathname !== '/') {
       navigate('/')
     }
@@ -209,8 +218,8 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
     }, 10);
   }
 
-  // Only show on homepage
-  if (location.pathname !== '/') {
+  // Only show on homepage or test page
+  if (location.pathname !== '/' && !location.pathname.includes('UnsplashGridTestPage')) {
     return null
   }
 

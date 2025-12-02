@@ -4,9 +4,11 @@ import type { Coordinates } from './common';
 
 export interface Image {
   _id: string;
-  publicId: string;
-  imageTitle: string;
+  title?: string;
+  description?: string;
   imageUrl: string;
+  width: number;
+  height: number;
   // Multiple image sizes for progressive loading (like Unsplash)
   thumbnailUrl?: string; // Small thumbnail for blur-up effect - WebP
   smallUrl?: string; // Small size for grid view - WebP

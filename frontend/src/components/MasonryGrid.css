@@ -2,6 +2,7 @@
   display: flex;
   gap: 24px; /* Gap between columns */
   padding: 16px;
+  align-items: flex-start; /* Align columns to the top */
 }
 
 .masonry-column {
@@ -9,6 +10,7 @@
   flex-direction: column;
   flex: 1;
   gap: 24px; /* Gap between images in a column */
+  min-width: 0; /* Prevent columns from overflowing */
 }
 
 .masonry-item {
@@ -16,13 +18,7 @@
   height: auto;
   position: relative;
   overflow: hidden;
-}
-
-.masonry-item.portrait {
-  max-height: var(
-    --masonry-portrait-max-height,
-    600px
-  ); /* Use variable with fallback */
+  border-radius: 8px; /* Optional: for rounded corners */
 }
 
 .masonry-item img {
