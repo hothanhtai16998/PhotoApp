@@ -150,9 +150,7 @@ const MobileImageCard: React.FC<MobileImageCardProps> = ({
     const menuRef = useRef<HTMLDivElement>(null);
     const dropdownRef = useRef<HTMLButtonElement>(null);
 
-    const handleActionClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
-    };
+    // Removed handleActionClick - now handled inline
 
     const handleAuthorClick = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -281,23 +279,36 @@ const MobileImageCard: React.FC<MobileImageCardProps> = ({
             </div>
 
             {/* C. Action Bar (Bottom) - Always Visible */}
-            <div className="card-action-bar-mobile" onClick={handleActionClick}>
-                <button
-                    className={`action-btn-mobile bookmark-btn-mobile ${isFavorited ? 'active' : ''}`}
-                    aria-label={isFavorited ? 'Remove bookmark' : 'Bookmark image'}
-                    title={isFavorited ? 'Remove bookmark' : 'Bookmark'}
-                    onClick={handleBookmarkClick}
-                >
-                    <Bookmark size={18} fill={isFavorited ? 'currentColor' : 'none'} />
-                </button>
-                <button
-                    className="action-btn-mobile collection-btn-mobile"
-                    aria-label="Add to collection"
-                    title="Add to collection"
-                    onClick={handleCollectionClick}
-                >
-                    <Plus size={18} />
-                </button>
+            <div 
+                className="card-action-bar-mobile" 
+                onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    // Only handle if clicking directly on the container (empty space)
+                    if (e.target === e.currentTarget) {
+                        // Do nothing - just prevent propagation
+                        return;
+                    }
+                }}
+            >
+                <div className="action-buttons-left-mobile">
+                    <button
+                        className={`action-btn-mobile bookmark-btn-mobile ${isFavorited ? 'active' : ''}`}
+                        aria-label={isFavorited ? 'Remove bookmark' : 'Bookmark image'}
+                        title={isFavorited ? 'Remove bookmark' : 'Bookmark'}
+                        onClick={handleBookmarkClick}
+                    >
+                        <Bookmark size={18} fill={isFavorited ? 'currentColor' : 'none'} />
+                    </button>
+                    <button
+                        className="action-btn-mobile collection-btn-mobile"
+                        aria-label="Add to collection"
+                        title="Add to collection"
+                        onClick={handleCollectionClick}
+                    >
+                        <Plus size={18} />
+                    </button>
+                </div>
                 <div className="download-btn-wrapper-mobile">
                     <button
                         className="download-btn-split-mobile download-btn-text-mobile"

@@ -113,12 +113,7 @@
     background: #fff;
     border-radius: 8px;
     overflow: hidden;
-    cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .masonry-card-mobile:active {
-    transform: scale(0.98);
   }
   .masonry-grid {
     padding: 0;
@@ -172,6 +167,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    cursor: pointer;
   }
 
   .card-image-mobile {
@@ -186,16 +182,27 @@
     padding: 12px 16px;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 8px;
     border-top: 1px solid #f0f0f0;
     background: #fff;
+    flex-shrink: 0;
+    width: 100%;
+    box-sizing: border-box;
+    position: relative;
+  }
+
+  .action-buttons-left-mobile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     flex-shrink: 0;
   }
 
   /* Mobile Action Buttons - Square with borders */
   .action-btn-mobile {
     background: #fff;
-    border: 1px solid #e5e5e5;
+    border: 1px solid #d1d1d1;
     border-radius: 6px;
     padding: 8px;
     width: 36px;
@@ -235,10 +242,11 @@
     display: flex;
     align-items: center;
     background: #fff;
-    border: 1px solid #e5e5e5;
+    border: 1px solid #d1d1d1;
     border-radius: 6px;
     overflow: hidden;
     flex-shrink: 0;
+    margin-left: auto;
   }
 
   .download-btn-split-mobile {
