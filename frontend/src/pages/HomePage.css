@@ -44,3 +44,9 @@
     font-size: 0.9375rem;
   }
 }
+
+@media (min-width: 390px) {
+  .container {
+    padding: 0;
+  }
+}

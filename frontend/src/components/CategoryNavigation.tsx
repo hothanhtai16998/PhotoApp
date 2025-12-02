@@ -1,10 +1,11 @@
 import { useImageStore } from "@/stores/useImageStore"
 import { useNavigate, useLocation, useSearchParams, useParams } from "react-router-dom"
-import { useState, useEffect, useRef, memo } from "react"
+import { useState, useEffect, useRef, memo, useCallback } from "react"
 import { categoryService, type Category } from "@/services/categoryService"
 import { appConfig } from '@/config/appConfig';
 import { timingConfig } from '@/config/timingConfig';
 import { categoryNameToSlug, getCategoryNameFromSlug } from '@/utils/categorySlug';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import './CategoryNavigation.css'
 
 export const CategoryNavigation = memo(function CategoryNavigation() {
@@ -19,7 +20,11 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
   const [isSticky, setIsSticky] = useState(false)
   const [navHeight, setNavHeight] = useState(0)
   const categoryNavRef = useRef<HTMLDivElement>(null)
+  const categoryNavElementRef = useRef<HTMLElement>(null)
   const initialNavTopRef = useRef<number | null>(null)
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   
   // Determine active category from URL (route param) or fallback to store
   const activeCategoryFromUrl = categorySlug 
@@ -182,6 +187,66 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
     }
   }, [headerHeight, isSticky])
 
+  // Check if mobile and update scroll button visibility
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= appConfig.mobileBreakpoint)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Check scroll position and update button visibility
+  const checkScrollButtons = useCallback(() => {
+    if (!categoryNavElementRef.current || !isMobile) {
+      setCanScrollLeft(false)
+      setCanScrollRight(false)
+      return
+    }
+
+    const nav = categoryNavElementRef.current
+    const { scrollLeft, scrollWidth, clientWidth } = nav
+    setCanScrollLeft(scrollLeft > 0)
+    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1) // -1 for rounding
+  }, [isMobile])
+
+  // Update scroll button visibility when categories change or on scroll
+  useEffect(() => {
+    if (!categoryNavElementRef.current) return
+
+    checkScrollButtons()
+
+    const nav = categoryNavElementRef.current
+    nav.addEventListener('scroll', checkScrollButtons)
+    
+    // Also check on resize
+    const handleResize = () => {
+      checkScrollButtons()
+    }
+    window.addEventListener('resize', handleResize)
+
+    return () => {
+      nav.removeEventListener('scroll', checkScrollButtons)
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [categoryNames, checkScrollButtons])
+
+  // Scroll handlers
+  const scrollLeft = useCallback(() => {
+    if (!categoryNavElementRef.current) return
+    const nav = categoryNavElementRef.current
+    const scrollAmount = nav.clientWidth * 0.8 // Scroll 80% of visible width
+    nav.scrollBy({ left: -scrollAmount, behavior: 'smooth' })
+  }, [])
+
+  const scrollRight = useCallback(() => {
+    if (!categoryNavElementRef.current) return
+    const nav = categoryNavElementRef.current
+    const scrollAmount = nav.clientWidth * 0.8 // Scroll 80% of visible width
+    nav.scrollBy({ left: scrollAmount, behavior: 'smooth' })
+  }, [])
+
   // Fetch categories from backend
   useEffect(() => {
     const loadCategories = async () => {
@@ -247,28 +312,22 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
       <div
         className={`category-navigation-container ${isSticky ? 'is-sticky' : ''}`}
         ref={categoryNavRef}
-        onTouchMove={(e) => {
-          // Prevent scrolling in category navigation on mobile
-          if (window.innerWidth <= appConfig.mobileBreakpoint) {
-            e.preventDefault();
-          }
-        }}
-        onTouchStart={(e) => {
-          // Prevent scrolling in category navigation on mobile
-          if (window.innerWidth <= appConfig.mobileBreakpoint) {
-            e.stopPropagation();
-          }
-        }}
       >
         <div className="category-navigation-wrapper">
+          {/* Left scroll button - only on mobile */}
+          {isMobile && canScrollLeft && (
+            <button
+              className="category-scroll-btn category-scroll-btn-left"
+              onClick={scrollLeft}
+              aria-label="Scroll left"
+            >
+              <ChevronLeft size={20} />
+            </button>
+          )}
+          
           <nav
+            ref={categoryNavElementRef}
             className="category-navigation"
-            onTouchMove={(e) => {
-              // Prevent scrolling in category navigation on mobile
-              if (window.innerWidth <= appConfig.mobileBreakpoint) {
-                e.preventDefault();
-              }
-            }}
           >
             {categoryNames.map((category) => (
               <button
@@ -280,6 +339,17 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
               </button>
             ))}
           </nav>
+
+          {/* Right scroll button - only on mobile */}
+          {isMobile && canScrollRight && (
+            <button
+              className="category-scroll-btn category-scroll-btn-right"
+              onClick={scrollRight}
+              aria-label="Scroll right"
+            >
+              <ChevronRight size={20} />
+            </button>
+          )}
         </div>
       </div>
     </>

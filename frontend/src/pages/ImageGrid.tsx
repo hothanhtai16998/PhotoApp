@@ -13,8 +13,10 @@ import { ActualLocationContext } from '@/contexts/ActualLocationContext';
 import { INLINE_MODAL_FLAG_KEY } from '@/constants/modalKeys';
 import { getCategoryNameFromSlug } from '@/utils/categorySlug';
 import { categoryService } from '@/services/categoryService';
+import api from '@/lib/api';
 
 const ImageModal = lazy(() => import('@/components/ImageModal'));
+const CollectionModal = lazy(() => import('@/components/CollectionModal'));
 const GRID_SCROLL_POSITION_KEY = 'imageGridScrollPosition';
 
 const ImageGrid = () => {
@@ -41,13 +43,15 @@ const ImageGrid = () => {
         ? (categoryName || 'all')
         : (categoryFromQuery || 'all');
     const [selectedImage, setSelectedImage] = useState<Image | null>(null);
+    const [collectionImage, setCollectionImage] = useState<Image | null>(null);
+    const [showCollectionModal, setShowCollectionModal] = useState(false);
     const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
     const processedImages = useRef<Set<string>>(new Set());
     const currentImageIds = useRef<Set<string>>(new Set());
     const [columnCount, setColumnCount] = useState(() => {
         if (typeof window === 'undefined') return 3;
         const width = window.innerWidth;
-        if (width < appConfig.breakpoints.md) return 1; // Mobile: 1 column
+        if (width < appConfig.mobileBreakpoint) return 1; // Mobile: 1 column
         if (width < appConfig.breakpoints.lg) return 2; // Tablet: 2 columns
         return 3; // Desktop: 3 columns
     });
@@ -240,6 +244,103 @@ const ImageGrid = () => {
         });
     }, []);
 
+    // Download handler
+    const handleDownload = useCallback(async (image: Image, e: React.MouseEvent) => {
+        e.stopPropagation();
+        try {
+            if (!image._id) {
+                throw new Error('Lỗi khi lấy ID của ảnh');
+            }
+
+            const response = await api.get(`/images/${image._id}/download`, {
+                responseType: 'blob',
+                withCredentials: true,
+            });
+
+            const blob = new Blob([response.data], { type: response.headers['content-type'] || 'image/webp' });
+            const blobUrl = URL.createObjectURL(blob);
+
+            const link = document.createElement('a');
+            link.href = blobUrl;
+
+            const contentDisposition = response.headers['content-disposition'];
+            let fileName = 'photo.webp';
+            if (contentDisposition) {
+                const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
+                if (fileNameMatch) {
+                    fileName = fileNameMatch[1];
+                }
+            } else {
+                const sanitizedTitle = (image.imageTitle || 'photo').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                const urlExtension = image.imageUrl?.match(/\.([a-z]+)(?:\?|$)/i)?.[1] || 'webp';
+                fileName = `${sanitizedTitle}.${urlExtension}`;
+            }
+            link.download = fileName;
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            URL.revokeObjectURL(blobUrl);
+        } catch (error) {
+            console.error('Failed to download image:', error);
+        }
+    }, []);
+
+    // Download handler with size selection (for mobile)
+    const handleDownloadWithSize = useCallback(async (image: Image, size: 'small' | 'medium' | 'large' | 'original') => {
+        try {
+            if (!image._id) {
+                throw new Error('Lỗi khi lấy ID của ảnh');
+            }
+
+            const response = await api.get(`/images/${image._id}/download?size=${size}`, {
+                responseType: 'blob',
+                withCredentials: true,
+            });
+
+            const blob = new Blob([response.data], { type: response.headers['content-type'] || 'image/webp' });
+            const blobUrl = URL.createObjectURL(blob);
+
+            const link = document.createElement('a');
+            link.href = blobUrl;
+
+            const contentDisposition = response.headers['content-disposition'];
+            let fileName = 'photo.webp';
+            if (contentDisposition) {
+                const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
+                if (fileNameMatch) {
+                    fileName = fileNameMatch[1];
+                }
+            } else {
+                const sanitizedTitle = (image.imageTitle || 'photo').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                const urlExtension = image.imageUrl?.match(/\.([a-z]+)(?:\?|$)/i)?.[1] || 'webp';
+                fileName = `${sanitizedTitle}.${urlExtension}`;
+            }
+            link.download = fileName;
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            URL.revokeObjectURL(blobUrl);
+        } catch (error) {
+            console.error('Failed to download image:', error);
+        }
+    }, []);
+
+    // Collection handler
+    const handleAddToCollection = useCallback((image: Image, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setCollectionImage(image);
+        setShowCollectionModal(true);
+    }, []);
+
+    const handleCollectionModalClose = useCallback(() => {
+        setShowCollectionModal(false);
+        setCollectionImage(null);
+    }, []);
+
     // Clean up query params if using route-based category (backward compatibility)
     useEffect(() => {
         const isOnHomeRoute = !actualPathname || actualPathname === '/';
@@ -259,7 +360,7 @@ const ImageGrid = () => {
     useEffect(() => {
         const updateColumnCount = () => {
             const width = window.innerWidth;
-            if (width < appConfig.breakpoints.md) {
+            if (width < appConfig.mobileBreakpoint) {
                 setColumnCount(1); // Mobile: 1 column
             } else if (width < appConfig.breakpoints.lg) {
                 setColumnCount(2); // Tablet: 2 columns
@@ -284,7 +385,14 @@ const ImageGrid = () => {
                         ))}
                     </div>
                 ) : (
-                    <MasonryGrid images={images} onImageClick={handleImageClick} columnCount={columnCount} />
+                    <MasonryGrid
+                        images={images}
+                        onImageClick={handleImageClick}
+                        columnCount={columnCount}
+                        onDownload={handleDownload}
+                        onDownloadWithSize={handleDownloadWithSize}
+                        onAddToCollection={handleAddToCollection}
+                    />
                 )}
                 <div ref={loadMoreRef} />
                 {isLoadingMore && <p className="text-center py-4">Đang tải...</p>}
@@ -303,6 +411,16 @@ const ImageGrid = () => {
                         onImageLoad={handleImageLoad}
                         currentImageIds={currentImageIds.current}
                         processedImages={processedImages}
+                    />
+                )}
+                {showCollectionModal && collectionImage && (
+                    <CollectionModal
+                        isOpen={showCollectionModal}
+                        onClose={handleCollectionModalClose}
+                        imageId={collectionImage._id}
+                        onCollectionUpdate={() => {
+                            // Optionally refresh images or update state
+                        }}
                     />
                 )}
             </Suspense>

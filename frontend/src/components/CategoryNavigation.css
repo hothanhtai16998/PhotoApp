@@ -27,6 +27,9 @@
   margin: 0 auto;
   padding: 0 20px;
   max-width: min(1600px, 96%); /* Match image-grid-container max-width */
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .category-navigation {
@@ -37,6 +40,8 @@
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  flex: 1;
+  scroll-behavior: smooth;
 }
 
 /* Desktop: Allow scrolling if needed */
@@ -84,6 +89,47 @@
   background: #111;
 }
 
+/* Scroll buttons - only visible on mobile */
+.category-scroll-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  display: none; /* Hidden by default, shown on mobile */
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.category-scroll-btn:hover {
+  background: #f5f5f5;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+
+.category-scroll-btn:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.category-scroll-btn-left {
+  left: 4px;
+}
+
+.category-scroll-btn-right {
+  right: 4px;
+}
+
+.category-scroll-btn svg {
+  color: #111;
+}
+
 /* Responsive */
 @media (min-width: 768px) {
   .category-navigation-wrapper {
@@ -107,10 +153,10 @@
   }
 }
 
+/* Mobile - Using mobileBreakpoint (768px) */
 @media (max-width: 768px) {
   .category-navigation-container {
     margin-top: 0; /* No gap - slider fills to here */
-    overflow: hidden !important;
     z-index: 1499;
   }
 
@@ -119,8 +165,7 @@
   }
 
   .category-navigation-wrapper {
-    padding: 0 12px;
-    overflow: hidden !important;
+    padding: 0 40px; /* Space for scroll buttons */
     width: 100%;
     max-width: 100%;
   }
@@ -128,20 +173,22 @@
   .category-navigation {
     gap: 20px;
     padding: 10px 0;
-    overflow-x: hidden !important;
-    overflow-y: hidden !important;
-    -webkit-overflow-scrolling: none !important;
-    touch-action: none !important;
-    scroll-behavior: auto !important;
-    overscroll-behavior: none !important;
-    position: relative;
-    width: 100%;
-    max-width: 100%;
+    overflow-x: auto !important; /* Enable scrolling on mobile */
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x; /* Allow horizontal scrolling */
+    scroll-behavior: smooth;
+    overscroll-behavior-x: contain;
   }
 
   .category-nav-link {
     font-size: 0.8125rem;
     pointer-events: auto;
+  }
+
+  /* Show scroll buttons on mobile */
+  .category-scroll-btn {
+    display: flex;
   }
 }
 
@@ -149,7 +196,6 @@
   .category-navigation-container {
     margin-top: 0; /* No gap - slider fills to here */
     margin-bottom: 20px;
-    overflow: hidden !important;
     z-index: 1499;
   }
 
@@ -158,20 +204,19 @@
   }
 
   .category-navigation-wrapper {
-    padding: 0 8px;
-    overflow: hidden;
+    padding: 0 36px; /* Space for scroll buttons */
     width: 100%;
   }
 
   .category-navigation {
     gap: 16px;
     padding: 0;
-    overflow-x: hidden !important; /* Disable horizontal scrolling */
-    overflow-y: hidden !important; /* Disable vertical scrolling */
-    -webkit-overflow-scrolling: none !important; /* Disable momentum scrolling on iOS */
-    touch-action: none !important; /* Disable all touch scrolling */
-    scroll-behavior: auto;
-    overscroll-behavior: none;
+    overflow-x: auto !important; /* Enable scrolling on mobile */
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x; /* Allow horizontal scrolling */
+    scroll-behavior: smooth;
+    overscroll-behavior-x: contain;
   }
 
   .category-nav-link {
@@ -180,5 +225,15 @@
     min-height: 44px; /* Better touch target */
     display: flex;
     align-items: center;
+  }
+
+  .category-scroll-btn {
+    width: 28px;
+    height: 28px;
+  }
+
+  .category-scroll-btn svg {
+    width: 16px;
+    height: 16px;
   }
 }

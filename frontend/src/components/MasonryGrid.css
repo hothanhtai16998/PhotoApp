@@ -99,3 +99,218 @@
 .overlay-actions button:hover {
   background-color: white;
 }
+
+/* ===== MOBILE-ONLY 3-SECTION CARD STRUCTURE ===== */
+/* All styles below are scoped to mobile breakpoint only */
+@media (max-width: 768px) {
+  /* Mobile Card Container */
+  .masonry-card-mobile {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .masonry-card-mobile:active {
+    transform: scale(0.98);
+  }
+  .masonry-grid {
+    padding: 0;
+  }
+  /* A. Author Section (Top) - Always Visible */
+  .card-author-section-mobile {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #f0f0f0;
+    background: #fff;
+    flex-shrink: 0;
+  }
+
+  .author-info-mobile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: inherit;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .author-avatar-mobile {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid #e5e5e5;
+  }
+
+  .author-name-mobile {
+    font-size: 14px;
+    font-weight: 500;
+    color: #111;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* B. Image Section (Middle) - Always Visible */
+  .card-image-section-mobile {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    background: #f0f0f0;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .card-image-mobile {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: cover;
+  }
+
+  /* C. Action Bar (Bottom) - Always Visible */
+  .card-action-bar-mobile {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-top: 1px solid #f0f0f0;
+    background: #fff;
+    flex-shrink: 0;
+  }
+
+  /* Mobile Action Buttons - Square with borders */
+  .action-btn-mobile {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    padding: 8px;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #767676;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .action-btn-mobile:active {
+    background: #f5f5f5;
+    transform: scale(0.98);
+  }
+
+  .action-btn-mobile svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .action-btn-mobile.bookmark-btn-mobile.active {
+    color: #111;
+  }
+
+  .action-btn-mobile.bookmark-btn-mobile.active svg {
+    fill: #111;
+  }
+
+  /* Download Button Wrapper (Mobile Split Button) */
+  .download-btn-wrapper-mobile {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .download-btn-split-mobile {
+    background: #fff;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #767676;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+      'Helvetica Neue', Arial, sans-serif;
+  }
+
+  .download-btn-text-mobile {
+    padding: 8px 12px;
+    border-right: 1px solid #e5e5e5;
+  }
+
+  .download-btn-dropdown-mobile {
+    padding: 8px 10px;
+    min-width: 32px;
+  }
+
+  .download-btn-dropdown-mobile svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .download-btn-split-mobile:active {
+    background: #f5f5f5;
+  }
+
+  /* Download Menu */
+  .card-download-menu-mobile {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    right: 0;
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 120px;
+    z-index: 1000;
+    overflow: hidden;
+  }
+
+  .card-download-menu-item-mobile {
+    display: block;
+    width: 100%;
+    padding: 10px 16px;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    font-size: 14px;
+    color: #111;
+    transition: background 0.15s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+      'Helvetica Neue', Arial, sans-serif;
+  }
+
+  .card-download-menu-item-mobile:active {
+    background: #f5f5f5;
+  }
+}
+
+@media (max-width: 320px) {
+  .masonry-grid {
+    padding: 0;
+  }
+}
