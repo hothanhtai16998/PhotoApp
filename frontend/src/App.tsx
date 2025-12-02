@@ -5,6 +5,7 @@ import AdminRoute from "./components/auth/AdminRoute";
 import { Skeleton } from "./components/ui/skeleton";
 import { PageViewTracker } from "./components/PageViewTracker";
 import { ContactButton } from './components/ContactButton';
+import UnsplashStyleGridPage from '@/pages/UnsplashStyleGridPage';
 
 // Lazy load pages for code splitting
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -21,7 +22,7 @@ const ImagePage = lazy(() => import("./pages/ImagePage"));
 const CollectionsPage = lazy(() => import("./pages/CollectionsPage"));
 const CollectionDetailPage = lazy(() => import("./pages/collection/CollectionDetailPage"));
 const AboutPage = lazy(() => import("./pages/AboutPage"));
-const UnsplashGridTestPage = lazy(() => import("./pages/UnsplashGridTestPage"));
+// const UnsplashGrid = lazy(() => import("./pages/"));
 
 
 // Loading fallback component
@@ -48,7 +49,8 @@ function App() {
         <Route path="/signin" element={<SignInPage />} />
         <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
         <Route path="/about" element={<AboutPage />} />
-        <Route path="/UnsplashGridTestPage" element={<UnsplashGridTestPage />} />
+        <Route path="/unsplash-grid" element={<UnsplashStyleGridPage />} />
+        {/* <Route path="/UnsplashGrid" element={<UnsplashGrid />} /> */}
 
 
         {/**protected routes */}

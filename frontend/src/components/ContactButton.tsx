@@ -13,26 +13,37 @@ interface AuthorInfo {
     };
 }
 
-// Replace with your actual author info
 const authorInfo: AuthorInfo = {
     social: {
         facebook: "https://www.facebook.com/dominhhung2003",
         twitter: "https://twitter.com",
         instagram: "https://instagram.com",
-        tiktok: "https://www.tiktok.com/@runtapchupanh?_r=1&_d=secCgYIASAHKAESPgo8CcNaTtIGK3YCOxlsy9ZE8XQCCg0%2BKdOX39i2rrLZzXsZHvN8IcPz1wc1odal1PBFmJ1pOysKCoAfiVZGGgA%3D&_svg=1&checksum=d4af0892724a5a3444770cbcead4ce81d1e1e7df1ba613d6a009c01d37c7956d&item_author_type=1&sec_uid=MS4wLjABAAAAF1E1KZIixKzT6AUFWtl7ol2e6UCPrznChrx74TWzjISsk7EBXbuDkMIaVaTiLiy3&sec_user_id=MS4wLjABAAAAF1E1KZIixKzT6AUFWtl7ol2e6UCPrznChrx74TWzjISsk7EBXbuDkMIaVaTiLiy3&share_app_id=1180&share_author_id=7122849835637031963&share_link_id=890DD61E-C177-4E91-A4B9-550251E5FA96&share_region=VN&share_scene=1&sharer_language=vi&social_share_type=4&source=h5_t&timestamp=1764128350&tt_from=copy&u_code=e30e992e2jm9i2&ug_btm=b8727%2Cb0&user_id=7122849835637031963&utm_campaign=client_share&utm_medium=ios&utm_source=copyhttps://www.tiktok.com/@runtapchupanh?_r=1&_d=secCgYIASAHKAESPgo8CcNaTtIGK3YCOxlsy9ZE8XQCCg0%2BKdOX39i2rrLZzXsZHvN8IcPz1wc1odal1PBFmJ1pOysKCoAfiVZGGgA%3D&_svg=1&checksum=d4af0892724a5a3444770cbcead4ce81d1e1e7df1ba613d6a009c01d37c7956d&item_author_type=1&sec_uid=MS4wLjABAAAAF1E1KZIixKzT6AUFWtl7ol2e6UCPrznChrx74TWzjISsk7EBXbuDkMIaVaTiLiy3&sec_user_id=MS4wLjABAAAAF1E1KZIixKzT6AUFWtl7ol2e6UCPrznChrx74TWzjISsk7EBXbuDkMIaVaTiLiy3&share_app_id=1180&share_author_id=7122849835637031963&share_link_id=890DD61E-C177-4E91-A4B9-550251E5FA96&share_region=VN&share_scene=1&sharer_language=vi&social_share_type=4&source=h5_t&timestamp=1764128350&tt_from=copy&u_code=e30e992e2jm9i2&ug_btm=b8727%2Cb0&user_id=7122849835637031963&utm_campaign=client_share&utm_medium=ios&utm_source=copy",
+        tiktok: "https://www.tiktok.com/@runtapchupanh?_r=1&_d=secCgYIASAHKAESPgo8CcNaTtIGK3YCOxlsy9ZE8XQCCg0%2BKdOX39i2rrLZzXsZHvN8IcPz1wc1odal1PBFmJ1pOysKCoAfiVZGGgA%3D&_svg=1&checksum=d4af0892724a5a3444770cbcead4ce81d1e1e7df1",
     },
 };
 
 export const ContactButton = () => {
     const location = useLocation();
     const [isOpen, setIsOpen] = useState(false);
+    const [isShaking, setIsShaking] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
     const isAuthPage =
         location.pathname === "/signin" || location.pathname === "/signup";
 
     useEffect(() => {
-        if (!isOpen || isAuthPage) return;
+        if (isAuthPage) return;
+
+        const interval = setInterval(() => {
+            setIsShaking(true);
+            setTimeout(() => setIsShaking(false), 3000);
+        }, 13000);
+
+        return () => clearInterval(interval);
+    }, [isAuthPage]);
+
+    useEffect(() => {
+        if (!isOpen) return;
 
         const handleClickOutside = (event: MouseEvent) => {
             if (
@@ -47,7 +58,7 @@ export const ContactButton = () => {
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
         };
-    }, [isOpen, isAuthPage]);
+    }, [isOpen]);
 
     if (isAuthPage) {
         return null;
@@ -56,11 +67,13 @@ export const ContactButton = () => {
     return (
         <div ref={containerRef} className="contact-button-container">
             <button
-                className="contact-button"
+                className={`contact-button ${isOpen ? "active" : ""} ${isShaking ? "bloom" : ""}`}
                 onClick={() => setIsOpen(!isOpen)}
                 aria-label="Contact"
             >
-                <span className="contact-button-text">Liên hệ</span>
+                <span className={`contact-button-text ${isShaking ? "shaking" : ""}`}>
+                    Liên hệ
+                </span>
             </button>
 
             {isOpen && (
@@ -115,7 +128,6 @@ export const ContactButton = () => {
     );
 };
 
-// TikTok Icon Component
 const TikTokIcon = ({ size = 24 }: { size?: number }) => (
     <svg
         width={size}

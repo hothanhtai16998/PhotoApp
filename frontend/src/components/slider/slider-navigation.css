@@ -31,7 +31,7 @@
   z-index: 10;
   display: flex;
   align-items: center;
-  justify-content: flex-end; /* Center the entire carousel */
+  justify-content: flex-start; /* Center the entire carousel */
   gap: 12px; /* Reduced gap */
 }
 
