@@ -26,6 +26,7 @@ interface ImageModalProps {
   currentImageIds: Set<string>;
   processedImages: React.MutableRefObject<Set<string>>;
   renderAsPage?: boolean; // When true, renders as page (no overlay)
+  lockBodyScroll?: boolean; // Allow caller to disable body scroll lock
 }
 
 const ImageModal = ({
@@ -39,6 +40,7 @@ const ImageModal = ({
   currentImageIds,
   processedImages,
   renderAsPage = false,
+  lockBodyScroll = true,
 }: ImageModalProps) => {
   const modalContentRef = useRef<HTMLDivElement>(null);
   const { user } = useUserStore();
@@ -141,8 +143,8 @@ const ImageModal = ({
     return () => document.removeEventListener('keydown', handleKeyboard);
   }, [zoomProps]);
 
-  // Lock body scroll when modal is open (only when rendered as modal, not page)
-  useScrollLock(!renderAsPage, '.image-modal-content');
+  // Lock body scroll when modal is open (only when rendered as modal, not page and when enabled)
+  useScrollLock(lockBodyScroll && !renderAsPage, '.image-modal-content');
 
   return (
     <>

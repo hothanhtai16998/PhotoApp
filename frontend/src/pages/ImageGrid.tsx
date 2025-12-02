@@ -62,12 +62,12 @@ const ImageGrid = () => {
 
     const handleImageClick = useCallback((image: Image) => {
         const newSlug = generateImageSlug(image.imageTitle || '', image._id);
-        if (typeof window !== 'undefined') {
-            sessionStorage.setItem(appConfig.storage.imagePageFromGridKey, 'true');
-        }
 
         if (isMobileViewport()) {
-            // Mobile: navigate to full page (no inline modal)
+            // Mobile: open full ImagePage but remember it's from grid (for back behavior)
+            if (typeof window !== 'undefined') {
+                sessionStorage.setItem(appConfig.storage.imagePageFromGridKey, 'true');
+            }
             navigate(`/photos/${newSlug}`, { state: { fromGrid: true } });
             return;
         }
@@ -239,6 +239,7 @@ const ImageGrid = () => {
                         images={images}
                         onClose={handleCloseModal}
                         onImageSelect={handleModalImageSelect}
+                        lockBodyScroll={false}
                         renderAsPage={false}
                         onDownload={() => { /* Download handled by ImageModal internally */ }}
                         imageTypes={imageTypes}

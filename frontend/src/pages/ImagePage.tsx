@@ -182,6 +182,7 @@ function ImagePage() {
             images={images}
             onClose={handleClose}
             onImageSelect={handleImageSelect}
+            lockBodyScroll={!isFromGrid}
             onDownload={handleDownload}
             imageTypes={imageTypes}
             onImageLoad={handleImageLoad}
