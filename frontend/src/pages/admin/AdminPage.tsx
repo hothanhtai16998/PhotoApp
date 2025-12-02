@@ -1,10 +1,8 @@
-import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '@/stores/useUserStore';
-import { useImageStore } from '@/stores/useImageStore';
 import { usePermissions } from '@/hooks/usePermissions';
-import { adminService, type DashboardStats, type User, type AdminImage, type AdminRole, type AdminRolePermissions } from '@/services/adminService';
-import { categoryService, type Category } from '@/services/categoryService';
+import type { AdminRolePermissions } from '@/services/adminService';
 import type { User as AuthUser } from '@/types/user';
 import Header from '@/components/Header';
 import {
@@ -23,16 +21,23 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+    useAdminDashboard,
+    useAdminUsers,
+    useAdminImages,
+    useAdminCategories,
+    useAdminRoles,
+} from './hooks';
 import './AdminPage.css';
 
 // Lazy load admin tab components to reduce initial bundle size
 const AdminDashboard = lazy(() => import('./components/tabs/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const AdminAnalytics = lazy(() => import('./components/tabs/AdminAnalytics').then(m => ({ default: m.AdminAnalytics })));
-const AdminUsers = lazy(() => import('./components/tabs/AdminUsers').then(m => ({ default: m.AdminUsers })));
-const AdminImages = lazy(() => import('./components/tabs/AdminImages').then(m => ({ default: m.AdminImages })));
-const AdminCategories = lazy(() => import('./components/tabs/AdminCategories').then(m => ({ default: m.AdminCategories })));
+const AdminUsersTab = lazy(() => import('./components/tabs/AdminUsers').then(m => ({ default: m.AdminUsers })));
+const AdminImagesTab = lazy(() => import('./components/tabs/AdminImages').then(m => ({ default: m.AdminImages })));
+const AdminCategoriesTab = lazy(() => import('./components/tabs/AdminCategories').then(m => ({ default: m.AdminCategories })));
 const AdminCollections = lazy(() => import('./components/tabs/AdminCollections').then(m => ({ default: m.AdminCollections })));
-const AdminRoles = lazy(() => import('./components/tabs/AdminRoles').then(m => ({ default: m.AdminRoles })));
+const AdminRolesTab = lazy(() => import('./components/tabs/AdminRoles').then(m => ({ default: m.AdminRoles })));
 const AdminFavorites = lazy(() => import('./components/tabs/AdminFavorites').then(m => ({ default: m.AdminFavorites })));
 const AdminModeration = lazy(() => import('./components/tabs/AdminModeration').then(m => ({ default: m.AdminModeration })));
 const AdminLogs = lazy(() => import('./components/tabs/AdminLogs').then(m => ({ default: m.AdminLogs })));
@@ -53,151 +58,31 @@ type TabType = 'dashboard' | 'analytics' | 'users' | 'images' | 'categories' | '
 
 function AdminPage() {
     const { user, fetchMe } = useUserStore();
-    const { removeImage } = useImageStore();
     const navigate = useNavigate();
     const { hasPermission, isSuperAdmin } = usePermissions();
     const [activeTab, setActiveTab] = useState<TabType>('dashboard');
-    const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState<DashboardStats | null>(null);
 
-    // Users state
-    const [users, setUsers] = useState<User[]>([]);
-    const [usersPagination, setUsersPagination] = useState({ page: 1, pages: 1, total: 0 });
-    const [usersSearch, setUsersSearch] = useState('');
-    const [editingUser, setEditingUser] = useState<User | null>(null);
+    // Use custom hooks for each domain
+    const dashboard = useAdminDashboard();
+    const usersAdmin = useAdminUsers();
+    const imagesAdmin = useAdminImages();
+    const categoriesAdmin = useAdminCategories();
+    const rolesAdmin = useAdminRoles();
 
-    // Images state
-    const [images, setImages] = useState<AdminImage[]>([]);
-    const [imagesPagination, setImagesPagination] = useState({ page: 1, pages: 1, total: 0 });
-    const [imagesSearch, setImagesSearch] = useState('');
-
-    // Categories state
-    const [categories, setCategories] = useState<Category[]>([]);
-    const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-    const [creatingCategory, setCreatingCategory] = useState(false);
-
-    // Roles state
-    const [adminRoles, setAdminRoles] = useState<AdminRole[]>([]);
-    const [editingRole, setEditingRole] = useState<AdminRole | null>(null);
-    const [creatingRole, setCreatingRole] = useState(false);
-
-    const loadDashboardStats = useCallback(async () => {
-        // Check permission before API call
-        if (!isSuperAdmin() && !hasPermission('viewDashboard')) {
-            toast.error('Bạn không có quyền xem bảng điều khiển');
-            return;
-        }
-        try {
-            setLoading(true);
-            const data = await adminService.getDashboardStats();
-            setStats(data);
-        } catch (error: unknown) {
-            const axiosError = error as { response?: { data?: { message?: string } } };
-            toast.error(axiosError.response?.data?.message || 'Failed to load dashboard stats');
-        } finally {
-            setLoading(false);
-        }
-    }, [hasPermission, isSuperAdmin]);
-
-    const loadUsers = useCallback(async (page = 1) => {
-        // Check permission before API call
-        if (!isSuperAdmin() && !hasPermission('viewUsers')) {
-            toast.error('Bạn không có quyền xem người dùng');
-            return;
-        }
-        try {
-            setLoading(true);
-            const data = await adminService.getAllUsers({
-                page,
-                limit: 20,
-                search: usersSearch || undefined,
-            });
-            setUsers(data.users);
-            setUsersPagination(data.pagination);
-        } catch (error: unknown) {
-            const axiosError = error as { response?: { data?: { message?: string } } };
-            toast.error(axiosError.response?.data?.message || 'Failed to load users');
-        } finally {
-            setLoading(false);
-        }
-    }, [usersSearch, hasPermission, isSuperAdmin]);
-
-    const loadImages = useCallback(async (page = 1) => {
-        // Check permission before API call
-        if (!isSuperAdmin() && !hasPermission('viewImages')) {
-            toast.error('Bạn không có quyền xem ảnh');
-            return;
-        }
-        try {
-            setLoading(true);
-            const data = await adminService.getAllImages({
-                page,
-                limit: 20,
-                search: imagesSearch || undefined,
-            });
-            setImages(data.images);
-            setImagesPagination(data.pagination);
-        } catch (error: unknown) {
-            const axiosError = error as { response?: { data?: { message?: string } } };
-            toast.error(axiosError.response?.data?.message || 'Lỗi khi lấy ảnh');
-        } finally {
-            setLoading(false);
-        }
-    }, [imagesSearch, hasPermission, isSuperAdmin]);
-
-    const loadCategories = useCallback(async () => {
-        // Check permission before API call
-        if (!isSuperAdmin() && !hasPermission('viewCategories')) {
-            toast.error('Bạn không có quyền xem danh mục');
-            return;
-        }
-        try {
-            setLoading(true);
-            const data = await categoryService.getAllCategoriesAdmin();
-            setCategories(data);
-        } catch (error: unknown) {
-            const axiosError = error as { response?: { data?: { message?: string } } };
-            toast.error(axiosError.response?.data?.message || 'Lỗi khi lấy danh mục');
-        } finally {
-            setLoading(false);
-        }
-    }, [hasPermission, isSuperAdmin]);
-
-    const loadAdminRoles = useCallback(async () => {
-        if (!isSuperAdmin()) return;
-        try {
-            setLoading(true);
-            const data = await adminService.getAllAdminRoles();
-            setAdminRoles(data.adminRoles);
-            // Also load users if not already loaded (for create role modal)
-            if (users.length === 0) {
-                await loadUsers(1);
-            }
-        } catch (error: unknown) {
-            const axiosError = error as { response?: { data?: { message?: string } } };
-            toast.error(axiosError.response?.data?.message || 'Lỗi khi lấy danh sách quyền admin');
-        } finally {
-            setLoading(false);
-        }
-    }, [isSuperAdmin, users.length, loadUsers]);
-
+    // Check admin access on mount
     useEffect(() => {
         let isMounted = true;
-        
+
         const checkAdmin = async () => {
-            // Get current user from store first
             let currentUser = useUserStore.getState().user;
-            
-            // Only fetch if we don't have user data or don't have permissions
+
             if (!currentUser || (!currentUser.permissions && currentUser.isAdmin === undefined)) {
                 try {
                     await fetchMe();
-                    // Wait a bit for state to update
                     await new Promise(resolve => setTimeout(resolve, 100));
                     if (!isMounted) return;
                     currentUser = useUserStore.getState().user;
                 } catch (error) {
-                    // If fetchMe fails, check if we have a user from before
                     if (!isMounted) return;
                     currentUser = useUserStore.getState().user;
                     if (!currentUser) {
@@ -206,240 +91,117 @@ function AdminPage() {
                         navigate('/signin');
                         return;
                     }
-                    // Continue with existing user data
                 }
             }
-            
+
             if (!isMounted) return;
-            
-            // If still no user, redirect to sign in
+
             if (!currentUser) {
                 toast.error('Vui lòng đăng nhập lại.');
                 navigate('/signin');
                 return;
             }
-            
-            // Check if user has admin access (either isAdmin, isSuperAdmin, or has permissions)
-            const hasAdminAccess = currentUser.isAdmin === true || 
-                                  currentUser.isSuperAdmin === true || 
-                                  (currentUser.permissions && Object.keys(currentUser.permissions).length > 0);
-            
+
+            const hasAdminAccess = currentUser.isAdmin === true ||
+                currentUser.isSuperAdmin === true ||
+                (currentUser.permissions && Object.keys(currentUser.permissions).length > 0);
+
             if (!hasAdminAccess) {
                 toast.error('Cần quyền Admin để truy cập trang này.');
                 navigate('/');
                 return;
             }
-            
-            // Dashboard stats will be loaded by the tab change useEffect
         };
-        
+
         checkAdmin();
-        
+
         return () => {
             isMounted = false;
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // Empty deps - only run once on mount
+    }, [fetchMe, navigate]);
 
+    // Store stable references to load functions to avoid infinite loops
+    // This pattern is recommended when you want to call functions on mount/dependency change
+    // without re-running when the function references change
+    const loadFunctionsRef = useRef({
+        loadDashboardStats: dashboard.loadDashboardStats,
+        loadUsers: usersAdmin.loadUsers,
+        loadImages: imagesAdmin.loadImages,
+        loadCategories: categoriesAdmin.loadCategories,
+        loadAdminRoles: rolesAdmin.loadAdminRoles,
+        getUsersLength: () => usersAdmin.users.length,
+    });
+
+    // Keep refs in sync with latest functions
     useEffect(() => {
-        if (activeTab === 'dashboard') {
-            loadDashboardStats();
-        } else if (activeTab === 'users') {
-            loadUsers();
-        } else if (activeTab === 'images') {
-            loadImages();
-        } else if (activeTab === 'categories') {
-            loadCategories();
-        } else if (activeTab === 'roles') {
-            loadAdminRoles();
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeTab]); // Only depend on activeTab to avoid infinite loops
+        loadFunctionsRef.current = {
+            loadDashboardStats: dashboard.loadDashboardStats,
+            loadUsers: usersAdmin.loadUsers,
+            loadImages: imagesAdmin.loadImages,
+            loadCategories: categoriesAdmin.loadCategories,
+            loadAdminRoles: rolesAdmin.loadAdminRoles,
+            getUsersLength: () => usersAdmin.users.length,
+        };
+    });
 
-    const handleDeleteUser = async (userId: string, username: string) => {
-        if (!confirm(`Bạn có muốn xoá người dùng "${username}" không? Sẽ xoá cả ảnh mà người này đã đăng.`)) {
-            return;
+    // Load data when tab changes
+    useEffect(() => {
+        const fns = loadFunctionsRef.current;
+        switch (activeTab) {
+            case 'dashboard':
+                fns.loadDashboardStats();
+                break;
+            case 'users':
+                fns.loadUsers();
+                break;
+            case 'images':
+                fns.loadImages();
+                break;
+            case 'categories':
+                fns.loadCategories();
+                break;
+            case 'roles':
+                fns.loadAdminRoles(fns.loadUsers, fns.getUsersLength());
+                break;
         }
+    }, [activeTab]);
 
-        try {
-            await adminService.deleteUser(userId);
-            toast.success('Xoá người dùng thành công');
-            loadUsers(usersPagination.page);
-            if (activeTab === 'dashboard') loadDashboardStats();
-        } catch (error: unknown) {
-            const axiosError = error as { response?: { data?: { message?: string } } };
-            toast.error(axiosError.response?.data?.message || 'Lỗi khi xoá người dùng');
+    // Handler wrappers to refresh dashboard when needed
+    const handleDeleteUser = useCallback(async (userId: string, username: string) => {
+        const success = await usersAdmin.deleteUser(userId, username);
+        if (success && activeTab === 'dashboard') {
+            dashboard.loadDashboardStats();
         }
-    };
+    }, [usersAdmin, activeTab, dashboard]);
 
-    const handleDeleteImage = async (imageId: string, imageTitle: string) => {
-        // Check permission before action
-        if (!isSuperAdmin() && !hasPermission('deleteImages')) {
-            toast.error('Bạn không có quyền xóa ảnh');
-            return;
+    const handleUpdateUser = useCallback(async (userId: string, updates: Partial<AuthUser>) => {
+        const success = await usersAdmin.updateUser(userId, updates);
+        if (success && activeTab === 'dashboard') {
+            dashboard.loadDashboardStats();
         }
-        if (!confirm(`Bạn có muốn xoá ảnh "${imageTitle}" không?`)) {
-            return;
-        }
+    }, [usersAdmin, activeTab, dashboard]);
 
-        try {
-            await adminService.deleteImage(imageId);
-            
-            // Remove image from global image store immediately
-            // This ensures the image disappears from homepage ImageGrid if user is on homepage
-            removeImage(imageId);
-            
-            // Also trigger a refresh of the ImageGrid store to sync with backend
-            // This ensures deleted image doesn't reappear when user navigates back to homepage
-            // Wait a bit to ensure backend deletion is complete before refreshing
-            setTimeout(() => {
-                const imageStoreState = useImageStore.getState();
-                if (imageStoreState.images.length > 0 || imageStoreState.pagination) {
-                    // Homepage has been visited at some point, refresh to sync
-                    // Use _refresh flag to bypass cache and ensure we get fresh data
-                    imageStoreState.fetchImages({ 
-                        page: imageStoreState.pagination?.page || 1,
-                        search: imageStoreState.currentSearch,
-                        category: imageStoreState.currentCategory,
-                        _refresh: true 
-                    });
-                }
-            }, 200);
-            
-            toast.success('Xoá ảnh thành công');
-            loadImages(imagesPagination.page);
-            if (activeTab === 'dashboard') loadDashboardStats();
-        } catch (error: unknown) {
-            const axiosError = error as { response?: { data?: { message?: string } } };
-            toast.error(axiosError.response?.data?.message || 'Lỗi khi xoá ảnh');
+    const handleDeleteImage = useCallback(async (imageId: string, imageTitle: string) => {
+        const success = await imagesAdmin.deleteImage(imageId, imageTitle);
+        if (success && activeTab === 'dashboard') {
+            dashboard.loadDashboardStats();
         }
-    };
+    }, [imagesAdmin, activeTab, dashboard]);
 
-    const handleUpdateUser = async (userId: string, updates: Partial<User>) => {
-        // Check permission before action
-        if (!isSuperAdmin() && !hasPermission('editUsers')) {
-            toast.error('Bạn không có quyền chỉnh sửa người dùng');
-            return;
-        }
-        try {
-            await adminService.updateUser(userId, updates);
-            toast.success('Cập nhật thông tin người dùng thành công');
-            setEditingUser(null);
-            loadUsers(usersPagination.page);
-            if (activeTab === 'dashboard') loadDashboardStats();
-        } catch (error: unknown) {
-            const axiosError = error as { response?: { data?: { message?: string } } };
-            toast.error(axiosError.response?.data?.message || 'Failed to update user');
-        }
-    };
-
-    const handleCreateCategory = async (data: { name: string; description?: string }) => {
-        // Check permission before action
-        if (!isSuperAdmin() && !hasPermission('createCategories')) {
-            toast.error('Bạn không có quyền tạo danh mục');
-            return;
-        }
-        try {
-            await categoryService.createCategory(data);
-            toast.success('Tạo danh mục thành công');
-            setCreatingCategory(false);
-            loadCategories();
-        } catch (error: unknown) {
-            const axiosError = error as { response?: { data?: { message?: string } } };
-            toast.error(axiosError.response?.data?.message || 'Lỗi khi tạo danh mục');
-        }
-    };
-
-    const handleUpdateCategory = async (categoryId: string, updates: { name?: string; description?: string; isActive?: boolean }) => {
-        // Check permission before action
-        if (!isSuperAdmin() && !hasPermission('editCategories')) {
-            toast.error('Bạn không có quyền chỉnh sửa danh mục');
-            return;
-        }
-        try {
-            await categoryService.updateCategory(categoryId, updates);
-            toast.success('Danh mục đã được cập nhật thành công');
-            setEditingCategory(null);
-            loadCategories();
-        } catch (error: unknown) {
-            const axiosError = error as { response?: { data?: { message?: string } } };
-            toast.error(axiosError.response?.data?.message || 'Lỗi khi cập nhật danh mục');
-        }
-    };
-
-    const handleDeleteCategory = async (categoryId: string, categoryName: string) => {
-        // Check permission before action
-        if (!isSuperAdmin() && !hasPermission('deleteCategories')) {
-            toast.error('Bạn không có quyền xóa danh mục');
-            return;
-        }
-        if (!confirm(`Bạn có muốn xoá danh mục "${categoryName}" không? Chỉ xoá được nếu không có ảnh nào thuộc loại danh mục này.`)) {
-            return;
-        }
-
-        try {
-            await categoryService.deleteCategory(categoryId);
-            toast.success('Xoá danh mục thành công');
-            loadCategories();
-        } catch (error: unknown) {
-            const axiosError = error as { response?: { data?: { message?: string } } };
-            toast.error(axiosError.response?.data?.message || 'Lỗi khi xoá danh mục');
-        }
-    };
-
-    const handleCreateRole = async (data: { 
-        userId: string; 
-        role: 'super_admin' | 'admin' | 'moderator'; 
+    const handleCreateRole = useCallback(async (data: {
+        userId: string;
+        role: 'super_admin' | 'admin' | 'moderator';
         permissions: AdminRolePermissions;
         expiresAt?: string | null;
         active?: boolean;
         allowedIPs?: string[];
     }) => {
-        try {
-            await adminService.createAdminRole(data);
-            toast.success('Quyền admin đã được tạo thành công');
-            setCreatingRole(false);
-            loadAdminRoles();
-            loadUsers(usersPagination.page);
-        } catch (error: unknown) {
-            const axiosError = error as { response?: { data?: { message?: string } } };
-            toast.error(axiosError.response?.data?.message || 'Lỗi khi tạo quyền admin');
-        }
-    };
+        await rolesAdmin.createRole(data, usersAdmin.loadUsers, usersAdmin.pagination.page);
+    }, [rolesAdmin, usersAdmin]);
 
-    const handleUpdateRole = async (userId: string, updates: { 
-        role?: 'super_admin' | 'admin' | 'moderator'; 
-        permissions?: AdminRolePermissions;
-        expiresAt?: string | null;
-        active?: boolean;
-        allowedIPs?: string[];
-    }) => {
-        try {
-            await adminService.updateAdminRole(userId, updates);
-            toast.success('Quyền admin đã được cập nhật thành công');
-            setEditingRole(null);
-            loadAdminRoles();
-        } catch (error: unknown) {
-            const axiosError = error as { response?: { data?: { message?: string } } };
-            toast.error(axiosError.response?.data?.message || 'Lỗi khi cập nhật quyền admin');
-        }
-    };
-
-    const handleDeleteRole = async (userId: string, username: string) => {
-        if (!confirm(`Bạn có muốn xoá quyền ad của tài khoản "${username}" không?`)) {
-            return;
-        }
-
-        try {
-            await adminService.deleteAdminRole(userId);
-            toast.success('Quyền admin đã được xoá thành công');
-            loadAdminRoles();
-            loadUsers(usersPagination.page);
-        } catch (error: unknown) {
-            const axiosError = error as { response?: { data?: { message?: string } } };
-            toast.error(axiosError.response?.data?.message || 'Lỗi khi xoá quyền admin');
-        }
-    };
+    const handleDeleteRole = useCallback(async (userId: string, username: string) => {
+        await rolesAdmin.deleteRole(userId, username, usersAdmin.loadUsers, usersAdmin.pagination.page);
+    }, [rolesAdmin, usersAdmin]);
 
     return (
         <>
@@ -568,70 +330,73 @@ function AdminPage() {
                     <div className="admin-content">
                         <Suspense fallback={<AdminTabLoader />}>
                             {activeTab === 'dashboard' && (
-                                <AdminDashboard stats={stats} loading={loading} />
+                                <AdminDashboard
+                                    stats={dashboard.stats}
+                                    loading={dashboard.loading}
+                                />
                             )}
                             {activeTab === 'analytics' && (
                                 <AdminAnalytics />
                             )}
                             {activeTab === 'users' && (
-                                <AdminUsers
-                                    users={users}
-                                    pagination={usersPagination}
-                                    search={usersSearch}
+                                <AdminUsersTab
+                                    users={usersAdmin.users}
+                                    pagination={usersAdmin.pagination}
+                                    search={usersAdmin.search}
                                     currentUser={user as AuthUser | null}
-                                    onSearchChange={setUsersSearch}
-                                    onSearch={() => loadUsers(1)}
-                                    onPageChange={loadUsers}
-                                    onEdit={setEditingUser}
+                                    onSearchChange={usersAdmin.setSearch}
+                                    onSearch={() => usersAdmin.loadUsers(1)}
+                                    onPageChange={usersAdmin.loadUsers}
+                                    onEdit={usersAdmin.setEditingUser}
                                     onDelete={handleDeleteUser}
-                                    editingUser={editingUser}
-                                    onCloseEdit={() => setEditingUser(null)}
+                                    editingUser={usersAdmin.editingUser}
+                                    onCloseEdit={() => usersAdmin.setEditingUser(null)}
                                     onSaveEdit={handleUpdateUser}
                                 />
                             )}
                             {activeTab === 'images' && (
-                        <AdminImages
-                            images={images}
-                            pagination={imagesPagination}
-                            search={imagesSearch}
-                            onSearchChange={setImagesSearch}
-                            onSearch={() => loadImages(1)}
-                            onPageChange={loadImages}
-                            onDelete={handleDeleteImage}
-                            onImageUpdated={() => loadImages(imagesPagination.page)}
-                        />
+                                <AdminImagesTab
+                                    images={imagesAdmin.images}
+                                    pagination={imagesAdmin.pagination}
+                                    search={imagesAdmin.search}
+                                    onSearchChange={imagesAdmin.setSearch}
+                                    onSearch={() => imagesAdmin.loadImages(1)}
+                                    onPageChange={imagesAdmin.loadImages}
+                                    onDelete={handleDeleteImage}
+                                    onImageUpdated={() => imagesAdmin.loadImages(imagesAdmin.pagination.page)}
+                                />
                             )}
                             {activeTab === 'categories' && (
-                                <AdminCategories
-                                    categories={categories}
-                                    creatingCategory={creatingCategory}
-                                    editingCategory={editingCategory}
-                                    onCreateClick={() => setCreatingCategory(true)}
-                                    onEdit={setEditingCategory}
-                                    onDelete={handleDeleteCategory}
-                                    onCloseCreate={() => setCreatingCategory(false)}
-                                    onCloseEdit={() => setEditingCategory(null)}
-                                    onSaveCreate={handleCreateCategory}
-                                    onSaveEdit={handleUpdateCategory}
+                                <AdminCategoriesTab
+                                    categories={categoriesAdmin.categories}
+                                    creatingCategory={categoriesAdmin.creatingCategory}
+                                    editingCategory={categoriesAdmin.editingCategory}
+                                    onCreateClick={() => categoriesAdmin.setCreatingCategory(true)}
+                                    onEdit={categoriesAdmin.setEditingCategory}
+                                    onDelete={categoriesAdmin.deleteCategory}
+                                    onCloseCreate={() => categoriesAdmin.setCreatingCategory(false)}
+                                    onCloseEdit={() => categoriesAdmin.setEditingCategory(null)}
+                                    onSaveCreate={categoriesAdmin.createCategory}
+                                    onSaveEdit={categoriesAdmin.updateCategory}
                                 />
                             )}
                             {activeTab === 'collections' && (
                                 <AdminCollections />
                             )}
                             {activeTab === 'roles' && isSuperAdmin() && (
-                                <AdminRoles
-                                    roles={adminRoles}
-                                    users={users}
+                                <AdminRolesTab
+                                    roles={rolesAdmin.adminRoles}
+                                    users={usersAdmin.users}
                                     currentUser={user as AuthUser | null}
-                                    creatingRole={creatingRole}
-                                    editingRole={editingRole}
-                                    onCreateClick={() => setCreatingRole(true)}
-                                    onEdit={(role) => setEditingRole(role)}
+                                    creatingRole={rolesAdmin.creatingRole}
+                                    editingRole={rolesAdmin.editingRole}
+                                    onCreateClick={() => rolesAdmin.setCreatingRole(true)}
+                                    onEdit={rolesAdmin.setEditingRole}
                                     onDelete={handleDeleteRole}
-                                    onCloseCreate={() => setCreatingRole(false)}
-                                    onCloseEdit={() => setEditingRole(null)}
+                                    onCloseCreate={() => rolesAdmin.setCreatingRole(false)}
+                                    onCloseEdit={() => rolesAdmin.setEditingRole(null)}
                                     onSaveCreate={handleCreateRole}
-                                    onSaveEdit={handleUpdateRole}
+                                    onSaveEdit={rolesAdmin.updateRole}
                                 />
                             )}
                             {activeTab === 'permissions' && (isSuperAdmin() || hasPermission('viewAdmins')) && (

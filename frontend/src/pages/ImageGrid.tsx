@@ -156,7 +156,7 @@ const ImageGrid = () => {
                         onClose={handleCloseModal}
                         onImageSelect={setSelectedImage}
                         renderAsPage={false}
-                        onDownload={() => console.log('Download')}
+                        onDownload={() => { /* Download handled by ImageModal internally */ }}
                         imageTypes={imageTypes}
                         onImageLoad={handleImageLoad}
                         currentImageIds={currentImageIds.current}
