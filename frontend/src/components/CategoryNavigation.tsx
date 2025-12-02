@@ -193,29 +193,24 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
 
   const handleCategoryClick = (category: string) => {
     const isTestPage = location.pathname.includes('UnsplashGridTestPage');
+    const newCategory = category !== 'Tất cả' ? category : undefined;
 
     if (isTestPage) {
-      const newCategory = category !== 'Tất cả' ? category : 'all';
-      setSearchParams({ category: newCategory });
+      setSearchParams({ category: newCategory || 'all' });
       return;
     }
 
     if (location.pathname !== '/') {
-      navigate('/')
+      navigate('/');
     }
-    
-    // Dispatch event to save images before category change
-    // This allows ImageGrid to capture images before store clears them
-    window.dispatchEvent(new CustomEvent('beforeCategoryChange', {
-      detail: { category: category !== 'Tất cả' ? category : undefined }
-    }));
-    
-    // Small delay to ensure event is processed
-    setTimeout(() => {
-      fetchImages({
-        category: category !== 'Tất cả' ? category : undefined,
-      });
-    }, 10);
+
+    // Directly fetch images for the new category.
+    // The store's fetchImages implementation should handle resetting state.
+    fetchImages({
+      category: newCategory,
+      page: 1, // Explicitly reset to page 1
+      search: undefined, // Clear search term
+    });
   }
 
   // Only show on homepage or test page
