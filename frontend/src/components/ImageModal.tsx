@@ -116,6 +116,65 @@ const ImageModal = ({
     modalContentRef,
   });
 
+  // Track if banner should be hidden when related images reaches banner position
+  const [isHeaderHidden, setIsHeaderHidden] = useState(false);
+  const relatedImagesRef = useRef<HTMLDivElement>(null);
+
+  // Detect when related images section reaches the banner position (top of scroll container)
+  useEffect(() => {
+    if (!renderAsPage || !modalContentRef.current) return;
+
+    const scrollContainer = modalContentRef.current;
+    let relatedImagesElement: HTMLDivElement | null = null;
+
+    const handleScroll = () => {
+      if (!scrollContainer) return;
+
+      // Get the related images element
+      if (!relatedImagesElement) {
+        relatedImagesElement = relatedImagesRef.current;
+        if (!relatedImagesElement) return;
+      }
+
+      // Get positions relative to the scroll container
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const relatedRect = relatedImagesElement.getBoundingClientRect();
+      
+      // Calculate position of related images relative to the top of the scroll container viewport
+      // The banner is sticky at top: 0, so we check when related images reaches that position
+      const relatedTopRelativeToContainer = relatedRect.top - containerRect.top;
+      
+      // Only hide when related images section reaches or passes the top of the container
+      // (where the sticky banner is positioned at top: 0)
+      // Use a small threshold (20px) to trigger slightly before exact hit for smoother UX
+      const shouldHide = relatedTopRelativeToContainer <= 20 && scrollContainer.scrollTop > 50;
+      
+      setIsHeaderHidden(shouldHide);
+    };
+
+    // Wait for related images to be rendered
+    const checkAndSetup = () => {
+      relatedImagesElement = relatedImagesRef.current;
+      if (relatedImagesElement) {
+        // Set up scroll listener
+        scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+        // Initial check - ensure header is visible on load
+        setIsHeaderHidden(false);
+        handleScroll();
+      } else {
+        // Retry after a short delay
+        setTimeout(checkAndSetup, 100);
+      }
+    };
+
+    const timeoutId = setTimeout(checkAndSetup, 300);
+
+    return () => {
+      clearTimeout(timeoutId);
+      scrollContainer.removeEventListener('scroll', handleScroll);
+    };
+  }, [renderAsPage, relatedImages.length]);
+
   // Add zoom keyboard shortcuts
   useEffect(() => {
     const { zoom, isZoomed, zoomIn, zoomOut, resetZoom } = zoomProps;
@@ -187,6 +246,7 @@ const ImageModal = ({
           onClose={onClose}
           modalContentRef={modalContentRef}
           onImageSelect={onImageSelect}
+          isHeaderHidden={isHeaderHidden}
         />
 
         {/* Modal Image Content - Scrollable */}
@@ -220,18 +280,20 @@ const ImageModal = ({
           />
 
           {/* Related Images Section */}
-          <ImageModalRelated
-            relatedImages={relatedImages}
-            hasMoreRelatedImages={hasMoreRelatedImages}
-            isLoadingRelatedImages={isLoadingRelatedImages}
-            imageTypes={imageTypes}
-            currentImageIds={currentImageIds}
-            processedImages={processedImages}
-            onImageSelect={onImageSelect}
-            onImageLoad={onImageLoad}
-            modalContentRef={modalContentRef}
-            loadMoreRef={relatedImagesLoadMoreRef}
-          />
+          <div ref={relatedImagesRef}>
+            <ImageModalRelated
+              relatedImages={relatedImages}
+              hasMoreRelatedImages={hasMoreRelatedImages}
+              isLoadingRelatedImages={isLoadingRelatedImages}
+              imageTypes={imageTypes}
+              currentImageIds={currentImageIds}
+              processedImages={processedImages}
+              onImageSelect={onImageSelect}
+              onImageLoad={onImageLoad}
+              modalContentRef={modalContentRef}
+              loadMoreRef={relatedImagesLoadMoreRef}
+            />
+          </div>
         </div>
       </div>
 

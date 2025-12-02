@@ -19,6 +19,7 @@ interface ImageModalHeaderProps {
   onClose: () => void;
   modalContentRef: React.RefObject<HTMLDivElement | null>;
   onImageSelect: (image: Image) => void;
+  isHeaderHidden?: boolean;
 }
 
 export const ImageModalHeader = ({
@@ -34,6 +35,7 @@ export const ImageModalHeader = ({
   onClose,
   modalContentRef,
   onImageSelect,
+  isHeaderHidden = false,
 }: ImageModalHeaderProps) => {
   const {
     showUserProfileCard,
@@ -171,7 +173,7 @@ export const ImageModalHeader = ({
   // Mobile/Page Author Banner
   if (isMobile || renderAsPage) {
     return (
-      <div className="image-modal-author-banner">
+      <div className={`image-modal-author-banner ${isHeaderHidden ? 'header-hidden' : ''}`}>
         <div
           className="modal-author-banner-left clickable-user-info"
           ref={userInfoRef}

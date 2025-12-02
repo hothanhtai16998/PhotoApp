@@ -1,3 +1,35 @@
+.image-page-layout {
+  display: flex;
+  width: 100%;
+}
+
+.image-page-sidebar {
+  width: 56px;
+  padding: 16px 0;
+  border-right: 1px solid #e5e5e5;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 20;
+}
+
+@media (min-width: 1024px) {
+  .image-page-sidebar {
+    position: fixed;
+    left: 0;
+    top: var(--header-height, 56px);
+    bottom: 0;
+    height: auto;
+  }
+
+  /* Add left offset so main content doesn't go under the sidebar */
+  .image-page-container.page-mode {
+    padding-left: 56px;
+  }
+}
+
 .image-page-container {
   width: 100%;
 }

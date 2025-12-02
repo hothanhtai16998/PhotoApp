@@ -6,6 +6,7 @@ import { extractIdFromSlug, generateImageSlug } from '@/lib/utils';
 import type { Image } from '@/types/image';
 import { appConfig } from '@/config/appConfig';
 import './ImagePage.css';
+import ImagePageSidebar from '@/components/ImagePageSidebar';
 
 // Lazy load ImageModal - main component of this page
 const ImageModal = lazy(() => import('@/components/ImageModal'));
@@ -171,26 +172,29 @@ function ImagePage() {
   return (
     <>
       <Header />
-      <div className={`image-page-container ${isFromGrid ? 'modal-mode' : 'page-mode'}`}>
-        <Suspense fallback={
-          <div className="flex items-center justify-center min-h-screen">
-            <div className="loading-spinner" />
-          </div>
-        }>
-          <ImageModal
-            image={image}
-            images={images}
-            onClose={handleClose}
-            onImageSelect={handleImageSelect}
-            lockBodyScroll={!isFromGrid}
-            onDownload={handleDownload}
-            imageTypes={imageTypes}
-            onImageLoad={handleImageLoad}
-            currentImageIds={currentImageIds.current}
-            processedImages={processedImages}
-            renderAsPage={renderAsPage}
-          />
-        </Suspense>
+      <div className="image-page-layout">
+        {renderAsPage && <ImagePageSidebar />}
+        <div className={`image-page-container ${isFromGrid ? 'modal-mode' : 'page-mode'}`}>
+          <Suspense fallback={
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="loading-spinner" />
+            </div>
+          }>
+            <ImageModal
+              image={image}
+              images={images}
+              onClose={handleClose}
+              onImageSelect={handleImageSelect}
+              lockBodyScroll={!isFromGrid}
+              onDownload={handleDownload}
+              imageTypes={imageTypes}
+              onImageLoad={handleImageLoad}
+              currentImageIds={currentImageIds.current}
+              processedImages={processedImages}
+              renderAsPage={renderAsPage}
+            />
+          </Suspense>
+        </div>
       </div>
     </>
   );
