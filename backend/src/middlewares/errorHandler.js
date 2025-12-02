@@ -5,7 +5,15 @@ import { logger } from '../utils/logger.js';
  * Handles all errors and sends appropriate responses with user-friendly messages
  */
 export const errorHandler = (err, req, res, next) => {
-    logger.error('Request error', err, {
+    // If headers already sent, delegate to default Express error handler
+    if (res.headersSent) {
+        return next(err);
+    }
+
+    // Structured logging to avoid leaking excessive raw error object
+    logger.error('Request error', {
+        message: err?.message,
+        stack: err?.stack,
         method: req.method,
         url: req.url,
         ip: req.ip,
@@ -36,9 +44,9 @@ export const errorHandler = (err, req, res, next) => {
         });
     }
 
-    // JWT errors
+    // JWT errors - treat as authorization/authentication failures
     if (err.name === 'JsonWebTokenError') {
-        return res.status(401).json({
+        return res.status(403).json({
             success: false,
             message: 'Your session is invalid. Please sign in again.',
             errorCode: 'INVALID_TOKEN',
@@ -46,7 +54,7 @@ export const errorHandler = (err, req, res, next) => {
     }
 
     if (err.name === 'TokenExpiredError') {
-        return res.status(401).json({
+        return res.status(403).json({
             success: false,
             message: 'Your session has expired. Please sign in again.',
             errorCode: 'TOKEN_EXPIRED',

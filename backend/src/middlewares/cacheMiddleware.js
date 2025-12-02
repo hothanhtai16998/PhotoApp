@@ -28,18 +28,25 @@ const TTL_CONFIG = {
  * @returns {string} Cache key
  */
 function generateCacheKey(req) {
-    const path = req.originalUrl || req.url;
-    const userId = req.user?._id || req.user?.id || 'anonymous';
-    const query = JSON.stringify(req.query || {});
-    
+    // Use path without query string; fall back to url
+    const path = req.path || (req.originalUrl && req.originalUrl.split('?')[0]) || req.url || '/';
+
+    // Stable user id extraction
+    const userId = req.user?._id ?? req.user?.id ?? 'anonymous';
+
+    // Stable query serialization: sort keys to avoid different key orderings
+    const queryObj = req.query || {};
+    const sortedQuery = Object.keys(queryObj).sort().reduce((acc, k) => { acc[k] = queryObj[k]; return acc; }, {});
+    const query = JSON.stringify(sortedQuery);
+
     // For user-specific endpoints, include user ID in key
-    const userSpecificPaths = ['/favorites', '/collections', '/profile'];
+    const userSpecificPaths = ['/api/favorites', '/favorites', '/api/collections', '/collections', '/profile'];
     const isUserSpecific = userSpecificPaths.some(p => path.includes(p));
-    
+
     if (isUserSpecific) {
         return `${path}:${userId}:${query}`;
     }
-    
+
     return `${path}:${query}`;
 }
 

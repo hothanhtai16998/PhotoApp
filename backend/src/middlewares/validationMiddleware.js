@@ -9,11 +9,16 @@ export const validate = (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         const errorMessages = errors.array().map(err => err.msg || err.message || 'Validation failed');
-        // Log validation errors for debugging
+        // Redact sensitive fields before logging validation errors
+        const safeBody = { ...(req.body || {}) };
+        ['password', 'hashedPassword', 'token', 'accessToken', 'refreshToken'].forEach((k) => {
+            if (k in safeBody) safeBody[k] = '[REDACTED]';
+        });
+
         logger.warn('Validation failed', {
             url: req.url,
             method: req.method,
-            body: req.body,
+            body: safeBody,
             errors: errorMessages,
         });
         return res.status(400).json({
@@ -32,10 +37,11 @@ export const validate = (req, res, next) => {
 export const validateSignUp = [
     body('username')
         .trim()
-        .escape() // Sanitize: escape HTML entities
         .isLength({ min: 3, max: 20 })
         .matches(/^[a-zA-Z0-9_]+$/)
-        .withMessage('Username must be 3-20 characters and contain only letters, numbers, and underscores'),
+        .withMessage('Username must be 3-20 characters and contain only letters, numbers, and underscores')
+        .escape() // Sanitize after validation to avoid altering validation input
+    ,
     body('email')
         .trim()
         .normalizeEmail() // Sanitize: normalize email format
@@ -109,10 +115,10 @@ export const validateImageUpload = [
             if (!value) return true;
             try {
                 const coords = typeof value === 'string' ? JSON.parse(value) : value;
-                if (coords.latitude && coords.longitude) {
+                if (coords && ('latitude' in coords) && ('longitude' in coords)) {
                     const lat = parseFloat(coords.latitude);
                     const lng = parseFloat(coords.longitude);
-                    if (isNaN(lat) || isNaN(lng)) return false;
+                    if (!isFinite(lat) || !isFinite(lng)) return false;
                     if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return false;
                     return true;
                 }

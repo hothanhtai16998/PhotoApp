@@ -1,5 +1,6 @@
 import rateLimit from 'express-rate-limit';
 import { env } from '../libs/env.js';
+import { enqueueRequest } from './requestQueue.js';
 
 /**
  * General API rate limiter
@@ -9,6 +10,19 @@ export const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: env.NODE_ENV === 'development' ? 1000 : 100, // Much higher limit in development
     message: 'Too many requests from this IP, please try again later.',
+    // Custom handler: try to enqueue GET requests instead of immediately rejecting
+    handler: (req, res, next, options) => {
+        try {
+            const enqueued = enqueueRequest(req, res, next);
+            if (!enqueued) {
+                return res.status(429).json({ message: options.message || 'Too many requests' });
+            }
+            // If enqueued or accepted, do nothing; the enqueueRequest either called next() or will process later
+            return;
+        } catch (err) {
+            return res.status(429).json({ message: options.message || 'Too many requests' });
+        }
+    },
     standardHeaders: true,
     legacyHeaders: false,
     skip: (req) => {

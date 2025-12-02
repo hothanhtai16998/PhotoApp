@@ -11,20 +11,19 @@ const upload = multer({
         fileSize: FILE_UPLOAD.MAX_SIZE,
     },
     fileFilter: (req, file, cb) => {
+        // Use MulterError for consistent Multer handling in error middleware
         if (!file.mimetype.startsWith('image/')) {
-            return cb(
-                new Error('Only image files are allowed'),
-                false
-            );
+            const err = new multer.MulterError('LIMIT_UNEXPECTED_FILE');
+            err.message = 'Only image files are allowed';
+            err.field = file.fieldname;
+            return cb(err);
         }
 
         if (!FILE_UPLOAD.ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-            return cb(
-                new Error(
-                    `Invalid file type. Allowed types: ${FILE_UPLOAD.ALLOWED_MIME_TYPES.join(', ')}`
-                ),
-                false
-            );
+            const err = new multer.MulterError('LIMIT_UNEXPECTED_FILE');
+            err.message = `Invalid file type. Allowed types: ${FILE_UPLOAD.ALLOWED_MIME_TYPES.join(', ')}`;
+            err.field = file.fieldname;
+            return cb(err);
         }
 
         cb(null, true);

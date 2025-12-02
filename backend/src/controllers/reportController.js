@@ -60,7 +60,7 @@ export const createReport = asyncHandler(async (req, res) => {
     } else if (type === 'user') {
         target = await User.findById(targetId);
         // Prevent reporting yourself
-        if (targetId.toString() === userId.toString()) {
+        if (target && target._id && target._id.toString() === userId.toString()) {
             return res.status(400).json({
                 success: false,
                 message: 'Cannot report yourself',

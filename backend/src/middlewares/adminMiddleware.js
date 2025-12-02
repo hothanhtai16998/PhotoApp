@@ -1,4 +1,3 @@
-import AdminRole from '../models/AdminRole.js';
 import { asyncHandler } from './asyncHandler.js';
 
 /**

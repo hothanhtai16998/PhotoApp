@@ -11,57 +11,57 @@ import { env } from '../libs/env.js';
 function isSocialMediaScraper(req) {
   const userAgent = req.get('user-agent') || '';
   const lowerUA = userAgent.toLowerCase();
-  
-  // Log user agent for debugging
-  logger.info(`Checking user agent: ${userAgent}`);
-  
+
+  // Log user agent for debugging (debug-level to reduce noise)
+  if (logger.debug) logger.debug(`Checking user agent: ${userAgent}`);
+
   // Facebook crawler - most common patterns
-  if (lowerUA.includes('facebookexternalhit') || 
-      lowerUA.includes('facebot') ||
-      lowerUA.includes('facebookcatalog') ||
-      lowerUA.includes('facebookplatform')) {
-    logger.info('Detected Facebook scraper');
+  if (lowerUA.includes('facebookexternalhit') ||
+    lowerUA.includes('facebot') ||
+    lowerUA.includes('facebookcatalog') ||
+    lowerUA.includes('facebookplatform')) {
+    if (logger.debug) logger.debug('Detected Facebook scraper');
     return true;
   }
-  
+
   // Twitter crawler
-  if (lowerUA.includes('twitterbot') || 
-      lowerUA.includes('twitter') ||
-      lowerUA.includes('x.com')) {
-    logger.info('Detected Twitter scraper');
+  if (lowerUA.includes('twitterbot') ||
+    lowerUA.includes('twitter') ||
+    lowerUA.includes('x.com')) {
+    if (logger.debug) logger.debug('Detected Twitter scraper');
     return true;
   }
-  
+
   // LinkedIn crawler
   if (lowerUA.includes('linkedinbot')) {
-    logger.info('Detected LinkedIn scraper');
+    if (logger.debug) logger.debug('Detected LinkedIn scraper');
     return true;
   }
-  
+
   // Pinterest crawler
   if (lowerUA.includes('pinterest')) {
-    logger.info('Detected Pinterest scraper');
+    if (logger.debug) logger.debug('Detected Pinterest scraper');
     return true;
   }
-  
+
   // WhatsApp crawler
   if (lowerUA.includes('whatsapp')) {
-    logger.info('Detected WhatsApp scraper');
+    if (logger.debug) logger.debug('Detected WhatsApp scraper');
     return true;
   }
-  
+
   // Telegram crawler
   if (lowerUA.includes('telegrambot')) {
-    logger.info('Detected Telegram scraper');
+    if (logger.debug) logger.debug('Detected Telegram scraper');
     return true;
   }
-  
+
   // Discord crawler
   if (lowerUA.includes('discordbot')) {
-    logger.info('Detected Discord scraper');
+    if (logger.debug) logger.debug('Detected Discord scraper');
     return true;
   }
-  
+
   return false;
 }
 
@@ -74,7 +74,7 @@ function isSocialMediaScraper(req) {
 function generateSocialShareHTML(image, url, req) {
   // Get image URL - prefer regularUrl, fallback to smallUrl, then imageUrl
   let imageUrl = image.regularUrl || image.smallUrl || image.imageUrl;
-  
+
   // Ensure image URL is absolute (Facebook requires absolute URLs)
   // Most image URLs should already be absolute (Cloudinary URLs), but check anyway
   if (imageUrl && !imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
@@ -83,15 +83,28 @@ function generateSocialShareHTML(image, url, req) {
     const host = req.get('host');
     imageUrl = `${protocol}://${host}${imageUrl.startsWith('/') ? imageUrl : '/' + imageUrl}`;
   }
-  
-  // Log the final image URL for debugging
-  logger.info(`Final image URL for meta tags: ${imageUrl}`);
-  
+
+  // Log the final image URL for debugging (debug-level to reduce noise)
+  if (logger.debug) logger.debug(`Final image URL for meta tags: ${imageUrl}`);
+
   const title = image.imageTitle || 'Photo';
   const authorName = image.uploadedBy?.displayName || image.uploadedBy?.username || 'Unknown';
   const description = `Photo by ${authorName}${image.location ? ` in ${image.location}` : ''}`;
   const siteName = 'PhotoApp';
-  
+
+  // Derive image mime type from file extension if possible
+  let imageType = '';
+  try {
+    const ext = (imageUrl || '').split('.').pop().toLowerCase();
+    if (ext === 'jpg' || ext === 'jpeg') imageType = 'image/jpeg';
+    else if (ext === 'png') imageType = 'image/png';
+    else if (ext === 'webp') imageType = 'image/webp';
+    else if (ext === 'gif') imageType = 'image/gif';
+    else if (ext === 'svg') imageType = 'image/svg+xml';
+  } catch (e) {
+    imageType = '';
+  }
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -106,7 +119,7 @@ function generateSocialShareHTML(image, url, req) {
   <meta property="og:description" content="${escapeHtml(description)}">
   <meta property="og:image" content="${escapeHtml(imageUrl)}">
   <meta property="og:image:secure_url" content="${escapeHtml(imageUrl)}">
-  <meta property="og:image:type" content="image/jpeg">
+  ${imageType ? `<meta property="og:image:type" content="${escapeHtml(imageType)}">` : ''}
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:site_name" content="${siteName}">
@@ -159,48 +172,47 @@ function escapeHtml(text) {
  */
 export const handleSocialShare = asyncHandler(async (req, res) => {
   const { slug } = req.params;
-  
+
   if (!slug) {
     return res.status(404).send('Not found');
   }
-  
+
   // Extract short ID from slug
   const shortId = extractIdFromSlug(slug);
   if (!shortId) {
     logger.warn(`Invalid slug format: ${slug}`);
     return res.status(404).send('Invalid image slug');
   }
-  
+
   // Find image by short ID
   const image = await findImageByShortId(shortId);
   if (!image) {
     logger.warn(`Image not found for short ID: ${shortId}`);
     return res.status(404).send('Image not found');
   }
-  
+
   // Build full URL
   const protocol = req.protocol || (req.secure ? 'https' : 'http');
   const host = req.get('host');
   const fullUrl = `${protocol}://${host}${req.originalUrl}`;
-  
-  // Log for debugging
-  logger.info(`Social share request detected:`);
-  logger.info(`  User-Agent: ${req.get('user-agent')}`);
-  logger.info(`  Image ID: ${image._id}`);
-  logger.info(`  Image Title: ${image.imageTitle}`);
-  logger.info(`  Image URL: ${image.regularUrl || image.smallUrl || image.imageUrl}`);
-  logger.info(`  Full URL: ${fullUrl}`);
-  
+
+  // Log a concise summary for debugging
+  if (logger.debug) {
+    logger.debug(`Social share request: ua=${req.get('user-agent')}, id=${image._id}, url=${image.regularUrl || image.smallUrl || image.imageUrl}, fullUrl=${fullUrl}`);
+  } else {
+    logger.info(`Social share for image ${image._id}`);
+  }
+
   // Generate HTML with meta tags
   const html = generateSocialShareHTML(image, fullUrl, req);
-  
+
   // Set appropriate headers
   res.set('Content-Type', 'text/html; charset=utf-8');
   res.set('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
-  
+
   // Allow Facebook and other scrapers to access
   res.set('X-Content-Type-Options', 'nosniff');
-  
+
   // Send response
   res.send(html);
 });

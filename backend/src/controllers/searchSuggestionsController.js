@@ -52,17 +52,13 @@ export const getSearchSuggestions = asyncHandler(async (req, res) => {
 
         // 2. Search in tags
         const escapedQuery2 = escapeRegex(query);
+        // Unwind tags first, then match to reduce work and avoid double-matching
         const tagMatches = await Image.aggregate([
-            {
-                $match: {
-                    tags: { $regex: new RegExp(escapedQuery2, 'i') },
-                    moderationStatus: 'approved',
-                },
-            },
             { $unwind: '$tags' },
             {
                 $match: {
                     tags: { $regex: new RegExp(escapedQuery2, 'i') },
+                    moderationStatus: 'approved',
                 },
             },
             {

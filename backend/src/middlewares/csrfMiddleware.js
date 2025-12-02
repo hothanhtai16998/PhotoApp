@@ -34,8 +34,10 @@ const generateToken = () => {
  * This ensures every authenticated user always has a valid token
  */
 export const csrfToken = (req, res, next) => {
-    // Check if token already exists in cookie
-    if (!req.cookies[CSRF_TOKEN_COOKIE]) {
+    // Determine current token (cookie may not reflect newly-set token until next request)
+    let currentToken = req.cookies && req.cookies[CSRF_TOKEN_COOKIE];
+
+    if (!currentToken) {
         // Generate new token
         const token = generateToken();
         const isProduction = env.NODE_ENV === 'production';
@@ -50,11 +52,13 @@ export const csrfToken = (req, res, next) => {
         });
 
         logger.info('CSRF token generated', { path: req.path });
+
+        // Use newly generated token immediately for header
+        currentToken = token;
     }
 
     // Send token in response header for frontend convenience
     // Frontend can use this immediately without reading cookie
-    const currentToken = req.cookies[CSRF_TOKEN_COOKIE];
     if (currentToken) {
         res.setHeader('X-CSRF-Token', currentToken);
     }

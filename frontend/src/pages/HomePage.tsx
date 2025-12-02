@@ -1,48 +1,28 @@
-import { useEffect, lazy, Suspense } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useEffect, lazy, Suspense, useContext } from "react";
 import Header from "../components/Header";
 import './HomePage.css';
 import { useImageStore } from "@/stores/useImageStore";
 import { useGlobalKeyboardShortcuts } from "@/hooks/useGlobalKeyboardShortcuts";
 import { Skeleton } from "@/components/ui/skeleton";
-import { appConfig } from "@/config/appConfig";
 import { triggerSearchFocus } from "@/utils/searchFocusEvent";
 import ImageGrid from "./ImageGrid";
+import { ActualLocationContext } from "@/contexts/ActualLocationContext";
 
 // Lazy load Slider - conditionally rendered
 const Slider = lazy(() => import("@/components/Slider"));
 
 function HomePage() {
     const { currentSearch } = useImageStore();
-    const [searchParams] = useSearchParams();
-    const navigate = useNavigate();
+    const actualLocation = useContext(ActualLocationContext);
 
     // Check if modal is open (image param exists)
-    const isModalOpen = !!searchParams.get('image');
+    const isModalOpen = actualLocation?.pathname?.startsWith('/photos/') || false;
 
     // Global keyboard shortcuts
     useGlobalKeyboardShortcuts({
         onFocusSearch: triggerSearchFocus,
         isModalOpen,
     });
-
-    // If page is refreshed with ?image=slug, redirect to /photos/:slug to show as full page
-    // This handles the refresh case (like Unsplash)
-    useEffect(() => {
-        const imageParam = searchParams.get('image');
-        if (imageParam) {
-            // Check if this is a page refresh by checking sessionStorage
-            // If image param exists but we don't have the "fromGrid" flag, it's a refresh
-            const fromGrid = sessionStorage.getItem(appConfig.storage.imagePageFromGridKey);
-            if (!fromGrid) {
-                // This is a refresh or direct access, redirect to /photos/:slug
-                navigate(`/photos/${imageParam}`, { replace: true });
-            } else {
-                // Clear the flag after using it
-                sessionStorage.removeItem(appConfig.storage.imagePageFromGridKey);
-            }
-        }
-    }, [searchParams, navigate]);
 
     // Scroll to top when search is activated to show results immediately
     useEffect(() => {

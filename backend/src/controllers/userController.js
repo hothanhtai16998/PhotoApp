@@ -78,7 +78,7 @@ export const searchUsers = asyncHandler(async (req, res) => {
 
     // Use lean() for faster queries
     const users = await User.find(query)
-        .select('username email displayName avatarUrl')
+        .select('username displayName avatarUrl')
         .skip(skip)
         .limit(limit)
         .lean();

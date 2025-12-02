@@ -5,7 +5,23 @@
  */
 
 export const appConfig = {
-    // Mobile breakpoint in pixels
+    // Responsive breakpoints in pixels
+    // Use these to detect device layouts and conditionally render modal vs page.
+    breakpoints: {
+        // Phones (portrait)
+        xs: 480,
+        // Small tablets / large phones
+        sm: 640,
+        // Tablets (portrait)
+        md: 768,
+        // Tablets (landscape) / small laptops
+        lg: 1024,
+        // Desktops
+        xl: 1280,
+        // Large desktops / 2K
+        xxl: 1536,
+    },
+    // Backward-compatible mobile breakpoint (use md by default)
     mobileBreakpoint: 768,
     
     // API timeout in milliseconds (2 minutes for file uploads)
