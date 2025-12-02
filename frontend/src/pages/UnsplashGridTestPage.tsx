@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, lazy, Suspense, useRef } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import type { Image } from '../types/image';
 import { imageService } from '../services/imageService';
 import MasonryGrid from '../components/MasonryGrid';
@@ -7,6 +7,7 @@ import CategoryNavigation from '../components/CategoryNavigation';
 import { useInfiniteScroll } from '../components/image/hooks/useInfiniteScroll';
 import { Skeleton } from '@/components/ui/skeleton';
 import { generateImageSlug, extractIdFromSlug } from '@/lib/utils';
+import { appConfig } from '@/config/appConfig';
 
 const ImageModal = lazy(() => import('@/components/ImageModal'));
 
@@ -18,6 +19,7 @@ const UnsplashGridTestPage = () => {
     const [hasMore, setHasMore] = useState(true);
     const [searchParams, setSearchParams] = useSearchParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const category = searchParams.get('category') || 'all';
     const [selectedImage, setSelectedImage] = useState<Image | null>(null);
     const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
@@ -38,20 +40,16 @@ const UnsplashGridTestPage = () => {
     };
 
     const handleImageClick = (image: Image) => {
-        setSelectedImage(image);
+        // Set flag to indicate navigation is from the grid
+        sessionStorage.setItem(appConfig.storage.imagePageFromGridKey, 'true');
         const newSlug = generateImageSlug(image.imageTitle || '', image._id);
-        setSearchParams(prev => {
-            prev.set('photo', newSlug);
-            return prev;
-        });
+        // Navigate to the photo's path, preserving the grid page in the background state
+        navigate(`/photos/${newSlug}`, { state: { background: location } });
     };
 
     const handleCloseModal = () => {
         setSelectedImage(null);
-        setSearchParams(prev => {
-            prev.delete('photo');
-            return prev;
-        });
+        navigate(-1); // Go back to the previous URL (the grid page)
     };
 
     const fetchImages = useCallback(async (currentPage: number, categoryName: string) => {
