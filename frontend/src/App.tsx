@@ -22,7 +22,7 @@ const ImagePage = lazy(() => import("./pages/ImagePage"));
 const CollectionsPage = lazy(() => import("./pages/CollectionsPage"));
 const CollectionDetailPage = lazy(() => import("./pages/collection/CollectionDetailPage"));
 const AboutPage = lazy(() => import("./pages/AboutPage"));
-const UnsplashGridTestPage = lazy(() => import("./pages/UnsplashGridTestPage"));
+const UnsplashGridTestPage = lazy(() => import("./pages/ImageGrid"));
 
 
 // Loading fallback component

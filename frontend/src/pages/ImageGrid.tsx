@@ -11,7 +11,7 @@ import { appConfig } from '@/config/appConfig';
 
 const ImageModal = lazy(() => import('@/components/ImageModal'));
 
-const UnsplashGridTestPage = () => {
+const ImageGrid = () => {
     const [images, setImages] = useState<Image[]>([]);
     const [loading, setLoading] = useState(true);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -168,4 +168,4 @@ const UnsplashGridTestPage = () => {
     );
 };
 
-export default UnsplashGridTestPage;
+export default ImageGrid;

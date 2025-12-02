@@ -1,12 +1,13 @@
 import { useEffect, lazy, Suspense } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
-import ImageGrid from "@/components/ImageGrid";
+// import ImageGrid from "@/components/ImageGrid";
 import './HomePage.css';
 import { useImageStore } from "@/stores/useImageStore";
 import { useGlobalKeyboardShortcuts } from "@/hooks/useGlobalKeyboardShortcuts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { appConfig } from "@/config/appConfig";
+import ImageGrid from "./ImageGrid";
 
 // Lazy load Slider - conditionally rendered
 const Slider = lazy(() => import("@/components/Slider"));
