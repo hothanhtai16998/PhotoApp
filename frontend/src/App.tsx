@@ -80,6 +80,7 @@ function App() {
         <Routes location={backgroundLocation || location}>
           {/**public routes */}
           <Route path="/" element={<HomePage />} />
+          <Route path="/t/:categorySlug" element={<HomePage />} />
           <Route path="/photos/:slug" element={<ImagePage />} />
           <Route path="/signup" element={<SignUpPage />} />
           <Route path="/signin" element={<SignInPage />} />

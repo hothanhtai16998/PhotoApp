@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, lazy, Suspense, useRef, useContext } from 'react';
-import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation, useParams } from 'react-router-dom';
 import type { Image } from '../types/image';
 import { imageService } from '../services/imageService';
 import MasonryGrid from '../components/MasonryGrid';
@@ -11,6 +11,8 @@ import { appConfig } from '@/config/appConfig';
 import { isMobileViewport } from '@/utils/responsive';
 import { ActualLocationContext } from '@/contexts/ActualLocationContext';
 import { INLINE_MODAL_FLAG_KEY } from '@/constants/modalKeys';
+import { getCategoryNameFromSlug } from '@/utils/categorySlug';
+import { categoryService } from '@/services/categoryService';
 
 const ImageModal = lazy(() => import('@/components/ImageModal'));
 const GRID_SCROLL_POSITION_KEY = 'imageGridScrollPosition';
@@ -28,7 +30,16 @@ const ImageGrid = () => {
     const actualPathname = actualLocation?.pathname;
     const actualLocationState = actualLocation?.state as { inlineModal?: boolean } | undefined;
     const isInlineModalRoute = Boolean(actualLocationState?.inlineModal);
-    const category = searchParams.get('category') || 'all';
+
+    // Get category slug from route params (for /t/:categorySlug)
+    const { categorySlug } = useParams<{ categorySlug?: string }>();
+    const [categoryName, setCategoryName] = useState<string | null>(null);
+
+    // Determine category: from route param or query param (backward compatibility)
+    const categoryFromQuery = searchParams.get('category');
+    const category = categorySlug
+        ? (categoryName || 'all')
+        : (categoryFromQuery || 'all');
     const [selectedImage, setSelectedImage] = useState<Image | null>(null);
     const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
     const processedImages = useRef<Set<string>>(new Set());
@@ -41,7 +52,26 @@ const ImageGrid = () => {
         return 3; // Desktop: 3 columns
     });
 
-    // Category changes are handled internally by CategoryNavigation and the image store
+    // Fetch categories to convert slug to name
+    useEffect(() => {
+        const loadCategories = async () => {
+            try {
+                const fetchedCategories = await categoryService.fetchCategories();
+
+                // If we have a category slug, convert it to name
+                if (categorySlug) {
+                    const name = getCategoryNameFromSlug(categorySlug, fetchedCategories);
+                    setCategoryName(name);
+                } else {
+                    setCategoryName(null);
+                }
+            } catch (error) {
+                console.error('Failed to load categories:', error);
+                setCategoryName(null);
+            }
+        };
+        loadCategories();
+    }, [categorySlug]);
 
     const saveScrollPosition = useCallback(() => {
         if (typeof window === 'undefined') return;
@@ -210,18 +240,20 @@ const ImageGrid = () => {
         });
     }, []);
 
+    // Clean up query params if using route-based category (backward compatibility)
     useEffect(() => {
         const isOnHomeRoute = !actualPathname || actualPathname === '/';
         if (!isOnHomeRoute) return;
 
-        if (category === 'all') {
+        // Only clean up query params if we're on homepage and category is 'all'
+        if (category === 'all' && categoryFromQuery) {
             const newSearchParams = new URLSearchParams(searchParams.toString());
             newSearchParams.delete('category');
             const queryString = newSearchParams.toString();
             const nextPath = queryString ? `?${queryString}` : '/';
             navigate(nextPath, { replace: true });
         }
-    }, [category, searchParams, navigate, actualPathname]);
+    }, [category, categoryFromQuery, searchParams, navigate, actualPathname]);
 
     // Update column count based on viewport size
     useEffect(() => {

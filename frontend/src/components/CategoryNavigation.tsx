@@ -1,9 +1,10 @@
 import { useImageStore } from "@/stores/useImageStore"
-import { useNavigate, useLocation, useSearchParams } from "react-router-dom"
+import { useNavigate, useLocation, useSearchParams, useParams } from "react-router-dom"
 import { useState, useEffect, useRef, memo } from "react"
 import { categoryService, type Category } from "@/services/categoryService"
 import { appConfig } from '@/config/appConfig';
 import { timingConfig } from '@/config/timingConfig';
+import { categoryNameToSlug, getCategoryNameFromSlug } from '@/utils/categorySlug';
 import './CategoryNavigation.css'
 
 export const CategoryNavigation = memo(function CategoryNavigation() {
@@ -11,13 +12,20 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams();
-  const [categories, setCategories] = useState<string[]>(['Tất cả'])
+  const { categorySlug } = useParams<{ categorySlug?: string }>();
+  const [categoryNames, setCategoryNames] = useState<string[]>(['Tất cả'])
+  const [categoryObjects, setCategoryObjects] = useState<Category[]>([])
   const [headerHeight, setHeaderHeight] = useState(0)
   const [isSticky, setIsSticky] = useState(false)
   const [navHeight, setNavHeight] = useState(0)
   const categoryNavRef = useRef<HTMLDivElement>(null)
   const initialNavTopRef = useRef<number | null>(null)
-  const activeCategory = currentCategory || 'Tất cả'
+  
+  // Determine active category from URL (route param) or fallback to store
+  const activeCategoryFromUrl = categorySlug 
+    ? (getCategoryNameFromSlug(categorySlug, categoryObjects) || null)
+    : null;
+  const activeCategory = activeCategoryFromUrl || currentCategory || 'Tất cả'
 
   // Calculate header height for sticky positioning
   useEffect(() => {
@@ -73,7 +81,7 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
         setNavHeight(height)
       }
     }
-  }, [categories, isSticky])
+  }, [categoryNames, isSticky])
 
   // Preserve sticky state when modal opens
   useEffect(() => {
@@ -179,13 +187,15 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
     const loadCategories = async () => {
       try {
         const fetchedCategories = await categoryService.fetchCategories()
+        setCategoryObjects(fetchedCategories)
         // Map to category names and add 'Tất cả' at the beginning
-        const categoryNames = ['Tất cả', ...fetchedCategories.map((cat: Category) => cat.name)]
-        setCategories(categoryNames)
+        const names = ['Tất cả', ...fetchedCategories.map((cat: Category) => cat.name)]
+        setCategoryNames(names)
       } catch (error) {
         console.error('Failed to load categories:', error)
         // Fallback to default categories if API fails
-        setCategories(['Tất cả'])
+        setCategoryNames(['Tất cả'])
+        setCategoryObjects([])
       }
     }
     loadCategories()
@@ -193,28 +203,31 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
 
   const handleCategoryClick = (category: string) => {
     const isTestPage = location.pathname.includes('UnsplashGridTestPage');
-    const newCategory = category !== 'Tất cả' ? category : undefined;
-
+    
+    // For test page, use query params (backward compatibility)
     if (isTestPage) {
+      const newCategory = category !== 'Tất cả' ? category : undefined;
       setSearchParams({ category: newCategory || 'all' });
       return;
     }
 
-    if (location.pathname !== '/') {
+    // For normal pages, navigate to route-based URLs
+    if (category === 'Tất cả') {
+      // Navigate to homepage
       navigate('/');
+    } else {
+      // Navigate to category page: /t/{slug}
+      const slug = categoryNameToSlug(category);
+      navigate(`/t/${slug}`);
     }
-
-    // Directly fetch images for the new category.
-    // The store's fetchImages implementation should handle resetting state.
-    fetchImages({
-      category: newCategory,
-      page: 1, // Explicitly reset to page 1
-      search: undefined, // Clear search term
-    });
   }
 
-  // Only show on homepage or test page
-  if (location.pathname !== '/' && !location.pathname.includes('UnsplashGridTestPage')) {
+  // Show on homepage, category pages (/t/:slug), and test page
+  const isHomePage = location.pathname === '/';
+  const isCategoryPage = location.pathname.startsWith('/t/');
+  const isTestPage = location.pathname.includes('UnsplashGridTestPage');
+  
+  if (!isHomePage && !isCategoryPage && !isTestPage) {
     return null
   }
 
@@ -257,7 +270,7 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
               }
             }}
           >
-            {categories.map((category) => (
+            {categoryNames.map((category) => (
               <button
                 key={category}
                 onClick={() => handleCategoryClick(category)}
