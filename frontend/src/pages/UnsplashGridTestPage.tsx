@@ -1,11 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState, useEffect, useCallback, lazy, Suspense, useRef } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import type { Image } from '../types/image';
 import { imageService } from '../services/imageService';
 import MasonryGrid from '../components/MasonryGrid';
 import CategoryNavigation from '../components/CategoryNavigation';
 import { useInfiniteScroll } from '../components/image/hooks/useInfiniteScroll';
 import { Skeleton } from '@/components/ui/skeleton';
+import { generateImageSlug, extractIdFromSlug } from '@/lib/utils';
+
+const ImageModal = lazy(() => import('@/components/ImageModal'));
 
 const UnsplashGridTestPage = () => {
     const [images, setImages] = useState<Image[]>([]);
@@ -13,8 +16,43 @@ const UnsplashGridTestPage = () => {
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
     const category = searchParams.get('category') || 'all';
+    const [selectedImage, setSelectedImage] = useState<Image | null>(null);
+    const [imageTypes, setImageTypes] = useState<Map<string, 'portrait' | 'landscape'>>(new Map());
+    const processedImages = useRef<Set<string>>(new Set());
+    const currentImageIds = useRef<Set<string>>(new Set());
+
+    const handleCategoryChange = (newCategory: string) => {
+        navigate('/');
+        setSearchParams(prev => {
+            if (newCategory === 'all' || newCategory === 'Tất cả') {
+                prev.delete('category');
+            } else {
+                prev.set('category', newCategory);
+            }
+            prev.delete('photo');
+            return prev;
+        });
+    };
+
+    const handleImageClick = (image: Image) => {
+        setSelectedImage(image);
+        const newSlug = generateImageSlug(image.imageTitle || '', image._id);
+        setSearchParams(prev => {
+            prev.set('photo', newSlug);
+            return prev;
+        });
+    };
+
+    const handleCloseModal = () => {
+        setSelectedImage(null);
+        setSearchParams(prev => {
+            prev.delete('photo');
+            return prev;
+        });
+    };
 
     const fetchImages = useCallback(async (currentPage: number, categoryName: string) => {
         if (currentPage === 1) {
@@ -50,6 +88,17 @@ const UnsplashGridTestPage = () => {
         fetchImages(1, category);
     }, [category, fetchImages]);
 
+    useEffect(() => {
+        const imageSlug = searchParams.get('image');
+        if (imageSlug && images.length > 0) {
+            const imageId = extractIdFromSlug(imageSlug);
+            const imageFromUrl = images.find(img => img._id.endsWith(imageId));
+            if (imageFromUrl) {
+                setSelectedImage(imageFromUrl);
+            }
+        }
+    }, [images, searchParams]);
+
     const handleLoadMore = useCallback(() => {
         if (!loading && hasMore && !isLoadingMore) {
             const nextPage = page + 1;
@@ -64,11 +113,31 @@ const UnsplashGridTestPage = () => {
         onLoadMore: handleLoadMore,
     });
 
+    const handleImageLoad = useCallback((imageId: string, img: HTMLImageElement) => {
+        if (processedImages.current.has(imageId)) return;
+        processedImages.current.add(imageId);
+        const isPortrait = img.naturalHeight > img.naturalWidth;
+        const imageType = isPortrait ? 'portrait' : 'landscape';
+        setImageTypes(prev => {
+            if (prev.has(imageId)) return prev;
+            const newMap = new Map(prev);
+            newMap.set(imageId, imageType);
+            return newMap;
+        });
+    }, []);
+
+    useEffect(() => {
+        if (category === 'all') {
+            const newSearchParams = new URLSearchParams(searchParams.toString());
+            newSearchParams.delete('category');
+            navigate(`?${newSearchParams.toString()}`, { replace: true });
+        }
+    }, [category, searchParams, navigate]);
+
     return (
         <>
             <div className="container mx-auto">
-                <h1 className="text-2xl font-bold text-center my-4">Grid Test</h1>
-                <CategoryNavigation />
+                <CategoryNavigation onCategoryChange={handleCategoryChange} activeCategory={category} />
                 {loading && images.length === 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
                         {Array.from({ length: 12 }).map((_, i) => (
@@ -76,11 +145,27 @@ const UnsplashGridTestPage = () => {
                         ))}
                     </div>
                 ) : (
-                    <MasonryGrid images={images} />
+                    <MasonryGrid images={images} onImageClick={handleImageClick} />
                 )}
                 <div ref={loadMoreRef} />
                 {isLoadingMore && <p className="text-center py-4">Đang tải...</p>}
             </div>
+            <Suspense fallback={null}>
+                {selectedImage && (
+                    <ImageModal
+                        image={selectedImage}
+                        images={images}
+                        onClose={handleCloseModal}
+                        onImageSelect={setSelectedImage}
+                        renderAsPage={false}
+                        onDownload={() => console.log('Download')}
+                        imageTypes={imageTypes}
+                        onImageLoad={handleImageLoad}
+                        currentImageIds={currentImageIds.current}
+                        processedImages={processedImages}
+                    />
+                )}
+            </Suspense>
         </>
     );
 };

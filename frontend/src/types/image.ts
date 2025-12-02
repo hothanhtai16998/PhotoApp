@@ -4,7 +4,7 @@ import type { Coordinates } from './common';
 
 export interface Image {
   _id: string;
-  title?: string;
+  imageTitle?: string;
   description?: string;
   imageUrl: string;
   width: number;
@@ -20,7 +20,7 @@ export interface Image {
   imageAvifUrl?: string; // Original - AVIF
   // imageCategory can be a string (legacy) or populated Category object
   imageCategory: string | Category;
-  uploadedBy: User;
+  uploadedBy: User & { avatarUrl?: string };
   location?: string;
   coordinates?: Coordinates;
   cameraModel?: string;

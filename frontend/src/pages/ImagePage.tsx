@@ -27,21 +27,21 @@ function ImagePage() {
   const getInitialFromGrid = () => {
     // Check if we have state from navigation
     const hasState = location.state?.fromGrid === true;
-    
+
     // Check sessionStorage (set when clicking from grid)
     const fromGridFlag = sessionStorage.getItem(appConfig.storage.imagePageFromGridKey);
-    
+
     // If we have state OR sessionStorage flag, it's from grid (modal mode)
     const fromGrid = hasState || fromGridFlag === 'true';
-    
+
     // Clear sessionStorage flag after reading (only if it exists)
     if (fromGridFlag === 'true') {
       sessionStorage.removeItem(appConfig.storage.imagePageFromGridKey);
     }
-    
+
     return fromGrid;
   };
-  
+
   // Initialize state once - use lazy initialization to prevent re-detection
   const [isFromGrid] = useState(() => getInitialFromGrid());
   const renderAsPage = !isFromGrid; // Page mode when NOT from grid
@@ -64,7 +64,7 @@ function ImagePage() {
       try {
         setLoading(true);
         setError(null);
-        
+
         // If coming from grid, try to use passed images first (faster)
         const passedImages = location.state?.images as Image[] | undefined;
         if (passedImages && passedImages.length > 0) {
@@ -72,7 +72,7 @@ function ImagePage() {
             const imgShortId = img._id.slice(-12);
             return imgShortId === imageId;
           });
-          
+
           if (foundImage) {
             setImage(foundImage);
             setImages(passedImages);
@@ -81,16 +81,16 @@ function ImagePage() {
             return;
           }
         }
-        
+
         // Otherwise, fetch from API
         const relatedResponse = await imageService.fetchImages({ limit: 50 });
         const allImages = relatedResponse.images || [];
-        
+
         const foundImage = allImages.find(img => {
           const imgShortId = img._id.slice(-12);
           return imgShortId === imageId;
         });
-        
+
         if (foundImage) {
           setImage(foundImage);
           setImages(allImages);
@@ -124,7 +124,7 @@ function ImagePage() {
   }, []);
 
   const handleImageSelect = useCallback((selectedImage: Image) => {
-    const newSlug = generateImageSlug(selectedImage.imageTitle, selectedImage._id);
+    const newSlug = generateImageSlug(selectedImage.imageTitle || "", selectedImage._id);
     // When navigating between images, keep as page mode (no fromGrid state)
     navigate(`/photos/${newSlug}`, { replace: true, state: { images } });
   }, [navigate, images]);
@@ -140,7 +140,9 @@ function ImagePage() {
       navigate('/'); // Go to home
     }
   }, [navigate, isFromGrid]);
-  
+
+
+
 
   if (loading) {
     return (
@@ -175,18 +177,18 @@ function ImagePage() {
             <div className="loading-spinner" />
           </div>
         }>
-        <ImageModal
-          image={image}
-          images={images}
-          onClose={handleClose}
-          onImageSelect={handleImageSelect}
-          onDownload={handleDownload}
-          imageTypes={imageTypes}
-          onImageLoad={handleImageLoad}
-          currentImageIds={currentImageIds.current}
-          processedImages={processedImages}
-          renderAsPage={renderAsPage}
-        />
+          <ImageModal
+            image={image}
+            images={images}
+            onClose={handleClose}
+            onImageSelect={handleImageSelect}
+            onDownload={handleDownload}
+            imageTypes={imageTypes}
+            onImageLoad={handleImageLoad}
+            currentImageIds={currentImageIds.current}
+            processedImages={processedImages}
+            renderAsPage={renderAsPage}
+          />
         </Suspense>
       </div>
     </>

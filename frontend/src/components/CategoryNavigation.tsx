@@ -83,24 +83,24 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
         // The scroll handler will skip updates, so we just need to ensure state is preserved
       }
     }
-    
+
     // Check immediately
     checkModalState()
-    
+
     // Watch for modal state changes
     const observer = new MutationObserver(checkModalState)
     observer.observe(document.body, { attributes: true, attributeFilter: ['class'] })
-    
+
     return () => observer.disconnect()
   }, [])
 
   // Handle scroll to make category nav stick to header
   useEffect(() => {
     if (!categoryNavRef.current || headerHeight === 0) return
-    
+
     const nav = categoryNavRef.current
     let lastStickyState = isSticky // Initialize with current state
-    
+
     // Store initial nav position once
     const storeInitialPosition = () => {
       if (initialNavTopRef.current === null) {
@@ -109,21 +109,21 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
         initialNavTopRef.current = rect.top + scrollY
       }
     }
-    
+
     const handleScroll = () => {
       // Don't update sticky state when image modal is open
       if (document.body.classList.contains('image-modal-open')) {
         return
       }
-      
+
       const scrollY = window.scrollY || window.pageYOffset
-      
+
       // Store initial position on first scroll or if not stored
       if (initialNavTopRef.current === null) {
         storeInitialPosition()
         if (initialNavTopRef.current === null) return
       }
-      
+
       // If at top, don't stick
       if (scrollY === 0) {
         if (lastStickyState !== false) {
@@ -132,20 +132,20 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
         }
         return
       }
-      
+
       // Calculate: when would the header (at top of viewport) reach the nav's original position?
       // The nav's original top minus header height = scroll position where they meet
       const scrollPositionWhereHeaderReachesNav = initialNavTopRef.current - headerHeight
-      
+
       // Nav should stick only when we've scrolled past that point
       const shouldStick = scrollY >= scrollPositionWhereHeaderReachesNav
-      
+
       if (shouldStick !== lastStickyState) {
         setIsSticky(shouldStick)
         lastStickyState = shouldStick
       }
     }
-    
+
     // Throttled scroll handler
     let rafId: number | null = null
     const throttledScroll = () => {
@@ -155,17 +155,17 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
         rafId = null
       })
     }
-    
+
     window.addEventListener('scroll', throttledScroll, { passive: true })
-    
+
     // Initial setup
     const initCheck = () => {
       storeInitialPosition()
       handleScroll()
     }
-    
+
     setTimeout(initCheck, timingConfig.ui.initCheckDelayMs)
-    
+
     return () => {
       window.removeEventListener('scroll', throttledScroll)
       if (rafId) {
@@ -222,12 +222,12 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
     <>
       {/* Spacer to prevent layout shift when sticky */}
       {isSticky && navHeight > 0 && (
-        <div 
-          style={{ 
+        <div
+          style={{
             height: `${navHeight}px`,
             flexShrink: 0,
             pointerEvents: 'none'
-          }} 
+          }}
           aria-hidden="true"
         />
       )}
@@ -248,27 +248,27 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
         }}
       >
         <div className="category-navigation-wrapper">
-        <nav 
-          className="category-navigation"
-          onTouchMove={(e) => {
-            // Prevent scrolling in category navigation on mobile
-            if (window.innerWidth <= appConfig.mobileBreakpoint) {
-              e.preventDefault();
-            }
-          }}
-        >
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => handleCategoryClick(category)}
-              className={`category-nav-link ${activeCategory === category ? 'active' : ''}`}
-            >
-              {category}
-            </button>
-          ))}
-        </nav>
+          <nav
+            className="category-navigation"
+            onTouchMove={(e) => {
+              // Prevent scrolling in category navigation on mobile
+              if (window.innerWidth <= appConfig.mobileBreakpoint) {
+                e.preventDefault();
+              }
+            }}
+          >
+            {categories.map((category) => (
+              <button
+                key={category}
+                onClick={() => handleCategoryClick(category)}
+                className={`category-nav-link ${activeCategory === category ? 'active' : ''}`}
+              >
+                {category}
+              </button>
+            ))}
+          </nav>
+        </div>
       </div>
-    </div>
     </>
   )
 })
