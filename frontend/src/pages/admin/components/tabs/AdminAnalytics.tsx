@@ -4,6 +4,11 @@ import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/utils';
 import { BarChart2, Calendar, ArrowUp, ArrowDown, MoreVertical } from 'lucide-react';
 import { AreaChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart } from 'recharts';
+import {
+    ChartContainer,
+    ChartTooltip,
+    ChartTooltipContent,
+} from '@/components/ui/chart';
 import type { AnalyticsData } from '@/types/admin';
 
 interface RealtimeData {
@@ -161,7 +166,9 @@ export function AdminAnalytics() {
             });
         }
 
-        return chartDataArray;
+        // Find first non-zero data point and slice from there
+        const firstDataIndex = chartDataArray.findIndex(d => d.value > 0);
+        return firstDataIndex >= 0 ? chartDataArray.slice(firstDataIndex) : chartDataArray;
     }, [activeTab, analytics, days]);
 
     // Calculate percentages - safe to call even if analytics is null
@@ -169,6 +176,48 @@ export function AdminAnalytics() {
     const imagePercentage = analytics ? calculatePercentage(analytics.images.total) : 0;
     const pendingPercentage = analytics ? calculatePercentage(analytics.images.pendingModeration) : 0;
     const approvedPercentage = analytics ? calculatePercentage(analytics.images.approved) : 0;
+
+    // Format chart data for the selected metric tab with profile page logic
+    const formattedChartData = useMemo(() => {
+        if (!chartData || chartData.length === 0) return { data: [], domain: ['auto', 'auto'] };
+
+        // Find first non-zero data point
+        const firstDataIndex = chartData.findIndex(d => d.value > 0);
+        const filteredData = firstDataIndex >= 0 ? chartData.slice(firstDataIndex) : chartData;
+
+        // Calculate Y-axis domain based on data range (adaptive like Unsplash)
+        const calculateDomain = (data: Array<{ value: number }>) => {
+            if (data.length === 0) return ['auto', 'auto'];
+            const values = data.map(d => d.value);
+            const minValue = Math.min(...values);
+            const maxValue = Math.max(...values);
+
+            if (maxValue === 0) return ['auto', 'auto'];
+
+            if (minValue === 0) {
+                const padding = maxValue * 0.1;
+                return [0, Math.round(maxValue + padding)];
+            } else {
+                const range = maxValue - minValue;
+                const padding = range > 0 ? range * 0.15 : maxValue * 0.15;
+                const domainMin = Math.max(0, Math.round(minValue - padding));
+                const domainMax = Math.round(maxValue + padding);
+                return [domainMin, domainMax];
+            }
+        };
+
+        const domain = calculateDomain(filteredData);
+
+        return { data: filteredData, domain };
+    }, [chartData]);
+
+    // Chart configuration
+    const chartConfig = {
+        value: {
+            label: activeTab === 'users' ? 'Người dùng' : activeTab === 'images' ? 'Ảnh' : activeTab === 'pending' ? 'Chờ duyệt' : 'Đã phê duyệt',
+            color: '#667eea',
+        },
+    };
 
     if (loading) {
         return <div className="admin-loading">Đang tải dữ liệu phân tích...</div>;
@@ -234,6 +283,21 @@ export function AdminAnalytics() {
                 <div className="falcon-card falcon-main-chart">
                     <div className="falcon-card-header">
                         <div className="falcon-chart-header-left">
+                            {/* Metric Label and Value */}
+                            <div style={{ marginBottom: '24px' }}>
+                                <div style={{ fontSize: '0.875rem', color: '#767676', textTransform: 'uppercase', marginBottom: '4px' }}>
+                                    {activeTab === 'users' ? 'NGƯỜI DÙNG' : activeTab === 'images' ? 'ẢNH' : activeTab === 'pending' ? 'CHỜ DUYỆT' : 'ĐÃ PHÊ DUYỆT'}
+                                </div>
+                                <div style={{ fontSize: '36px', fontWeight: 700, color: '#111' }}>
+                                    {activeTab === 'users' 
+                                        ? analytics.users.total.toLocaleString() 
+                                        : activeTab === 'images' 
+                                        ? analytics.images.total.toLocaleString()
+                                        : activeTab === 'pending'
+                                        ? analytics.images.pendingModeration.toLocaleString()
+                                        : analytics.images.approved.toLocaleString()}
+                                </div>
+                            </div>
                             <select
                                 value={days}
                                 onChange={(e) => setDays(Number(e.target.value))}
@@ -245,240 +309,46 @@ export function AdminAnalytics() {
                             <option value={365}>Năm trước</option>
                             </select>
                         </div>
-                        <div className="falcon-chart-header-right">
-                            <a href="#" className="falcon-link-button" onClick={(e) => e.preventDefault()}>
-                                Tổng quan lượt truy cập →
-                            </a>
-                        </div>
                     </div>
                     <div className="falcon-card-body">
-                        <ResponsiveContainer width="100%" height={400}>
-                        <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                            <defs>
-                                <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#667eea" stopOpacity={0.8}/>
-                                    <stop offset="95%" stopColor="#667eea" stopOpacity={0}/>
-                                </linearGradient>
-                                <linearGradient id="colorComparison" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#a0aec0" stopOpacity={0.3}/>
-                                    <stop offset="95%" stopColor="#a0aec0" stopOpacity={0}/>
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#e9ecef" strokeOpacity={0.5} />
-                            <XAxis 
-                                dataKey="dateLabel" 
-                                stroke="#6c757d"
-                                tick={{ fill: '#6c757d', fontSize: 11 }}
-                                axisLine={{ stroke: '#dee2e6' }}
-                            />
-                            <YAxis 
-                                stroke="#6c757d"
-                                tick={{ fill: '#6c757d', fontSize: 11 }}
-                                axisLine={{ stroke: '#dee2e6' }}
-                            />
-                            <Tooltip
-                                content={({ active, payload, label }) => {
-                                    if (active && payload?.length) {
-                                        // Find the correct payload entries by dataKey
-                                        // Area component uses dataKey="value", Line component uses dataKey="comparison"
-                                        const valuePayload = payload.find(p => p.dataKey === 'value');
-                                        const comparisonPayload = payload.find(p => p.dataKey === 'comparison');
-                                        
-                                        const current = valuePayload?.value ?? 0;
-                                        const comparison = comparisonPayload?.value ?? 0;
-                                        const percentage = comparison > 0 
-                                            ? (((current as number) - (comparison as number)) / (comparison as number)) * 100 
-                                            : ((current as number) > 0 ? 100 : 0);
-                                        const isPositive = percentage >= 0;
-                                        const hasComparison = comparison > 0;
-                                        
-                                        // Check if this is today's date
-                                        const today = new Date();
-                                        const todayLabel = today.toLocaleDateString('vi-VN', { month: 'short', day: 'numeric' });
-                                        const isToday = label === todayLabel;
-                                        
-                                        // Get the comparison date (same day, previous month - month-over-month comparison)
-                                        const labelStr = typeof label === 'string' ? label : String(label);
-                                        const labelParts = labelStr.split(' ');
-                                        const day = parseInt(labelParts[0] || '1');
-                                        const monthName = labelParts[1] || '';
-                                        const months: Record<string, number> = {
-                                            'thg 1': 0, 'thg 2': 1, 'thg 3': 2, 'thg 4': 3,
-                                            'thg 5': 4, 'thg 6': 5, 'thg 7': 6, 'thg 8': 7,
-                                            'thg 9': 8, 'thg 10': 9, 'thg 11': 10, 'thg 12': 11
-                                        };
-                                        const month = months[monthName] ?? today.getMonth();
-                                        const currentDate = new Date(today.getFullYear(), month, day);
-                                        const comparisonDate = new Date(currentDate);
-                                        comparisonDate.setMonth(comparisonDate.getMonth() - 1); // Go back one month
-                                        
-                                        return (
-                                            <div style={{
-                                                backgroundColor: 'rgba(255, 255, 255, 0.98)',
-                                                border: '1px solid #e9ecef',
-                                                borderRadius: '8px',
-                                                padding: '14px',
-                                                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                                                minWidth: '200px'
-                                            }}>
-                                                {/* Date Header */}
-                                                <div style={{ 
-                                                    color: '#212529', 
-                                                    fontWeight: 600, 
-                                                    marginBottom: '14px',
-                                                    fontSize: '15px',
-                                                    borderBottom: '2px solid #e9ecef',
-                                                    paddingBottom: '10px'
-                                                }}>
-                                                    📅 {label}
-                                                    {isToday && <span style={{ color: '#667eea', marginLeft: '8px', fontSize: '12px' }}>• Hôm nay</span>}
-                                                </div>
-                                                
-                                                {/* Current Value - Main Display */}
-                                                <div style={{ marginBottom: '14px' }}>
-                                                    <div style={{ 
-                                                        color: '#6c757d', 
-                                                        fontSize: '12px',
-                                                        marginBottom: '8px',
-                                                        fontWeight: 500
-                                                    }}>
-                                                        {isToday ? 'Số lượng hôm nay (24/11)' : `Số lượng ngày ${label}`}
-                                                    </div>
-                                                    <div style={{ 
-                                                        color: '#667eea', 
-                                                        fontWeight: 700,
-                                                        fontSize: '24px',
-                                                        lineHeight: '1.2'
-                                                    }}>
-                                                        {current.toLocaleString()}
-                                                    </div>
-                                                    {current === 0 && (
-                                                        <div style={{ 
-                                                            color: '#999', 
-                                                            fontSize: '11px',
-                                                            marginTop: '4px',
-                                                            fontStyle: 'italic'
-                                                        }}>
-                                                            Không có hoạt động
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                
-                                                {/* Comparison Value */}
-                                                {hasComparison && (
-                                                    <div style={{ 
-                                                        marginBottom: '14px', 
-                                                        padding: '10px', 
-                                                        backgroundColor: '#f8f9fa', 
-                                                        borderRadius: '8px',
-                                                        border: '1px solid #e9ecef'
-                                                    }}>
-                                                        <div style={{ 
-                                                            color: '#6c757d', 
-                                                            fontSize: '12px',
-                                                            marginBottom: '8px',
-                                                            fontWeight: 500
-                                                        }}>
-                                                            So với {comparisonDate.toLocaleDateString('vi-VN', { month: 'short', day: 'numeric' })} (kỳ trước)
-                                                        </div>
-                                                        <div style={{ 
-                                                            color: '#495057', 
-                                                            fontWeight: 600,
-                                                            fontSize: '18px'
-                                                        }}>
-                                                            {comparison.toLocaleString()}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                
-                                                {/* Change Indicator */}
-                                                {hasComparison && (
-                                                    <div style={{
-                                                        marginTop: '12px',
-                                                        paddingTop: '12px',
-                                                        borderTop: '2px solid #e9ecef'
-                                                    }}>
-                                                        <div style={{ 
-                                                            color: '#6c757d', 
-                                                            fontSize: '12px',
-                                                            marginBottom: '8px',
-                                                            fontWeight: 500
-                                                        }}>
-                                                            Thay đổi
-                                                        </div>
-                                                        <div style={{ 
-                                                            color: isPositive ? '#00d97e' : '#e63757',
-                                                            fontWeight: 700,
-                                                            fontSize: '18px',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '8px'
-                                                        }}>
-                                                            <span style={{ fontSize: '20px' }}>{isPositive ? '↑' : '↓'}</span>
-                                                            <span>{Math.abs(percentage).toFixed(1)}%</span>
-                                                        </div>
-                                                        <div style={{ 
-                                                            fontSize: '11px',
-                                                            color: '#6c757d',
-                                                            marginTop: '4px'
-                                                        }}>
-                                                            {isPositive ? 'Tăng' : 'Giảm'} {Math.abs(percentage).toFixed(1)}% so với kỳ trước
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                
-                                                {!hasComparison && (
-                                                    <div style={{
-                                                        marginTop: '12px',
-                                                        paddingTop: '12px',
-                                                        borderTop: '2px solid #e9ecef',
-                                                        color: '#6c757d',
-                                                        fontSize: '12px',
-                                                        textAlign: 'center',
-                                                        padding: '8px',
-                                                        backgroundColor: '#f8f9fa',
-                                                        borderRadius: '6px'
-                                                    }}>
-                                                        ⚠️ Chưa có dữ liệu kỳ trước để so sánh
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    }
-                                    return null;
-                                }}
-                            />
-                            <Legend 
-                                wrapperStyle={{ paddingTop: '20px' }}
-                                iconType="line"
-                                formatter={(value) => (
-                                    <span style={{ color: '#6c757d', fontSize: '12px' }}>{value}</span>
-                                )}
-                            />
-                            {/* Comparison line (previous period) - dashed */}
-                            <Line
-                                type="monotone"
-                                dataKey="comparison"
-                                stroke="#a0aec0"
-                                strokeWidth={2}
-                                strokeDasharray="5 5"
-                                dot={false}
-                                activeDot={{ r: 4 }}
-                                name="Kỳ trước"
-                            />
-                            {/* Current period - solid with area fill */}
-                            <Area
-                                type="monotone"
-                                dataKey="value"
-                                stroke="#667eea"
-                                strokeWidth={2}
-                                fillOpacity={1}
-                                fill="url(#colorValue)"
-                                name="Kỳ hiện tại"
-                                activeDot={{ r: 5, fill: '#667eea' }}
-                            />
-                        </AreaChart>
-                    </ResponsiveContainer>
+                        <div className="insights-chart-container" style={{ height: '400px', position: 'relative' }}>
+                            <ChartContainer config={chartConfig} className="h-full w-full">
+                                <AreaChart data={formattedChartData.data} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="fillValue" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="#e0e7ff" stopOpacity={0.8} />
+                                            <stop offset="100%" stopColor="#fbfdfc" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <Area
+                                        type="monotone"
+                                        dataKey="value"
+                                        stroke="#667eea"
+                                        strokeWidth={2}
+                                        fill="url(#fillValue)"
+                                        dot={{ r: 2.5, fill: '#111' }}
+                                        activeDot={{ r: 4, fill: '#111', stroke: '#111', strokeWidth: 1 }}
+                                    />
+                                    <XAxis
+                                        dataKey="dateLabel"
+                                        tick={{ fill: '#767676', fontSize: 11 }}
+                                        axisLine={false}
+                                        tickLine={false}
+                                        interval="preserveStartEnd"
+                                        height={20}
+                                    />
+                                    <YAxis
+                                        hide
+                                        domain={formattedChartData.domain}
+                                    />
+                                    <CartesianGrid vertical={false} horizontal={false} />
+                                    <ChartTooltip
+                                        cursor={false}
+                                        content={<ChartTooltipContent indicator="dot" />}
+                                    />
+                                </AreaChart>
+                            </ChartContainer>
+                        </div>
                     </div>
                 </div>
 

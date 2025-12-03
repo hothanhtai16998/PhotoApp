@@ -94,6 +94,16 @@ export interface AnalyticsData {
     displayName: string;
     uploadCount: number;
   }>;
+  viewsOverTime?: Array<{
+    date: string;
+    value: number;
+  }>;
+  downloadsOverTime?: Array<{
+    date: string;
+    value: number;
+  }>;
+  totalViews?: number;
+  totalDownloads?: number;
 }
 
 export interface RealtimeAnalyticsResponse {

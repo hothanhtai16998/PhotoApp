@@ -254,6 +254,110 @@ export const getAnalytics = asyncHandler(async (req, res) => {
         },
     ]);
 
+    // Aggregate views and downloads from all images for admin analytics
+    const allImages = await Image.find({})
+        .select('views downloads dailyViews dailyDownloads')
+        .lean();
+
+    // Aggregate daily views and downloads across all images
+    const viewsOverTime = {};
+    const downloadsOverTime = {};
+
+    allImages.forEach(image => {
+        // Process dailyViews
+        if (image.dailyViews) {
+            const dailyViewsObj = image.dailyViews instanceof Map
+                ? Object.fromEntries(image.dailyViews)
+                : image.dailyViews;
+
+            Object.entries(dailyViewsObj).forEach(([date, count]) => {
+                const startDateStr = startDateUTC.toISOString().split('T')[0];
+                const endDateStr = endDateUTC.toISOString().split('T')[0];
+                if (date >= startDateStr && date <= endDateStr) {
+                    viewsOverTime[date] = (viewsOverTime[date] || 0) + count;
+                }
+            });
+        }
+
+        // Process dailyDownloads
+        if (image.dailyDownloads) {
+            const dailyDownloadsObj = image.dailyDownloads instanceof Map
+                ? Object.fromEntries(image.dailyDownloads)
+                : image.dailyDownloads;
+
+            Object.entries(dailyDownloadsObj).forEach(([date, count]) => {
+                const startDateStr = startDateUTC.toISOString().split('T')[0];
+                const endDateStr = endDateUTC.toISOString().split('T')[0];
+                if (date >= startDateStr && date <= endDateStr) {
+                    downloadsOverTime[date] = (downloadsOverTime[date] || 0) + count;
+                }
+            });
+        }
+    });
+
+    // Find first date with actual data (for views and downloads separately)
+    const startDateStr = startDateUTC.toISOString().split('T')[0];
+    const endDateStr = endDateUTC.toISOString().split('T')[0];
+    
+    const viewsDates = Object.keys(viewsOverTime)
+        .filter(date => {
+            return viewsOverTime[date] > 0 && 
+                   date >= startDateStr && 
+                   date <= endDateStr;
+        })
+        .sort();
+    
+    const downloadsDates = Object.keys(downloadsOverTime)
+        .filter(date => {
+            return downloadsOverTime[date] > 0 && 
+                   date >= startDateStr && 
+                   date <= endDateStr;
+        })
+        .sort();
+    
+    const firstViewsDate = viewsDates.length > 0 ? viewsDates[0] : null;
+    const firstDownloadsDate = downloadsDates.length > 0 ? downloadsDates[0] : null;
+    
+    // For views: start from first date with data (within period), or startDate if no data
+    const viewsStartDate = firstViewsDate && firstViewsDate >= startDateStr 
+        ? new Date(firstViewsDate + 'T00:00:00.000Z') 
+        : startDateUTC;
+    
+    // For downloads: start from first date with data (within period), or startDate if no data
+    const downloadsStartDate = firstDownloadsDate && firstDownloadsDate >= startDateStr
+        ? new Date(firstDownloadsDate + 'T00:00:00.000Z')
+        : startDateUTC;
+
+    // Fill in missing dates from first data date (not from period start)
+    const viewsDatesToFill = [];
+    for (let d = new Date(viewsStartDate); d <= endDateUTC; d.setDate(d.getDate() + 1)) {
+        const dateStr = d.toISOString().split('T')[0];
+        viewsDatesToFill.push(dateStr);
+        if (!viewsOverTime[dateStr]) viewsOverTime[dateStr] = 0;
+    }
+
+    const downloadsDatesToFill = [];
+    for (let d = new Date(downloadsStartDate); d <= endDateUTC; d.setDate(d.getDate() + 1)) {
+        const dateStr = d.toISOString().split('T')[0];
+        downloadsDatesToFill.push(dateStr);
+        if (!downloadsOverTime[dateStr]) downloadsOverTime[dateStr] = 0;
+    }
+
+    // Convert to array format for charting - only include dates from first data date
+    const viewsData = viewsDatesToFill.map(date => ({
+        date,
+        value: viewsOverTime[date] || 0
+    }));
+
+    const downloadsData = downloadsDatesToFill.map(date => ({
+        date,
+        value: downloadsOverTime[date] || 0
+    }));
+
+    // Calculate total views and downloads in period
+    const totalViewsInPeriod = viewsData.reduce((sum, d) => sum + d.value, 0);
+    const totalDownloadsInPeriod = downloadsData.reduce((sum, d) => sum + d.value, 0);
+
     res.status(200).json({
         period: {
             days,
@@ -284,6 +388,10 @@ export const getAnalytics = asyncHandler(async (req, res) => {
         dailyApproved,
         dailyApprovedComparison,
         topUploaders,
+        viewsOverTime: viewsData,
+        downloadsOverTime: downloadsData,
+        totalViews: totalViewsInPeriod,
+        totalDownloads: totalDownloadsInPeriod,
     });
 });
 

@@ -257,18 +257,6 @@ export function ProfileHeader({
                         </div>
                     </button>
                 </div>
-                {isOwnProfile && (
-                    <div className="profile-availability">
-                        <XCircle size={16} />
-                        <span>Không sẵn sàng nhận việc</span>
-                        <button
-                            className="availability-update-link"
-                            onClick={onUpdateAvailability}
-                        >
-                            Cập nhật
-                        </button>
-                    </div>
-                )}
             </div>
         </div>
     );
