@@ -1,4 +1,5 @@
 import { Camera, Users, Folder, BarChart3 } from "lucide-react";
+import { t } from "@/i18n";
 
 type TabType = 'photos' | 'following' | 'collections' | 'stats';
 
@@ -26,7 +27,7 @@ export function ProfileTabs({
                 onClick={() => onTabChange('photos')}
             >
                 <Camera size={18} className="tab-icon" />
-                <span className="tab-label">Ảnh</span>
+                <span className="tab-label">{t('profile.photos')}</span>
                 <span className="tab-count">{photosCount}</span>
             </button>
             <button
@@ -34,7 +35,7 @@ export function ProfileTabs({
                 onClick={() => onTabChange('following')}
             >
                 <Users size={18} className="tab-icon" />
-                <span className="tab-label">Đang theo dõi</span>
+                <span className="tab-label">{t('profile.following')}</span>
                 <span className="tab-count">{followingCount + followersCount}</span>
             </button>
             <button
@@ -42,7 +43,7 @@ export function ProfileTabs({
                 onClick={() => onTabChange('collections')}
             >
                 <Folder size={18} className="tab-icon" />
-                <span className="tab-label">Bộ sưu tập</span>
+                <span className="tab-label">{t('profile.collections')}</span>
                 <span className="tab-count">{collectionsCount}</span>
             </button>
             <button
@@ -50,7 +51,7 @@ export function ProfileTabs({
                 onClick={() => onTabChange('stats')}
             >
                 <BarChart3 size={18} className="tab-icon" />
-                <span className="tab-label">Thống kê</span>
+                <span className="tab-label">{t('profile.stats')}</span>
             </button>
         </div>
     );

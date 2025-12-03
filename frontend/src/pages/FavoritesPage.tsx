@@ -97,13 +97,9 @@ function FavoritesPage() {
     const currentImageIds = useMemo(() => new Set(images.map(img => img._id)), [images]);
 
     useEffect(() => {
-        if (!accessToken || !user?._id) {
-            navigate('/signin');
-            return;
-        }
-
+        // ProtectedRoute ensures user is authenticated
         fetchFavorites(1);
-    }, [accessToken, user, navigate, fetchFavorites]);
+    }, [fetchFavorites]);
 
     // Determine image type when it loads
     const handleImageLoad = useCallback((imageId: string, img: HTMLImageElement) => {

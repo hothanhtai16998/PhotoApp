@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef, lazy, Suspense, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '@/stores/useUserStore';
-import { useAuthStore } from '@/stores/useAuthStore';
 import { usePermissions } from '@/hooks/usePermissions';
 import type { AdminRolePermissions } from '@/services/adminService';
 import type { User as AuthUser } from '@/types/user';
@@ -58,9 +56,9 @@ const AdminTabLoader = () => (
 type TabType = 'dashboard' | 'analytics' | 'users' | 'images' | 'categories' | 'collections' | 'roles' | 'permissions' | 'favorites' | 'moderation' | 'logs' | 'settings';
 
 function AdminPage() {
-    const { user, fetchMe } = useUserStore();
-    const { accessToken, isInitializing } = useAuthStore();
-    const navigate = useNavigate();
+    // AdminRoute handles authentication and admin permission checks
+    // So user is guaranteed to exist and have admin access here
+    const { user } = useUserStore();
     const { hasPermission, isSuperAdmin } = usePermissions();
     const [activeTab, setActiveTab] = useState<TabType>('dashboard');
 
@@ -71,78 +69,8 @@ function AdminPage() {
     const categoriesAdmin = useAdminCategories();
     const rolesAdmin = useAdminRoles();
 
-    // Check admin access on mount - wait for auth initialization
-    useEffect(() => {
-        // Don't check until auth store has finished initializing
-        if (isInitializing) {
-            return;
-        }
-
-        let isMounted = true;
-
-        const checkAdmin = async () => {
-            // Check if user has access token - if not, redirect immediately
-            const currentToken = useAuthStore.getState().accessToken;
-            if (!currentToken) {
-                toast.error('Vui lòng đăng nhập lại.');
-                navigate('/signin');
-                return;
-            }
-
-            let currentUser = useUserStore.getState().user;
-
-            // Only fetch user if we don't have user data yet
-            if (!currentUser || (!currentUser.permissions && currentUser.isAdmin === undefined)) {
-                try {
-                    await fetchMe();
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    if (!isMounted) return;
-                    currentUser = useUserStore.getState().user;
-                } catch (error) {
-                    if (!isMounted) return;
-                    // Check if error was 401/403 - if so, user is not authenticated
-                    const errorStatus = (error as { response?: { status?: number } })?.response?.status;
-                    if (errorStatus === 401 || errorStatus === 403) {
-                        toast.error('Vui lòng đăng nhập lại.');
-                        navigate('/signin');
-                        return;
-                    }
-                    // For other errors (network, 500, etc.), check if we have user data anyway
-                    currentUser = useUserStore.getState().user;
-                    if (!currentUser) {
-                        console.error('AdminPage - Error fetching user:', error);
-                        // Don't redirect on network errors - user might still be authenticated
-                        // The fetchMe error handler in the store will handle 401/403
-                        return;
-                    }
-                }
-            }
-
-            if (!isMounted) return;
-
-            if (!currentUser) {
-                // Only redirect if we're sure user is not authenticated
-                // (no access token check already handled above)
-                return;
-            }
-
-            const hasAdminAccess = currentUser.isAdmin === true ||
-                currentUser.isSuperAdmin === true ||
-                (currentUser.permissions && Object.keys(currentUser.permissions).length > 0);
-
-            if (!hasAdminAccess) {
-                toast.error('Cần quyền Admin để truy cập trang này.');
-                navigate('/');
-                return;
-            }
-        };
-
-        checkAdmin();
-
-        return () => {
-            isMounted = false;
-        };
-    }, [isInitializing, accessToken, user, fetchMe, navigate]);
+    // AdminRoute already handles authentication and admin permission checks
+    // No need for duplicate checks here
 
     // Store stable references to load functions to avoid infinite loops
     // This pattern is recommended when you want to call functions on mount/dependency change
@@ -227,22 +155,6 @@ function AdminPage() {
         await rolesAdmin.deleteRole(userId, username, usersAdmin.loadUsers, usersAdmin.pagination.page);
     }, [rolesAdmin, usersAdmin]);
 
-    // Show loading while auth is initializing
-    if (isInitializing) {
-        return (
-            <>
-                <Header />
-                <div className="admin-page">
-                    <div className="flex items-center justify-center p-8">
-                        <div className="flex flex-col items-center gap-4">
-                            <Skeleton className="h-8 w-32" />
-                            <Skeleton className="h-64 w-full max-w-4xl" />
-                        </div>
-                    </div>
-                </div>
-            </>
-        );
-    }
 
     return (
         <>

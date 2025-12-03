@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { Mail, Phone, MapPin, Globe, Linkedin, Github, Facebook, Twitter, X, Instagram } from "lucide-react";
+import { t } from '@/i18n';
 import "./FloatingContactButton.css";
 
 // TikTok Icon Component (lucide-react doesn't have TikTok icon)
@@ -94,7 +95,7 @@ function FloatingContactButton() {
                 >
                     <div className="uiverse-background-v2"></div>
                     <div className="uiverse-logo-v2">
-                        <span className="uiverse-logo-text">Liên hệ</span>
+                        <span className="uiverse-logo-text">{t('common.contact')}</span>
                     </div>
                     <div className="uiverse-box uiverse-box1">
                         <a href={authorInfo.social.instagram || "#"} target="_blank" rel="noopener noreferrer" className="uiverse-icon" onClick={(e) => e.stopPropagation()}>

@@ -1,5 +1,6 @@
 import { Check, X, User, FileText, Phone, Image as ImageIcon, Folder } from 'lucide-react';
 import type { ProfileCompletion as ProfileCompletionData } from '@/services/userStatsService';
+import { t } from '@/i18n';
 import './ProfileCompletion.css';
 
 interface ProfileCompletionProps {
@@ -13,33 +14,33 @@ export const ProfileCompletion = ({ completion, onEditProfile }: ProfileCompleti
   const criteriaList = [
     {
       key: 'hasAvatar' as keyof typeof criteria,
-      label: 'Ảnh đại diện',
+      label: t('profile.avatar'),
       icon: User,
-      action: 'Thêm ảnh đại diện',
+      action: t('profile.addAvatar'),
     },
     {
       key: 'hasBio' as keyof typeof criteria,
-      label: 'Tiểu sử',
+      label: t('profile.bio'),
       icon: FileText,
-      action: 'Thêm tiểu sử',
+      action: t('profile.addBio'),
     },
     {
       key: 'hasPhone' as keyof typeof criteria,
-      label: 'Số điện thoại',
+      label: t('profile.phone'),
       icon: Phone,
-      action: 'Thêm số điện thoại',
+      action: t('profile.addPhone'),
     },
     {
       key: 'hasImages' as keyof typeof criteria,
-      label: 'Tải lên ít nhất 1 ảnh',
+      label: t('profile.uploadAtLeast1'),
       icon: ImageIcon,
-      action: 'Tải ảnh lên',
+      action: t('profile.uploadImage'),
     },
     {
       key: 'hasCollections' as keyof typeof criteria,
-      label: 'Tạo ít nhất 1 bộ sưu tập',
+      label: t('profile.createAtLeast1'),
       icon: Folder,
-      action: 'Tạo bộ sưu tập',
+      action: t('profile.createCollection'),
     },
   ];
 
@@ -53,7 +54,7 @@ export const ProfileCompletion = ({ completion, onEditProfile }: ProfileCompleti
   return (
     <div className="profile-completion">
       <div className="profile-completion-header">
-        <h3 className="profile-completion-title">Hoàn thiện hồ sơ</h3>
+        <h3 className="profile-completion-title">{t('profile.completeProfile')}</h3>
         <div className="profile-completion-percentage">
           <span className="percentage-value" style={{ color: getProgressColor() }}>
             {percentage}%
@@ -112,7 +113,7 @@ export const ProfileCompletion = ({ completion, onEditProfile }: ProfileCompleti
       {percentage < 100 && (
         <div className="profile-completion-footer">
           <p className="completion-message">
-            Hoàn thiện hồ sơ của bạn để có thêm lượt xem và tương tác!
+            {t('profile.completeMessage')}
           </p>
         </div>
       )}

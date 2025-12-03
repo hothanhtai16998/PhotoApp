@@ -3,6 +3,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import type { UseFormRegister, UseFormHandleSubmit, FieldErrors } from 'react-hook-form';
 import type { ChangePasswordFormData } from '@/types/forms';
+import { t } from '@/i18n';
 
 interface PasswordFormProps {
   register: UseFormRegister<ChangePasswordFormData>;
@@ -25,10 +26,10 @@ export const PasswordForm = ({
 }: PasswordFormProps) => {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="change-password-form">
-      <h1 className="form-title">Mật khẩu hiện tại</h1>
+      <h1 className="form-title">{t('profile.currentPassword')}</h1>
 
       <div className="form-field">
-        <Label htmlFor="password">Mật khẩu hiện tại</Label>
+        <Label htmlFor="password">{t('profile.currentPassword')}</Label>
         <Input
           id="password"
           type="password"
@@ -41,7 +42,7 @@ export const PasswordForm = ({
       </div>
 
       <div className="form-field">
-        <Label htmlFor="newPassword">Mật khẩu mới</Label>
+        <Label htmlFor="newPassword">{t('profile.newPassword')}</Label>
         <Input
           id="newPassword"
           type="password"
@@ -53,7 +54,7 @@ export const PasswordForm = ({
       </div>
 
       <div className="form-field">
-        <Label htmlFor="newPasswordMatch">Xác nhận mật khẩu</Label>
+        <Label htmlFor="newPasswordMatch">{t('profile.confirmPassword')}</Label>
         <Input
           id="newPasswordMatch"
           type="password"
@@ -72,7 +73,7 @@ export const PasswordForm = ({
 
       {passwordSuccess && (
         <div className="password-success-message">
-          Mật khẩu thay đổi thành công!
+          {t('profile.passwordChanged')}
         </div>
       )}
 
@@ -82,7 +83,7 @@ export const PasswordForm = ({
           disabled={isSubmitting}
           className="update-btn"
         >
-          {isSubmitting ? 'Đang đổi...' : 'Đổi mật khẩu'}
+          {isSubmitting ? t('profile.changing') : t('profile.changePassword')}
         </Button>
       </div>
     </form>

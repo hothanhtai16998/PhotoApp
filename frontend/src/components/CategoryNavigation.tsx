@@ -6,6 +6,8 @@ import { appConfig } from '@/config/appConfig';
 import { timingConfig } from '@/config/timingConfig';
 import { categoryNameToSlug, getCategoryNameFromSlug } from '@/utils/categorySlug';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { t, getLocale } from '@/i18n';
+import { getTranslatedCategoryName } from '@/utils/categoryTranslations';
 import './CategoryNavigation.css'
 
 export const CategoryNavigation = memo(function CategoryNavigation() {
@@ -14,7 +16,6 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
   const location = useLocation()
   const [, setSearchParams] = useSearchParams();
   const { categorySlug } = useParams<{ categorySlug?: string }>();
-  const [categoryNames, setCategoryNames] = useState<string[]>(['Tất cả'])
   const [categoryObjects, setCategoryObjects] = useState<Category[]>([])
   const [headerHeight, setHeaderHeight] = useState(0)
   const [isSticky, setIsSticky] = useState(false)
@@ -25,12 +26,31 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [locale, setLocaleState] = useState<('vi' | 'en')>(getLocale())
+  
+  // Listen for locale changes
+  useEffect(() => {
+    const handleLocaleChange = () => {
+      setLocaleState(getLocale());
+    };
+    window.addEventListener('localeChange', handleLocaleChange);
+    return () => window.removeEventListener('localeChange', handleLocaleChange);
+  }, []);
   
   // Determine active category from URL (route param) or fallback to store
   const activeCategoryFromUrl = categorySlug 
     ? (getCategoryNameFromSlug(categorySlug, categoryObjects) || null)
     : null;
-  const activeCategory = activeCategoryFromUrl || currentCategory || 'Tất cả'
+  const activeCategoryVi = activeCategoryFromUrl || currentCategory || '';
+  
+  // Get all category names (Vietnamese - for navigation)
+  const allCategoryNames = ['', ...categoryObjects.map((cat: Category) => cat.name)];
+  
+  // Get translated display names
+  const getDisplayName = (categoryName: string): string => {
+    if (!categoryName) return t('common.all');
+    return getTranslatedCategoryName(categoryName, locale);
+  };
 
   // Calculate header height for sticky positioning
   useEffect(() => {
@@ -86,7 +106,7 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
         setNavHeight(height)
       }
     }
-  }, [categoryNames, isSticky])
+  }, [categoryObjects, isSticky])
 
   // Preserve sticky state when modal opens
   useEffect(() => {
@@ -230,7 +250,7 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
       nav.removeEventListener('scroll', checkScrollButtons)
       window.removeEventListener('resize', handleResize)
     }
-  }, [categoryNames, checkScrollButtons])
+  }, [categoryObjects, checkScrollButtons])
 
   // Scroll handlers
   const scrollLeft = useCallback(() => {
@@ -253,36 +273,31 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
       try {
         const fetchedCategories = await categoryService.fetchCategories()
         setCategoryObjects(fetchedCategories)
-        // Map to category names and add 'Tất cả' at the beginning
-        const names = ['Tất cả', ...fetchedCategories.map((cat: Category) => cat.name)]
-        setCategoryNames(names)
       } catch (error) {
         console.error('Failed to load categories:', error)
-        // Fallback to default categories if API fails
-        setCategoryNames(['Tất cả'])
         setCategoryObjects([])
       }
     }
     loadCategories()
   }, [])
 
-  const handleCategoryClick = (category: string) => {
+  const handleCategoryClick = (categoryNameVi: string) => {
     const isTestPage = location.pathname.includes('UnsplashGridTestPage');
     
     // For test page, use query params (backward compatibility)
     if (isTestPage) {
-      const newCategory = category !== 'Tất cả' ? category : undefined;
+      const newCategory = categoryNameVi ? categoryNameVi : undefined;
       setSearchParams({ category: newCategory || 'all' });
       return;
     }
 
     // For normal pages, navigate to route-based URLs
-    if (category === 'Tất cả') {
-      // Navigate to homepage
+    if (!categoryNameVi) {
+      // Navigate to homepage (All category)
       navigate('/');
     } else {
       // Navigate to category page: /t/{slug}
-      const slug = categoryNameToSlug(category);
+      const slug = categoryNameToSlug(categoryNameVi);
       navigate(`/t/${slug}`);
     }
   }
@@ -329,15 +344,19 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
             ref={categoryNavElementRef}
             className="category-navigation"
           >
-            {categoryNames.map((category) => (
-              <button
-                key={category}
-                onClick={() => handleCategoryClick(category)}
-                className={`category-nav-link ${activeCategory === category ? 'active' : ''}`}
-              >
-                {category}
-              </button>
-            ))}
+            {allCategoryNames.map((categoryNameVi) => {
+              const displayName = getDisplayName(categoryNameVi);
+              const isActive = categoryNameVi === activeCategoryVi;
+              return (
+                <button
+                  key={categoryNameVi || 'all'}
+                  onClick={() => handleCategoryClick(categoryNameVi)}
+                  className={`category-nav-link ${isActive ? 'active' : ''}`}
+                >
+                  {displayName}
+                </button>
+              );
+            })}
           </nav>
 
           {/* Right scroll button - only on mobile */}

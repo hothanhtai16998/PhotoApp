@@ -4,6 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Eye, Download, ChevronDown, Award, Target } from 'lucide-react';
 import { toast } from 'sonner';
 import { uiConfig } from '@/config/uiConfig';
+import { t, getLocale } from '@/i18n';
 import {
   ChartContainer,
   ChartTooltip,
@@ -49,7 +50,7 @@ export const UserAnalyticsDashboard = () => {
         setAnalytics(data);
       } catch (error) {
         console.error('Failed to load analytics:', error);
-        toast.error('Không thể tải dữ liệu phân tích');
+        toast.error(t('profile.analyticsLoadFailed'));
       } finally {
         setLoading(false);
       }
@@ -145,14 +146,14 @@ export const UserAnalyticsDashboard = () => {
   // Chart configuration
   const viewsChartConfig = {
     views: {
-      label: 'Lượt xem',
+      label: t('image.views'),
       color: '#b1e3c5',
     },
   };
 
   const downloadsChartConfig = {
     downloads: {
-      label: 'Lượt tải',
+      label: t('image.downloads'),
       color: '#b1e3c5',
     },
   };
@@ -176,7 +177,7 @@ export const UserAnalyticsDashboard = () => {
     return (
       <div className="analytics-dashboard">
         <div className="analytics-empty">
-          <p>Không có dữ liệu phân tích</p>
+          <p>{t('profile.noAnalyticsData')}</p>
         </div>
       </div>
     );
@@ -186,7 +187,7 @@ export const UserAnalyticsDashboard = () => {
     <div className="analytics-dashboard">
       {/* Insights Header */}
       <div className="insights-header">
-        <h2 className="insights-title">Thống kê</h2>
+        <h2 className="insights-title">{t('profile.stats')}</h2>
         <div className="insights-period-dropdown" ref={periodDropdownRef}>
           <button 
             className="insights-period-button"
@@ -206,10 +207,10 @@ export const UserAnalyticsDashboard = () => {
                     setPeriodDropdownOpen(false);
                   }}
                 >
-                  {optionDays === 7 ? '7 ngày qua' : 
-                   optionDays === 30 ? '30 ngày qua' : 
-                   optionDays === 365 ? 'Năm ngoái' : 
-                   `${optionDays} ngày`}
+                  {optionDays === 7 ? t('profile.last7Days') : 
+                   optionDays === 30 ? t('profile.last30Days') : 
+                   optionDays === 365 ? t('profile.lastYear') : 
+                   t('profile.daysAgo', { days: optionDays })}
                 </button>
               ))}
             </div>
@@ -222,7 +223,7 @@ export const UserAnalyticsDashboard = () => {
         {/* Views Card */}
         <div className="insights-card">
           <div className="insights-card-header">
-            <div className="insights-metric-label">LƯỢT XEM</div>
+            <div className="insights-metric-label">{t('profile.views')}</div>
             <div className="insights-metric-value">{formatNumber(analytics.summary.totalViews)}</div>
           </div>
           
@@ -270,7 +271,7 @@ export const UserAnalyticsDashboard = () => {
                         const year = date.getFullYear();
                         return `${day}/${month}/${year}`;
                       }}
-                      formatter={(value) => [`Đã xem ${value} lần`, '']}
+                      formatter={(value) => [t('profile.viewedTimes', { value }), '']}
                     />
                   } 
                 />
@@ -281,7 +282,7 @@ export const UserAnalyticsDashboard = () => {
           {/* Most Viewed On */}
           <div className="insights-most-section">
             <div className="insights-most-header">
-              <span>Được xem nhiều nhất trên</span>
+              <span>{t('profile.mostViewedOn')}</span>
               <button className="insights-most-toggle">
                 <ChevronDown size={16} />
               </button>
@@ -314,7 +315,7 @@ export const UserAnalyticsDashboard = () => {
         {/* Downloads Card */}
         <div className="insights-card">
           <div className="insights-card-header">
-            <div className="insights-metric-label">LƯỢT TẢI</div>
+            <div className="insights-metric-label">{t('profile.downloads')}</div>
             <div className="insights-metric-value">{formatNumber(analytics.summary.totalDownloads)}</div>
           </div>
           
@@ -362,7 +363,7 @@ export const UserAnalyticsDashboard = () => {
                         const year = date.getFullYear();
                         return `${day}/${month}/${year}`;
                       }}
-                      formatter={(value) => [`Đã tải ${value} lần`, '']}
+                      formatter={(value) => [t('profile.downloadedTimes', { value }), '']}
                     />
                   } 
                 />
@@ -373,7 +374,7 @@ export const UserAnalyticsDashboard = () => {
           {/* Most Downloaded On */}
           <div className="insights-most-section">
             <div className="insights-most-header">
-              <span>Được tải nhiều nhất trên</span>
+              <span>{t('profile.mostDownloadedOn')}</span>
               <button className="insights-most-toggle">
                 <ChevronDown size={16} />
               </button>
@@ -404,7 +405,7 @@ export const UserAnalyticsDashboard = () => {
                 )}
               </>
             ) : (
-              <div className="insights-empty-state">Chưa có dữ liệu để báo cáo.</div>
+              <div className="insights-empty-state">{t('profile.noInsightsData')}</div>
             )}
           </div>
         </div>
@@ -415,50 +416,50 @@ export const UserAnalyticsDashboard = () => {
         {/* Uses Section */}
         <div className="insights-section-card">
           <div className="insights-section-header">
-            <h3 className="insights-section-title">Sử dụng</h3>
-            <button className="insights-section-button">Hiển thị nổi bật</button>
+            <h3 className="insights-section-title">{t('profile.uses')}</h3>
+            <button className="insights-section-button">{t('profile.showFeatured')}</button>
           </div>
           <div className="insights-uses-content">
             {/* Uses chart/visualization would go here */}
-            <div className="insights-empty-state">Nothing to report so far.</div>
+            <div className="insights-empty-state">{t('profile.noInsightsData')}</div>
           </div>
           <div className="insights-section-footer">
-            <span className="insights-section-note">Việc sử dụng ảnh hiện chỉ giới hạn ở một số trang web nhất định.</span>
+            <span className="insights-section-note">{t('profile.usesNote')}</span>
           </div>
         </div>
 
         {/* Milestones Section */}
         <div className="insights-section-card">
           <div className="insights-section-header">
-            <h3 className="insights-section-title">Cột mốc của bạn</h3>
+            <h3 className="insights-section-title">{t('profile.milestones')}</h3>
           </div>
           <div className="insights-milestones">
             <div className="milestone-item">
               <Award size={20} className="milestone-icon" />
               <div className="milestone-content">
-                <h4 className="milestone-title">Lần tải lên đầu tiên</h4>
-                <div className="milestone-date">Đã tải lên {new Date(analytics.mostPopularImages[0]?.createdAt || Date.now()).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}</div>
+                <h4 className="milestone-title">{t('profile.firstUpload')}</h4>
+                <div className="milestone-date">{t('profile.uploadedOn')} {new Date(analytics.mostPopularImages[0]?.createdAt || Date.now()).toLocaleDateString(getLocale() === 'vi' ? 'vi-VN' : 'en-US', { month: 'long', year: 'numeric' })}</div>
               </div>
             </div>
             <div className="milestone-item milestone-upcoming">
               <Target size={20} className="milestone-icon" />
               <div className="milestone-content">
-                <h4 className="milestone-title">Ảnh nổi bật</h4>
-                <div className="milestone-description">Đạt 5 ảnh nổi bật trên trang chủ</div>
+                <h4 className="milestone-title">{t('profile.featuredImage')}</h4>
+                <div className="milestone-description">{t('profile.featuredGoal')}</div>
               </div>
             </div>
             <div className="milestone-item milestone-upcoming">
               <Eye size={20} className="milestone-icon" />
               <div className="milestone-content">
-                <h4 className="milestone-title">Lượt xem</h4>
-                <div className="milestone-description">Đạt 100k lượt xem</div>
+                <h4 className="milestone-title">{t('image.views')}</h4>
+                <div className="milestone-description">{t('profile.viewsGoal')}</div>
               </div>
             </div>
             <div className="milestone-item milestone-upcoming">
               <Download size={20} className="milestone-icon" />
               <div className="milestone-content">
-                <h4 className="milestone-title">Lượt tải</h4>
-                <div className="milestone-description">Đạt 500k lượt tải</div>
+                <h4 className="milestone-title">{t('image.downloads')}</h4>
+                <div className="milestone-description">{t('profile.downloadsGoal')}</div>
               </div>
             </div>
           </div>
@@ -468,9 +469,9 @@ export const UserAnalyticsDashboard = () => {
       {/* Your Images Section */}
       <div className="insights-images-section">
         <div className="insights-images-header">
-          <h3 className="insights-section-title">Ảnh của bạn</h3>
+          <h3 className="insights-section-title">{t('profile.yourImages')}</h3>
           <button className="insights-sort-button">
-            Sắp xếp theo lượt xem
+            {t('profile.sortByViews')}
             <ChevronDown size={16} />
           </button>
         </div>
@@ -494,9 +495,9 @@ export const UserAnalyticsDashboard = () => {
                 </div>
                 <div className="insights-image-info">
                   <div className="insights-image-meta">
-                    <div className="insights-image-badge">Đã xuất bản</div>
+                    <div className="insights-image-badge">{t('profile.published')}</div>
                     <time className="insights-image-date">
-                      {new Date(image.createdAt).toLocaleDateString('vi-VN', { month: 'long', day: 'numeric', year: 'numeric' })}
+                      {new Date(image.createdAt).toLocaleDateString(getLocale() === 'vi' ? 'vi-VN' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                     </time>
                   </div>
                   <div className="insights-image-stats">
@@ -514,7 +515,7 @@ export const UserAnalyticsDashboard = () => {
             ))}
           </div>
         ) : (
-          <div className="insights-empty-state">Chưa có ảnh nào.</div>
+          <div className="insights-empty-state">{t('profile.noImages')}</div>
         )}
       </div>
     </div>

@@ -69,18 +69,44 @@ export function AdminRoles({
                         </tr>
                     </thead>
                     <tbody>
-                        {roles.map((role) => {
-                            const userId = typeof role.userId === 'string' ? role.userId : role.userId?._id;
-                            const username = typeof role.userId === 'string' ? '' : role.userId?.username || '';
-                            return (
-                                <tr key={role._id}>
-                                    <td>
-                                        <div>
-                                            <strong>{typeof role.userId === 'string' ? '' : (role.userId?.displayName || role.userId?.username)}</strong>
-                                            <br />
-                                            <small>{typeof role.userId === 'string' ? '' : role.userId?.email}</small>
-                                        </div>
-                                    </td>
+                        {roles
+                            .filter((role) => {
+                                // Filter out roles without valid user data
+                                if (!role.userId) return false;
+                                
+                                // If userId is an object, check if it has required fields
+                                if (typeof role.userId === 'object') {
+                                    return !!(role.userId._id || role.userId.username);
+                                }
+                                
+                                // If userId is a string, check if user exists in users array
+                                if (typeof role.userId === 'string') {
+                                    return users.some(user => user._id === role.userId);
+                                }
+                                
+                                return false;
+                            })
+                            .map((role) => {
+                                const userId = typeof role.userId === 'string' ? role.userId : role.userId?._id;
+                                const username = typeof role.userId === 'string' 
+                                    ? (users.find(u => u._id === role.userId)?.username || '') 
+                                    : (role.userId?.username || '');
+                                const userDisplayName = typeof role.userId === 'string'
+                                    ? (users.find(u => u._id === role.userId)?.displayName || users.find(u => u._id === role.userId)?.username || '')
+                                    : (role.userId?.displayName || role.userId?.username || '');
+                                const userEmail = typeof role.userId === 'string'
+                                    ? (users.find(u => u._id === role.userId)?.email || '')
+                                    : (role.userId?.email || '');
+                                
+                                return (
+                                    <tr key={role._id}>
+                                        <td>
+                                            <div>
+                                                <strong>{userDisplayName}</strong>
+                                                <br />
+                                                <small>{userEmail}</small>
+                                            </div>
+                                        </td>
                                     <td>
                                         <span className={`admin-role-badge ${role.role}`}>
                                             {role.role === 'super_admin' ? t('admin.superAdmin') : role.role === 'admin' ? t('admin.adminRoleLabel') : t('admin.moderator')}

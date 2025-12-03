@@ -49,13 +49,9 @@ export default function FavoriteCollectionsPage() {
 	}, [accessToken, user, navigate]);
 
 	useEffect(() => {
-		if (!accessToken || !user?._id) {
-			navigate('/signin');
-			return;
-		}
-
+		// ProtectedRoute ensures user is authenticated
 		fetchFavoriteCollections(1);
-	}, [accessToken, user, navigate, fetchFavoriteCollections]);
+	}, [fetchFavoriteCollections]);
 
 	const handleCollectionClick = (collection: Collection) => {
 		navigate(`/collections/${collection._id}`);

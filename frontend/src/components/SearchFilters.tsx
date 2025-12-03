@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { X, Filter, Calendar, Palette, Image as ImageIcon } from 'lucide-react';
+import { t } from '@/i18n';
 import './SearchFilters.css';
 
 export type Orientation = 'all' | 'portrait' | 'landscape' | 'square';
@@ -107,11 +108,11 @@ export default function SearchFiltersComponent({
       <button
         className={`search-filters-toggle ${hasActiveFilters ? 'active' : ''}`}
         onClick={() => setIsOpen(!isOpen)}
-        aria-label="Mở bộ lọc tìm kiếm"
-        title="Bộ lọc nâng cao"
+        aria-label={t('search.openFilter')}
+        title={t('search.advancedFilter')}
       >
         <Filter size={18} />
-        <span>Bộ lọc</span>
+        <span>{t('search.filter')}</span>
         {hasActiveFilters && <span className="filter-badge" />}
       </button>
 
@@ -120,11 +121,11 @@ export default function SearchFiltersComponent({
           <div className="search-filters-overlay" onClick={() => setIsOpen(false)} />
           <div className="search-filters-panel" onClick={(e) => e.stopPropagation()}>
             <div className="search-filters-header">
-              <h3>Bộ lọc tìm kiếm</h3>
+              <h3>{t('search.filterTitle')}</h3>
               <button
                 className="search-filters-close"
                 onClick={() => setIsOpen(false)}
-                aria-label="Đóng"
+                aria-label={t('common.close')}
               >
                 <X size={20} />
               </button>

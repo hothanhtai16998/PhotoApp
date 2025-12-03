@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Facebook, Twitter, Instagram } from "lucide-react";
 import { useLocation } from "react-router-dom";
+import { t } from '@/i18n';
 import "./ContactButton.css";
 
 interface AuthorInfo {
@@ -72,7 +73,7 @@ export const ContactButton = () => {
                 aria-label="Contact"
             >
                 <span className={`contact-button-text ${isShaking ? "shaking" : ""}`}>
-                    Liên hệ
+                    {t('common.contact')}
                 </span>
             </button>
 

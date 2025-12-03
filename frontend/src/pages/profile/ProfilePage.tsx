@@ -44,6 +44,7 @@ const TABS = {
 function ProfilePage() {
     // currentUser: the logged-in user viewing the profile
     // profileUser: the user whose profile is being displayed (may be different from currentUser)
+    // ProtectedRoute handles authentication, so currentUser is guaranteed to exist here
     const { user: currentUser } = useUserStore();
     const navigate = useNavigate();
     const params = useParams<{ username?: string; userId?: string }>();
@@ -239,13 +240,10 @@ function ProfilePage() {
     const cancelSignal = useRequestCancellationOnChange([displayUserId]);
 
     useEffect(() => {
-        // Require authentication for viewing profiles
-        if (!currentUser?._id) {
-            navigate('/signin');
-            return;
+        // ProtectedRoute ensures currentUser exists, but we still need displayUserId
+        if (!displayUserId) {
+            return undefined;
         }
-
-        if (!displayUserId) return;
 
         // Only fetch essential data on initial load (images and follow stats for header)
         // Collections and stats will be lazy-loaded when their tabs are clicked
@@ -259,7 +257,9 @@ function ProfilePage() {
                 console.error('Error fetching profile data:', error);
             }
         });
-    }, [displayUserId, currentUser, navigate, fetchUserImagesWrapper, fetchFollowStatsWrapper, cancelSignal]);
+
+        return undefined;
+    }, [displayUserId, fetchUserImagesWrapper, fetchFollowStatsWrapper, cancelSignal]);
 
     // Lazy-load collections only when collections tab is active
     useEffect(() => {
@@ -441,7 +441,7 @@ function ProfilePage() {
 
         try {
             if (!image._id) {
-                throw new Error('Lỗi khi lấy ID của ảnh');
+                throw new Error(t('profile.imageIdError'));
             }
 
             // Use backend endpoint to download image (proxies from S3)
@@ -483,10 +483,10 @@ function ProfilePage() {
                 URL.revokeObjectURL(blobUrl);
             }, timingConfig.cleanup.blobUrlRevokeMs);
 
-            toast.success('Tải ảnh thành công');
+            toast.success(t('profile.downloadSuccess'));
         } catch (error) {
-            console.error('Tải ảnh thất bại:', error);
-            toast.error('Tải ảnh thất bại. Vui lòng thử lại.');
+            console.error(t('profile.downloadFailed'), error);
+            toast.error(t('profile.loadImagesFailed'));
 
             // Fallback: try opening in new tab if download fails
             try {
@@ -519,19 +519,33 @@ function ProfilePage() {
         );
     }
 
-    // currentUser is guaranteed to exist after redirect check in useEffect
+    // Guard: Ensure currentUser exists before accessing its properties
+    if (!currentUser) {
+        return (
+            <>
+                <Header />
+                <main className="profile-page">
+                    <div className="profile-container">
+                        <Skeleton className="h-32 w-full" />
+                    </div>
+                </main>
+            </>
+        );
+    }
+
+    // Use profileUser if available, otherwise fallback to currentUser
     const displayUser = profileUser || {
-        _id: currentUser!._id,
-        username: currentUser!.username,
-        displayName: currentUser!.displayName || currentUser!.username,
-        avatarUrl: currentUser!.avatarUrl,
-        bio: currentUser!.bio,
-        location: currentUser!.location,
-        website: currentUser!.website,
-        instagram: currentUser!.instagram,
-        twitter: currentUser!.twitter,
-        facebook: currentUser!.facebook,
-        createdAt: currentUser!.createdAt || new Date().toISOString(),
+        _id: currentUser._id,
+        username: currentUser.username,
+        displayName: currentUser.displayName || currentUser.username,
+        avatarUrl: currentUser.avatarUrl,
+        bio: currentUser.bio,
+        location: currentUser.location,
+        website: currentUser.website,
+        instagram: currentUser.instagram,
+        twitter: currentUser.twitter,
+        facebook: currentUser.facebook,
+        createdAt: currentUser.createdAt || new Date().toISOString(),
     };
 
     return (

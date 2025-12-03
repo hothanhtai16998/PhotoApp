@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/Avatar";
 import { ProfileCompletion } from "./ProfileCompletion";
-import { Edit2, Star, MapPin, Globe, Instagram, Twitter, Users, ImageIcon, Folder, UserPlus } from "lucide-react";
+import { Edit2, Star, MapPin, Globe, Instagram, Twitter, Users } from "lucide-react";
 import type { PublicUser } from "@/services/userService";
 import type { UserStats } from "@/services/userStatsService";
+import { t } from "@/i18n";
 
 interface ProfileHeaderProps {
     displayUser: PublicUser;
@@ -56,7 +57,7 @@ export function ProfileHeader({
                                 className="edit-profile-btn"
                             >
                                 <Edit2 size={16} />
-                                Chỉnh sửa hồ sơ
+                                {t('profile.editProfile')}
                             </Button>
                             <Button
                                 variant="outline"
@@ -65,13 +66,13 @@ export function ProfileHeader({
                                 className="edit-pins-btn"
                             >
                                 <Star size={16} />
-                                Chỉnh sửa ghim
+                                {t('profile.editPins')}
                             </Button>
                         </div>
                     )}
                 </div>
                 <p className="profile-description">
-                    {displayUser.bio || `Tải xuống miễn phí những bức ảnh chất lượng cao đẹp mắt được tuyển chọn bởi ${displayUser.displayName || displayUser.username}.`}
+                    {displayUser.bio || t('profile.defaultBio', { name: displayUser.displayName || displayUser.username })}
                 </p>
 
                 {/* Location */}
@@ -91,7 +92,7 @@ export function ProfileHeader({
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="social-link"
-                                title="Trang web"
+                                title={t('profile.website')}
                             >
                                 <Globe size={18} />
                             </a>
@@ -139,66 +140,6 @@ export function ProfileHeader({
                         onEditProfile={onEditProfile}
                     />
                 )}
-
-                {/* Visual Stats Cards */}
-                <div className="profile-stats-grid" key={displayUserId || 'no-user'}>
-                    <button
-                        className="profile-stat-card"
-                        onClick={() => onTabChange('photos')}
-                    >
-                        <div className="stat-card-icon" style={{ backgroundColor: '#e0f2fe' }}>
-                            <ImageIcon size={20} color="#0369a1" />
-                        </div>
-                        <div className="stat-card-content">
-                            <span className="stat-card-value">
-                                {(isSwitchingProfile || statsUserId !== displayUserId) ? '-' : photosCount}
-                            </span>
-                            <span className="stat-card-label">Ảnh</span>
-                        </div>
-                    </button>
-                    <button
-                        className="profile-stat-card"
-                        onClick={() => onTabChange('collections')}
-                    >
-                        <div className="stat-card-icon" style={{ backgroundColor: '#fef3c7' }}>
-                            <Folder size={20} color="#d97706" />
-                        </div>
-                        <div className="stat-card-content">
-                            <span className="stat-card-value">
-                                {(isSwitchingProfile || statsUserId !== displayUserId) ? '-' : collectionsCount}
-                            </span>
-                            <span className="stat-card-label">Bộ sưu tập</span>
-                        </div>
-                    </button>
-                    <button
-                        className="profile-stat-card"
-                        onClick={() => onTabChange('following')}
-                    >
-                        <div className="stat-card-icon" style={{ backgroundColor: '#f3e8ff' }}>
-                            <Users size={20} color="#7c3aed" />
-                        </div>
-                        <div className="stat-card-content">
-                            <span className="stat-card-value">
-                                {(isSwitchingProfile || statsUserId !== displayUserId) ? '-' : followStats.followers}
-                            </span>
-                            <span className="stat-card-label">Người theo dõi</span>
-                        </div>
-                    </button>
-                    <button
-                        className="profile-stat-card"
-                        onClick={() => onTabChange('following')}
-                    >
-                        <div className="stat-card-icon" style={{ backgroundColor: '#fef3c7' }}>
-                            <UserPlus size={20} color="#d97706" />
-                        </div>
-                        <div className="stat-card-content">
-                            <span className="stat-card-value">
-                                {(isSwitchingProfile || statsUserId !== displayUserId) ? '-' : followStats.following}
-                            </span>
-                            <span className="stat-card-label">Đang theo dõi</span>
-                        </div>
-                    </button>
-                </div>
             </div>
         </div>
     );
