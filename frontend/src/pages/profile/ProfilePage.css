@@ -3,7 +3,7 @@
   min-height: 100vh;
   background: #fff;
   padding: 40px 20px;
-  padding-top: calc(var(--header-height, 65px) + 40px);
+  padding-top: calc(var(--header-height, 56px) + 40px);
   margin-top: 0;
 }
 
@@ -338,99 +338,90 @@
 /* Mobile Responsive for Stats Grid */
 @media (max-width: 768px) {
   .profile-stats-grid {
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 12px;
-    margin: 16px 0;
+    display: none; /* Hide stats grid on mobile */
   }
 
   .profile-stat-card {
-    padding: 14px;
-    gap: 10px;
-    min-height: 60px; /* Increased touch target */
+    padding: 10px 8px;
+    gap: 8px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    text-align: left;
+    min-height: auto;
     width: 100%;
   }
 
+  .stat-card-content {
+    flex: 0;
+  }
+
   .stat-card-icon {
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     flex-shrink: 0;
   }
 
   .stat-card-icon svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
   }
 
   .stat-card-value {
-    font-size: 1.125rem;
+    font-size: 1rem;
   }
 
   .stat-card-label {
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
   }
 
-  /* Profile header mobile adjustments */
-  .profile-header {
-    flex-direction: column;
-    gap: 24px;
-    padding-bottom: 24px;
-  }
-
-  .profile-name-section {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-
-  .profile-actions {
-    width: 100%;
-    flex-wrap: wrap;
-  }
-
-  .edit-profile-btn,
-  .edit-pins-btn {
-    flex: 1;
-    min-width: 120px;
-    justify-content: center;
-    padding: 10px 16px;
-    font-size: 0.875rem;
-  }
+  /* Profile header mobile adjustments - removed duplicate, handled in main responsive section below */
 }
 
 @media (max-width: 480px) {
   .profile-stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
+    display: none; /* Hide stats grid on mobile */
   }
 
   .profile-stat-card {
-    padding: 16px;
-    min-height: 64px; /* Even larger touch target for small screens */
+    padding: 8px 6px;
+    gap: 6px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    text-align: left;
+    min-height: auto;
     width: 100%;
   }
 
+  .stat-card-content {
+    flex: 0;
+  }
+
   .stat-card-icon {
-    width: 44px;
-    height: 44px;
+    width: 32px;
+    height: 32px;
   }
 
   .stat-card-icon svg {
-    width: 22px;
-    height: 22px;
+    width: 16px;
+    height: 16px;
   }
 
   .stat-card-value {
-    font-size: 1.25rem;
+    font-size: 0.9375rem;
   }
 
   .stat-card-label {
-    font-size: 0.875rem;
+    font-size: 0.6875rem;
   }
 
   /* Profile page mobile padding */
   .profile-page {
-    padding: 20px 12px;
-    padding-top: calc(var(--header-height, 65px) + 20px);
+    padding: 16px 8px;
+    padding-top: calc(
+      var(--header-height, 56px) + 56px + 16px
+    ); /* Header + Search bar + spacing */
   }
 
   .profile-container {
@@ -673,18 +664,23 @@
 /* Responsive */
 @media (max-width: 768px) {
   .profile-page {
-    padding: 20px 12px;
+    padding: 16px 0;
+    padding-top: calc(
+      var(--header-height, 56px) + 56px + 16px
+    ); /* Header + Search bar + spacing */
   }
 
   .profile-container {
-    padding: 0;
+    padding: 0 8px;
+    max-width: 100%;
   }
 
   .profile-header {
     flex-direction: column;
-    gap: 20px;
-    padding-bottom: 24px;
-    margin-bottom: 32px;
+    gap: 16px;
+    padding-bottom: 16px;
+    margin-bottom: 0;
+    border-bottom: none; /* Remove border on mobile like Unsplash */
   }
 
   .profile-avatar-container {
@@ -693,58 +689,67 @@
 
   .profile-avatar,
   .profile-avatar-placeholder {
-    width: 100px;
-    height: 100px;
+    width: 96px;
+    height: 96px;
   }
 
   .profile-info {
     width: 100%;
     text-align: center;
     align-items: center;
+    gap: 10px; /* Tighter spacing like Unsplash */
   }
 
   .profile-name-section {
     flex-direction: column;
     align-items: center;
-    gap: 16px;
+    gap: 10px;
     width: 100%;
   }
 
   .profile-name {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
     text-align: center;
     margin: 0;
+    font-weight: 600;
   }
 
   .profile-actions {
     width: 100%;
     display: flex;
-    flex-direction: column;
-    gap: 8px;
+    flex-direction: row;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 4px;
   }
 
   .edit-profile-btn,
   .edit-pins-btn {
-    width: 100%;
+    flex: 1;
     justify-content: center;
-    min-height: 44px; /* Better touch target */
+    min-height: 40px;
+    max-width: 180px;
+    padding: 10px 16px;
+    font-size: 0.875rem;
   }
 
   .profile-description {
     text-align: center;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    margin: 0;
   }
 
   .profile-availability {
-    justify-content: center;
-    text-align: center;
-    flex-wrap: wrap;
+    display: none; /* Hide availability section on mobile */
   }
 
   .profile-tabs {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    margin-bottom: 24px;
+    margin-bottom: 0;
+    margin-top: 0;
   }
 
   .profile-tabs::-webkit-scrollbar {
@@ -773,17 +778,22 @@
 
 @media (max-width: 480px) {
   .profile-page {
-    padding: 16px 8px;
+    padding: 12px 0;
+    padding-top: calc(
+      var(--header-height, 56px) + 56px + 16px
+    ); /* Header + Search bar + spacing */
   }
 
   .profile-container {
-    padding: 0;
+    padding: 0 8px;
+    max-width: 100%;
   }
 
   .profile-header {
-    gap: 16px;
-    padding-bottom: 20px;
-    margin-bottom: 24px;
+    gap: 14px;
+    padding-bottom: 14px;
+    margin-bottom: 0;
+    border-bottom: none; /* Remove border on mobile like Unsplash */
   }
 
   .profile-avatar-container {
@@ -800,6 +810,33 @@
 
   .profile-name {
     font-size: 1.5rem;
+  }
+
+  .profile-info {
+    gap: 8px;
+  }
+
+  .profile-name-section {
+    gap: 8px;
+  }
+
+  .profile-actions {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 4px;
+  }
+
+  .edit-profile-btn,
+  .edit-pins-btn {
+    flex: 1;
+    justify-content: center;
+    min-height: 40px;
+    max-width: 160px;
+    padding: 10px 12px;
+    font-size: 0.8125rem;
   }
 
   .profile-description {
