@@ -13,6 +13,7 @@ import { Folder, Plus, Trash2, Edit2, Eye, Copy, Lock, Unlock, Search, X, Filter
 import ProgressiveImage from '@/components/ProgressiveImage';
 import { CollectionShare } from '@/components/collection/CollectionShare';
 import { collectionTemplateService } from '@/services/collectionTemplateService';
+import { t } from '@/i18n';
 import './CollectionsPage.css';
 
 // Lazy load CollectionModal - only shown when editing
@@ -57,7 +58,7 @@ export default function CollectionsPage() {
 
 	useEffect(() => {
 		if (!accessToken) {
-			toast.info('Vui lòng đăng nhập để xem bộ sưu tập');
+			toast.info(t('collections.loginRequired'));
 			navigate('/');
 			return;
 		}
@@ -94,7 +95,7 @@ export default function CollectionsPage() {
 	// Filtering and sorting is now handled in the store
 
 	const handleDeleteCollection = async (collectionId: string) => {
-		if (!confirm('Bạn có chắc chắn muốn xóa bộ sưu tập này?')) {
+		if (!confirm(t('collections.deleteConfirm'))) {
 			return;
 		}
 
@@ -136,8 +137,8 @@ export default function CollectionsPage() {
 			});
 			toast.success(
 				!collection.isPublic 
-					? 'Đã công khai bộ sưu tập' 
-					: 'Đã ẩn bộ sưu tập'
+					? t('collections.madePublic') 
+					: t('collections.madePrivate')
 			);
 		} catch (_error) {
 			// Error already handled in store
@@ -146,7 +147,7 @@ export default function CollectionsPage() {
 
 	const handleSaveAsTemplate = async (e: React.MouseEvent, collection: Collection) => {
 		e.stopPropagation();
-		const templateName = prompt(`Nhập tên mẫu cho "${collection.name}":`, collection.name);
+		const templateName = prompt(t('collections.enterTemplateName', { name: collection.name }), collection.name);
 		if (!templateName?.trim()) {
 			return;
 		}
@@ -156,10 +157,10 @@ export default function CollectionsPage() {
 			await collectionTemplateService.saveCollectionAsTemplate(collection._id, {
 				templateName: templateName.trim(),
 			});
-			toast.success('Đã lưu bộ sưu tập thành mẫu');
+			toast.success(t('collections.saveAsTemplateSuccess'));
 		} catch (error: unknown) {
 			console.error('Failed to save as template:', error);
-			toast.error(getErrorMessage(error, 'Không thể lưu mẫu. Vui lòng thử lại.'));
+			toast.error(getErrorMessage(error, t('collections.saveAsTemplateFailed')));
 		} finally {
 			setSavingAsTemplate(null);
 		}
@@ -167,13 +168,13 @@ export default function CollectionsPage() {
 
 	const handleDuplicateCollection = async (e: React.MouseEvent, collection: Collection) => {
 		e.stopPropagation();
-		if (!confirm(`Tạo bản sao của "${collection.name}"?`)) {
+		if (!confirm(t('collections.duplicateConfirm', { name: collection.name }))) {
 			return;
 		}
 
 		try {
 			const newCollection = await collectionService.createCollection({
-				name: `${collection.name} (Bản sao)`,
+				name: t('collections.copyName', { name: collection.name }),
 				description: collection.description || undefined,
 				isPublic: false, // Duplicates are private by default
 			});
@@ -200,10 +201,10 @@ export default function CollectionsPage() {
 
 			// Reload collections
 			await refreshCollections();
-			toast.success('Đã tạo bản sao bộ sưu tập');
+			toast.success(t('collections.duplicateSuccess'));
 		} catch (error: unknown) {
 			console.error('Failed to duplicate collection:', error);
-			toast.error('Không thể tạo bản sao. Vui lòng thử lại.');
+			toast.error(t('collections.duplicateFailed'));
 		}
 	};
 
@@ -214,7 +215,7 @@ export default function CollectionsPage() {
 				<div className="collections-page">
 					<div className="collections-loading">
 						<div className="loading-spinner" />
-						<p>Đang tải bộ sưu tập...</p>
+						<p>{t('collections.loading')}</p>
 					</div>
 				</div>
 			</>
@@ -226,16 +227,16 @@ export default function CollectionsPage() {
 			<Header />
 			<div className="collections-page">
 				<div className="collections-header">
-					<h1>Bộ sưu tập của tôi</h1>
+					<h1>{t('collections.myCollections')}</h1>
 					<button
 						className="collections-create-btn"
 						onClick={() => {
 							// For now, show a message. In the future, we can add a create modal
-							toast.info('Mở ảnh và nhấn "Bộ sưu tập" để tạo bộ sưu tập mới');
+							toast.info(t('collections.openToCreate'));
 						}}
 					>
 						<Plus size={18} />
-						Tạo bộ sưu tập
+						{t('collections.createCollection')}
 					</button>
 				</div>
 
@@ -247,7 +248,7 @@ export default function CollectionsPage() {
 							<input
 								type="text"
 								className="collections-search-input"
-								placeholder="Tìm kiếm bộ sưu tập..."
+								placeholder={t('collections.searchPlaceholder')}
 								value={searchQuery}
 								onChange={(e) => setSearchQuery(e.target.value)}
 							/>
@@ -255,7 +256,7 @@ export default function CollectionsPage() {
 								<button
 									className="collections-search-clear"
 									onClick={clearSearch}
-									title="Xóa tìm kiếm"
+									title={t('collections.clearSearch')}
 								>
 									<X size={16} />
 								</button>
@@ -266,16 +267,16 @@ export default function CollectionsPage() {
 								<button
 									className={`collections-tag-filter-btn ${!selectedTag ? 'active' : ''}`}
 									onClick={() => setSelectedTag(null)}
-									title="Tất cả thẻ"
+									title={t('collections.allTags')}
 								>
-									Tất cả
+									{t('collections.all')}
 								</button>
 								{allTags.map(tag => (
 									<button
 										key={tag}
 										className={`collections-tag-filter-btn ${selectedTag === tag ? 'active' : ''}`}
 										onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
-										title={`Lọc theo: ${tag}`}
+										title={t('collections.filterBy', { tag })}
 									>
 										{tag}
 									</button>
@@ -286,20 +287,20 @@ export default function CollectionsPage() {
 							<button
 								className={`collections-filter-btn ${showPublicOnly ? 'active' : ''}`}
 								onClick={() => setShowPublicOnly(!showPublicOnly)}
-								title={showPublicOnly ? 'Hiển thị tất cả' : 'Chỉ hiển thị công khai'}
+								title={showPublicOnly ? t('collections.showAll') : t('collections.showPublicOnly')}
 							>
 								<Filter size={16} />
-								<span>{showPublicOnly ? 'Công khai' : 'Tất cả'}</span>
+								<span>{showPublicOnly ? t('collections.public') : t('collections.all')}</span>
 							</button>
 							<select
 								className="collections-sort-select"
 								value={sortBy}
 								onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
 							>
-								<option value="newest">Mới nhất</option>
-								<option value="oldest">Cũ nhất</option>
-								<option value="name">Tên A-Z</option>
-								<option value="images">Nhiều ảnh nhất</option>
+								<option value="newest">{t('collections.sortNewest')}</option>
+								<option value="oldest">{t('collections.sortOldest')}</option>
+								<option value="name">{t('collections.sortName')}</option>
+								<option value="images">{t('collections.sortImages')}</option>
 							</select>
 						</div>
 					</div>
@@ -308,23 +309,23 @@ export default function CollectionsPage() {
 				{collections.length === 0 ? (
 					<div className="collections-empty">
 						<Folder size={64} />
-						<h2>Chưa có bộ sưu tập nào</h2>
-						<p>Bắt đầu tạo bộ sưu tập đầu tiên của bạn để lưu ảnh yêu thích</p>
+						<h2>{t('collections.empty')}</h2>
+						<p>{t('collections.emptyHint')}</p>
 						<button
 							className="collections-empty-btn"
 							onClick={() => navigate('/')}
 						>
-							Khám phá ảnh
+							{t('favorites.explore')}
 						</button>
 					</div>
 				) : filteredCollections.length === 0 ? (
 					<div className="collections-empty">
 						<Folder size={64} />
-						<h2>Không tìm thấy bộ sưu tập</h2>
+						<h2>{t('collections.noCollectionsFound')}</h2>
 						<p>
 							{searchQuery 
-								? `Không có bộ sưu tập nào khớp với "${searchQuery}"`
-								: 'Không có bộ sưu tập nào phù hợp với bộ lọc'}
+								? t('collections.noMatchSearch', { query: searchQuery })
+								: t('collections.noMatchFilter')}
 						</p>
 						{(searchQuery || showPublicOnly) && (
 							<button
@@ -333,7 +334,7 @@ export default function CollectionsPage() {
 								clearFilters();
 							}}
 							>
-								Xóa bộ lọc
+								{t('collections.clearFilters')}
 							</button>
 						)}
 					</div>
@@ -341,7 +342,7 @@ export default function CollectionsPage() {
 					<>
 						{searchQuery && (
 							<div className="collections-results-info">
-								Tìm thấy {filteredCollections.length} bộ sưu tập
+								{t('collections.foundCount', { count: filteredCollections.length })}
 							</div>
 						)}
 						<div className="collections-grid">
@@ -380,7 +381,7 @@ export default function CollectionsPage() {
 														e.stopPropagation();
 														handleCollectionClick(collection);
 													}}
-													title="Xem bộ sưu tập"
+													title={t('collections.view')}
 												>
 													<Eye size={18} />
 												</button>
@@ -388,7 +389,7 @@ export default function CollectionsPage() {
 													className={`collection-card-action-btn ${favoriteStatuses[collection._id] ? 'action-favorite' : ''}`}
 													onClick={(e) => handleToggleFavorite(e, collection)}
 													disabled={togglingFavoriteId === collection._id}
-													title={favoriteStatuses[collection._id] ? 'Xóa khỏi yêu thích' : 'Thêm vào yêu thích'}
+													title={favoriteStatuses[collection._id] ? t('collections.removeFromFavorites') : t('collections.addToFavorites')}
 												>
 													<Heart size={18} fill={favoriteStatuses[collection._id] ? 'currentColor' : 'none'} />
 												</button>
@@ -398,7 +399,7 @@ export default function CollectionsPage() {
 												<button
 													className="collection-card-action-btn"
 													onClick={(e) => handleTogglePublic(e, collection)}
-													title={collection.isPublic ? 'Ẩn bộ sưu tập' : 'Công khai bộ sưu tập'}
+													title={collection.isPublic ? t('collections.makePrivate') : t('collections.makePublic')}
 												>
 													{collection.isPublic ? (
 														<Unlock size={18} />
@@ -409,14 +410,14 @@ export default function CollectionsPage() {
 												<button
 													className="collection-card-action-btn"
 													onClick={(e) => handleDuplicateCollection(e, collection)}
-													title="Tạo bản sao"
+													title={t('collections.duplicate')}
 												>
 													<Copy size={18} />
 												</button>
 												<button
 													className="collection-card-action-btn"
 													onClick={(e) => handleEditCollection(e, collection)}
-													title="Chỉnh sửa bộ sưu tập"
+													title={t('collections.editCollection')}
 												>
 													<Edit2 size={18} />
 												</button>
@@ -424,7 +425,7 @@ export default function CollectionsPage() {
 													className="collection-card-action-btn action-secondary"
 													onClick={(e) => handleSaveAsTemplate(e, collection)}
 													disabled={savingAsTemplate === collection._id}
-													title="Lưu thành mẫu"
+													title={t('collections.saveAsTemplate')}
 												>
 													<FileText size={18} />
 												</button>
@@ -435,7 +436,7 @@ export default function CollectionsPage() {
 														handleDeleteCollection(collection._id);
 													}}
 													disabled={deletingId === collection._id}
-													title="Xóa bộ sưu tập"
+													title={t('common.delete')}
 												>
 													<Trash2 size={18} />
 												</button>
@@ -465,11 +466,11 @@ export default function CollectionsPage() {
 										)}
 										<div className="collection-card-meta">
 											<span className="collection-card-count">
-												{collection.imageCount || 0} ảnh
+												{t('collections.imageCount', { count: collection.imageCount || 0 })}
 											</span>
 											{collection.views !== undefined && collection.views > 0 && (
 												<span className="collection-card-views">
-													{collection.views} lượt xem
+													{t('collections.viewCount', { count: collection.views })}
 												</span>
 											)}
 										</div>

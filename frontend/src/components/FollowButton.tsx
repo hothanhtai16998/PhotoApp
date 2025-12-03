@@ -5,6 +5,7 @@ import { followService } from '@/services/followService';
 import { useUserStore } from '@/stores/useUserStore';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/utils';
+import { t } from '@/i18n';
 import './FollowButton.css';
 
 interface FollowButtonProps {
@@ -69,15 +70,15 @@ export const FollowButton = ({
 			if (isFollowing) {
 				await followService.unfollowUser(userId);
 				setIsFollowing(false);
-				toast.success(`Đã bỏ theo dõi ${userDisplayName || 'người dùng'}`);
+				toast.success(t('follow.unfollowed', { name: userDisplayName || t('follow.user') }));
 			} else {
 				await followService.followUser(userId);
 				setIsFollowing(true);
-				toast.success(`Đã theo dõi ${userDisplayName || 'người dùng'}`);
+				toast.success(t('follow.followed', { name: userDisplayName || t('follow.user') }));
 			}
 		} catch (error: unknown) {
 			console.error('Follow action failed:', error);
-			const message = getErrorMessage(error, 'Có lỗi xảy ra. Vui lòng thử lại.');
+			const message = getErrorMessage(error, t('follow.error'));
 			toast.error(message);
 		} finally {
 			setActionLoading(false);
@@ -116,7 +117,7 @@ export const FollowButton = ({
 					<UserPlus size={16} />
 				)
 			) : null}
-			<span>{isFollowing ? 'Đang theo dõi' : 'Theo dõi'}</span>
+			<span>{isFollowing ? t('follow.following') : t('follow.follow')}</span>
 		</Button>
 	);
 };

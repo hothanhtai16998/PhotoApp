@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Flag } from 'lucide-react';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/utils';
 import { reportService, type ReportType, type ReportReason } from '@/services/reportService';
+import { t } from '@/i18n';
 import './ReportButton.css';
 
 interface ReportButtonProps {
@@ -12,26 +13,26 @@ interface ReportButtonProps {
     className?: string;
 }
 
-const REPORT_REASONS: { value: ReportReason; label: string }[] = [
-    { value: 'inappropriate_content', label: 'Nội dung không phù hợp' },
-    { value: 'spam', label: 'Spam' },
-    { value: 'copyright_violation', label: 'Vi phạm bản quyền' },
-    { value: 'harassment', label: 'Quấy rối' },
-    { value: 'fake_account', label: 'Tài khoản giả mạo' },
-    { value: 'other', label: 'Khác' },
-];
-
 export default function ReportButton({ type, targetId, targetName, className = '' }: ReportButtonProps) {
     const [showModal, setShowModal] = useState(false);
     const [reason, setReason] = useState<ReportReason | ''>('');
     const [description, setDescription] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
+    const REPORT_REASONS = useMemo(() => [
+        { value: 'inappropriate_content' as ReportReason, label: t('report.inappropriateContent') },
+        { value: 'spam' as ReportReason, label: t('report.spam') },
+        { value: 'copyright_violation' as ReportReason, label: t('report.copyrightViolation') },
+        { value: 'harassment' as ReportReason, label: t('report.harassment') },
+        { value: 'fake_account' as ReportReason, label: t('report.fakeAccount') },
+        { value: 'other' as ReportReason, label: t('report.other') },
+    ], []);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
         if (!reason) {
-            toast.error('Vui lòng chọn lý do báo cáo');
+            toast.error(t('report.selectReason'));
             return;
         }
 
@@ -44,13 +45,13 @@ export default function ReportButton({ type, targetId, targetName, className = '
                 description: description.trim() || undefined,
             });
             
-            toast.success('Đã gửi báo cáo thành công. Cảm ơn bạn đã giúp cải thiện cộng đồng!');
+            toast.success(t('report.success'));
             setShowModal(false);
             setReason('');
             setDescription('');
         } catch (error: unknown) {
             console.error('Failed to submit report:', error);
-            toast.error(getErrorMessage(error, 'Không thể gửi báo cáo. Vui lòng thử lại.'));
+            toast.error(getErrorMessage(error, t('report.failed')));
         } finally {
             setSubmitting(false);
         }
@@ -59,13 +60,13 @@ export default function ReportButton({ type, targetId, targetName, className = '
     const getTypeLabel = () => {
         switch (type) {
             case 'image':
-                return 'ảnh';
+                return t('report.typeImage');
             case 'collection':
-                return 'bộ sưu tập';
+                return t('report.typeCollection');
             case 'user':
-                return 'người dùng';
+                return t('report.typeUser');
             default:
-                return 'nội dung';
+                return t('report.typeContent');
         }
     };
 
@@ -74,21 +75,21 @@ export default function ReportButton({ type, targetId, targetName, className = '
             <button
                 className={`report-btn ${className}`}
                 onClick={() => setShowModal(true)}
-                title={`Báo cáo ${getTypeLabel()}`}
+                title={t('report.reportType', { type: getTypeLabel() })}
             >
                 <Flag size={16} />
-                <span>Báo cáo</span>
+                <span>{t('report.report')}</span>
             </button>
 
             {showModal && (
                 <div className="report-modal-overlay" onClick={() => setShowModal(false)}>
                     <div className="report-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="report-modal-header">
-                            <h2>Báo cáo {getTypeLabel()}</h2>
+                            <h2>{t('report.reportType', { type: getTypeLabel() })}</h2>
                             <button
                                 className="report-modal-close"
                                 onClick={() => setShowModal(false)}
-                                aria-label="Đóng"
+                                aria-label={t('common.close')}
                             >
                                 ×
                             </button>
@@ -97,12 +98,12 @@ export default function ReportButton({ type, targetId, targetName, className = '
                         <form onSubmit={handleSubmit} className="report-modal-form">
                             {targetName && (
                                 <div className="report-modal-target">
-                                    <p>Bạn đang báo cáo: <strong>{targetName}</strong></p>
+                                    <p>{t('report.reporting')} <strong>{targetName}</strong></p>
                                 </div>
                             )}
 
                             <div className="report-form-group">
-                                <label htmlFor="reason">Lý do báo cáo *</label>
+                                <label htmlFor="reason">{t('report.reasonLabel')}</label>
                                 <select
                                     id="reason"
                                     value={reason}
@@ -110,7 +111,7 @@ export default function ReportButton({ type, targetId, targetName, className = '
                                     required
                                     disabled={submitting}
                                 >
-                                    <option value="">Chọn lý do...</option>
+                                    <option value="">{t('report.selectReasonPlaceholder')}</option>
                                     {REPORT_REASONS.map((r) => (
                                         <option key={r.value} value={r.value}>
                                             {r.label}
@@ -120,12 +121,12 @@ export default function ReportButton({ type, targetId, targetName, className = '
                             </div>
 
                             <div className="report-form-group">
-                                <label htmlFor="description">Mô tả chi tiết (tùy chọn)</label>
+                                <label htmlFor="description">{t('report.descriptionLabel')}</label>
                                 <textarea
                                     id="description"
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
-                                    placeholder="Vui lòng cung cấp thêm thông tin về vấn đề..."
+                                    placeholder={t('report.descriptionPlaceholder')}
                                     rows={4}
                                     maxLength={1000}
                                     disabled={submitting}
@@ -142,14 +143,14 @@ export default function ReportButton({ type, targetId, targetName, className = '
                                     onClick={() => setShowModal(false)}
                                     disabled={submitting}
                                 >
-                                    Hủy
+                                    {t('common.cancel')}
                                 </button>
                                 <button
                                     type="submit"
                                     className="report-btn-submit"
                                     disabled={submitting || !reason}
                                 >
-                                    {submitting ? 'Đang gửi...' : 'Gửi báo cáo'}
+                                    {submitting ? t('report.submitting') : t('report.submit')}
                                 </button>
                             </div>
                         </form>

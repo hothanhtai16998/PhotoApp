@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { imageService } from '@/services/imageService';
 import { uploadSchema, type UploadFormValues } from '@/types/forms';
 import { uploadConfig } from '@/config/uploadConfig';
+import { t } from '@/i18n';
 import './UploadPage.css';
 
 function UploadPage() {
@@ -24,7 +25,7 @@ function UploadPage() {
     const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm<UploadFormValues>({
         resolver: zodResolver(uploadSchema),
     });
-    
+
     // Upload state
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
@@ -37,36 +38,36 @@ function UploadPage() {
     // Fetch images by category for display
     useEffect(() => {
         const { categories, imagesPerCategory, maxCategories, minImagesPerCategory } = uploadConfig;
-        
+
         const processCategoryImages = (allImages: Image[]) => {
             const categoryData = [];
-            
+
             // Group images by category
             for (const category of categories) {
                 const categoryImgs = allImages.filter(img => {
-                    const categoryName = typeof img.imageCategory === 'string' 
-                        ? img.imageCategory 
+                    const categoryName = typeof img.imageCategory === 'string'
+                        ? img.imageCategory
                         : img.imageCategory?.name;
                     return categoryName && categoryName.toLowerCase() === category.toLowerCase();
                 }).slice(0, imagesPerCategory);
-                
+
                 if (categoryImgs.length >= minImagesPerCategory) {
                     categoryData.push({ category, images: categoryImgs });
                 }
             }
-            
+
             // If we don't have enough category images, use general images and group them
             if (categoryData.length === 0 && allImages.length > 0) {
                 const shuffled = [...allImages].sort(() => 0.5 - Math.random());
                 // Create groups from shuffled images
                 for (let i = 0; i < maxCategories && shuffled.length >= imagesPerCategory; i++) {
-                    categoryData.push({ 
-                        category: categories[i] || 'Featured', 
-                        images: shuffled.slice(i * imagesPerCategory, (i + 1) * imagesPerCategory) 
+                    categoryData.push({
+                        category: categories[i] || 'Featured',
+                        images: shuffled.slice(i * imagesPerCategory, (i + 1) * imagesPerCategory)
                     });
                 }
             }
-            
+
             setCategoryImages(categoryData.slice(0, maxCategories));
         };
 
@@ -110,7 +111,7 @@ function UploadPage() {
             try {
                 // Compress image first
                 const compressedFile = await compressImage(file);
-                
+
                 // Pre-upload image to S3
                 const result = await imageService.preUploadImage(
                     compressedFile,
@@ -122,7 +123,7 @@ function UploadPage() {
                 setPreUploadData(result);
                 setUploadProgress(100);
                 setIsUploading(false);
-                toast.success('Ảnh đã tải lên thành công! Bạn có thể gửi bây giờ.');
+                toast.success(t('upload.uploadedSuccess'));
             } catch (error: unknown) {
                 console.error('Upload error:', error);
                 const errorMessage = getErrorMessage(error, 'Failed to upload image. Please try again.');
@@ -144,12 +145,12 @@ function UploadPage() {
     const onSubmit = async (data: UploadFormValues) => {
         // Check if upload is complete
         if (!preUploadData) {
-            toast.error('Vui lòng đợi ảnh tải lên hoàn tất');
+            toast.error(t('upload.waitForUpload'));
             return;
         }
 
         if (isUploading) {
-            toast.error('Đang tải ảnh lên, vui lòng đợi...');
+            toast.error(t('upload.uploadInProgress'));
             return;
         }
 
@@ -167,8 +168,8 @@ function UploadPage() {
             };
 
             await imageService.finalizeImageUpload(finalizeData);
-            
-            toast.success('Tải ảnh lên thành công!');
+
+            toast.success(t('upload.finalizeSuccess'));
             navigate('/');
         } catch (error: unknown) {
             console.error('Finalize error:', error);
@@ -192,11 +193,11 @@ function UploadPage() {
                             <div className="upload-progress-spinner">
                                 <div className="spinner-circle"></div>
                             </div>
-                            <h3 className="upload-progress-title">Đang tải ảnh lên...</h3>
-                            <p className="upload-progress-text">Vui lòng đợi trong khi ảnh của bạn được tải lên</p>
+                            <h3 className="upload-progress-title">{t('upload.uploadingTitle')}</h3>
+                            <p className="upload-progress-text">{t('upload.uploadingWait')}</p>
                             <div className="upload-progress-bar-container">
-                                <div 
-                                    className="upload-progress-bar" 
+                                <div
+                                    className="upload-progress-bar"
                                     style={{ width: `${uploadProgress}%` }}
                                 />
                             </div>
@@ -210,20 +211,20 @@ function UploadPage() {
                         <div className="upload-icon">
                             <Upload size={32} />
                         </div>
-                        <h1 className="upload-title">Bắt đầu tải lên</h1>
+                        <h1 className="upload-title">{t('upload.startUploading')}</h1>
                         <p className="upload-description">
-                            Chia sẻ ảnh của bạn với hàng triệu người và được các nhà sáng tạo khắp nơi khám phá.
+                            {t('upload.sharePhotos')}
                         </p>
                         <p className="upload-subdescription">
-                            Tải lên hình ảnh chất lượng cao để giúp người khác tạo nội dung đẹp. Tác phẩm của bạn sẽ được các nhà thiết kế, nhà tiếp thị và nhà sáng tạo trên toàn thế giới xem.
+                            {t('upload.uploadHighQuality')}
                         </p>
-                        
+
                         <form onSubmit={handleSubmit(onSubmit)} className="upload-form">
                             <div className="form-group">
                                 <Label htmlFor="image">Photo</Label>
-                                <Input 
-                                    id="image" 
-                                    type="file" 
+                                <Input
+                                    id="image"
+                                    type="file"
                                     accept="image/*"
                                     capture="environment"
                                     {...register('image')}
@@ -237,15 +238,15 @@ function UploadPage() {
                                 )}
                                 {preUploadData && !isUploading && (
                                     <p className="success-text" style={{ marginTop: '8px', color: '#10b981' }}>
-                                        ✓ Ảnh đã tải lên thành công
+                                        ✓ {t('upload.uploadedCheck')}
                                     </p>
                                 )}
                             </div>
                             <div className="form-group">
                                 <Label htmlFor="imageTitle">Title</Label>
-                                <Input 
-                                    id="imageTitle" 
-                                    {...register('imageTitle')} 
+                                <Input
+                                    id="imageTitle"
+                                    {...register('imageTitle')}
                                     placeholder="Give your photo a title"
                                     disabled={isUploading}
                                 />
@@ -253,9 +254,9 @@ function UploadPage() {
                             </div>
                             <div className="form-group">
                                 <Label htmlFor="imageCategory">Category</Label>
-                                <Input 
-                                    id="imageCategory" 
-                                    {...register('imageCategory')} 
+                                <Input
+                                    id="imageCategory"
+                                    {...register('imageCategory')}
                                     placeholder="e.g., Nature, Portrait, Architecture"
                                     disabled={isUploading}
                                 />
@@ -263,9 +264,9 @@ function UploadPage() {
                             </div>
                             <div className="form-group">
                                 <Label htmlFor="location">Location (Optional)</Label>
-                                <Input 
-                                    id="location" 
-                                    {...register('location')} 
+                                <Input
+                                    id="location"
+                                    {...register('location')}
                                     placeholder="e.g., Paris, France"
                                     disabled={isUploading}
                                 />
@@ -273,25 +274,25 @@ function UploadPage() {
                             </div>
                             <div className="form-group">
                                 <Label htmlFor="cameraModel">Camera Model (Optional)</Label>
-                                <Input 
-                                    id="cameraModel" 
-                                    {...register('cameraModel')} 
+                                <Input
+                                    id="cameraModel"
+                                    {...register('cameraModel')}
                                     placeholder="e.g., Sony A7 III"
                                     disabled={isUploading}
                                 />
                             </div>
-                            <Button 
-                                type="submit" 
-                                disabled={isSubmitDisabled} 
+                            <Button
+                                type="submit"
+                                disabled={isSubmitDisabled}
                                 className="upload-submit-btn"
                             >
-                                {isFinalizing 
-                                    ? 'Đang lưu...' 
-                                    : isUploading 
-                                    ? `Đang tải lên... ${uploadProgress}%` 
-                                    : !preUploadData
-                                    ? 'Vui lòng chọn ảnh'
-                                    : 'Gửi ảnh'
+                                {isFinalizing
+                                    ? t('upload.saving')
+                                    : isUploading
+                                        ? t('upload.uploadingProgress', { progress: uploadProgress })
+                                        : !preUploadData
+                                            ? t('upload.selectImage')
+                                            : t('upload.submitImage')
                                 }
                             </Button>
                         </form>
@@ -306,7 +307,7 @@ function UploadPage() {
                             <p className="category-description">
                                 These categories are in high demand. Upload photos in these areas to get more visibility.
                             </p>
-                            
+
                             {categoryImages.length > 0 ? (
                                 <div className="category-grid">
                                     {categoryImages.map((catData) => (

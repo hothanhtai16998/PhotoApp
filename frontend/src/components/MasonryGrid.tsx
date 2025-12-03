@@ -10,6 +10,7 @@ import { useBatchedFavoriteCheck, updateFavoriteCache } from '@/hooks/useBatched
 import { favoriteService } from '@/services/favoriteService';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { toast } from 'sonner';
+import { t } from '@/i18n';
 
 export type DownloadSize = 'small' | 'medium' | 'large' | 'original';
 
@@ -165,13 +166,13 @@ const MobileImageCard: React.FC<MobileImageCardProps> = ({
             updateFavoriteCache(imageId, response.isFavorited);
 
             if (response.isFavorited) {
-                toast.success('Đã thêm vào yêu thích');
+                toast.success(t('favorites.added'));
             } else {
-                toast.success('Đã xóa khỏi yêu thích');
+                toast.success(t('favorites.removed'));
             }
         } catch (error) {
             console.error('Failed to toggle favorite:', error);
-            toast.error('Không thể cập nhật yêu thích. Vui lòng thử lại.');
+            toast.error(t('favorites.updateFailed'));
         } finally {
             setTogglingFavorites(prev => {
                 const next = new Set(prev);

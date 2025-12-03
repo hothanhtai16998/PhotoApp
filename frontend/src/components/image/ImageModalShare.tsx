@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { generateImageSlug } from '@/lib/utils';
 import { shareService } from '@/utils/shareService';
 import type { Image } from '@/types/image';
+import { t } from '@/i18n';
 
 interface ImageModalShareProps {
   image: Image;
@@ -150,16 +151,16 @@ export const ImageModalShare = memo(({ image }: ImageModalShareProps) => {
           text: shareText,
           url: shareUrl,
         });
-        toast.success('Đã chia sẻ ảnh');
+        toast.success(t('share.shared'));
         setShowShareMenu(false);
       } catch (error) {
         if ((error as Error).name !== 'AbortError') {
           console.error('Share failed:', error);
-          toast.error('Không thể chia sẻ. Vui lòng thử lại.');
+          toast.error(t('share.shareFailed'));
         }
       }
     } else {
-      toast.error('Trình duyệt của bạn không hỗ trợ tính năng này');
+      toast.error(t('share.browserNotSupported'));
     }
   }, [getShareData, image.imageTitle]);
 
@@ -168,11 +169,11 @@ export const ImageModalShare = memo(({ image }: ImageModalShareProps) => {
     const { shareUrl } = getShareData();
     try {
       await shareService.copyToClipboard(shareUrl);
-      toast.success('Đã sao chép liên kết vào clipboard');
+      toast.success(t('share.linkCopied'));
       setShowShareMenu(false);
     } catch (error) {
       console.error('Failed to copy to clipboard:', error);
-      toast.error('Không thể sao chép liên kết. Vui lòng thử lại.');
+      toast.error(t('share.linkCopyFailed'));
     }
   }, [getShareData]);
 
@@ -199,17 +200,17 @@ export const ImageModalShare = memo(({ image }: ImageModalShareProps) => {
     try {
       const success = await shareService.copyToClipboard(embedCode);
       if (success) {
-        toast.success('Đã sao chép mã nhúng vào clipboard');
+        toast.success(t('share.embedCopied'));
         // Select the textarea text for visual feedback
         if (embedCodeRef.current) {
           embedCodeRef.current.select();
         }
       } else {
-        toast.error('Không thể sao chép mã nhúng. Vui lòng thử lại.');
+        toast.error(t('share.embedCopyFailed'));
       }
     } catch (error) {
       console.error('Failed to copy embed code:', error);
-      toast.error('Không thể sao chép mã nhúng. Vui lòng thử lại.');
+      toast.error(t('share.embedCopyFailed'));
     }
   }, [embedCode]);
 
@@ -225,11 +226,11 @@ export const ImageModalShare = memo(({ image }: ImageModalShareProps) => {
         ref={shareButtonRef}
         className={`modal-footer-btn modal-share-btn ${showShareMenu ? 'active' : ''}`}
         onClick={handleShare}
-        title="Chia sẻ (Ctrl/Cmd + S)"
-        aria-label="Chia sẻ ảnh"
+        title={`${t('share.share')} (Ctrl/Cmd + S)`}
+        aria-label={t('share.sharePhoto')}
       >
         <Share2 size={18} />
-        <span>Chia sẻ</span>
+        <span>{t('share.share')}</span>
         <kbd className="keyboard-hint">⌘S</kbd>
       </button>
       {/* Share Menu */}
