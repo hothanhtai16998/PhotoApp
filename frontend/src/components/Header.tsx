@@ -9,6 +9,7 @@ import { SearchBar, type SearchBarRef } from "./SearchBar"
 import { Avatar } from "./Avatar"
 import NotificationBell from "./NotificationBell"
 import { LanguageSwitcher } from "./LanguageSwitcher"
+import { ThemeToggle } from "./admin/ThemeToggle"
 import LOGO_CONFIG from "@/config/logo"
 import { updateFaviconWithImage } from "@/utils/faviconUpdater"
 import { t } from "@/i18n"
@@ -159,6 +160,8 @@ export const Header = memo(function Header() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
+                    <ThemeToggle asMenuItem={true} />
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
                       <LanguageSwitcher variant="menu-item" />
                     </DropdownMenuItem>
@@ -223,6 +226,14 @@ export const Header = memo(function Header() {
                   <span>{t('header.legal')}</span>
                   <ChevronDown size={16} className="mobile-menu-arrow" />
                 </Link>
+                <div
+                  className="mobile-menu-nav-item mobile-theme-toggle"
+                  style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <ThemeToggle asMenuItem={false} />
+                  <span>{t('theme.toggle')}</span>
+                </div>
                 <LanguageSwitcher 
                   variant="menu-item" 
                   className="mobile-menu-nav-item mobile-language-switcher"

@@ -4,7 +4,6 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { ChevronLeft, ChevronRight, Menu, X } from 'lucide-react';
 import { QuickStatsWidget } from '@/components/admin/QuickStatsWidget';
-import { ThemeToggle } from '@/components/admin/ThemeToggle';
 import type { AdminRolePermissions } from '@/services/adminService';
 import type { User as AuthUser } from '@/types/user';
 import Header from '@/components/Header';
@@ -211,7 +210,6 @@ function AdminPage() {
                                 {!sidebarCollapsed && <h2>Trang quản lý</h2>}
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                {!isMobile && !sidebarCollapsed && <ThemeToggle />}
                                 {!isMobile && (
                                     <button
                                         className="admin-sidebar-toggle"

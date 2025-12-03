@@ -753,6 +753,14 @@ export const vi = {
     typeContent: 'nội dung',
   },
 
+  // Theme
+  theme: {
+    darkMode: 'Chế độ tối',
+    lightMode: 'Chế độ sáng',
+    switchToDark: 'Chuyển sang chế độ tối',
+    switchToLight: 'Chuyển sang chế độ sáng',
+    toggle: 'Giao diện',
+  },
   // Accessibility
   a11y: {
     loading: 'Đang tải',

@@ -1,11 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type MouseEvent } from 'react';
 import { Moon, Sun } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { t } from '@/i18n';
 import './ThemeToggle.css';
 
-export function ThemeToggle() {
+// Initialize theme on module load
+(function initializeTheme() {
+    const saved = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const shouldBeDark = saved ? saved === 'dark' : prefersDark;
+    
+    if (shouldBeDark) {
+        document.documentElement.classList.add('dark-theme');
+    } else {
+        document.documentElement.classList.remove('dark-theme');
+    }
+})();
+
+export function ThemeToggle({ asMenuItem = false }: { asMenuItem?: boolean }) {
     const [isDark, setIsDark] = useState(() => {
-        const saved = localStorage.getItem('admin-theme');
+        const saved = localStorage.getItem('theme');
         if (saved) return saved === 'dark';
         return window.matchMedia('(prefers-color-scheme: dark)').matches;
     });
@@ -14,24 +28,40 @@ export function ThemeToggle() {
         const root = document.documentElement;
         if (isDark) {
             root.classList.add('dark-theme');
-            localStorage.setItem('admin-theme', 'dark');
+            localStorage.setItem('theme', 'dark');
         } else {
             root.classList.remove('dark-theme');
-            localStorage.setItem('admin-theme', 'light');
+            localStorage.setItem('theme', 'light');
         }
     }, [isDark]);
 
+    const toggleTheme = (e?: MouseEvent) => {
+        e?.stopPropagation(); // Prevent event bubbling in mobile menu
+        setIsDark(!isDark);
+    };
+
+    if (asMenuItem) {
+        return (
+            <DropdownMenuItem
+                onClick={toggleTheme}
+                className="theme-toggle-menu-item"
+            >
+                {isDark ? <Sun size={16} /> : <Moon size={16} />}
+                <span>{isDark ? t('theme.lightMode') : t('theme.darkMode')}</span>
+            </DropdownMenuItem>
+        );
+    }
+
     return (
-        <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsDark(!isDark)}
+        <button
+            onClick={toggleTheme}
             className="theme-toggle-btn"
-            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-            title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label={isDark ? t('theme.switchToLight') : t('theme.switchToDark')}
+            title={isDark ? t('theme.switchToLight') : t('theme.switchToDark')}
+            type="button"
         >
             {isDark ? <Sun size={16} /> : <Moon size={16} />}
-        </Button>
+        </button>
     );
 }
 

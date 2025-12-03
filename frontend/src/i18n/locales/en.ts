@@ -737,6 +737,14 @@ export const en = {
     typeContent: 'content',
   },
 
+  // Theme
+  theme: {
+    darkMode: 'Dark Mode',
+    lightMode: 'Light Mode',
+    switchToDark: 'Switch to dark mode',
+    switchToLight: 'Switch to light mode',
+    toggle: 'Theme',
+  },
   // Accessibility
   a11y: {
     loading: 'Loading',

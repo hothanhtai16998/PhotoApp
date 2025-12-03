@@ -6,7 +6,6 @@ import { Download, Users, Image as ImageIcon, Tag, Plus, Search } from 'lucide-r
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { AdminBreadcrumbs } from '@/components/admin/AdminBreadcrumbs';
 import { useNavigate } from 'react-router-dom';
 import { t } from '@/i18n';
 
@@ -57,7 +56,6 @@ export function AdminDashboard({ stats, loading }: AdminDashboardProps) {
     if (loading) {
         return (
             <div className="admin-dashboard">
-                <AdminBreadcrumbs items={[]} />
                 <div className="admin-dashboard-skeleton">
                     <Skeleton className="h-48 w-full mb-6" />
                     <div className="admin-stats-grid">
@@ -75,7 +73,6 @@ export function AdminDashboard({ stats, loading }: AdminDashboardProps) {
     if (!stats) {
         return (
             <div className="admin-dashboard">
-                <AdminBreadcrumbs items={[]} />
                 <div className="admin-empty-state">
                     <p>{t('admin.noData')}</p>
                 </div>
@@ -85,7 +82,6 @@ export function AdminDashboard({ stats, loading }: AdminDashboardProps) {
 
     return (
         <div className="admin-dashboard">
-            <AdminBreadcrumbs items={[]} />
             <div className="admin-dashboard-hero" style={{ position: 'relative' }}>
                 <h1 className="admin-dashboard-title">
                     <span>📊</span>
