@@ -864,76 +864,92 @@
 /* Responsive */
 @media (max-width: 768px) {
   .admin-page {
-    padding: 12px;
+    padding: 8px;
+    padding-top: calc(var(--header-height, 65px) + 8px);
   }
 
   .admin-container {
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
   }
 
   .admin-sidebar {
     width: 100%;
     position: static;
-    padding: 16px;
+    padding: 12px;
+    border-radius: 8px;
   }
 
   .admin-sidebar-header {
-    margin-bottom: 20px;
-    padding-bottom: 16px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
   }
 
   .admin-sidebar-header h2 {
-    font-size: 1.125rem;
+    font-size: 1rem;
   }
 
   .admin-nav {
     flex-direction: row;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 4px;
+    max-height: none;
   }
 
   .admin-nav-item {
     min-height: 44px; /* Better touch target */
-    padding: 10px 14px;
-    font-size: 0.875rem;
-    flex: 1 1 auto;
-    min-width: calc(50% - 3px);
+    padding: 10px 12px;
+    font-size: 0.8125rem;
+    flex: 1 1 calc(50% - 2px);
+    min-width: calc(50% - 2px);
+    max-width: calc(50% - 2px);
   }
 
   .admin-content {
-    padding: 20px;
+    padding: 16px;
+    border-radius: 8px;
   }
 
   .admin-title {
-    font-size: 1.5rem;
-    margin-bottom: 24px;
+    font-size: 1.25rem;
+    margin-bottom: 20px;
   }
 
   .admin-stats-grid {
     grid-template-columns: 1fr;
-    gap: 16px;
-    margin-bottom: 32px;
+    gap: 12px;
+    margin-bottom: 24px;
   }
 
   .admin-stat-card {
-    padding: 20px;
+    padding: 16px;
   }
 
   .admin-stat-value {
-    font-size: 2rem;
+    font-size: 1.75rem;
+  }
+
+  .admin-stat-label {
+    font-size: 0.8125rem;
   }
 
   .admin-images-grid {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 12px;
   }
 
   .admin-header {
     flex-direction: column;
     align-items: stretch;
-    gap: 16px;
-    margin-bottom: 24px;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding: 20px 16px;
+    border-radius: 12px;
+  }
+
+  .admin-header .admin-title {
+    font-size: 1.5rem;
+    margin-bottom: 0;
   }
 
   .admin-search {
@@ -943,52 +959,168 @@
   .admin-search input {
     width: 100%;
     min-height: 44px;
+    font-size: 0.9375rem;
   }
 
   .admin-table {
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+    margin: 0 -4px;
+    padding: 0 4px;
   }
 
   .admin-table table {
-    /* Keep table width flexible; avoid forcing a large min-width on small screens */
     width: 100%;
-    min-width: auto;
+    min-width: 600px; /* Minimum width for table content */
     table-layout: auto;
   }
 
   .admin-table th,
   .admin-table td {
-    padding: 10px 8px;
+    padding: 10px 6px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
+  .admin-table th {
+    font-size: 0.6875rem;
+    padding: 8px 6px;
+  }
+
+  .admin-section-title {
+    font-size: 1.125rem;
+    margin-bottom: 16px;
+  }
+
+  .admin-section {
+    margin-bottom: 32px;
+  }
+
+  .admin-dashboard-hero {
+    padding: 28px 20px;
+    margin-bottom: 24px;
+  }
+
+  .admin-dashboard-title {
+    font-size: 1.75rem;
+  }
+
+  .admin-dashboard-subtitle {
+    font-size: 1rem;
+  }
+
+  .admin-analytics-hero {
+    padding: 28px 20px;
+    margin-bottom: 24px;
+  }
+
+  .admin-analytics-title {
+    font-size: 1.75rem;
+  }
+
+  .admin-analytics-subtitle {
+    font-size: 1rem;
+  }
+
+  .falcon-metric-tabs {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .falcon-metric-tab {
+    padding: 16px;
+  }
+
+  .falcon-metric-value {
+    font-size: 1.5rem;
+  }
+
+  .falcon-analytics-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .falcon-chart-realtime-container {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .admin-daily-uploads-chart {
+    padding: 24px 16px;
+    min-height: 280px;
+  }
+
+  .admin-top-uploaders {
+    padding: 24px 20px;
+  }
+
+  .admin-category-chart {
+    padding: 24px 20px;
+  }
+
+  .admin-category-list {
+    gap: 8px;
+  }
+
+  .admin-category-item {
+    padding: 16px;
+  }
+
+  .admin-permissions-list {
+    gap: 4px;
+  }
+
+  .admin-permission-tag {
+    font-size: 0.6875rem;
+    padding: 3px 8px;
+  }
+
+  .admin-actions {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .admin-actions button {
+    min-height: 36px;
+    padding: 6px 12px;
+    font-size: 0.8125rem;
   }
 }
 
 @media (max-width: 480px) {
   .admin-page {
-    padding: 8px;
+    padding: 6px;
+    padding-top: calc(var(--header-height, 65px) + 6px);
   }
 
   .admin-container {
-    gap: 12px;
+    gap: 8px;
   }
 
   .admin-sidebar {
-    padding: 12px;
+    padding: 10px;
+  }
+
+  .admin-sidebar-header {
+    margin-bottom: 12px;
+    padding-bottom: 10px;
   }
 
   .admin-sidebar-header h2 {
-    font-size: 1rem;
+    font-size: 0.9375rem;
   }
 
   .admin-nav {
-    gap: 4px;
+    gap: 3px;
   }
 
   .admin-nav-item {
-    padding: 10px 12px;
-    font-size: 0.8125rem;
-    min-width: calc(50% - 2px);
+    padding: 8px 10px;
+    font-size: 0.75rem;
+    min-width: calc(50% - 1.5px);
+    max-width: calc(50% - 1.5px);
   }
 
   .admin-nav-item span:not(.admin-nav-icon) {
@@ -1000,48 +1132,177 @@
   }
 
   .admin-content {
-    padding: 16px;
+    padding: 12px;
   }
 
   .admin-title {
+    font-size: 1.125rem;
+    margin-bottom: 16px;
+  }
+
+  .admin-header {
+    padding: 16px 12px;
+  }
+
+  .admin-header .admin-title {
     font-size: 1.25rem;
-    margin-bottom: 20px;
   }
 
   .admin-stat-card {
-    padding: 16px;
-  }
-
-  /* Mobile-specific table adjustments */
-  @media (max-width: 480px) {
-    .admin-table table {
-      min-width: auto !important;
-      width: 100% !important;
-    }
-
-    .admin-table th,
-    .admin-table td {
-      white-space: normal;
-      word-break: break-word;
-      padding: 8px 6px;
-    }
+    padding: 12px;
   }
 
   .admin-stat-value {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
   }
 
   .admin-stat-label {
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
+  }
+
+  .admin-stats-grid {
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .admin-section-title {
+    font-size: 1rem;
+    margin-bottom: 12px;
+  }
+
+  .admin-section {
+    margin-bottom: 24px;
   }
 
   .admin-table {
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
+    margin: 0 -2px;
+    padding: 0 2px;
   }
 
-  .admin-table th,
+  .admin-table table {
+    min-width: 500px; /* Minimum width for table content */
+  }
+
+  .admin-table th {
+    font-size: 0.625rem;
+    padding: 6px 4px;
+  }
+
   .admin-table td {
     padding: 8px 4px;
+    font-size: 0.6875rem;
+  }
+
+  .admin-category-item {
+    padding: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .admin-category-name {
+    font-size: 0.875rem;
+  }
+
+  .admin-category-count {
+    font-size: 0.8125rem;
+    padding: 4px 10px;
+  }
+
+  .admin-actions {
+    gap: 4px;
+  }
+
+  .admin-actions button {
+    min-height: 32px;
+    padding: 4px 10px;
+    font-size: 0.75rem;
+  }
+
+  .admin-permission-tag {
+    font-size: 0.625rem;
+    padding: 2px 6px;
+  }
+
+  .admin-role-badge {
+    font-size: 0.6875rem;
+    padding: 4px 10px;
+  }
+
+  .admin-dashboard-hero {
+    padding: 24px 16px;
+    margin-bottom: 20px;
+  }
+
+  .admin-dashboard-title {
+    font-size: 1.5rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .admin-dashboard-subtitle {
+    font-size: 0.9375rem;
+  }
+
+  .admin-analytics-hero {
+    padding: 24px 16px;
+    margin-bottom: 20px;
+  }
+
+  .admin-analytics-title {
+    font-size: 1.5rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .admin-analytics-subtitle {
+    font-size: 0.9375rem;
+  }
+
+  .falcon-metric-tabs {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .falcon-metric-tab {
+    padding: 12px;
+  }
+
+  .falcon-metric-value {
+    font-size: 1.25rem;
+  }
+
+  .falcon-analytics-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .falcon-chart-realtime-container {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .admin-daily-uploads-chart {
+    padding: 20px 12px;
+    min-height: 240px;
+  }
+
+  .admin-top-uploaders {
+    padding: 20px 16px;
+  }
+
+  .admin-top-uploader-item {
+    padding: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .admin-category-chart {
+    padding: 20px 16px;
   }
 }
 
