@@ -85,7 +85,11 @@ export const Header = memo(function Header() {
                       )}
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="user-menu-content">
+                  <DropdownMenuContent
+                    align="start"
+                    side="bottom"
+                    className="user-menu-content"
+                  >
                     <DropdownMenuItem asChild>
                       <Link to="/favorites" className="user-menu-item">
                         <Heart size={16} />

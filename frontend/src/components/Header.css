@@ -357,9 +357,29 @@
   margin-top: 8px;
   animation: slideDownFade 0.2s ease-out;
   transform-origin: top right !important;
-  /* Ensure dropdown doesn't cause horizontal overflow */
-  right: 0 !important;
-  left: auto !important;
+  z-index: 1600 !important; /* Higher than header z-index (1500) */
+  /* Ensure dropdown doesn't cause horizontal overflow on desktop */
+}
+
+@media (min-width: 769px) {
+  .user-menu-content {
+    right: 0 !important;
+    left: auto !important;
+  }
+}
+
+/* Mobile: Position menu below avatar */
+@media (max-width: 768px) {
+  .user-menu-content {
+    transform-origin: top left !important;
+    /* Let Radix UI handle positioning, but ensure it doesn't overflow */
+    max-width: min(200px, calc(100vw - 24px)) !important;
+  }
+  
+  /* Target Radix UI data attributes for mobile positioning */
+  .user-menu-content[data-side="bottom"][data-align="start"] {
+    transform-origin: top left !important;
+  }
 }
 
 @keyframes slideDownFade {
