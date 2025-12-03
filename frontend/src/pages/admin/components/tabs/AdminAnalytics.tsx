@@ -278,11 +278,11 @@ export function AdminAnalytics() {
                     <div className="falcon-card-header">
                         <div className="falcon-chart-header-left">
                             {/* Metric Label and Value */}
-                            <div style={{ marginBottom: '24px' }}>
-                                <div style={{ fontSize: '0.875rem', color: '#767676', textTransform: 'uppercase', marginBottom: '4px' }}>
+                            <div className="falcon-chart-metric-info">
+                                <div className="falcon-chart-metric-label">
                                     {activeTab === 'users' ? 'NGƯỜI DÙNG' : activeTab === 'images' ? 'ẢNH' : activeTab === 'pending' ? 'CHỜ DUYỆT' : 'ĐÃ PHÊ DUYỆT'}
                                 </div>
-                                <div style={{ fontSize: '36px', fontWeight: 700, color: '#111' }}>
+                                <div className="falcon-chart-metric-value">
                                     {activeTab === 'users' 
                                         ? analytics.users.total.toLocaleString() 
                                         : activeTab === 'images' 
@@ -305,7 +305,7 @@ export function AdminAnalytics() {
                         </div>
                     </div>
                     <div className="falcon-card-body">
-                        <div className="insights-chart-container" style={{ height: '400px', position: 'relative' }}>
+                        <div className="insights-chart-container">
                             <ChartContainer config={chartConfig} className="h-full w-full">
                                 <AreaChart data={formattedChartData.data} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                                     <defs>

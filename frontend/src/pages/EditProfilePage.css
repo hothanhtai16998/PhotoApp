@@ -5,6 +5,16 @@
   padding: 40px 20px;
   padding-top: calc(var(--header-height, 65px) + 40px);
   margin-top: 0;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
+}
+
+.profile-settings-page *,
+.profile-settings-page *::before,
+.profile-settings-page *::after {
+  box-sizing: border-box;
 }
 
 .profile-settings-container {
@@ -15,6 +25,9 @@
   grid-template-columns: 240px 1fr;
   gap: 60px;
   align-items: start;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 /* Left Sidebar */
@@ -67,12 +80,18 @@
 .profile-main-content {
   max-width: min(700px, 96%);
   padding-bottom: 60px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .profile-form {
   display: flex;
   flex-direction: column;
   gap: 40px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .form-title {
@@ -207,6 +226,8 @@
   border-radius: 6px;
   font-size: 0.9375rem;
   transition: border-color 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .form-field input:focus {
@@ -275,6 +296,8 @@
   resize: vertical;
   min-height: 120px;
   transition: border-color 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .bio-textarea:focus {
@@ -303,6 +326,8 @@
   border-radius: 6px;
   overflow: hidden;
   transition: border-color 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .input-with-prefix:focus-within {
@@ -443,46 +468,341 @@
 
 @media (max-width: 768px) {
   .profile-settings-page {
-    padding: 20px 16px;
+    padding: 0 12px 100px 12px;
+    padding-top: var(--header-height, 65px);
+    overflow-x: hidden;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .profile-settings-container {
     grid-template-columns: 1fr;
-    gap: 32px;
+    gap: 0;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
   }
 
   .profile-sidebar {
     position: static;
     order: -1;
+    margin-top: 0;
+    margin-bottom: 20px;
+    margin-left: -12px;
+    margin-right: -12px;
+    width: calc(100% + 24px);
+    max-width: calc(100% + 24px);
+    box-sizing: border-box;
+    overflow-x: visible;
+    background: #f9f9f9;
+    border-radius: 0;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e5e5;
+  }
+
+  .sidebar-title {
+    font-size: 0.8125rem;
+    margin-bottom: 12px;
+    padding: 0 4px;
+    font-weight: 600;
+    color: #111;
   }
 
   .sidebar-nav {
     flex-direction: row;
     overflow-x: auto;
+    overflow-y: hidden;
     gap: 8px;
-    padding-bottom: 8px;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #d1d1d1 transparent;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .sidebar-nav::-webkit-scrollbar {
+    height: 4px;
+    display: block;
+  }
+
+  .sidebar-nav::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .sidebar-nav::-webkit-scrollbar-thumb {
+    background: #d1d1d1;
+    border-radius: 2px;
   }
 
   .sidebar-link {
     white-space: nowrap;
-    padding: 8px 16px;
+    padding: 10px 16px;
+    min-height: 44px; /* Better touch target */
+    display: flex;
+    align-items: center;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  .sidebar-link:hover {
+    background: #f5f5f5;
+    border-color: #111;
+  }
+
+  .sidebar-link.active {
+    background: #111;
+    color: #fff;
+    border-color: #111;
+  }
+
+  .profile-main-content {
+    max-width: 100%;
+    padding-bottom: 0;
+    padding-top: 0;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  .profile-form {
+    gap: 32px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  .form-title {
+    font-size: 1.5rem;
+    margin-bottom: 24px;
   }
 
   .profile-image-section {
     flex-direction: column;
     align-items: center;
     text-align: center;
+    gap: 20px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .profile-image-wrapper {
+    width: 100px;
+    height: 100px;
+  }
+
+  .profile-image,
+  .profile-image-placeholder {
+    width: 100px;
+    height: 100px;
+    font-size: 2rem;
+  }
+
+  .profile-basic-info {
+    width: 100%;
+    gap: 16px;
+    box-sizing: border-box;
   }
 
   .form-row {
     grid-template-columns: 1fr;
+    gap: 16px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .form-field {
+    gap: 6px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .form-field input,
+  .form-field textarea,
+  .input-with-prefix input {
+    padding: 12px 14px;
+    font-size: 1rem; /* Prevent zoom on iOS */
+    min-height: 44px; /* Better touch target */
+  }
+
+  .bio-textarea {
+    min-height: 100px;
+    padding-bottom: 32px;
+  }
+
+  .form-section {
+    gap: 16px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .section-title {
+    font-size: 1rem;
   }
 
   .form-actions {
     justify-content: stretch;
+    padding-top: 16px;
+    margin-top: 8px;
   }
 
   .update-btn {
     width: 100%;
+    padding: 14px 24px;
+    font-size: 1rem;
+    min-height: 48px; /* Better touch target */
+  }
+
+  .input-with-prefix {
+    min-height: 44px;
+  }
+
+  .input-prefix {
+    padding: 12px 14px;
+    font-size: 1rem;
+  }
+
+  .checkbox-field {
+    gap: 10px;
+    min-height: 44px;
+    align-items: center;
+  }
+
+  .checkbox-input {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-settings-page {
+    padding: 0 8px 90px 8px;
+    padding-top: var(--header-height, 65px);
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+  }
+
+  .profile-settings-container {
+    gap: 0;
+  }
+
+  .profile-sidebar {
+    width: calc(100% + 16px);
+    max-width: calc(100% + 16px);
+    padding: 10px 12px;
+    margin-top: var(--header-height);
+  }
+
+  .sidebar-title {
+    font-size: 0.75rem;
+    margin-bottom: 10px;
+    padding: 0 4px;
+    font-weight: 600;
+  }
+
+  .sidebar-nav {
+    gap: 6px;
+    padding-bottom: 4px;
+  }
+
+  .sidebar-link {
+    padding: 10px 14px;
+    font-size: 0.8125rem;
+    min-height: 44px;
+  }
+
+  .profile-form {
+    gap: 24px;
+  }
+
+  .form-title {
+    font-size: 1.25rem;
+    margin-bottom: 20px;
+  }
+
+  .profile-image-section {
+    gap: 16px;
+  }
+
+  .profile-image-wrapper {
+    width: 80px;
+    height: 80px;
+  }
+
+  .profile-image,
+  .profile-image-placeholder {
+    width: 80px;
+    height: 80px;
+    font-size: 1.75rem;
+  }
+
+  .change-image-btn {
+    font-size: 0.8125rem;
+  }
+
+  .profile-basic-info {
+    gap: 12px;
+  }
+
+  .form-row {
+    gap: 12px;
+  }
+
+  .form-field {
+    gap: 4px;
+  }
+
+  .form-field label {
+    font-size: 0.8125rem;
+  }
+
+  .form-field input,
+  .form-field textarea,
+  .input-with-prefix input {
+    padding: 10px 12px;
+    font-size: 0.9375rem;
+  }
+
+  .bio-textarea {
+    min-height: 90px;
+    padding-bottom: 28px;
+  }
+
+  .form-section {
+    gap: 12px;
+  }
+
+  .section-title {
+    font-size: 0.9375rem;
+  }
+
+  .field-hint,
+  .field-url {
+    font-size: 0.75rem;
+  }
+
+  .form-actions {
+    padding-top: 12px;
+  }
+
+  .update-btn {
+    padding: 12px 20px;
+    font-size: 0.9375rem;
+    min-height: 44px;
+  }
+
+  .account-badge {
+    font-size: 0.6875rem;
+    padding: 3px 8px;
+    margin-top: 6px;
   }
 }

@@ -186,9 +186,10 @@ function AdminPage() {
                     {/* Mobile Menu Button */}
                     {isMobile && (
                         <button
-                            className="admin-mobile-menu-btn"
+                            className={`admin-mobile-menu-btn ${mobileMenuOpen ? 'menu-open' : ''}`}
                             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                            aria-label="Toggle menu"
+                            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+                            aria-expanded={mobileMenuOpen}
                         >
                             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
                         </button>
