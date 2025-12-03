@@ -68,6 +68,24 @@ function AdminPage() {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+    // Get the display name for the active tab
+    const getActiveTabName = (): string => {
+        const tabNames: Record<TabType, string> = {
+            'analytics': 'Phân tích',
+            'users': 'Người dùng',
+            'images': 'Ảnh',
+            'categories': 'Danh mục ảnh',
+            'collections': 'Bộ sưu tập',
+            'roles': 'Quyền quản trị',
+            'permissions': 'Ma trận quyền hạn',
+            'favorites': 'Quản lý yêu thích',
+            'moderation': 'Kiểm duyệt nội dung',
+            'logs': 'Nhật ký hệ thống',
+            'settings': 'Cài đặt',
+        };
+        return tabNames[activeTab] || 'Menu';
+    };
+
     // Listen for tab change events from quick actions
     useEffect(() => {
         const handleTabChange = (e: Event) => {
@@ -172,7 +190,14 @@ function AdminPage() {
                             aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
                             aria-expanded={mobileMenuOpen}
                         >
-                            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                            {mobileMenuOpen ? (
+                                <X size={20} />
+                            ) : (
+                                <>
+                                    <Menu size={20} className="admin-mobile-menu-icon" />
+                                    <span className="admin-mobile-tab-name">{getActiveTabName()}</span>
+                                </>
+                            )}
                         </button>
                     )}
 

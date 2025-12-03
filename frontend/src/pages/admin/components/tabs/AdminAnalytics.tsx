@@ -277,21 +277,6 @@ export function AdminAnalytics() {
                 <div className="falcon-card falcon-main-chart">
                     <div className="falcon-card-header">
                         <div className="falcon-chart-header-left">
-                            {/* Metric Label and Value */}
-                            <div className="falcon-chart-metric-info">
-                                <div className="falcon-chart-metric-label">
-                                    {activeTab === 'users' ? 'NGƯỜI DÙNG' : activeTab === 'images' ? 'ẢNH' : activeTab === 'pending' ? 'CHỜ DUYỆT' : 'ĐÃ PHÊ DUYỆT'}
-                                </div>
-                                <div className="falcon-chart-metric-value">
-                                    {activeTab === 'users' 
-                                        ? analytics.users.total.toLocaleString() 
-                                        : activeTab === 'images' 
-                                        ? analytics.images.total.toLocaleString()
-                                        : activeTab === 'pending'
-                                        ? analytics.images.pendingModeration.toLocaleString()
-                                        : analytics.images.approved.toLocaleString()}
-                                </div>
-                            </div>
                             <select
                                 value={days}
                                 onChange={(e) => setDays(Number(e.target.value))}
