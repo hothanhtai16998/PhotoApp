@@ -9,11 +9,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Heart } from "lucide-react";
 import type { Image } from "@/types/image";
 import ProgressiveImage from "@/components/ProgressiveImage";
-import api from "@/lib/axios";
 import { generateImageSlug, extractIdFromSlug } from "@/lib/utils";
 import { toast } from "sonner";
 import { appConfig } from "@/config/appConfig";
 import { uiConfig } from "@/config/uiConfig";
+import { downloadImage } from "@/utils/downloadService";
 import "./FavoritesPage.css";
 
 // Lazy load ImageModal - conditionally rendered
@@ -120,55 +120,13 @@ function FavoritesPage() {
         updateImage(updatedImage._id, updatedImage);
     }, [updateImage]);
 
-    // Download image function - uses backend proxy to avoid CORS issues
+    // Download image function - uses shared download service
     const handleDownloadImage = useCallback(async (image: Image, e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
 
         try {
-            if (!image._id) {
-                throw new Error('Lỗi khi lấy ID của ảnh');
-            }
-
-            // Use backend endpoint to download image (proxies from S3)
-            const response = await api.get(`/images/${image._id}/download`, {
-                responseType: 'blob',
-                withCredentials: true,
-            });
-
-            // Create blob URL from response
-            const blob = new Blob([response.data], { type: response.headers['content-type'] || 'image/webp' });
-            const blobUrl = URL.createObjectURL(blob);
-
-            // Create download link
-            const link = document.createElement('a');
-            link.href = blobUrl;
-
-            // Get filename from Content-Disposition header or use default
-            const contentDisposition = response.headers['content-disposition'];
-            let fileName = 'photo.webp';
-            if (contentDisposition) {
-                const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
-                if (fileNameMatch) {
-                    fileName = fileNameMatch[1];
-                }
-            } else {
-                // Fallback: generate filename from image title
-                const sanitizedTitle = (image.imageTitle || 'photo').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-                const urlExtension = image.imageUrl?.match(/\.([a-z]+)(?:\?|$)/i)?.[1] || 'webp';
-                fileName = `${sanitizedTitle}.${urlExtension}`;
-            }
-            link.download = fileName;
-
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            // Clean up the blob URL after a short delay
-            setTimeout(() => {
-                URL.revokeObjectURL(blobUrl);
-            }, 100);
-
+            await downloadImage(image);
             toast.success('Tải ảnh thành công');
         } catch (error) {
             console.error('Tải ảnh thất bại:', error);

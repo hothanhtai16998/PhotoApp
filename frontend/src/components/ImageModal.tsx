@@ -310,9 +310,7 @@ const ImageModal = ({
         isOpen={showCollectionModal}
         onClose={handleCollectionClose}
         imageId={image._id}
-        onCollectionUpdate={() => {
-          // Optionally refresh data if needed
-        }}
+        onCollectionUpdate={undefined}
       />
     </>
   );

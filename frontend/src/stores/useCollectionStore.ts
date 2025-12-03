@@ -5,8 +5,8 @@ import { collectionService } from '@/services/collectionService';
 import { collectionFavoriteService } from '@/services/collectionFavoriteService';
 import { collectionVersionService } from '@/services/collectionVersionService';
 import type { CollectionState } from '@/types/store';
-import type { Collection } from '@/types/collection';
 import type { ApiErrorResponse } from '@/types/errors';
+import { isCollection } from '@/utils/typeGuards';
 
 export const useCollectionStore = create(
 	immer<CollectionState>((set, get) => ({
@@ -180,9 +180,15 @@ export const useCollectionStore = create(
 					versionNumber
 				);
 
-				set((state) => {
-					state.collection = restoredCollection as unknown as Collection;
-				});
+				// Use type guard for safe type checking
+				if (isCollection(restoredCollection)) {
+					set((state) => {
+						state.collection = restoredCollection;
+					});
+				} else {
+					console.error('Restored collection has invalid format:', restoredCollection);
+					throw new Error('Invalid collection data received');
+				}
 
 				// Reload versions
 				await get().fetchVersions(collectionId);

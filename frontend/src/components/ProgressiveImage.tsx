@@ -1,4 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, memo } from 'react';
+import { LRUSet } from '@/utils/lruCache';
 import './ProgressiveImage.css';
 
 interface ProgressiveImageProps {
@@ -25,20 +26,12 @@ interface ProgressiveImageProps {
  * Fallback to original URL if size-specific URLs are not available
  * (for backward compatibility with old images)
  */
-const generateThumbnailUrl = (imageUrl: string): string => {
-  return imageUrl;
-};
-
-/**
- * Fallback to original URL if size-specific URLs are not available
- */
-const generateSmallUrl = (imageUrl: string): string => {
-  return imageUrl;
-};
+const getFallbackUrl = (imageUrl: string): string => imageUrl;
 
 // Module-level cache to persist loaded image URLs across component mounts
 // This prevents flashing when navigating back to the grid
-const globalLoadedImages = new Set<string>();
+// Uses LRU cache to prevent memory leaks from unbounded growth
+const globalLoadedImages = new LRUSet(500);
 
 /**
  * Check if an image is already loaded in the browser cache
@@ -96,8 +89,8 @@ const ProgressiveImage = memo(({
   fetchPriority = 'auto',
 }: ProgressiveImageProps) => {
   // Generate URLs on-the-fly if not provided (for old images)
-  const effectiveThumbnail = thumbnailUrl || generateThumbnailUrl(src);
-  const effectiveSmall = smallUrl || generateSmallUrl(src);
+  const effectiveThumbnail = thumbnailUrl || getFallbackUrl(src);
+  const effectiveSmall = smallUrl || getFallbackUrl(src);
   const effectiveRegular = regularUrl || src;
   
   // AVIF URLs (for srcset generation, use null if not available to avoid duplicates)

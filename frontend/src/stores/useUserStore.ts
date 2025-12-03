@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { authService } from '@/services/authService';
-import { useAuthStore } from '@/stores/useAuthStore';
 import type { UserState } from '@/types/store';
 import type { HttpErrorResponse } from '@/types/errors';
+import { onLogout, onLoginSuccess, dispatchLogout } from '@/utils/authEvents';
 
 export const useUserStore = create(
 	immer<UserState>((set) => ({
@@ -28,13 +28,13 @@ export const useUserStore = create(
 				const errorStatus = (error as HttpErrorResponse)?.response?.status;
 
 				if (errorStatus === 401 || errorStatus === 403) {
-					// User is not authenticated, clear both user and auth state
+					// User is not authenticated, clear user state
 					set((state) => {
 						state.user = null;
 						state.loading = false;
 					});
-					// Also clear auth token
-					useAuthStore.getState().clearAuth();
+					// Dispatch logout event to notify auth store (decoupled)
+					dispatchLogout();
 				} else {
 					// For other errors (network, 500, etc.), keep existing user data
 					set((state) => {
@@ -54,7 +54,20 @@ export const useUserStore = create(
 	}))
 );
 
+// Listen for auth events to keep user store in sync (decoupled from auth store)
+if (typeof window !== 'undefined') {
+	// Clear user when logout event is dispatched
+	onLogout(() => {
+		useUserStore.getState().clearUser();
+	});
 
-
-
+	// Fetch user when login success event is dispatched
+	onLoginSuccess(() => {
+		const state = useUserStore.getState();
+		// Only fetch if we don't have user data yet
+		if (!state.user && !state.loading) {
+			state.fetchMe();
+		}
+	});
+}
 

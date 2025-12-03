@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
-import { useUserStore } from '@/stores/useUserStore';
 import type { AuthState } from '@/types/store';
 import type { ApiErrorResponse, ValidationErrorResponse, HttpErrorResponse } from '@/types/errors';
+import { dispatchLogout, dispatchLoginSuccess } from '@/utils/authEvents';
 
 export const useAuthStore = create<AuthState>((set, get) => ({
 	accessToken: null,
@@ -19,8 +19,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 			accessToken: null,
 			loading: false,
 		});
-		// Also clear user state
-		useUserStore.getState().clearUser();
+		// Dispatch event to notify other stores (decoupled from useUserStore)
+		dispatchLogout();
 	},
 
 		signUp: async (
@@ -77,9 +77,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 					get().setAccessToken(response.accessToken);
 				}
 
-				// Always fetch full user data with permissions from /users/me
-				// This ensures we have the latest user data including permissions
-				await useUserStore.getState().fetchMe();
+				// Dispatch event to notify other stores to fetch user data (decoupled)
+				dispatchLoginSuccess();
 
 				toast.success(
 					'Chào mừng bạn quay lại 🎉'
@@ -133,14 +132,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 		refresh: async () => {
 			try {
 				const { setAccessToken } = get();
-				const { user, fetchMe } = useUserStore.getState();
 				const accessToken = await authService.refresh();
 
 				setAccessToken(accessToken);
 
-				if (!user) {
-					await fetchMe();
-				}
+				// Dispatch event to let user store handle fetching user data
+				dispatchLoginSuccess();
 			} catch (error: unknown) {
 				const errorStatus = (error as HttpErrorResponse)?.response?.status;
 				// Only show error if it's not a 401/403 (expected when not logged in)

@@ -6,6 +6,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { favoriteService } from '@/services/favoriteService';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { LRUCache } from '@/utils/lruCache';
 
 // Global batching state
 const pendingChecks = new Map<string, Set<(result: boolean) => void>>();
@@ -13,7 +14,9 @@ const checkTimeoutRef: { current: ReturnType<typeof setTimeout> | null } = { cur
 const BATCH_DELAY = 100; // Wait 100ms to collect all requests
 
 // Cache for favorite status to allow immediate updates
-const favoriteCache = new Map<string, boolean>();
+// Uses LRU cache to prevent memory leaks from unbounded growth
+const MAX_CACHE_SIZE = 1000;
+const favoriteCache = new LRUCache<boolean>(MAX_CACHE_SIZE);
 
 /**
  * Manually update favorite status in cache (called after toggle)
