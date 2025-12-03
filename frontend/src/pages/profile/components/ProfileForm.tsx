@@ -44,7 +44,7 @@ export const ProfileForm = ({
         <div className="profile-image-container">
           <div className="profile-image-wrapper">
             {avatarPreview ? (
-              <img src={avatarPreview} alt="Preview" className="profile-image" />
+              <img src={avatarPreview} alt="Xem trước" className="profile-image" />
             ) : user.avatarUrl ? (
               <img src={user.avatarUrl} alt={user.displayName} className="profile-image" />
             ) : (
@@ -95,7 +95,7 @@ export const ProfileForm = ({
               <Input id="lastName" {...register('lastName')} />
               <div className="account-badge">
                 <CheckCircle2 size={16} />
-                <span>Checked</span>
+                <span>Đã xác minh</span>
               </div>
             </div>
           </div>
@@ -110,7 +110,7 @@ export const ProfileForm = ({
             />
             {user?.isOAuthUser && (
               <p className="field-hint" style={{ fontSize: '0.8125rem', color: '#767676', marginTop: '4px' }}>
-                Email thuộc tài khoản Google (không thể thay Đổi)
+                Email thuộc tài khoản Google (không thể thay đổi)
               </p>
             )}
           </div>
@@ -125,7 +125,7 @@ export const ProfileForm = ({
 
       {/* Badge Section */}
       <div className="form-section">
-        <h3 className="section-title">Badge</h3>
+        <h3 className="section-title">Huy hiệu</h3>
         <p className="empty-badge-message">Bạn chưa có huy hiệu nào :(</p>
       </div>
 
@@ -141,7 +141,7 @@ export const ProfileForm = ({
           <Input id="phone" {...register('phone')} type="tel" placeholder="e.g., +1 234 567 8900" />
         </div>
         <div className="form-field">
-          <Label htmlFor="personalSite">Personal site/portfolio</Label>
+          <Label htmlFor="personalSite">Trang web cá nhân/portfolio</Label>
           <Input id="personalSite" {...register('personalSite')} placeholder="https://" />
         </div>
         <div className="form-field">
@@ -151,7 +151,7 @@ export const ProfileForm = ({
             {...register('bio')}
             className="bio-textarea"
             maxLength={500}
-            placeholder="Tell us about yourself..."
+            placeholder="Hãy cho chúng tôi biết về bạn..."
           />
           <div className="char-counter">{bioCharCount}</div>
         </div>
@@ -167,7 +167,7 @@ export const ProfileForm = ({
               <span className="input-prefix">@</span>
               <Input id="instagram" {...register('instagram')} placeholder="username" />
             </div>
-            <p className="field-hint">So that we can feature you on @photoapp</p>
+            <p className="field-hint">Để chúng tôi có thể giới thiệu bạn trên @photoapp</p>
           </div>
           <div className="form-field">
             <Label htmlFor="twitter">Tài khoản X (Twitter)</Label>
@@ -175,7 +175,7 @@ export const ProfileForm = ({
               <span className="input-prefix">@</span>
               <Input id="twitter" {...register('twitter')} placeholder="username" />
             </div>
-            <p className="field-hint">So that we can feature you on @photoapp</p>
+            <p className="field-hint">Để chúng tôi có thể giới thiệu bạn trên @photoapp</p>
           </div>
         </div>
       </div>
@@ -191,7 +191,7 @@ export const ProfileForm = ({
             className="checkbox-input"
           />
           <Label htmlFor="showMessageButton" className="checkbox-label">
-            Display a 'Message' button on your profile
+            Hiển thị nút 'Nhắn tin' trên hồ sơ của bạn
           </Label>
         </div>
         <p className="field-hint">Tin nhắn sẽ được gửi tới email của bạn</p>
@@ -200,7 +200,7 @@ export const ProfileForm = ({
       {/* Submit Button */}
       <div className="form-actions">
         <Button type="submit" disabled={isSubmitting} className="update-btn">
-          {isSubmitting ? 'Updating...' : 'Update account'}
+          {isSubmitting ? 'Đang cập nhật...' : 'Cập nhật tài khoản'}
         </Button>
       </div>
     </form>

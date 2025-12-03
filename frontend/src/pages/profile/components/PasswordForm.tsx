@@ -82,7 +82,7 @@ export const PasswordForm = ({
           disabled={isSubmitting}
           className="update-btn"
         >
-          {isSubmitting ? 'Changing...' : 'Change password'}
+          {isSubmitting ? 'Đang đổi...' : 'Đổi mật khẩu'}
         </Button>
       </div>
     </form>

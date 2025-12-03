@@ -75,7 +75,7 @@ export const UserAnalyticsDashboard = () => {
   }, [analytics]);
 
   // Get period label
-  const periodLabel = days === 7 ? 'Last 7 days' : days === 30 ? 'Last 30 days' : days === 365 ? 'Last year' : `${days} days`;
+  const periodLabel = days === 7 ? '7 ngày qua' : days === 30 ? '30 ngày qua' : days === 365 ? 'Năm ngoái' : `${days} ngày`;
 
   // Format number with dots (European format like "2.090")
   const formatNumber = (num: number): string => {
@@ -136,14 +136,14 @@ export const UserAnalyticsDashboard = () => {
   // Chart configuration
   const viewsChartConfig = {
     views: {
-      label: 'Views',
+      label: 'Lượt xem',
       color: '#b1e3c5',
     },
   };
 
   const downloadsChartConfig = {
     downloads: {
-      label: 'Downloads',
+      label: 'Lượt tải',
       color: '#b1e3c5',
     },
   };
@@ -177,7 +177,7 @@ export const UserAnalyticsDashboard = () => {
     <div className="analytics-dashboard">
       {/* Insights Header */}
       <div className="insights-header">
-        <h2 className="insights-title">Insights</h2>
+        <h2 className="insights-title">Thống kê</h2>
         <div className="insights-period-dropdown" ref={periodDropdownRef}>
           <button 
             className="insights-period-button"
@@ -197,10 +197,10 @@ export const UserAnalyticsDashboard = () => {
                     setPeriodDropdownOpen(false);
                   }}
                 >
-                  {optionDays === 7 ? 'Last 7 days' : 
-                   optionDays === 30 ? 'Last 30 days' : 
-                   optionDays === 365 ? 'Last year' : 
-                   `${optionDays} days`}
+                  {optionDays === 7 ? '7 ngày qua' : 
+                   optionDays === 30 ? '30 ngày qua' : 
+                   optionDays === 365 ? 'Năm ngoái' : 
+                   `${optionDays} ngày`}
                 </button>
               ))}
             </div>
@@ -213,7 +213,7 @@ export const UserAnalyticsDashboard = () => {
         {/* Views Card */}
         <div className="insights-card">
           <div className="insights-card-header">
-            <div className="insights-metric-label">VIEWS</div>
+            <div className="insights-metric-label">LƯỢT XEM</div>
             <div className="insights-metric-value">{formatNumber(analytics.summary.totalViews)}</div>
           </div>
           
@@ -256,13 +256,13 @@ export const UserAnalyticsDashboard = () => {
           {/* Most Viewed On */}
           <div className="insights-most-section">
             <div className="insights-most-header">
-              <span>Most viewed on</span>
+              <span>Được xem nhiều nhất trên</span>
               <button className="insights-most-toggle">
                 <ChevronDown size={16} />
               </button>
             </div>
             <div className="insights-platform">
-              <span className="insights-platform-name">Unsplash</span>
+              <span className="insights-platform-name">PhotoApp</span>
             </div>
             {analytics.mostPopularImages.length > 0 && (
               <div className="insights-thumbnails">
@@ -289,7 +289,7 @@ export const UserAnalyticsDashboard = () => {
         {/* Downloads Card */}
         <div className="insights-card">
           <div className="insights-card-header">
-            <div className="insights-metric-label">DOWNLOADS</div>
+            <div className="insights-metric-label">LƯỢT TẢI</div>
             <div className="insights-metric-value">{formatNumber(analytics.summary.totalDownloads)}</div>
           </div>
           
@@ -332,7 +332,7 @@ export const UserAnalyticsDashboard = () => {
           {/* Most Downloaded On */}
           <div className="insights-most-section">
             <div className="insights-most-header">
-              <span>Most downloaded on</span>
+              <span>Được tải nhiều nhất trên</span>
               <button className="insights-most-toggle">
                 <ChevronDown size={16} />
               </button>
@@ -340,7 +340,7 @@ export const UserAnalyticsDashboard = () => {
             {analytics.summary.totalDownloads > 0 ? (
               <>
                 <div className="insights-platform">
-                  <span className="insights-platform-name">Unsplash</span>
+                  <span className="insights-platform-name">PhotoApp</span>
                 </div>
                 {analytics.mostPopularImages.filter(img => img.downloads > 0).slice(0, 3).length > 0 && (
                   <div className="insights-thumbnails">
@@ -363,7 +363,7 @@ export const UserAnalyticsDashboard = () => {
                 )}
               </>
             ) : (
-              <div className="insights-empty-state">Nothing to report so far.</div>
+              <div className="insights-empty-state">Chưa có dữ liệu để báo cáo.</div>
             )}
           </div>
         </div>
@@ -374,50 +374,50 @@ export const UserAnalyticsDashboard = () => {
         {/* Uses Section */}
         <div className="insights-section-card">
           <div className="insights-section-header">
-            <h3 className="insights-section-title">Uses</h3>
-            <button className="insights-section-button">Show Highlights</button>
+            <h3 className="insights-section-title">Sử dụng</h3>
+            <button className="insights-section-button">Hiển thị nổi bật</button>
           </div>
           <div className="insights-uses-content">
             {/* Uses chart/visualization would go here */}
             <div className="insights-empty-state">Nothing to report so far.</div>
           </div>
           <div className="insights-section-footer">
-            <span className="insights-section-note">Photo uses are limited to select websites for the moment.</span>
+            <span className="insights-section-note">Việc sử dụng ảnh hiện chỉ giới hạn ở một số trang web nhất định.</span>
           </div>
         </div>
 
         {/* Milestones Section */}
         <div className="insights-section-card">
           <div className="insights-section-header">
-            <h3 className="insights-section-title">Your milestones</h3>
+            <h3 className="insights-section-title">Cột mốc của bạn</h3>
           </div>
           <div className="insights-milestones">
             <div className="milestone-item">
               <Award size={20} className="milestone-icon" />
               <div className="milestone-content">
-                <h4 className="milestone-title">First upload</h4>
-                <div className="milestone-date">Uploaded {new Date(analytics.mostPopularImages[0]?.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</div>
+                <h4 className="milestone-title">Lần tải lên đầu tiên</h4>
+                <div className="milestone-date">Đã tải lên {new Date(analytics.mostPopularImages[0]?.createdAt || Date.now()).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}</div>
               </div>
             </div>
             <div className="milestone-item milestone-upcoming">
               <Target size={20} className="milestone-icon" />
               <div className="milestone-content">
-                <h4 className="milestone-title">Featured Images</h4>
-                <div className="milestone-description">Reach 5 featured photos on the editorial feed</div>
+                <h4 className="milestone-title">Ảnh nổi bật</h4>
+                <div className="milestone-description">Đạt 5 ảnh nổi bật trên trang chủ</div>
               </div>
             </div>
             <div className="milestone-item milestone-upcoming">
               <Eye size={20} className="milestone-icon" />
               <div className="milestone-content">
-                <h4 className="milestone-title">Views</h4>
-                <div className="milestone-description">Reach 100k views</div>
+                <h4 className="milestone-title">Lượt xem</h4>
+                <div className="milestone-description">Đạt 100k lượt xem</div>
               </div>
             </div>
             <div className="milestone-item milestone-upcoming">
               <Download size={20} className="milestone-icon" />
               <div className="milestone-content">
-                <h4 className="milestone-title">Downloads</h4>
-                <div className="milestone-description">Reach 500k downloads</div>
+                <h4 className="milestone-title">Lượt tải</h4>
+                <div className="milestone-description">Đạt 500k lượt tải</div>
               </div>
             </div>
           </div>
@@ -427,9 +427,9 @@ export const UserAnalyticsDashboard = () => {
       {/* Your Images Section */}
       <div className="insights-images-section">
         <div className="insights-images-header">
-          <h3 className="insights-section-title">Your images</h3>
+          <h3 className="insights-section-title">Ảnh của bạn</h3>
           <button className="insights-sort-button">
-            Sort by Views
+            Sắp xếp theo lượt xem
             <ChevronDown size={16} />
           </button>
         </div>
@@ -453,9 +453,9 @@ export const UserAnalyticsDashboard = () => {
                 </div>
                 <div className="insights-image-info">
                   <div className="insights-image-meta">
-                    <div className="insights-image-badge">Published</div>
+                    <div className="insights-image-badge">Đã xuất bản</div>
                     <time className="insights-image-date">
-                      {new Date(image.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                      {new Date(image.createdAt).toLocaleDateString('vi-VN', { month: 'long', day: 'numeric', year: 'numeric' })}
                     </time>
                   </div>
                   <div className="insights-image-stats">
@@ -473,7 +473,7 @@ export const UserAnalyticsDashboard = () => {
             ))}
           </div>
         ) : (
-          <div className="insights-empty-state">No images yet.</div>
+          <div className="insights-empty-state">Chưa có ảnh nào.</div>
         )}
       </div>
     </div>

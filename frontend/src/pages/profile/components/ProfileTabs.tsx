@@ -40,7 +40,7 @@ export function ProfileTabs({
                 onClick={() => onTabChange('collections')}
             >
                 <Folder size={18} className="tab-icon" />
-                <span className="tab-label">Collections</span>
+                <span className="tab-label">Bộ sưu tập</span>
                 <span className="tab-count">{collectionsCount}</span>
             </button>
             <button

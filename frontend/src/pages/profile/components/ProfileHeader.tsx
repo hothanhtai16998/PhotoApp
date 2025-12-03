@@ -94,7 +94,7 @@ export function ProfileHeader({
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="social-link"
-                                title="Website"
+                                title="Trang web"
                             >
                                 <Globe size={18} />
                             </a>
@@ -175,7 +175,7 @@ export function ProfileHeader({
                     </button>
                     <button
                         className="profile-stat-card"
-                        title="Total likes received on your images"
+                        title="Tổng lượt thích nhận được trên ảnh của bạn"
                     >
                         <div className="stat-card-icon" style={{ backgroundColor: '#fce7f3' }}>
                             <Heart size={20} color="#be185d" />
@@ -191,7 +191,7 @@ export function ProfileHeader({
                     </button>
                     <button
                         className="profile-stat-card"
-                        title="Total downloads of your images"
+                        title="Tổng lượt tải xuống ảnh của bạn"
                     >
                         <div className="stat-card-icon" style={{ backgroundColor: '#d1fae5' }}>
                             <Download size={20} color="#059669" />
