@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { appConfig } from "@/config/appConfig";
 import { timingConfig } from "@/config/timingConfig";
 import { uiConfig } from "@/config/uiConfig";
+import { t } from "@/i18n";
 import "./ProfilePage.css";
 
 type TabType = 'photos' | 'following' | 'collections' | 'stats';
@@ -300,7 +301,7 @@ function ProfilePage() {
 
     const handleEditPins = () => {
         // Feature coming soon - allows users to pin favorite images to their profile
-        toast.info('Tính năng chỉnh sửa ghim sẽ sớm ra mắt! Tính năng này sẽ cho phép bạn giới thiệu những hình ảnh yêu thích trên hồ sơ của mình.');
+        toast.info(t('profile.pinnedEditSoon'));
     };
 
 
@@ -493,7 +494,7 @@ function ProfilePage() {
                     window.open(image.imageUrl, '_blank');
                 }
             } catch (fallbackError) {
-                console.error('Lỗi fallback khi tải ảnh:', fallbackError);
+                console.error('Fallback download error:', fallbackError);
             }
         }
     }, []);
@@ -568,20 +569,20 @@ function ProfilePage() {
                     <div className="profile-content">
                         {activeTab === TABS.PHOTOS ? (
                             loading ? (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4" aria-label="Đang tải ảnh" aria-live="polite">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4" aria-label={t('profile.loadingPhotos')} aria-live="polite">
                                     {Array.from({ length: 12 }).map((_, i) => (
                                         <Skeleton key={i} className="w-full h-64" />
                                     ))}
                                 </div>
                             ) : displayImages.length === 0 ? (
                                 <div className="empty-state" role="status" aria-live="polite">
-                                    <p>Chưa có ảnh nào.</p>
+                                    <p>{t('profile.noPhotos')}</p>
                                     <Button
                                         variant="outline"
                                         onClick={() => navigate('/upload')}
                                         className="mt-4"
                                     >
-                                        Tải ảnh lên
+                                        {t('upload.addImage')}
                                     </Button>
                                 </div>
                             ) : (
@@ -599,7 +600,7 @@ function ProfilePage() {
                             </Suspense>
                         ) : activeTab === TABS.COLLECTIONS ? (
                             collectionsLoading ? (
-                                <div className="profile-collections-grid" aria-label="Đang tải bộ sưu tập" aria-live="polite">
+                                <div className="profile-collections-grid" aria-label={t('profile.loadingCollections')} aria-live="polite">
                                     {Array.from({ length: uiConfig.skeleton.collectionGridCount }).map((_, index) => (
                                         <div key={`skeleton-${index}`} className="profile-collection-item">
                                             <Skeleton className="w-full h-48 rounded-lg mb-3" />
@@ -609,13 +610,13 @@ function ProfilePage() {
                                 </div>
                             ) : collections.length === 0 ? (
                                 <div className="empty-state" role="status" aria-live="polite">
-                                    <p>Chưa có bộ sưu tập nào.</p>
+                                    <p>{t('profile.noCollections')}</p>
                                     <Button
                                         variant="outline"
                                         onClick={() => navigate('/')}
                                         className="mt-4"
                                     >
-                                        Khám phá ảnh để tạo bộ sưu tập
+                                        {t('favorites.explore')}
                                     </Button>
                                 </div>
                             ) : (
@@ -655,7 +656,7 @@ function ProfilePage() {
                                                                     e.stopPropagation();
                                                                     navigate(`/collections/${collection._id}`);
                                                                 }}
-                                                                title="Xem bộ sưu tập"
+                                                                title={t('profile.viewCollection')}
                                                             >
                                                                 <Eye size={18} />
                                                             </button>

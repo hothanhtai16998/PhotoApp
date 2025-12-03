@@ -7,6 +7,7 @@ import { useImageStore } from '@/stores/useImageStore';
 import { ImageModalInfo } from './ImageModalInfo';
 import { ImageModalShare } from './ImageModalShare';
 import ReportButton from '../ReportButton';
+import { t, getLocale } from '@/i18n';
 
 interface ImageModalSidebarProps {
   image: Image;
@@ -34,8 +35,9 @@ export const ImageModalSidebar = ({
   onClose,
 }: ImageModalSidebarProps) => {
   const navigate = useNavigate();
+  const locale = getLocale();
   const formattedDate = useFormattedDate(image.createdAt, {
-    locale: 'vi-VN',
+    locale: locale === 'vi' ? 'vi-VN' : 'en-US',
     format: 'long',
   });
 
@@ -45,11 +47,11 @@ export const ImageModalSidebar = ({
       <div className="modal-footer-left">
         <div className="modal-footer-left-stats">
           <div className="modal-stat">
-            <span className="stat-label">Lượt xem</span>
+            <span className="stat-label">{t('image.views')}</span>
             <span className="stat-value">{views.toLocaleString()}</span>
           </div>
           <div className="modal-stat">
-            <span className="stat-label">Lượt tải</span>
+            <span className="stat-label">{t('image.downloads')}</span>
             <span className="stat-value">{downloads.toLocaleString()}</span>
           </div>
         </div>
@@ -78,7 +80,7 @@ export const ImageModalSidebar = ({
                       }}
                       onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
                       onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-                      title="Xem trên Google Maps"
+                      title={t('image.viewOnMaps')}
                     >
                       {image.location}
                       <ExternalLink size={12} style={{ flexShrink: 0, opacity: 0.7 }} />
@@ -112,7 +114,7 @@ export const ImageModalSidebar = ({
                         useImageStore.getState().fetchImages({ tag });
                       }, 100);
                     }}
-                    title={`Tìm kiếm: ${tag}`}
+                    title={t('image.searchTag', { tag })}
                   >
                     <Tag size={12} />
                     {tag}
@@ -131,15 +133,15 @@ export const ImageModalSidebar = ({
             className={`modal-footer-btn ${isFavorited ? 'favorited' : ''}`}
             onClick={handleToggleFavorite}
             disabled={isTogglingFavorite}
-            aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-            title={`${isFavorited ? 'Bỏ yêu thích' : 'Yêu thích'} (F)`}
+            aria-label={isFavorited ? t('image.unfavorite') : t('image.favorite')}
+            title={`${isFavorited ? t('image.unfavorite') : t('image.favorite')} (F)`}
           >
             <Heart
               size={18}
               fill={isFavorited ? 'currentColor' : 'none'}
               className={isFavorited ? 'favorite-icon-filled' : ''}
             />
-            <span>{isFavorited ? 'Đã lưu' : 'Lưu'}</span>
+            <span>{isFavorited ? t('image.saved') : t('image.save')}</span>
             <kbd className="keyboard-hint">F</kbd>
           </button>
         )}
@@ -147,11 +149,11 @@ export const ImageModalSidebar = ({
           <button
             className="modal-footer-btn"
             onClick={handleOpenCollection}
-            aria-label="Save to collection"
-            title="Lưu vào bộ sưu tập"
+            aria-label={t('image.addToCollection')}
+            title={t('image.addToCollection')}
           >
             <FolderPlus size={18} />
-            <span>Bộ sưu tập</span>
+            <span>{t('image.collection')}</span>
           </button>
         )}
         <ImageModalShare image={image} />

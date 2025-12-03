@@ -8,6 +8,7 @@ import { useUploadModalState } from './upload/hooks/useUploadModalState';
 import { UploadProgress } from './upload/UploadProgress';
 import { UploadPreview } from './upload/UploadPreview';
 import { UploadForm } from './upload/UploadForm';
+import { t } from '@/i18n';
 import './UploadModal.css';
 
 interface UploadModalProps {
@@ -200,15 +201,15 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                     <div className="confetti-container" id="confetti-container"></div>
                     <div className="success-content">
                         <div className="success-header">
-                            <h1 className="success-title">Thêm ảnh thành công 🎉</h1>
-                            <p className="success-subtitle">Our Editorial team is now reviewing your image.</p>
+                            <h1 className="success-title">{t('upload.success')}</h1>
+                            <p className="success-subtitle">{t('upload.successHint')}</p>
                         </div>
                         <Button
                             className="success-button"
                             onClick={handleViewProfile}
                             size="lg"
                         >
-                            Xem trang cá nhân
+                            {t('upload.viewProfile')}
                             <ArrowRight size={20} />
                         </Button>
                     </div>
@@ -224,7 +225,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                 <div className="upload-modal" onClick={(e) => e.stopPropagation()}>
                     {/* Header */}
                     <div className="upload-modal-header">
-                        <h2 className="upload-modal-title">Thêm ảnh vào PhotoApp</h2>
+                        <h2 className="upload-modal-title">{t('upload.title')}</h2>
                         <button className="upload-modal-close" onClick={handleCancel}>
                             <X size={20} />
                         </button>
@@ -244,21 +245,21 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                 <Upload size={64} />
                             </div>
                             <div className="upload-text">
-                                <span className="upload-main-text">Thêm ảnh</span>
+                                <span className="upload-main-text">{t('upload.addImage')}</span>
                                 <span className="upload-tag">JPEG</span>
                             </div>
                             <div className="upload-text">
-                                <span className="upload-main-text">hoặc bản vẽ illustration</span>
+                                <span className="upload-main-text">{t('upload.orIllustration')}</span>
                                 <span className="upload-tag">SVG</span>
                             </div>
-                            <p className="upload-instruction">Kẻo thả hoặc</p>
+                            <p className="upload-instruction">{t('upload.dragDrop')}</p>
                             <p className="upload-browse">
                                 <button type="button" className="upload-browse-link" onClick={(e) => {
                                     e.stopPropagation();
                                     fileInputRef.current?.click();
-                                }}>Chọn</button> ảnh từ máy tính, điện thoại (có thể chọn nhiều ảnh)
+                                }}>{t('upload.browse')}</button> {t('upload.browseHint')}
                             </p>
-                            <p className="upload-max-size">Tối đa 10 MB</p>
+                            <p className="upload-max-size">{t('upload.maxSize')}</p>
                             <input
                                 type="file"
                                 accept="image/*"
@@ -275,10 +276,10 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                     <div className="upload-modal-footer">
                         <div className="footer-buttons">
                             <Button type="button" variant="outline" onClick={handleCancel}>
-                                Huỷ
+                                {t('common.cancel')}
                             </Button>
                             <Button type="button" disabled>
-                                Tiếp theo
+                                {t('common.next')}
                             </Button>
                         </div>
                     </div>
@@ -293,7 +294,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
             <div className="upload-modal" onClick={(e) => e.stopPropagation()}>
                 {/* Header */}
                 <div className="upload-modal-header">
-                    <h2 className="upload-modal-title">Thêm ảnh vào PhotoApp</h2>
+                    <h2 className="upload-modal-title">{t('upload.title')}</h2>
                     <button className="upload-modal-close" onClick={handleCancel}>
                         <X size={20} />
                     </button>
@@ -304,7 +305,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                     {/* Header with add more button */}
                     <div className="upload-images-header">
                         <h3>
-                            Đã chọn {imagesData.length} {imagesData.length === 1 ? 'ảnh' : 'ảnh'}
+                            {t('upload.selected', { count: imagesData.length })}
                         </h3>
                         <Button
                             type="button"
@@ -329,7 +330,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                             }}
                         >
                             <Upload size={16} />
-                            Thêm ảnh
+                            {t('upload.addMore')}
                         </Button>
                     </div>
 
@@ -367,7 +368,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                 <div className="upload-modal-footer upload-modal-footer--form">
                     <div className="footer-buttons">
                         <Button type="button" variant="outline" onClick={handleCancel}>
-                            Huỷ
+                            {t('common.cancel')}
                         </Button>
                         <div
                             className="upload-submit-wrapper"
@@ -386,11 +387,11 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                 disabled={loading || !isFormValid}
                                 className="upload-submit-btn"
                             >
-                                {loading ? 'Đang tải...' : `Gửi ${imagesData.length} ảnh`}
+                                {loading ? t('upload.uploading') : t('upload.submit', { count: imagesData.length })}
                             </Button>
                             {showTooltip && !isFormValid && !loading && (
                                 <div className="upload-submit-tooltip">
-                                    Vui lòng điền đầy đủ các trường có dấu <span className="required-marker">*</span>
+                                    {t('upload.fillRequired')} <span className="required-marker">*</span>
                                     <div className="upload-submit-tooltip-arrow" />
                                 </div>
                             )}

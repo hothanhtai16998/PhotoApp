@@ -5,6 +5,7 @@ import { Avatar } from '../Avatar';
 import { DownloadSizeSelector, type DownloadSize } from './DownloadSizeSelector';
 import { FollowButton } from '../FollowButton';
 import { useUserProfileCard } from './hooks/useUserProfileCard';
+import { t } from '@/i18n';
 
 interface ImageModalHeaderProps {
   image: Image;
@@ -65,7 +66,7 @@ export const ImageModalHeader = ({
           onMouseLeave={handleMouseLeave}
           onClick={handleViewProfile}
           style={{ position: 'relative', cursor: 'pointer', willChange: 'opacity' }}
-          title="Xem hồ sơ"
+          title={t('image.viewProfile')}
         >
           <Avatar
             user={image.uploadedBy}
@@ -81,7 +82,7 @@ export const ImageModalHeader = ({
               {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}
               <CheckCircle2 className="verified-badge" size={16} />
             </div>
-            <div className="modal-user-status">Sẵn sàng nhận việc</div>
+            <div className="modal-user-status">{t('image.availableForHire')}</div>
           </div>
 
           {/* User Profile Card */}
@@ -145,7 +146,7 @@ export const ImageModalHeader = ({
                 className="user-profile-card-view-btn"
                 onClick={handleViewProfile}
               >
-                Xem hồ sơ
+                {t('image.viewProfile')}
               </button>
             </div>
           )}
@@ -160,8 +161,8 @@ export const ImageModalHeader = ({
           <button
             className="modal-close-btn-header"
             onClick={onClose}
-            title="Đóng (Esc)"
-            aria-label="Đóng"
+            title={t('image.close')}
+            aria-label={t('common.close')}
           >
             <X size={20} />
           </button>
@@ -181,7 +182,7 @@ export const ImageModalHeader = ({
           onMouseLeave={handleMouseLeave}
           onClick={handleViewProfile}
           style={{ position: 'relative', cursor: 'pointer', willChange: 'opacity' }}
-          title="Xem hồ sơ"
+          title={t('image.viewProfile')}
         >
           <Avatar
             user={image.uploadedBy}
@@ -197,7 +198,7 @@ export const ImageModalHeader = ({
               {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}
               <CheckCircle2 className="verified-badge" size={16} />
             </div>
-            <div className="modal-user-status">Sẵn sàng nhận việc</div>
+            <div className="modal-user-status">{t('image.availableForHire')}</div>
           </div>
 
           {/* User Profile Card */}
@@ -261,7 +262,7 @@ export const ImageModalHeader = ({
                 className="user-profile-card-view-btn"
                 onClick={handleViewProfile}
               >
-                Xem hồ sơ
+                {t('image.viewProfile')}
               </button>
             </div>
           )}
@@ -271,8 +272,8 @@ export const ImageModalHeader = ({
           <button
             className="modal-action-btn"
             onClick={handleToggleFavorite}
-            title={isFavorited ? 'Bỏ yêu thích' : 'Yêu thích'}
-            aria-label={isFavorited ? 'Bỏ yêu thích' : 'Yêu thích'}
+            title={isFavorited ? t('image.unfavorite') : t('image.favorite')}
+            aria-label={isFavorited ? t('image.unfavorite') : t('image.favorite')}
           >
             <Heart
               size={20}
@@ -283,8 +284,8 @@ export const ImageModalHeader = ({
           <button
             className="modal-action-btn"
             onClick={handleOpenCollection}
-            title="Thêm vào bộ sưu tập"
-            aria-label="Thêm vào bộ sưu tập"
+            title={t('image.addToCollection')}
+            aria-label={t('image.addToCollection')}
           >
             <FolderPlus size={20} />
           </button>

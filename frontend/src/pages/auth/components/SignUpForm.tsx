@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Eye, EyeOff, Check, X } from 'lucide-react';
 import type { SignUpFormValue } from '@/types/forms';
 import { ValidationStatus } from './ValidationStatus';
+import { t } from '@/i18n';
 
 interface SignUpFormProps {
   register: UseFormRegister<SignUpFormValue>;
@@ -51,11 +52,11 @@ export const SignUpForm = ({
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="signup-form">
       <div className="signup-form-header">
-        <h2 className="form-subtitle">Đăng nhập với tài khoản</h2>
+        <h2 className="form-subtitle">{t('auth.signInWithAccount')}</h2>
         <p className="form-switch">
-          Đã có tài khoản?{" "}
+          {t('auth.hasAccount')}{" "}
           <Link to="/signin" className="form-link">
-            Đăng nhập
+            {t('auth.signIn')}
           </Link>
         </p>
       </div>
@@ -66,7 +67,7 @@ export const SignUpForm = ({
           <Input
             type="text"
             id="username"
-            placeholder="Tên tài khoản"
+            placeholder={t('auth.username')}
             {...register('username')}
             className={
               errors.username || (usernameStatus.isAvailable === false)
@@ -87,7 +88,7 @@ export const SignUpForm = ({
           <Input
             type="text"
             id="firstName"
-            placeholder="Họ"
+            placeholder={t('auth.lastName')}
             {...register('firstName')}
             className={errors.firstName ? 'error' : ''}
           />
@@ -99,7 +100,7 @@ export const SignUpForm = ({
           <Input
             type="text"
             id="lastName"
-            placeholder="Tên"
+            placeholder={t('auth.firstName')}
             {...register('lastName')}
             className={errors.lastName ? 'error' : ''}
           />
@@ -115,7 +116,7 @@ export const SignUpForm = ({
           <Input
             type="email"
             id="email"
-            placeholder="Email address"
+            placeholder={t('auth.email')}
             {...register('email')}
             className={
               errors.email || (emailStatus.isAvailable === false)
@@ -136,7 +137,7 @@ export const SignUpForm = ({
           <Input
             type={showPassword ? "text" : "password"}
             id="password"
-            placeholder="Mật khẩu"
+            placeholder={t('auth.password')}
             {...register('password')}
             className={errors.password ? 'error' : ''}
           />
@@ -161,7 +162,7 @@ export const SignUpForm = ({
               ) : (
                 <X size={16} className="requirement-icon x-icon" />
               )}
-              <span className="requirement-text">Chứa ít nhất 6 ký tự</span>
+              <span className="requirement-text">{t('auth.passwordMin6')}</span>
             </div>
             <div className={`requirement-item ${passwordValidation.hasLowerUpper ? 'valid' : 'invalid'}`}>
               {passwordValidation.hasLowerUpper ? (
@@ -169,7 +170,7 @@ export const SignUpForm = ({
               ) : (
                 <X size={16} className="requirement-icon x-icon" />
               )}
-              <span className="requirement-text">Chứa cả chữ thường (a-z) và chữ hoa (A-Z)</span>
+              <span className="requirement-text">{t('auth.passwordLowerUpper')}</span>
             </div>
             <div className={`requirement-item ${passwordValidation.hasNumberOrSymbol ? 'valid' : 'invalid'}`}>
               {passwordValidation.hasNumberOrSymbol ? (
@@ -177,7 +178,7 @@ export const SignUpForm = ({
               ) : (
                 <X size={16} className="requirement-icon x-icon" />
               )}
-              <span className="requirement-text">Chứa ít nhất một số (0-9) hoặc ký tự đặc biệt</span>
+              <span className="requirement-text">{t('auth.passwordNumberSymbol')}</span>
             </div>
           </div>
         )}
@@ -189,7 +190,7 @@ export const SignUpForm = ({
           <Input
             type={showPassword ? "text" : "password"}
             id="confirmPassword"
-            placeholder="Xác nhận mật khẩu"
+            placeholder={t('auth.confirmPassword')}
             {...register('confirmPassword')}
             className={errors.confirmPassword ? 'error' : ''}
           />
@@ -204,7 +205,7 @@ export const SignUpForm = ({
         className="continue-btn"
         disabled={isSubmitting}
       >
-        {isSubmitting ? 'Đang tạo...' : 'Tiếp tục'}
+        {isSubmitting ? t('auth.creating') : t('auth.continue')}
       </Button>
     </form>
   );

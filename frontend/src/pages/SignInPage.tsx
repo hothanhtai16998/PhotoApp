@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { signInSchema, type SignInFormValue } from "@/types/forms";
+import { t } from "@/i18n";
 import "./SignInPage.css";
 
 function SignInPage() {
@@ -58,7 +59,7 @@ function SignInPage() {
             window.location.href = `${apiUrl}/api/auth/google`;
         } else {
             // For other providers, show coming soon message
-            alert(`Đăng nhập ${provider.charAt(0).toUpperCase() + provider.slice(1)} sẽ sớm ra mắt!`);
+            alert(t('auth.socialComingSoon', { provider: provider.charAt(0).toUpperCase() + provider.slice(1) }));
         }
     };
 
@@ -76,8 +77,8 @@ function SignInPage() {
             <div className="signin-modal">
                 <div className="signin-modal-content">
                     <div className="signin-header">
-                        <h1 className="signin-title">Chào mừng bạn</h1>
-                        <p className="signin-subtitle">Hãy đăng nhập để bắt đầu</p>
+                        <h1 className="signin-title">{t('auth.welcome')}</h1>
+                        <p className="signin-subtitle">{t('auth.signInToStart')}</p>
                     </div>
 
                     {/* Social Login Buttons */}
@@ -108,18 +109,18 @@ function SignInPage() {
                     {/* Separator */}
                     <div className="signin-separator">
                         <div className="separator-line"></div>
-                        <span className="separator-text">Hoặc</span>
+                        <span className="separator-text">{t('auth.or')}</span>
                         <div className="separator-line"></div>
                     </div>
 
                     {/* Email Signin Form */}
                     <form onSubmit={handleSubmit(onSubmit)} className="signin-form">
                         <div className="signin-form-header">
-                            <h2 className="form-subtitle">Đăng nhập bằng tài khoản</h2>
+                            <h2 className="form-subtitle">{t('auth.signInWithAccount')}</h2>
                             <p className="form-switch">
-                                Chưa có tài khoản?{" "}
+                                {t('auth.noAccount')}{" "}
                                 <Link to="/signup" className="form-link">
-                                    Đăng ký
+                                    {t('auth.signUp')}
                                 </Link>
                             </p>
                         </div>
@@ -129,7 +130,7 @@ function SignInPage() {
                             <Input
                                 type="text"
                                 id="username"
-                                placeholder="Tên tài khoản"
+                                placeholder={t('auth.username')}
                                 {...register('username')}
                                 className={errors.username ? 'error' : ''}
                             />
@@ -144,7 +145,7 @@ function SignInPage() {
                                 <Input
                                     type={showPassword ? "text" : "password"}
                                     id="password"
-                                    placeholder="Mật khẩu"
+                                    placeholder={t('auth.password')}
                                     {...register('password')}
                                     className={errors.password ? 'error' : ''}
                                 />
@@ -166,7 +167,7 @@ function SignInPage() {
                             className="continue-btn"
                             disabled={isSubmitting}
                         >
-                            {isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
+                            {isSubmitting ? t('auth.signingIn') : t('auth.signIn')}
                         </Button>
                     </form>
                 </div>

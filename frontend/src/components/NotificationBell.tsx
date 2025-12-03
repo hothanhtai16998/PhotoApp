@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { useUserStore } from '@/stores/useUserStore';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { t, getLocale } from '@/i18n';
 import './NotificationBell.css';
 
 export default function NotificationBell() {
@@ -24,184 +25,181 @@ export default function NotificationBell() {
 
 	// Get notification message helper
 	const getNotificationMessage = useCallback((notification: Notification): string => {
-		const actorName = notification.actor?.displayName || notification.actor?.username || 'Ai đó';
-		const collectionName = notification.collection?.name || 'bộ sưu tập';
-
-		const imageTitle = notification.image?.imageTitle || 'ảnh của bạn';
+		const actorName = notification.actor?.displayName || notification.actor?.username || t('notifications.someone');
+		const collectionName = notification.collection?.name || t('notifications.collection');
+		const imageTitle = notification.image?.imageTitle || t('notifications.yourPhoto');
 
 		switch (notification.type) {
 			case 'collection_invited': {
 				const permission = notification.metadata?.permission;
 				const permissionText =
 					permission === 'admin'
-						? 'quản trị'
+						? t('notifications.permissionAdmin')
 						: permission === 'edit'
-						? 'chỉnh sửa'
-						: 'xem';
-				return `${actorName} đã mời bạn tham gia bộ sưu tập "${collectionName}" với quyền ${permissionText}`;
+						? t('notifications.permissionEdit')
+						: t('notifications.permissionView');
+				return t('notifications.collectionInvited', { actor: actorName, collection: collectionName, permission: permissionText });
 			}
 			case 'collection_image_added':
-				return `${actorName} đã thêm ảnh vào bộ sưu tập "${collectionName}"`;
+				return t('notifications.collectionImageAdded', { actor: actorName, collection: collectionName });
 			case 'collection_image_removed':
-				return `${actorName} đã xóa ảnh khỏi bộ sưu tập "${collectionName}"`;
+				return t('notifications.collectionImageRemoved', { actor: actorName, collection: collectionName });
 			case 'collection_permission_changed':
-				return `${actorName} đã thay đổi quyền của bạn trong bộ sưu tập "${collectionName}"`;
+				return t('notifications.collectionPermissionChanged', { actor: actorName, collection: collectionName });
 			case 'collection_removed':
-				return `Bạn đã bị xóa khỏi bộ sưu tập "${collectionName}"`;
+				return t('notifications.collectionRemoved', { collection: collectionName });
 			case 'image_favorited':
-				return `${actorName} đã yêu thích ảnh "${imageTitle}"`;
+				return t('notifications.imageFavorited', { actor: actorName, image: imageTitle });
 			case 'image_downloaded':
-				return `${actorName} đã tải xuống ảnh "${imageTitle}"`;
+				return t('notifications.imageDownloaded', { actor: actorName, image: imageTitle });
 			case 'collection_favorited':
-				return `${actorName} đã yêu thích bộ sưu tập "${collectionName}"`;
+				return t('notifications.collectionFavorited', { actor: actorName, collection: collectionName });
 			case 'collection_shared':
-				return `${actorName} đã chia sẻ bộ sưu tập "${collectionName}"`;
+				return t('notifications.collectionShared', { actor: actorName, collection: collectionName });
 			case 'upload_completed':
-				return `Ảnh "${notification.image?.imageTitle || notification.metadata?.imageTitle || 'của bạn'}" đã tải lên thành công`;
+				return t('notifications.uploadCompleted', { image: notification.image?.imageTitle || notification.metadata?.imageTitle || t('notifications.yourPhoto') });
 			case 'upload_failed':
-				return `Tải lên ảnh "${notification.metadata?.imageTitle || 'của bạn'}" thất bại: ${notification.metadata?.error || 'Lỗi không xác định'}`;
+				return t('notifications.uploadFailed', { image: notification.metadata?.imageTitle || t('notifications.yourPhoto'), error: notification.metadata?.error || t('notifications.unknownError') });
 			case 'upload_processing':
-				return `Đã xử lý ảnh: nén và tạo thumbnail thành công`;
+				return t('notifications.uploadProcessing');
 			case 'bulk_upload_completed': {
 				const successCount = notification.metadata?.successCount || 0;
 				const totalCount = notification.metadata?.totalCount || 0;
 				const failedCount = notification.metadata?.failedCount || 0;
 				if (failedCount === 0) {
-					return `Đã tải lên thành công ${successCount}/${totalCount} ảnh`;
+					return t('notifications.bulkUploadCompleted', { success: successCount, total: totalCount });
 				} else {
-					return `Đã tải lên ${successCount}/${totalCount} ảnh (${failedCount} thất bại)`;
+					return t('notifications.bulkUploadWithFailed', { success: successCount, total: totalCount, failed: failedCount });
 				}
 			}
 			case 'collection_updated': {
 				const changes = (notification.metadata?.changes as string[]) || [];
-				const changeText = changes.length > 0 
-					? changes.join(', ')
-					: 'thông tin';
-				return `${actorName} đã cập nhật ${changeText} của bộ sưu tập "${collectionName}"`;
+				const changeText = changes.length > 0 ? changes.join(', ') : t('notifications.info');
+				return t('notifications.collectionUpdated', { actor: actorName, changes: changeText, collection: collectionName });
 			}
 			case 'collection_cover_changed':
-				return `${actorName} đã thay đổi ảnh bìa của bộ sưu tập "${collectionName}"`;
+				return t('notifications.collectionCoverChanged', { actor: actorName, collection: collectionName });
 			case 'collection_reordered': {
 				const imageCount = notification.metadata?.imageCount || 0;
-				return `${actorName} đã sắp xếp lại ${imageCount} ảnh trong bộ sưu tập "${collectionName}"`;
+				return t('notifications.collectionReordered', { actor: actorName, count: imageCount, collection: collectionName });
 			}
 			case 'bulk_delete_completed': {
 				const deletedCount = notification.metadata?.deletedCount || 0;
-				return `Đã xóa thành công ${deletedCount} ảnh`;
+				return t('notifications.bulkDeleteCompleted', { count: deletedCount });
 			}
 			case 'bulk_add_to_collection': {
 				const addedCount = notification.metadata?.addedCount || 0;
-				return `Đã thêm ${addedCount} ảnh vào bộ sưu tập "${collectionName}"`;
+				return t('notifications.bulkAddToCollection', { count: addedCount, collection: collectionName });
 			}
 			case 'image_featured':
-				return `Ảnh "${imageTitle}" đã được đưa lên trang chủ`;
+				return t('notifications.imageFeatured', { image: imageTitle });
 			case 'image_removed':
 			case 'image_removed_admin': {
-				const reason = notification.metadata?.reason || 'Lý do không xác định';
-				return `Ảnh "${imageTitle}" đã bị xóa bởi quản trị viên: ${reason}`;
+				const reason = notification.metadata?.reason || t('notifications.unknownReason');
+				return t('notifications.imageRemovedAdmin', { image: imageTitle, reason });
 			}
 			case 'account_verified':
-				return `Tài khoản của bạn đã được xác minh`;
+				return t('notifications.accountVerified');
 			case 'account_warning': {
-				const warningReason = notification.metadata?.reason || 'Vi phạm quy tắc';
-				return `Cảnh báo: ${warningReason}`;
+				const warningReason = notification.metadata?.reason || t('notifications.unknownReason');
+				return t('notifications.accountWarning', { reason: warningReason });
 			}
 			case 'account_banned':
 			case 'user_banned_admin': {
-				const banReason = notification.metadata?.reason || 'Vi phạm quy tắc';
-				const bannedBy = notification.metadata?.bannedBy || 'Quản trị viên';
-				return `Tài khoản của bạn đã bị cấm bởi ${bannedBy}: ${banReason}`;
+				const banReason = notification.metadata?.reason || t('notifications.unknownReason');
+				const bannedBy = notification.metadata?.bannedBy || t('notifications.unknownAdmin');
+				return t('notifications.accountBanned', { admin: bannedBy, reason: banReason });
 			}
 			case 'user_unbanned_admin': {
-				const unbannedBy = notification.metadata?.unbannedBy || 'Quản trị viên';
-				return `Tài khoản của bạn đã được bỏ cấm bởi ${unbannedBy}`;
+				const unbannedBy = notification.metadata?.unbannedBy || t('notifications.unknownAdmin');
+				return t('notifications.accountUnbanned', { admin: unbannedBy });
 			}
 			case 'profile_viewed':
-				return `${actorName} đã xem hồ sơ của bạn`;
+				return t('notifications.profileViewed', { actor: actorName });
 			case 'profile_updated': {
 				const changedFields = (notification.metadata?.changedFields as string[]) || [];
 				if (changedFields.length === 0) {
-					return 'Hồ sơ của bạn đã được cập nhật';
+					return t('notifications.profileUpdatedSimple');
 				}
 				
-				// Map field names to user-friendly Vietnamese names
-				const fieldNames: Record<string, string> = {
-					displayName: 'tên hiển thị',
-					firstName: 'tên',
-					lastName: 'họ',
-					email: 'email',
-					bio: 'tiểu sử',
-					location: 'địa điểm',
-					phone: 'số điện thoại',
-					website: 'trang web',
-					instagram: 'Instagram',
-					twitter: 'Twitter',
-					facebook: 'Facebook',
+				// Map field names to translated names
+				const fieldNameKeys: Record<string, string> = {
+					displayName: 'notifications.fieldDisplayName',
+					firstName: 'notifications.fieldFirstName',
+					lastName: 'notifications.fieldLastName',
+					email: 'notifications.fieldEmail',
+					bio: 'notifications.fieldBio',
+					location: 'notifications.fieldLocation',
+					phone: 'notifications.fieldPhone',
+					website: 'notifications.fieldWebsite',
+					instagram: 'notifications.fieldInstagram',
+					twitter: 'notifications.fieldTwitter',
+					facebook: 'notifications.fieldFacebook',
 				};
 				
-				const translatedFields = changedFields.map(field => fieldNames[field] || field);
+				const translatedFields = changedFields.map(field => fieldNameKeys[field] ? t(fieldNameKeys[field]) : field);
 				const fieldsText = translatedFields.join(', ');
-				return `Hồ sơ của bạn đã được cập nhật: ${fieldsText}`;
+				return t('notifications.profileUpdated', { fields: fieldsText });
 			}
 			case 'login_new_device': {
-				const deviceUserAgent = (notification.metadata?.userAgent as string) || 'Thiết bị mới';
-				const deviceIpAddress = (notification.metadata?.ipAddress as string) || 'IP không xác định';
+				const deviceUserAgent = (notification.metadata?.userAgent as string) || t('notifications.newDevice');
+				const deviceIpAddress = (notification.metadata?.ipAddress as string) || t('notifications.unknownIP');
 				// Extract browser name from user agent
 				const browserName = deviceUserAgent.includes('Chrome') ? 'Chrome' :
 					deviceUserAgent.includes('Firefox') ? 'Firefox' :
 					deviceUserAgent.includes('Safari') ? 'Safari' :
 					deviceUserAgent.includes('Edge') ? 'Edge' :
-					'Thiết bị mới';
-				return `Đăng nhập từ ${browserName} (${deviceIpAddress})`;
+					t('notifications.newDevice');
+				return t('notifications.loginNewDevice', { browser: browserName, ip: deviceIpAddress });
 			}
 			case 'password_changed': {
-				const changeIp = notification.metadata?.ipAddress || 'IP không xác định';
-				return `Mật khẩu của bạn đã được thay đổi từ ${changeIp}`;
+				const changeIp = notification.metadata?.ipAddress || t('notifications.unknownIP');
+				return t('notifications.passwordChanged', { ip: changeIp });
 			}
 			case 'email_changed': {
-				const oldEmail = notification.metadata?.oldEmail || 'Email cũ';
-				const newEmail = notification.metadata?.newEmail || 'Email mới';
-				return `Email đã được thay đổi từ ${oldEmail} sang ${newEmail}`;
+				const oldEmail = notification.metadata?.oldEmail || 'old@email.com';
+				const newEmail = notification.metadata?.newEmail || 'new@email.com';
+				return t('notifications.emailChanged', { oldEmail, newEmail });
 			}
 			case 'two_factor_enabled':
-				return `Xác thực hai yếu tố đã được bật cho tài khoản của bạn`;
+				return t('notifications.twoFactorEnabled');
 			case 'system_announcement': {
-				const announcementTitle = notification.metadata?.title || 'Thông báo hệ thống';
-				return `${announcementTitle}: ${notification.metadata?.message || 'Bạn có thông báo mới'}`;
+				const announcementTitle = notification.metadata?.title || t('notifications.title');
+				return t('notifications.systemAnnouncement', { title: announcementTitle, message: notification.metadata?.message || t('notifications.newNotification') });
 			}
 			case 'feature_update': {
-				const featureTitle = notification.metadata?.title || 'Tính năng mới';
-				return `${featureTitle}: ${notification.metadata?.message || 'Có tính năng mới được cập nhật'}`;
+				const featureTitle = notification.metadata?.title || t('notifications.title');
+				return t('notifications.featureUpdate', { title: featureTitle, message: notification.metadata?.message || t('notifications.newNotification') });
 			}
 			case 'maintenance_scheduled': {
-				const maintenanceTitle = notification.metadata?.title || 'Bảo trì hệ thống';
-				return `${maintenanceTitle}: ${notification.metadata?.message || 'Hệ thống sẽ được bảo trì'}`;
+				const maintenanceTitle = notification.metadata?.title || t('notifications.title');
+				return t('notifications.maintenanceScheduled', { title: maintenanceTitle, message: notification.metadata?.message || t('notifications.newNotification') });
 			}
 			case 'terms_updated': {
-				const termsTitle = notification.metadata?.title || 'Cập nhật điều khoản';
-				return `${termsTitle}: ${notification.metadata?.message || 'Điều khoản sử dụng đã được cập nhật'}`;
+				const termsTitle = notification.metadata?.title || t('notifications.title');
+				return t('notifications.termsUpdated', { title: termsTitle, message: notification.metadata?.message || t('notifications.newNotification') });
 			}
 			case 'image_reported': {
-				const imageReportReason = notification.metadata?.reason || 'Lý do không xác định';
+				const imageReportReason = notification.metadata?.reason || t('notifications.unknownReason');
 				const imageReportDescription = notification.metadata?.description ? ` - ${notification.metadata.description}` : '';
-				return `Ảnh "${imageTitle}" đã được báo cáo: ${imageReportReason}${imageReportDescription}`;
+				return t('notifications.imageReported', { image: imageTitle, reason: imageReportReason + imageReportDescription });
 			}
 			case 'collection_reported': {
-				const collectionReportReason = notification.metadata?.reason || 'Lý do không xác định';
+				const collectionReportReason = notification.metadata?.reason || t('notifications.unknownReason');
 				const collectionReportDescription = notification.metadata?.description ? ` - ${notification.metadata.description}` : '';
-				return `Bộ sưu tập "${collectionName}" đã được báo cáo: ${collectionReportReason}${collectionReportDescription}`;
+				return t('notifications.collectionReported', { collection: collectionName, reason: collectionReportReason + collectionReportDescription });
 			}
 			case 'user_reported': {
-				const userReportReason = notification.metadata?.reason || 'Lý do không xác định';
+				const userReportReason = notification.metadata?.reason || t('notifications.unknownReason');
 				const userReportDescription = notification.metadata?.description ? ` - ${notification.metadata.description}` : '';
-				return `Người dùng đã được báo cáo: ${userReportReason}${userReportDescription}`;
+				return t('notifications.userReported', { reason: userReportReason + userReportDescription });
 			}
 			case 'user_followed':
-				return `${actorName} đã bắt đầu theo dõi bạn`;
+				return t('notifications.userFollowed', { actor: actorName });
 			case 'user_unfollowed':
-				return `${actorName} đã ngừng theo dõi bạn`;
+				return t('notifications.userUnfollowed', { actor: actorName });
 			default:
-				return 'Bạn có thông báo mới';
+				return t('notifications.newNotification');
 		}
 	}, []);
 
@@ -318,7 +316,7 @@ export default function NotificationBell() {
 			);
 		} catch (error) {
 			console.error('Failed to mark notification as read:', error);
-			toast.error('Không thể đánh dấu đã đọc');
+			toast.error(t('notifications.markReadFailed'));
 		}
 	};
 
@@ -329,10 +327,10 @@ export default function NotificationBell() {
 			setNotifications(prev =>
 				prev.map(notif => ({ ...notif, isRead: true, readAt: new Date().toISOString() }))
 			);
-			toast.success('Đã đánh dấu tất cả là đã đọc');
+			toast.success(t('notifications.markAllReadSuccess'));
 		} catch (error) {
 			console.error('Failed to mark all as read:', error);
-			toast.error('Không thể đánh dấu tất cả là đã đọc');
+			toast.error(t('notifications.markAllReadFailed'));
 		}
 	};
 
@@ -344,7 +342,7 @@ export default function NotificationBell() {
 			setNotifications(prev => prev.filter(notif => notif._id !== notificationId));
 		} catch (error) {
 			console.error('Failed to delete notification:', error);
-			toast.error('Không thể xóa thông báo');
+			toast.error(t('notifications.deleteFailed'));
 		}
 	};
 
@@ -458,7 +456,7 @@ export default function NotificationBell() {
 	// Manual refresh handler
 	const handleManualRefresh = useCallback(async () => {
 		await fetchNotifications(true);
-		toast.success('Đã làm mới thông báo');
+		toast.success(t('notifications.refreshed'));
 	}, [fetchNotifications]);
 
 	if (!accessToken || !user) return null;
@@ -469,8 +467,8 @@ export default function NotificationBell() {
 				ref={bellButtonRef}
 				className={`notification-bell-btn ${hasNewNotification ? 'new-notification' : ''}`}
 				onClick={() => setIsOpen(!isOpen)}
-				aria-label="Thông báo"
-				title="Thông báo"
+				aria-label={t('notifications.title')}
+				title={t('notifications.title')}
 			>
 				<Bell size={20} />
 				{unreadCount > 0 && (
@@ -481,12 +479,12 @@ export default function NotificationBell() {
 			{isOpen && (
 				<div className="notification-dropdown">
 					<div className="notification-dropdown-header">
-						<h3>Thông báo</h3>
+						<h3>{t('notifications.title')}</h3>
 						<div className="notification-dropdown-actions">
 							<button
 								className={`notification-action-btn ${refreshing ? 'refreshing' : ''}`}
 								onClick={handleManualRefresh}
-								title="Làm mới"
+								title={t('notifications.refresh')}
 								disabled={refreshing}
 							>
 								<RefreshCw size={16} />
@@ -495,7 +493,7 @@ export default function NotificationBell() {
 								<button
 									className="notification-action-btn"
 									onClick={handleMarkAllAsRead}
-									title="Đánh dấu tất cả là đã đọc"
+									title={t('notifications.markAllRead')}
 								>
 									<CheckCheck size={16} />
 								</button>
@@ -503,7 +501,7 @@ export default function NotificationBell() {
 							<button
 								className="notification-action-btn"
 								onClick={() => setIsOpen(false)}
-								title="Đóng"
+								title={t('common.close')}
 							>
 								<X size={16} />
 							</button>
@@ -513,12 +511,12 @@ export default function NotificationBell() {
 					<div className="notification-dropdown-content">
 						{loading ? (
 							<div className="notification-loading">
-								<p>Đang tải...</p>
+								<p>{t('common.loading')}</p>
 							</div>
 						) : notifications.length === 0 ? (
 							<div className="notification-empty">
 								<Bell size={32} />
-								<p>Không có thông báo nào</p>
+								<p>{t('notifications.empty')}</p>
 							</div>
 						) : (
 							<div className="notification-list">
@@ -547,7 +545,7 @@ export default function NotificationBell() {
 														e.stopPropagation();
 														handleMarkAsRead(notification._id);
 													}}
-													title="Đánh dấu đã đọc"
+													title={t('notifications.markRead')}
 												>
 													<Check size={14} />
 												</button>
@@ -555,7 +553,7 @@ export default function NotificationBell() {
 											<button
 												className="notification-item-action-btn"
 												onClick={(e) => handleDelete(notification._id, e)}
-												title="Xóa"
+												title={t('notifications.delete')}
 											>
 												<Trash2 size={14} />
 											</button>
@@ -579,13 +577,14 @@ function formatNotificationTime(dateString: string): string {
 	const diffHours = Math.floor(diffMs / 3600000);
 	const diffDays = Math.floor(diffMs / 86400000);
 
-	if (diffMins < 1) return 'Vừa xong';
-	if (diffMins < 60) return `${diffMins} phút trước`;
-	if (diffHours < 24) return `${diffHours} giờ trước`;
-	if (diffDays < 7) return `${diffDays} ngày trước`;
+	if (diffMins < 1) return t('notifications.justNow');
+	if (diffMins < 60) return t('notifications.minutesAgo', { count: diffMins });
+	if (diffHours < 24) return t('notifications.hoursAgo', { count: diffHours });
+	if (diffDays < 7) return t('notifications.daysAgo', { count: diffDays });
 
-	// Format as date
-	return date.toLocaleDateString('vi-VN', {
+	// Format as date based on locale
+	const locale = getLocale();
+	return date.toLocaleDateString(locale === 'vi' ? 'vi-VN' : 'en-US', {
 		day: 'numeric',
 		month: 'short',
 		year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,

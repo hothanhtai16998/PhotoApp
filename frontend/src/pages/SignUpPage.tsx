@@ -6,6 +6,7 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { SignUpForm } from "./auth/components/SignUpForm";
 import { useSignUpValidation } from "./auth/hooks/useSignUpValidation";
 import { signUpSchema, type SignUpFormValue } from "@/types/forms";
+import { t } from "@/i18n";
 import "./SignUpPage.css";
 
 function SignUpPage() {
@@ -49,7 +50,7 @@ function SignUpPage() {
             window.location.href = `${apiUrl}/api/auth/google`;
         } else {
             // For other providers, show coming soon message
-            alert(`Đăng nhập bằng ${provider.charAt(0).toUpperCase() + provider.slice(1)} chưa khả dụng!`);
+            alert(t('auth.socialComingSoon', { provider: provider.charAt(0).toUpperCase() + provider.slice(1) }));
         }
     };
 
@@ -67,7 +68,7 @@ function SignUpPage() {
             <div className="signup-modal">
                 <div className="signup-modal-content">
                     <div className="signup-header">
-                        <h1 className="signup-title">Tạo tài khoản</h1>
+                        <h1 className="signup-title">{t('auth.createAccount')}</h1>
                     </div>
 
                     {/* Social Login Buttons */}
@@ -98,7 +99,7 @@ function SignUpPage() {
                     {/* Separator */}
                     <div className="signup-separator">
                         <div className="separator-line"></div>
-                        <span className="separator-text">Hoặc</span>
+                        <span className="separator-text">{t('auth.or')}</span>
                         <div className="separator-line"></div>
                     </div>
 
