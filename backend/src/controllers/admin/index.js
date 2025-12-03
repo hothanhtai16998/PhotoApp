@@ -6,4 +6,5 @@ export * from './adminRoleController.js';
 export * from './adminCollectionController.js';
 export * from './adminContentController.js';
 export * from './adminSystemController.js';
+export * from './adminTestUtilsController.js';
 

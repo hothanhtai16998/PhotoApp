@@ -42,9 +42,9 @@ router.get('/',
 // Public routes - get locations for suggestions/filtering
 router.get('/locations', getLocations);
 
-// Public routes - increment stats
-router.patch('/:imageId/view', incrementView);
-router.patch('/:imageId/download', incrementDownload);
+// Public routes - increment stats (with optional auth to track user activity)
+router.patch('/:imageId/view', optionalAuth, incrementView);
+router.patch('/:imageId/download', optionalAuth, incrementDownload);
 
 // Public route - download image (proxy from S3 to avoid CORS)
 // Use optionalAuth to populate req.user if user is logged in (for notifications)

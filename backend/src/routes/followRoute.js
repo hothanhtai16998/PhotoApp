@@ -6,6 +6,8 @@ import {
     getFollowers,
     getUserFollowStats,
     getFollowStatus,
+    getUserFollowing,
+    getUserFollowers,
 } from '../controllers/followController.js';
 import { protectedRoute } from '../middlewares/authMiddleware.js';
 
@@ -17,6 +19,12 @@ router.get('/following', protectedRoute, getFollowing);
 
 // Get users that follow current user
 router.get('/followers', protectedRoute, getFollowers);
+
+// Get users that a specific user is following (public endpoint)
+router.get('/:userId/following', getUserFollowing);
+
+// Get users that are following a specific user (public endpoint)
+router.get('/:userId/followers', getUserFollowers);
 
 // Follow a user
 router.post('/:userId', protectedRoute, followUser);

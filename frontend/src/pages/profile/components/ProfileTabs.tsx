@@ -1,11 +1,12 @@
-import { Camera, Palette, Folder, BarChart3 } from "lucide-react";
+import { Camera, Users, Folder, BarChart3 } from "lucide-react";
 
-type TabType = 'photos' | 'illustrations' | 'collections' | 'stats';
+type TabType = 'photos' | 'following' | 'collections' | 'stats';
 
 interface ProfileTabsProps {
     activeTab: TabType;
     photosCount: number;
-    illustrationsCount: number;
+    followingCount: number;
+    followersCount: number;
     collectionsCount: number;
     onTabChange: (tab: TabType) => void;
 }
@@ -13,7 +14,8 @@ interface ProfileTabsProps {
 export function ProfileTabs({
     activeTab,
     photosCount,
-    illustrationsCount,
+    followingCount,
+    followersCount,
     collectionsCount,
     onTabChange,
 }: ProfileTabsProps) {
@@ -28,12 +30,12 @@ export function ProfileTabs({
                 <span className="tab-count">{photosCount}</span>
             </button>
             <button
-                className={`profile-tab ${activeTab === 'illustrations' ? 'active' : ''}`}
-                onClick={() => onTabChange('illustrations')}
+                className={`profile-tab ${activeTab === 'following' ? 'active' : ''}`}
+                onClick={() => onTabChange('following')}
             >
-                <Palette size={18} className="tab-icon" />
-                <span className="tab-label">Minh họa</span>
-                <span className="tab-count">{illustrationsCount}</span>
+                <Users size={18} className="tab-icon" />
+                <span className="tab-label">Đang theo dõi</span>
+                <span className="tab-count">{followingCount + followersCount}</span>
             </button>
             <button
                 className={`profile-tab ${activeTab === 'collections' ? 'active' : ''}`}

@@ -139,9 +139,8 @@
 }
 
 /* Hide Y-axis and grid lines to match Unsplash */
-.insights-chart-container .recharts-cartesian-axis {
-  display: none;
-}
+/* Y-axis is already hidden with hide prop, so no need for CSS */
+/* Keep X-axis visible for dates */
 
 .insights-chart-container .recharts-cartesian-grid {
   display: none;

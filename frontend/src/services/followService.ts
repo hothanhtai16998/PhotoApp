@@ -116,4 +116,54 @@ export const followService = {
 		});
 		return res.data;
 	},
+
+	/**
+	 * Get users that a specific user is following
+	 */
+	getUserFollowing: async (userId: string, params?: {
+		page?: number;
+		limit?: number;
+	}, signal?: AbortSignal): Promise<FollowingListResponse> => {
+		const queryParams = new URLSearchParams();
+		if (params?.page) {
+			queryParams.append('page', params.page.toString());
+		}
+		if (params?.limit) {
+			queryParams.append('limit', params.limit.toString());
+		}
+
+		const queryString = queryParams.toString();
+		const url = queryString ? `/follows/${userId}/following?${queryString}` : `/follows/${userId}/following`;
+
+		const res = await api.get(url, {
+			withCredentials: true,
+			signal,
+		});
+		return res.data;
+	},
+
+	/**
+	 * Get users that are following a specific user
+	 */
+	getUserFollowers: async (userId: string, params?: {
+		page?: number;
+		limit?: number;
+	}, signal?: AbortSignal): Promise<FollowersListResponse> => {
+		const queryParams = new URLSearchParams();
+		if (params?.page) {
+			queryParams.append('page', params.page.toString());
+		}
+		if (params?.limit) {
+			queryParams.append('limit', params.limit.toString());
+		}
+
+		const queryString = queryParams.toString();
+		const url = queryString ? `/follows/${userId}/followers?${queryString}` : `/follows/${userId}/followers`;
+
+		const res = await api.get(url, {
+			withCredentials: true,
+			signal,
+		});
+		return res.data;
+	},
 };

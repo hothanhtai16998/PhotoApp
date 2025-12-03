@@ -185,25 +185,19 @@ export function AdminAnalytics() {
         const firstDataIndex = chartData.findIndex(d => d.value > 0);
         const filteredData = firstDataIndex >= 0 ? chartData.slice(firstDataIndex) : chartData;
 
-        // Calculate Y-axis domain based on data range (adaptive like Unsplash)
+        // Calculate Y-axis domain - use absolute max scaling like Unsplash
+        // Charts with different max values will have proportionally different heights
         const calculateDomain = (data: Array<{ value: number }>) => {
             if (data.length === 0) return ['auto', 'auto'];
             const values = data.map(d => d.value);
-            const minValue = Math.min(...values);
             const maxValue = Math.max(...values);
 
             if (maxValue === 0) return ['auto', 'auto'];
 
-            if (minValue === 0) {
-                const padding = maxValue * 0.1;
-                return [0, Math.round(maxValue + padding)];
-            } else {
-                const range = maxValue - minValue;
-                const padding = range > 0 ? range * 0.15 : maxValue * 0.15;
-                const domainMin = Math.max(0, Math.round(minValue - padding));
-                const domainMax = Math.round(maxValue + padding);
-                return [domainMin, domainMax];
-            }
+            // Use absolute max scaling - always scale from 0 to max value
+            // This ensures charts with different max values show proportionally different heights
+            const padding = Math.max(1, Math.ceil(maxValue * 0.1));
+            return [0, maxValue + padding];
         };
 
         const domain = calculateDomain(filteredData);

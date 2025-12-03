@@ -1,10 +1,12 @@
 import Image from '../models/Image.js';
+import UserActivity from '../models/UserActivity.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { logger } from '../utils/logger.js';
 
 /**
- * Get analytics data for a user's images
- * Returns: views/downloads over time, most popular images, geographic distribution, best performing categories
+ * Get analytics data for a user's viewing/downloading activity
+ * Returns: views/downloads over time, most popular images viewed, etc.
+ * NOTE: This tracks what the USER viewed/downloaded, not views on the user's images
  */
 export const getUserAnalytics = asyncHandler(async (req, res) => {
     const userId = req.user._id;
@@ -17,73 +19,63 @@ export const getUserAnalytics = asyncHandler(async (req, res) => {
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - daysNum);
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
 
-    // Get all user's images with their stats
-    const userImages = await Image.find({ uploadedBy: userId })
-        .select('imageTitle views downloads dailyViews dailyDownloads location imageCategory createdAt imageUrl thumbnailUrl smallUrl')
-        .populate('imageCategory', 'name')
+    // Get user's viewing/downloading activities in the date range
+    const userActivities = await UserActivity.find({
+        userId,
+        date: { $gte: startDateStr, $lte: endDateStr },
+    })
+        .populate({
+            path: 'imageId',
+            select: 'imageTitle imageUrl thumbnailUrl smallUrl location imageCategory views downloads dailyViews dailyDownloads createdAt',
+            populate: {
+                path: 'imageCategory',
+                select: 'name',
+            },
+        })
         .lean();
 
-    // 1. Views/Downloads over time (aggregate daily data)
+    // 1. Views/Downloads over time (aggregate daily data from user activities)
+    // Use actual counts from images' dailyViews/dailyDownloads for dates when user viewed them
     const viewsOverTime = {};
     const downloadsOverTime = {};
 
-    userImages.forEach(image => {
-        // Process dailyViews
-        if (image.dailyViews) {
-            const dailyViewsObj = image.dailyViews instanceof Map
-                ? Object.fromEntries(image.dailyViews)
-                : image.dailyViews;
-
-            Object.entries(dailyViewsObj).forEach(([date, count]) => {
-                if (date >= startDate.toISOString().split('T')[0] && date <= endDate.toISOString().split('T')[0]) {
-                    viewsOverTime[date] = (viewsOverTime[date] || 0) + count;
-                }
-            });
-        }
-
-        // Process dailyDownloads
-        if (image.dailyDownloads) {
-            const dailyDownloadsObj = image.dailyDownloads instanceof Map
-                ? Object.fromEntries(image.dailyDownloads)
-                : image.dailyDownloads;
-
-            Object.entries(dailyDownloadsObj).forEach(([date, count]) => {
-                if (date >= startDate.toISOString().split('T')[0] && date <= endDate.toISOString().split('T')[0]) {
-                    downloadsOverTime[date] = (downloadsOverTime[date] || 0) + count;
-                }
-            });
+    // Aggregate daily data from user activities
+    // Use the count field if available, otherwise default to 1
+    userActivities.forEach(activity => {
+        if (!activity.imageId) return;
+        
+        const date = activity.date;
+        if (date >= startDateStr && date <= endDateStr) {
+            const count = activity.count || 1; // Use count field if available, default to 1
+            
+            if (activity.activityType === 'view') {
+                viewsOverTime[date] = (viewsOverTime[date] || 0) + count;
+            } else if (activity.activityType === 'download') {
+                downloadsOverTime[date] = (downloadsOverTime[date] || 0) + count;
+            }
         }
     });
 
     // Find first date with actual data (for views and downloads separately)
-    // Only consider dates within the selected period
     const viewsDates = Object.keys(viewsOverTime)
-        .filter(date => {
-            const dateObj = new Date(date);
-            return viewsOverTime[date] > 0 && 
-                   dateObj >= startDate && 
-                   dateObj <= endDate;
-        })
+        .filter(date => viewsOverTime[date] > 0 && date >= startDateStr && date <= endDateStr)
         .sort();
     
     const downloadsDates = Object.keys(downloadsOverTime)
-        .filter(date => {
-            const dateObj = new Date(date);
-            return downloadsOverTime[date] > 0 && 
-                   dateObj >= startDate && 
-                   dateObj <= endDate;
-        })
+        .filter(date => downloadsOverTime[date] > 0 && date >= startDateStr && date <= endDateStr)
         .sort();
     
-    const firstViewsDate = viewsDates.length > 0 ? new Date(viewsDates[0]) : null;
-    const firstDownloadsDate = downloadsDates.length > 0 ? new Date(downloadsDates[0]) : null;
+    const firstViewsDate = viewsDates.length > 0 ? viewsDates[0] : null;
+    const firstDownloadsDate = downloadsDates.length > 0 ? downloadsDates[0] : null;
     
     // For views: start from first date with data (within period), or startDate if no data
-    const viewsStartDate = firstViewsDate && firstViewsDate >= startDate ? firstViewsDate : startDate;
+    const viewsStartDate = firstViewsDate && firstViewsDate >= startDateStr ? firstViewsDate : startDateStr;
     
     // For downloads: start from first date with data (within period), or startDate if no data
-    const downloadsStartDate = firstDownloadsDate && firstDownloadsDate >= startDate ? firstDownloadsDate : startDate;
+    const downloadsStartDate = firstDownloadsDate && firstDownloadsDate >= startDateStr ? firstDownloadsDate : startDateStr;
 
     // Fill in missing dates from first data date (not from period start)
     const viewsDatesToFill = [];
@@ -100,7 +92,7 @@ export const getUserAnalytics = asyncHandler(async (req, res) => {
         if (!downloadsOverTime[dateStr]) downloadsOverTime[dateStr] = 0;
     }
 
-    // Convert to array format for charting - only include dates from first data date
+    // Convert to array format for charting
     const viewsData = viewsDatesToFill.map(date => ({
         date,
         value: viewsOverTime[date] || 0
@@ -111,42 +103,65 @@ export const getUserAnalytics = asyncHandler(async (req, res) => {
         value: downloadsOverTime[date] || 0
     }));
 
-    // 2. Most popular images (by views and downloads)
-    const mostPopularImages = userImages
-        .map(img => ({
-            _id: img._id,
-            imageTitle: img.imageTitle,
-            imageUrl: img.imageUrl,
-            thumbnailUrl: img.thumbnailUrl || img.smallUrl || img.imageUrl,
-            smallUrl: img.smallUrl || img.imageUrl,
-            views: img.views || 0,
-            downloads: img.downloads || 0,
-            totalEngagement: (img.views || 0) + (img.downloads || 0) * 2, // Downloads weighted 2x
-            createdAt: img.createdAt,
+    // 2. Most popular images (images this user viewed/downloaded most)
+    const imageActivityCounts = {};
+    userActivities.forEach(activity => {
+        if (!activity.imageId) return; // Skip if image was deleted
+        
+        const imageId = activity.imageId._id?.toString() || activity.imageId.toString();
+        if (!imageActivityCounts[imageId]) {
+            imageActivityCounts[imageId] = {
+                image: activity.imageId,
+                views: 0,
+                downloads: 0,
+            };
+        }
+        
+        if (activity.activityType === 'view') {
+            imageActivityCounts[imageId].views += 1;
+        } else if (activity.activityType === 'download') {
+            imageActivityCounts[imageId].downloads += 1;
+        }
+    });
+
+    const mostPopularImages = Object.values(imageActivityCounts)
+        .map(item => ({
+            _id: item.image._id,
+            imageTitle: item.image.imageTitle || 'Untitled',
+            imageUrl: item.image.imageUrl,
+            thumbnailUrl: item.image.thumbnailUrl || item.image.smallUrl || item.image.imageUrl,
+            smallUrl: item.image.smallUrl || item.image.imageUrl,
+            views: item.views,
+            downloads: item.downloads,
+            totalEngagement: item.views + item.downloads * 2, // Downloads weighted 2x
+            createdAt: item.image.createdAt,
         }))
         .sort((a, b) => b.totalEngagement - a.totalEngagement)
         .slice(0, 10); // Top 10
 
-    // 3. Geographic distribution
+    // 3. Geographic distribution (locations of images user viewed/downloaded)
     const geographicDistribution = {};
-    userImages.forEach(image => {
-        if (image.location) {
-            // Extract country/region from location (simple approach)
-            const locationParts = (image.location || '').split(',').map(s => String(s || '').trim());
-            const country = locationParts[locationParts.length - 1] || image.location;
+    userActivities.forEach(activity => {
+        if (!activity.imageId || !activity.imageId.location) return;
+        
+        const location = activity.imageId.location;
+        const locationParts = (location || '').split(',').map(s => String(s || '').trim());
+        const country = locationParts[locationParts.length - 1] || location;
 
-            if (!geographicDistribution[country]) {
-                geographicDistribution[country] = {
-                    location: country,
-                    imageCount: 0,
-                    totalViews: 0,
-                    totalDownloads: 0,
-                };
-            }
+        if (!geographicDistribution[country]) {
+            geographicDistribution[country] = {
+                location: country,
+                imageCount: 0,
+                totalViews: 0,
+                totalDownloads: 0,
+            };
+        }
 
-            geographicDistribution[country].imageCount += 1;
-            geographicDistribution[country].totalViews += image.views || 0;
-            geographicDistribution[country].totalDownloads += image.downloads || 0;
+        geographicDistribution[country].imageCount += 1;
+        if (activity.activityType === 'view') {
+            geographicDistribution[country].totalViews += 1;
+        } else if (activity.activityType === 'download') {
+            geographicDistribution[country].totalDownloads += 1;
         }
     });
 
@@ -154,10 +169,13 @@ export const getUserAnalytics = asyncHandler(async (req, res) => {
         .sort((a, b) => b.totalViews - a.totalViews)
         .slice(0, 10); // Top 10 locations
 
-    // 4. Best performing categories
+    // 4. Best performing categories (categories of images user viewed/downloaded)
     const categoryPerformance = {};
-    userImages.forEach(image => {
-        const categoryName = image.imageCategory?.name || 'Unknown';
+    userActivities.forEach(activity => {
+        if (!activity.imageId) return;
+        
+        // Need to populate category if not already populated
+        const categoryName = activity.imageId.imageCategory?.name || 'Unknown';
 
         if (!categoryPerformance[categoryName]) {
             categoryPerformance[categoryName] = {
@@ -170,8 +188,11 @@ export const getUserAnalytics = asyncHandler(async (req, res) => {
         }
 
         categoryPerformance[categoryName].imageCount += 1;
-        categoryPerformance[categoryName].totalViews += image.views || 0;
-        categoryPerformance[categoryName].totalDownloads += image.downloads || 0;
+        if (activity.activityType === 'view') {
+            categoryPerformance[categoryName].totalViews += 1;
+        } else if (activity.activityType === 'download') {
+            categoryPerformance[categoryName].totalDownloads += 1;
+        }
     });
 
     // Calculate averages
@@ -183,13 +204,24 @@ export const getUserAnalytics = asyncHandler(async (req, res) => {
         .sort((a, b) => b.totalViews - a.totalViews)
         .slice(0, 10); // Top 10 categories
 
-    // Calculate summary stats - use views from the selected period (sum all data within period)
-    // Sum all values in viewsData and downloadsData (which now only include dates from first data date)
+    // Calculate summary stats - count unique images viewed/downloaded
+    const uniqueImagesViewed = new Set(
+        userActivities
+            .filter(a => a.activityType === 'view' && a.imageId)
+            .map(a => a.imageId._id?.toString() || a.imageId.toString())
+    ).size;
+    
+    const uniqueImagesDownloaded = new Set(
+        userActivities
+            .filter(a => a.activityType === 'download' && a.imageId)
+            .map(a => a.imageId._id?.toString() || a.imageId.toString())
+    ).size;
+
     const totalViews = viewsData.reduce((sum, item) => sum + item.value, 0);
     const totalDownloads = downloadsData.reduce((sum, item) => sum + item.value, 0);
-    const totalImages = userImages.length;
+    const totalImages = uniqueImagesViewed; // Total unique images viewed
     const avgViewsPerImage = totalImages > 0 ? Math.round(totalViews / totalImages) : 0;
-    const avgDownloadsPerImage = totalImages > 0 ? Math.round(totalDownloads / totalImages) : 0;
+    const avgDownloadsPerImage = uniqueImagesDownloaded > 0 ? Math.round(totalDownloads / uniqueImagesDownloaded) : 0;
 
     res.status(200).json({
         summary: {

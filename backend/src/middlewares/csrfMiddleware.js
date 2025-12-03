@@ -86,6 +86,12 @@ export const validateCsrf = (req, res, next) => {
         '/api/admin/analytics/track',
     ];
 
+    // Skip CSRF validation for test utility endpoints (used with API clients like Postman)
+    // These are protected by super admin authentication instead
+    if (fullPath.startsWith('/api/admin/test-utils/')) {
+        return next();
+    }
+
     if (publicPaths.some((path) => fullPath.startsWith(path))) {
         return next();
     }

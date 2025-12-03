@@ -331,3 +331,115 @@ export const getUserFollowStats = asyncHandler(async (req, res) => {
         },
     });
 });
+
+/**
+ * Get users that a specific user is following
+ * GET /api/follows/:userId/following
+ */
+export const getUserFollowing = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+    
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid user ID',
+            errorCode: 'INVALID_ID',
+        });
+    }
+
+    // Validate user exists
+    const user = await User.findById(userId);
+    if (!user) {
+        return res.status(404).json({
+            success: false,
+            message: 'User not found',
+            errorCode: 'USER_NOT_FOUND',
+        });
+    }
+
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 20), 100);
+    const skip = (page - 1) * limit;
+
+    // Get follow relationships
+    const follows = await Follow.find({ follower: userId })
+        .populate('following', 'username displayName avatarUrl bio')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
+    const total = await Follow.countDocuments({ follower: userId });
+
+    const following = follows.map(follow => ({
+        ...follow.following,
+        followedAt: follow.createdAt,
+    }));
+
+    res.status(200).json({
+        success: true,
+        following,
+        pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit),
+        },
+    });
+});
+
+/**
+ * Get users that are following a specific user
+ * GET /api/follows/:userId/followers
+ */
+export const getUserFollowers = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+    
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid user ID',
+            errorCode: 'INVALID_ID',
+        });
+    }
+
+    // Validate user exists
+    const user = await User.findById(userId);
+    if (!user) {
+        return res.status(404).json({
+            success: false,
+            message: 'User not found',
+            errorCode: 'USER_NOT_FOUND',
+        });
+    }
+
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 20), 100);
+    const skip = (page - 1) * limit;
+
+    // Get follow relationships
+    const follows = await Follow.find({ following: userId })
+        .populate('follower', 'username displayName avatarUrl bio')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
+    const total = await Follow.countDocuments({ following: userId });
+
+    const followers = follows.map(follow => ({
+        ...follow.follower,
+        followedAt: follow.createdAt,
+    }));
+
+    res.status(200).json({
+        success: true,
+        followers,
+        pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit),
+        },
+    });
+});

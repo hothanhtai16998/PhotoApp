@@ -33,6 +33,9 @@ import {
     updateSettings,
     getCacheStats,
     createSystemAnnouncement,
+    resetAllViewDownloadCounts,
+    addTestViewDownloadData,
+    listTestIds,
 } from '../controllers/admin/index.js';
 import { protectedRoute } from '../middlewares/authMiddleware.js';
 import { adminRoute } from '../middlewares/adminMiddleware.js';
@@ -101,6 +104,12 @@ router.get('/cache/stats', requireSuperAdmin, getCacheStats);
 
 // System Announcements
 router.post('/announcements', requirePermission('manageSettings'), validateCsrf, createSystemAnnouncement);
+
+// Test Utilities (Super Admin only - for testing/debugging)
+// Note: CSRF validation disabled for these endpoints since they're used with API clients (Postman, etc.)
+router.get('/test-utils/list-ids', requireSuperAdmin, listTestIds);
+router.post('/test-utils/reset-all-views-downloads', requireSuperAdmin, resetAllViewDownloadCounts);
+router.post('/test-utils/add-test-data', requireSuperAdmin, addTestViewDownloadData);
 
 export default router;
 

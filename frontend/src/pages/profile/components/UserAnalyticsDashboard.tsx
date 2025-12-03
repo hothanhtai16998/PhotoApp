@@ -84,53 +84,66 @@ export const UserAnalyticsDashboard = () => {
 
   // Format chart data for Recharts (with date labels)
   const formatChartData = useMemo(() => {
-    if (!analytics) return { viewsData: [], downloadsData: [], viewsDomain: [0, 0], downloadsDomain: [0, 0] };
+    if (!analytics) return { viewsData: [], downloadsData: [], viewsDomain: [0, 0], downloadsDomain: [0, 0], viewsTickInterval: 0, downloadsTickInterval: 0 };
     
-    const viewsData = analytics.viewsOverTime.map((item) => ({
-      date: item.date,
-      dateLabel: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      value: item.value,
-      views: item.value,
-    }));
+    const viewsData = analytics.viewsOverTime.map((item) => {
+      const date = new Date(item.date);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      return {
+        date: item.date,
+        dateLabel: `${day}/${month}`,
+        value: item.value,
+        views: item.value,
+      };
+    });
     
-    const downloadsData = analytics.downloadsOverTime.map((item) => ({
-      date: item.date,
-      dateLabel: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      value: item.value,
-      downloads: item.value,
-    }));
+    const downloadsData = analytics.downloadsOverTime.map((item) => {
+      const date = new Date(item.date);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      return {
+        date: item.date,
+        dateLabel: `${day}/${month}`,
+        value: item.value,
+        downloads: item.value,
+      };
+    });
     
-    // Calculate Y-axis domain based on data range (adaptive like Unsplash)
-    const calculateDomain = (data: Array<{ value: number }>) => {
+    // Calculate Y-axis domain - use absolute max scaling like Unsplash
+    // Charts with different max values will have proportionally different heights
+    const calculateDomain = (data: Array<{ value: number }>): [number, number] | ['auto', 'auto'] => {
       if (data.length === 0) return ['auto', 'auto'];
-      const values = data.map(d => d.value);
-      const minValue = Math.min(...values);
-      const maxValue = Math.max(...values);
       
-      // If all values are 0, use auto domain
+      const allValues = data.map(d => d.value);
+      const maxValue = Math.max(...allValues);
+      const minValue = Math.min(...allValues);
+      
       if (maxValue === 0) return ['auto', 'auto'];
       
-      // If min is 0, start from 0. Otherwise, let it auto-scale from data min
-      // This makes the line "float" when all values are non-zero
-      if (minValue === 0) {
-        // Has zeros - include 0 in domain
-        const padding = maxValue * 0.1;
-        return [0, Math.round(maxValue + padding)];
-      } else {
-        // All values are non-zero - let it auto-scale (line will float)
-        // Use dataMin with padding below, but ensure it doesn't go negative
-        const range = maxValue - minValue;
-        const padding = range > 0 ? range * 0.15 : maxValue * 0.15;
-        const domainMin = Math.max(0, Math.round(minValue - padding));
-        const domainMax = Math.round(maxValue + padding);
-        return [domainMin, domainMax];
-      }
+      // Use absolute max scaling - always scale from 0 to max value
+      // This ensures charts with different max values show proportionally different heights
+      // e.g., chart with max 9 will be much shorter than chart with max 46
+      const padding = Math.max(1, Math.ceil(maxValue * 0.1));
+      return [0, maxValue + padding];
     };
     
     const viewsDomain = calculateDomain(viewsData);
     const downloadsDomain = calculateDomain(downloadsData);
     
-    return { viewsData, downloadsData, viewsDomain, downloadsDomain };
+    // Calculate interval for X-axis labels based on data length
+    // Show more dates when there are fewer data points, fewer when many
+    const calculateTickInterval = (dataLength: number): number => {
+      if (dataLength <= 7) return 0; // Show all dates for a week
+      if (dataLength <= 14) return 1; // Show every other date for 2 weeks
+      if (dataLength <= 30) return Math.floor(dataLength / 5); // Show ~5 dates for a month
+      return Math.floor(dataLength / 7); // Show ~7 dates for longer periods
+    };
+    
+    const viewsTickInterval = calculateTickInterval(viewsData.length);
+    const downloadsTickInterval = calculateTickInterval(downloadsData.length);
+    
+    return { viewsData, downloadsData, viewsDomain, downloadsDomain, viewsTickInterval, downloadsTickInterval };
   }, [analytics]);
 
   // Chart configuration
@@ -220,7 +233,7 @@ export const UserAnalyticsDashboard = () => {
           {/* Line Chart */}
           <div className="insights-chart-container">
             <ChartContainer config={viewsChartConfig} className="h-[116px] w-full">
-              <AreaChart data={formatChartData.viewsData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+              <AreaChart data={formatChartData.viewsData} margin={{ top: 0, right: 0, left: 0, bottom: 20 }}>
                 <defs>
                   <linearGradient id="fillViews" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#ddf3ef" stopOpacity={0.8} />
@@ -230,8 +243,8 @@ export const UserAnalyticsDashboard = () => {
                 <Area
                   type="monotone"
                   dataKey="value"
-                  stroke="#b1e3c5"
-                  strokeWidth={2}
+                  stroke="#10b981"
+                  strokeWidth={1.5}
                   fill="url(#fillViews)"
                   dot={{ r: 2.5, fill: '#111' }}
                   activeDot={{ r: 3, fill: '#111' }}
@@ -241,14 +254,30 @@ export const UserAnalyticsDashboard = () => {
                   tick={{ fill: '#767676', fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
-                  interval="preserveStartEnd"
+                  interval={formatChartData.viewsTickInterval}
                   height={20}
                 />
                 <YAxis
                   hide
                   domain={formatChartData.viewsDomain}
+                  allowDataOverflow={true}
+                  type="number"
                 />
-                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                <ChartTooltip 
+                  content={
+                    <ChartTooltipContent 
+                      labelFormatter={(value, payload) => {
+                        if (!payload || payload.length === 0) return '';
+                        const date = new Date(payload[0].payload.date);
+                        const day = String(date.getDate()).padStart(2, '0');
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const year = date.getFullYear();
+                        return `${day}/${month}/${year}`;
+                      }}
+                      formatter={(value) => [`Đã xem ${value} lần`, '']}
+                    />
+                  } 
+                />
               </AreaChart>
             </ChartContainer>
           </div>
@@ -296,7 +325,7 @@ export const UserAnalyticsDashboard = () => {
           {/* Line Chart */}
           <div className="insights-chart-container">
             <ChartContainer config={downloadsChartConfig} className="h-[116px] w-full">
-              <AreaChart data={formatChartData.downloadsData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+              <AreaChart data={formatChartData.downloadsData} margin={{ top: 0, right: 0, left: 0, bottom: 20 }}>
                 <defs>
                   <linearGradient id="fillDownloads" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#ddf3ef" stopOpacity={0.8} />
@@ -306,8 +335,8 @@ export const UserAnalyticsDashboard = () => {
                 <Area
                   type="monotone"
                   dataKey="value"
-                  stroke="#b1e3c5"
-                  strokeWidth={2}
+                  stroke="#10b981"
+                  strokeWidth={1.5}
                   fill="url(#fillDownloads)"
                   dot={{ r: 2.5, fill: '#111' }}
                   activeDot={{ r: 3, fill: '#111' }}
@@ -317,14 +346,30 @@ export const UserAnalyticsDashboard = () => {
                   tick={{ fill: '#767676', fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
-                  interval="preserveStartEnd"
+                  interval={formatChartData.downloadsTickInterval}
                   height={20}
                 />
                 <YAxis
                   hide
                   domain={formatChartData.downloadsDomain}
+                  allowDataOverflow={true}
+                  type="number"
                 />
-                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                <ChartTooltip 
+                  content={
+                    <ChartTooltipContent 
+                      labelFormatter={(value, payload) => {
+                        if (!payload || payload.length === 0) return '';
+                        const date = new Date(payload[0].payload.date);
+                        const day = String(date.getDate()).padStart(2, '0');
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const year = date.getFullYear();
+                        return `${day}/${month}/${year}`;
+                      }}
+                      formatter={(value) => [`Đã tải ${value} lần`, '']}
+                    />
+                  } 
+                />
               </AreaChart>
             </ChartContainer>
           </div>

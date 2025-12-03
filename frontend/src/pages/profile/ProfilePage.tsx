@@ -15,6 +15,8 @@ import { generateImageSlug, extractIdFromSlug } from "@/lib/utils";
 import { Folder, Eye } from "lucide-react";
 // Lazy load analytics dashboard - only needed when stats tab is active
 const UserAnalyticsDashboard = lazy(() => import("./components/UserAnalyticsDashboard").then(module => ({ default: module.UserAnalyticsDashboard })));
+// Lazy load following/followers component - only needed when following tab is active
+const FollowingFollowers = lazy(() => import("./components/FollowingFollowers").then(module => ({ default: module.FollowingFollowers })));
 // Lazy load ImageModal - conditionally rendered
 const ImageModal = lazy(() => import("@/components/ImageModal"));
 import { userStatsService } from "@/services/userStatsService";
@@ -28,12 +30,12 @@ import { timingConfig } from "@/config/timingConfig";
 import { uiConfig } from "@/config/uiConfig";
 import "./ProfilePage.css";
 
-type TabType = 'photos' | 'illustrations' | 'collections' | 'stats';
+type TabType = 'photos' | 'following' | 'collections' | 'stats';
 
 // Profile tab IDs
 const TABS = {
     PHOTOS: 'photos',
-    ILLUSTRATIONS: 'illustrations',
+    FOLLOWING: 'following',
     COLLECTIONS: 'collections',
     STATS: 'stats',
 } as const;
@@ -314,15 +316,6 @@ function ProfilePage() {
                     !categoryName.toLowerCase().includes('illustration') &&
                     !categoryName.toLowerCase().includes('svg');
             });
-        } else if (activeTab === TABS.ILLUSTRATIONS) {
-            return images.filter(img => {
-                const categoryName = typeof img.imageCategory === 'string'
-                    ? img.imageCategory
-                    : img.imageCategory?.name;
-                return categoryName &&
-                    (categoryName.toLowerCase().includes('illustration') ||
-                        categoryName.toLowerCase().includes('svg'));
-            });
         }
         return [];
     }, [activeTab, images]);
@@ -566,14 +559,15 @@ function ProfilePage() {
                     <ProfileTabs
                         activeTab={activeTab}
                         photosCount={photosCount}
-                        illustrationsCount={illustrationsCount}
+                        followingCount={followStats.following}
+                        followersCount={followStats.followers}
                         collectionsCount={collectionsCount}
                         onTabChange={setActiveTab}
                     />
 
                     {/* Content Area */}
                     <div className="profile-content">
-                        {activeTab === TABS.PHOTOS || activeTab === TABS.ILLUSTRATIONS ? (
+                        {activeTab === TABS.PHOTOS ? (
                             loading ? (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4" aria-label="Đang tải ảnh" aria-live="polite">
                                     {Array.from({ length: 12 }).map((_, i) => (
@@ -582,7 +576,7 @@ function ProfilePage() {
                                 </div>
                             ) : displayImages.length === 0 ? (
                                 <div className="empty-state" role="status" aria-live="polite">
-                                    <p>Chưa có {activeTab === TABS.PHOTOS ? 'ảnh' : 'minh họa'} nào.</p>
+                                    <p>Chưa có ảnh nào.</p>
                                     <Button
                                         variant="outline"
                                         onClick={() => navigate('/upload')}
@@ -600,6 +594,10 @@ function ProfilePage() {
                                     onAddToCollection={handleAddToCollection}
                                 />
                             )
+                        ) : activeTab === TABS.FOLLOWING ? (
+                            <Suspense fallback={<div className="following-loading"><Skeleton className="h-64 w-full" /></div>}>
+                                <FollowingFollowers userId={displayUserId} />
+                            </Suspense>
                         ) : activeTab === TABS.COLLECTIONS ? (
                             collectionsLoading ? (
                                 <div className="profile-collections-grid" aria-label="Đang tải bộ sưu tập" aria-live="polite">
