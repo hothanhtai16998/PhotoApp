@@ -546,9 +546,9 @@
 
   .profile-header {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     align-items: flex-start;
-    gap: 20px;
+    gap: 16px;
     padding-bottom: 16px;
     margin-bottom: 0;
     border-bottom: none; /* Remove border on mobile like Unsplash */
@@ -559,7 +559,6 @@
     display: flex;
     justify-content: flex-start;
     align-items: flex-start;
-    flex-shrink: 0;
   }
 
   .profile-avatar,
@@ -675,9 +674,9 @@
 
   .profile-header {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     align-items: flex-start;
-    gap: 16px;
+    gap: 14px;
     padding-bottom: 14px;
     margin-bottom: 0;
     border-bottom: none; /* Remove border on mobile like Unsplash */
@@ -690,7 +689,6 @@
     justify-content: flex-start;
     align-items: flex-start;
     align-self: flex-start;
-    flex-shrink: 0;
   }
 
   .profile-avatar,

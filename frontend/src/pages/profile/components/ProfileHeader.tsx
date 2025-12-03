@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/Avatar";
 import { ProfileCompletion } from "./ProfileCompletion";
-import { Edit2, Star, MapPin, Globe, Instagram, Twitter, Users } from "lucide-react";
+import { Star, MapPin, Globe, Instagram, Twitter, Users } from "lucide-react";
 import type { PublicUser } from "@/services/userService";
 import type { UserStats } from "@/services/userStatsService";
 import { t } from "@/i18n";
@@ -25,15 +25,9 @@ export function ProfileHeader({
     displayUser,
     isOwnProfile,
     userStats,
-    displayUserId,
-    isSwitchingProfile,
-    statsUserId,
-    photosCount,
-    collectionsCount,
-    followStats,
+
     onEditProfile,
     onEditPins,
-    onTabChange,
 }: ProfileHeaderProps) {
     return (
         <div className="profile-header">
@@ -56,7 +50,6 @@ export function ProfileHeader({
                                 onClick={onEditProfile}
                                 className="edit-profile-btn"
                             >
-                                <Edit2 size={16} />
                                 {t('profile.editProfile')}
                             </Button>
                             <Button

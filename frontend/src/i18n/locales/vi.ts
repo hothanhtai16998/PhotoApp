@@ -386,8 +386,6 @@ export const vi = {
     noUsers: 'Không tìm thấy người dùng',
     noUsersFound: 'Không có người dùng nào khớp với tiêu chí tìm kiếm',
     noUsersDescription: 'Người dùng sẽ xuất hiện ở đây sau khi đăng ký',
-    noData: 'Không có dữ liệu',
-    dashboard: 'Dashboard',
     // Modals
     modalAddCategory: 'Thêm danh mục mới',
     categoryNameRequired: 'Không thể thiếu tên danh mục',
@@ -506,7 +504,7 @@ export const vi = {
     loadFollowingFailed: 'Không thể tải danh sách đang theo dõi',
     loadFollowersFailed: 'Không thể tải danh sách người theo dõi',
     // Profile Header
-    editPins: 'Chỉnh sửa ghim',
+    editPins: 'Ghim',
     defaultBio:
       'Tải xuống miễn phí những bức ảnh chất lượng cao đẹp mắt được tuyển chọn bởi {name}.',
     website: 'Trang web',
