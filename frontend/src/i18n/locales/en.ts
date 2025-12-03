@@ -33,8 +33,7 @@ export const en = {
     signUpSuccess:
       'Sign up successful! You will be redirected to the sign in page.',
     signUpFailed: 'Sign up failed. Please try again.',
-    signInFailed:
-      'Sign in failed. Please check your username or password.',
+    signInFailed: 'Sign in failed. Please check your username or password.',
     signOutSuccess: 'Signed out successfully!',
     welcomeBack: 'Welcome back 🎉',
     sessionExpired: 'Session expired. Please sign in again.',
@@ -58,7 +57,8 @@ export const en = {
     confirmPassword: 'Confirm password',
     passwordMin6: 'At least 6 characters',
     passwordLowerUpper: 'Contains both lowercase (a-z) and uppercase (A-Z)',
-    passwordNumberSymbol: 'Contains at least one number (0-9) or special character',
+    passwordNumberSymbol:
+      'Contains at least one number (0-9) or special character',
     continue: 'Continue',
     creating: 'Creating...',
   },
@@ -95,7 +95,8 @@ export const en = {
     favoriteCollectionsCount: '{count} collections',
     loadingFavoriteCollections: 'Loading favorite collections...',
     noFavoriteCollections: 'No favorite collections yet',
-    favoriteCollectionsHint: 'Start adding collections to favorites for easy access later',
+    favoriteCollectionsHint:
+      'Start adding collections to favorites for easy access later',
     exploreCollections: 'Explore collections',
     loadFailed: 'Could not load favorite collections',
     by: 'by',
@@ -164,7 +165,8 @@ export const en = {
     deleteConfirm: 'Are you sure you want to delete this collection?',
     loading: 'Loading collections...',
     loginRequired: 'Please sign in to view collections',
-    openToCreate: 'Open a photo and click "Collection" to create a new collection',
+    openToCreate:
+      'Open a photo and click "Collection" to create a new collection',
     searchPlaceholder: 'Search collections...',
     clearSearch: 'Clear search',
     allTags: 'All tags',
@@ -187,7 +189,8 @@ export const en = {
     addMore: 'Add more',
     dragDrop: 'Drag and drop or',
     browse: 'Browse',
-    browseHint: 'photos from your computer or phone (multiple selection allowed)',
+    browseHint:
+      'photos from your computer or phone (multiple selection allowed)',
     maxSize: 'Max 10 MB',
     selected: '{count} photos selected',
     uploading: 'Uploading...',
@@ -200,8 +203,10 @@ export const en = {
     fillRequired: 'Please fill in all required fields marked with',
     orIllustration: 'or illustration',
     startUploading: 'Start uploading',
-    sharePhotos: 'Share your photos with millions of people and be discovered by creators worldwide.',
-    uploadHighQuality: 'Upload high-quality images to help others create beautiful content. Your work will be viewed by designers, marketers, and creators worldwide.',
+    sharePhotos:
+      'Share your photos with millions of people and be discovered by creators worldwide.',
+    uploadHighQuality:
+      'Upload high-quality images to help others create beautiful content. Your work will be viewed by designers, marketers, and creators worldwide.',
     uploadingTitle: 'Uploading...',
     uploadingWait: 'Please wait while your photo is being uploaded',
     uploadedSuccess: 'Photo uploaded successfully! You can submit now.',
@@ -383,15 +388,14 @@ export const en = {
     noUsers: 'No users found',
     noUsersFound: 'No users match your search criteria',
     noUsersDescription: 'Users will appear here once they register',
-    noData: 'No data available',
-    dashboard: 'Dashboard',
     // Modals
     modalAddCategory: 'Add New Category',
     categoryNameRequired: 'Category name is required',
     categoryNameLabel: 'Category Name',
     categoryNamePlaceholder: 'Portrait, Landscape, Event,...',
     categoryDescriptionLabel: 'Description',
-    categoryDescriptionPlaceholder: 'Add a description for the category (optional)',
+    categoryDescriptionPlaceholder:
+      'Add a description for the category (optional)',
     create: 'Create',
     editUserInfo: 'Edit User Information',
     fullNameLabel: 'Full Name',
@@ -399,7 +403,8 @@ export const en = {
     save: 'Save',
     modalEditCategory: 'Edit Category',
     categoryNameRequired2: 'Category name is required',
-    categoryNameChangeNote: 'Changing the category name will update all images posted in this category.',
+    categoryNameChangeNote:
+      'Changing the category name will update all images posted in this category.',
     addAdminRole: 'Add Admin Role',
     selectAccount: 'Select Account',
     selectAccountPlaceholder: 'Please select an account...',
@@ -415,8 +420,8 @@ export const en = {
     ipLimit: '🌐 IP Limit',
     ipLimitPlaceholder: '192.168.1.100, 10.0.0.0/24',
     ipLimitHelp: 'Leave empty to allow all IPs. Supports IPv4, IPv6 and CIDR',
-    permissionsLabel: 'Permissions',
-    permissionsNote: 'Note: Permissions from lower roles are automatically inherited and cannot be unchecked.',
+    permissionsNote:
+      'Note: Permissions from lower roles are automatically inherited and cannot be unchecked.',
     inherited: '(Inherited)',
     inheritedFrom: 'Inherited from role: {role}',
     add: 'Add',
@@ -460,10 +465,12 @@ export const en = {
     clearLocation: 'Clear location',
     cameraMake: 'Camera Make',
     cameraMakePlaceholder: 'e.g., Canon, Nikon, Sony',
-    cameraMakeTooltip: 'Camera manufacturer name (e.g., Canon, Nikon, Sony, iPhone)',
+    cameraMakeTooltip:
+      'Camera manufacturer name (e.g., Canon, Nikon, Sony, iPhone)',
     cameraModel: 'Camera Model',
     cameraModelPlaceholder: 'e.g., Canon EOS 7D',
-    cameraModelTooltip: 'Camera model name (e.g., Canon EOS 7D, iPhone X, Sony A7 III)',
+    cameraModelTooltip:
+      'Camera model name (e.g., Canon EOS 7D, iPhone X, Sony A7 III)',
     focalLength: 'Focal Length (mm)',
     focalLengthTooltip: 'Lens focal length (e.g., 50mm, 24-70mm)',
     aperture: 'Aperture',
@@ -483,7 +490,8 @@ export const en = {
     loadingPhotos: 'Loading photos',
     loadingCollections: 'Loading collections',
     viewCollection: 'View collection',
-    pinnedEditSoon: 'Pinned photos editing coming soon! This feature will allow you to showcase your favorite images on your profile.',
+    pinnedEditSoon:
+      'Pinned photos editing coming soon! This feature will allow you to showcase your favorite images on your profile.',
     photos: 'Photos',
     following: 'Following',
     collections: 'Collections',
@@ -500,7 +508,8 @@ export const en = {
     loadFollowersFailed: 'Could not load followers list',
     // Profile Header
     editPins: 'Edit pins',
-    defaultBio: 'Download free high-quality beautiful photos curated by {name}.',
+    defaultBio:
+      'Download free high-quality beautiful photos curated by {name}.',
     website: 'Website',
     // Profile Form
     editInfo: 'Edit Information',
@@ -539,7 +548,6 @@ export const en = {
     published: 'Published',
     noImages: 'No images yet.',
     // Analytics additional
-    stats: 'Stats',
     daysAgo: 'Last {days} days',
     last7Days: 'Last 7 days',
     last30Days: 'Last 30 days',
@@ -575,7 +583,7 @@ export const en = {
     bioPlaceholder: 'Tell us about yourself...',
     social: 'Social Media',
     messaging: 'Messaging',
-    showMessageButton: 'Show \'Message\' button on your profile',
+    showMessageButton: "Show 'Message' button on your profile",
     messageHint: 'Messages will be sent to your email',
     usernameHint: '(only letters and numbers allowed)',
     // Error messages
@@ -611,10 +619,13 @@ export const en = {
     hoursAgo: '{count} hours ago',
     daysAgo: '{count} days ago',
     // Notification types
-    collectionInvited: '{actor} invited you to join collection "{collection}" with {permission} permission',
+    collectionInvited:
+      '{actor} invited you to join collection "{collection}" with {permission} permission',
     collectionImageAdded: '{actor} added an image to collection "{collection}"',
-    collectionImageRemoved: '{actor} removed an image from collection "{collection}"',
-    collectionPermissionChanged: '{actor} changed your permission in collection "{collection}"',
+    collectionImageRemoved:
+      '{actor} removed an image from collection "{collection}"',
+    collectionPermissionChanged:
+      '{actor} changed your permission in collection "{collection}"',
     collectionRemoved: 'You were removed from collection "{collection}"',
     imageFavorited: '{actor} liked photo "{image}"',
     imageDownloaded: '{actor} downloaded photo "{image}"',
@@ -626,8 +637,10 @@ export const en = {
     bulkUploadCompleted: 'Successfully uploaded {success}/{total} photos',
     bulkUploadWithFailed: 'Uploaded {success}/{total} photos ({failed} failed)',
     collectionUpdated: '{actor} updated {changes} of collection "{collection}"',
-    collectionCoverChanged: '{actor} changed the cover of collection "{collection}"',
-    collectionReordered: '{actor} reordered {count} photos in collection "{collection}"',
+    collectionCoverChanged:
+      '{actor} changed the cover of collection "{collection}"',
+    collectionReordered:
+      '{actor} reordered {count} photos in collection "{collection}"',
     bulkDeleteCompleted: 'Successfully deleted {count} photos',
     bulkAddToCollection: 'Added {count} photos to collection "{collection}"',
     imageFeatured: 'Photo "{image}" was featured on homepage',
@@ -714,13 +727,15 @@ export const en = {
     report: 'Report',
     reportType: 'Report {type}',
     selectReason: 'Please select a reason for reporting',
-    success: 'Report submitted successfully. Thank you for helping improve the community!',
+    success:
+      'Report submitted successfully. Thank you for helping improve the community!',
     failed: 'Could not submit report. Please try again.',
     reporting: 'You are reporting:',
     reasonLabel: 'Reason for reporting *',
     selectReasonPlaceholder: 'Select reason...',
     descriptionLabel: 'Additional details (optional)',
-    descriptionPlaceholder: 'Please provide more information about the issue...',
+    descriptionPlaceholder:
+      'Please provide more information about the issue...',
     submitting: 'Submitting...',
     submit: 'Submit report',
     // Report reasons

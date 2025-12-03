@@ -69,8 +69,12 @@ export const Header = memo(function Header() {
           <div className="mobile-header-actions">
             {accessToken ? (
               <>
+                {/* Notification Bell */}
+                <div className="mobile-header-icon-wrapper">
+                  <NotificationBell />
+                </div>
                 {/* User Icon/Avatar - Dropdown Menu like Desktop */}
-                <DropdownMenu>
+                <DropdownMenu modal={false}>
                   <DropdownMenuTrigger asChild>
                     <button className="mobile-header-icon" aria-label={t('header.userMenu')}>
                       {user ? (
@@ -134,10 +138,6 @@ export const Header = memo(function Header() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                {/* Notification Bell */}
-                <div className="mobile-header-icon-wrapper">
-                  <NotificationBell />
-                </div>
               </>
             ) : (
               <>
@@ -159,7 +159,7 @@ export const Header = memo(function Header() {
               <>
                 <button onClick={() => setUploadModalOpen(true)} className="header-link header-upload-button">{t('header.addImage')}</button>
                 <NotificationBell />
-                <DropdownMenu>
+                <DropdownMenu modal={false}>
                   <DropdownMenuTrigger asChild>
                     <button className="header-link user-menu-trigger" aria-label={t('header.userMenu')}>
                       {user ? (

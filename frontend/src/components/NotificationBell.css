@@ -88,6 +88,52 @@
   }
 }
 
+/* Ring ring animation for unread notifications - like phone call */
+.notification-bell-btn.has-unread {
+  animation: bellRing 0.6s ease-in-out;
+  animation-iteration-count: 8; /* Ring for ~5 seconds (8 * 0.6s = 4.8s) */
+}
+
+/* Ensure animation stops when class is removed */
+.notification-bell-btn:not(.has-unread) {
+  animation: none !important;
+  transform: none !important;
+}
+
+@keyframes bellRing {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+  10% {
+    transform: rotate(-10deg) scale(1.05);
+  }
+  20% {
+    transform: rotate(10deg) scale(1.05);
+  }
+  30% {
+    transform: rotate(-8deg) scale(1.03);
+  }
+  40% {
+    transform: rotate(8deg) scale(1.03);
+  }
+  50% {
+    transform: rotate(0deg) scale(1);
+  }
+  60% {
+    transform: rotate(-10deg) scale(1.05);
+  }
+  70% {
+    transform: rotate(10deg) scale(1.05);
+  }
+  80% {
+    transform: rotate(-8deg) scale(1.03);
+  }
+  90% {
+    transform: rotate(8deg) scale(1.03);
+  }
+}
+
 .notification-dropdown {
   position: absolute;
   top: calc(100% + 12px);
@@ -305,16 +351,54 @@
 
 @media (max-width: 768px) {
   .notification-dropdown {
-    right: 0;
-    width: calc(100vw - 24px);
-    max-width: min(400px, calc(100vw - 24px));
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-width: none;
     position: fixed;
-    top: calc(var(--header-height, 56px) + 12px);
+    top: calc(var(--header-height, 56px) + 8px);
+    max-height: 60vh; /* Limit to 60% of viewport height */
     z-index: 2000;
+  }
+  
+  .notification-dropdown-header {
+    padding: 10px 12px;
+    flex-shrink: 0;
+  }
+  
+  .notification-dropdown-header h3 {
+    font-size: 0.9375rem;
+  }
+  
+  .notification-dropdown-content {
+    max-height: calc(60vh - 60px); /* Account for header */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .notification-loading,
+  .notification-empty {
+    padding: 40px 20px;
   }
 
   .notification-item {
-    padding: 14px 16px;
+    padding: 8px 12px;
+    gap: 8px;
+  }
+  
+  .notification-item-icon {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .notification-item-message {
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    margin: 0 0 4px 0;
+  }
+  
+  .notification-item-time {
+    font-size: 0.6875rem;
   }
 
   .notification-item-actions {

@@ -375,10 +375,34 @@
     /* Let Radix UI handle positioning, but ensure it doesn't overflow */
     max-width: min(200px, calc(100vw - 24px)) !important;
   }
-  
+
   /* Target Radix UI data attributes for mobile positioning */
-  .user-menu-content[data-side="bottom"][data-align="start"] {
+  .user-menu-content[data-side='bottom'][data-align='start'] {
     transform-origin: top left !important;
+  }
+
+  /* Reduce padding for menu items on mobile */
+  .user-menu-content [data-slot='dropdown-menu-item'] {
+    padding: 4px 8px !important;
+    margin: 0.5px 0 !important;
+    font-size: 0.875rem !important; /* Slightly smaller font */
+    min-height: auto !important;
+  }
+
+  /* Reduce gap between icon and text on mobile */
+  .user-menu-content [data-slot='dropdown-menu-item'] a {
+    gap: 6px !important;
+  }
+
+  /* Reduce icon size on mobile */
+  .user-menu-content [data-slot='dropdown-menu-item'] svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  /* Reduce overall menu padding on mobile */
+  .user-menu-content {
+    padding: 4px 6px !important;
   }
 }
 
