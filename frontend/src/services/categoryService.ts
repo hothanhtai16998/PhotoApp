@@ -12,6 +12,11 @@ export interface Category {
 let categoriesCache: { data: Category[]; timestamp: number } | null = null;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
+// Function to clear the categories cache
+export const clearCategoriesCache = () => {
+  categoriesCache = null;
+};
+
 export const categoryService = {
   fetchCategories: async (forceRefresh = false): Promise<Category[]> => {
     // Return cached data if available and not expired

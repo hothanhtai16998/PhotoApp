@@ -269,16 +269,29 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
 
   // Fetch categories from backend
   useEffect(() => {
-    const loadCategories = async () => {
+    const loadCategories = async (forceRefresh = false) => {
       try {
-        const fetchedCategories = await categoryService.fetchCategories()
+        const fetchedCategories = await categoryService.fetchCategories(forceRefresh)
         setCategoryObjects(fetchedCategories)
       } catch (error) {
         console.error('Failed to load categories:', error)
         setCategoryObjects([])
       }
     }
+    
+    // Initial load
     loadCategories()
+    
+    // Listen for category updates (when admin creates/updates/deletes categories)
+    const handleCategoriesUpdated = () => {
+      loadCategories(true) // Force refresh to bypass cache
+    }
+    
+    window.addEventListener('categoriesUpdated', handleCategoriesUpdated)
+    
+    return () => {
+      window.removeEventListener('categoriesUpdated', handleCategoriesUpdated)
+    }
   }, [])
 
   const handleCategoryClick = (categoryNameVi: string) => {

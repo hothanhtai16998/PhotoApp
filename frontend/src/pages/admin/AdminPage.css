@@ -106,6 +106,19 @@
   transition: all 0.2s ease;
   z-index: 10;
   flex-shrink: 0;
+  color: var(--admin-text, #111);
+}
+
+.admin-sidebar-toggle svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+  color: inherit;
+}
+
+.admin-sidebar-toggle svg path {
+  fill: currentColor;
 }
 
 .admin-sidebar-toggle:hover {
@@ -239,7 +252,7 @@
 }
 
 .admin-nav-item.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #000000;
   color: white;
 }
 
@@ -472,7 +485,7 @@
 .admin-table th {
   text-align: left;
   padding: 16px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #000000;
   font-weight: 600;
   color: white;
   border-bottom: none;
@@ -540,9 +553,9 @@
   flex-wrap: wrap;
   gap: 20px;
   padding: 28px 36px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #000000;
   border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.25);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
   color: white;
 }
 
@@ -2245,7 +2258,7 @@
 
 /* Real-time Widget */
 .falcon-realtime-widget {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #000000;
   color: white;
 }
 
@@ -2267,11 +2280,13 @@
   font-weight: 700;
   text-align: center;
   margin: 20px 0;
+  color: white;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .falcon-views-per-second {
   margin: 24px 0;
+  color: white;
 }
 
 .falcon-views-label {
@@ -2281,6 +2296,7 @@
   letter-spacing: 0.05em;
   margin-bottom: 12px;
   opacity: 0.9;
+  color: white;
 }
 
 .falcon-views-chart {
@@ -2316,6 +2332,7 @@
   letter-spacing: 0.05em;
   margin-bottom: 12px;
   opacity: 0.9;
+  color: white;
 }
 
 .falcon-pages-list {
@@ -2331,6 +2348,7 @@
   background: rgba(255, 255, 255, 0.1);
   border-radius: 4px;
   font-size: 0.875rem;
+  color: white;
 }
 
 .falcon-page-path {
@@ -2338,11 +2356,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: white;
 }
 
 .falcon-page-count {
   font-weight: 600;
   margin-left: 12px;
+  color: white;
 }
 
 .falcon-realtime-link {

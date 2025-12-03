@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, lazy, Suspense, useCallback } from 'react'
 import { useUserStore } from '@/stores/useUserStore';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useIsMobile } from '@/hooks/useIsMobile';
-import { ChevronLeft, ChevronRight, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import type { AdminRolePermissions } from '@/services/adminService';
 import type { User as AuthUser } from '@/types/user';
 import Header from '@/components/Header';
@@ -199,7 +199,27 @@ function AdminPage() {
                                         aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                                         title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                                     >
-                                        {sidebarCollapsed ? <ChevronRight size={22} /> : <ChevronLeft size={22} />}
+                                        {sidebarCollapsed ? (
+                                            <svg 
+                                                xmlns="http://www.w3.org/2000/svg" 
+                                                viewBox="0 0 24 24" 
+                                                width="22" 
+                                                height="22" 
+                                                style={{ display: 'block', fill: 'currentColor' }}
+                                            >
+                                                <path d="M15.54,11.29,9.88,5.64a1,1,0,0,0-1.42,0,1,1,0,0,0,0,1.41l4.95,5L8.46,17a1,1,0,0,0,0,1.41,1,1,0,0,0,.71.3,1,1,0,0,0,.71-.3l5.66-5.65A1,1,0,0,0,15.54,11.29Z" fill="currentColor" />
+                                            </svg>
+                                        ) : (
+                                            <svg 
+                                                xmlns="http://www.w3.org/2000/svg" 
+                                                viewBox="0 0 24 24" 
+                                                width="22" 
+                                                height="22" 
+                                                style={{ display: 'block', fill: 'currentColor' }}
+                                            >
+                                                <path d="m8.5 12.8 5.7 5.6c.4.4 1 .4 1.4 0 .4-.4.4-1 0-1.4l-4.9-5 4.9-5c.4-.4.4-1 0-1.4-.2-.2-.4-.3-.7-.3-.3 0-.5.1-.7.3l-5.7 5.6c-.4.5-.4 1.1 0 1.6 0-.1 0-.1 0 0z" fill="currentColor" />
+                                            </svg>
+                                        )}
                                     </button>
                                 )}
                                 {isMobile && (

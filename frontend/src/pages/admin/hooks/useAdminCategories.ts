@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import { categoryService, type Category } from '@/services/categoryService';
+import { categoryService, clearCategoriesCache, type Category } from '@/services/categoryService';
 import { usePermissions } from '@/hooks/usePermissions';
 
 interface UseAdminCategoriesReturn {
@@ -68,6 +68,10 @@ export function useAdminCategories(): UseAdminCategoriesReturn {
 
       try {
         await categoryService.createCategory(data);
+        // Clear the frontend cache so CategoryNavigation will refresh
+        clearCategoriesCache();
+        // Dispatch event to notify CategoryNavigation to refresh
+        window.dispatchEvent(new CustomEvent('categoriesUpdated'));
         toast.success('Tạo danh mục thành công');
         setCreatingCategory(false);
         await loadCategories();
@@ -98,6 +102,10 @@ export function useAdminCategories(): UseAdminCategoriesReturn {
 
       try {
         await categoryService.updateCategory(categoryId, updates);
+        // Clear the frontend cache so CategoryNavigation will refresh
+        clearCategoriesCache();
+        // Dispatch event to notify CategoryNavigation to refresh
+        window.dispatchEvent(new CustomEvent('categoriesUpdated'));
         toast.success('Danh mục đã được cập nhật thành công');
         setEditingCategory(null);
         await loadCategories();
@@ -133,6 +141,10 @@ export function useAdminCategories(): UseAdminCategoriesReturn {
 
       try {
         await categoryService.deleteCategory(categoryId);
+        // Clear the frontend cache so CategoryNavigation will refresh
+        clearCategoriesCache();
+        // Dispatch event to notify CategoryNavigation to refresh
+        window.dispatchEvent(new CustomEvent('categoriesUpdated'));
         toast.success('Xoá danh mục thành công');
         await loadCategories();
         return true;
