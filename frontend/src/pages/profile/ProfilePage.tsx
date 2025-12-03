@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Image } from "@/types/image";
 import ProgressiveImage from "@/components/ProgressiveImage";
+import MasonryGrid from "@/components/MasonryGrid";
 import api from "@/lib/axios";
 import axios from "axios";
 import { generateImageSlug, extractIdFromSlug } from "@/lib/utils";
@@ -76,6 +77,15 @@ function ProfilePage() {
 
     // Detect if we're on mobile
     const isMobile = useIsMobile();
+
+    // Column count for masonry grid (responsive like ImageGrid)
+    const [columnCount, setColumnCount] = useState(() => {
+        if (typeof window === 'undefined') return 3;
+        const width = window.innerWidth;
+        if (width < appConfig.mobileBreakpoint) return 1; // Mobile: 1 column
+        if (width < appConfig.breakpoints.lg) return 2; // Tablet: 2 columns
+        return 3; // Desktop: 3 columns
+    });
 
     const [activeTab, setActiveTab] = useState<TabType>(TABS.PHOTOS);
     const [isSwitchingProfile, setIsSwitchingProfile] = useState(false);
@@ -292,10 +302,6 @@ function ProfilePage() {
         toast.info('Tính năng chỉnh sửa ghim sẽ sớm ra mắt! Tính năng này sẽ cho phép bạn giới thiệu những hình ảnh yêu thích trên hồ sơ của mình.');
     };
 
-    const handleUpdateAvailability = () => {
-        // Feature coming soon - allows users to indicate if they're available for hire
-        toast.info('Tính năng cập nhật tình trạng sẵn sàng sẽ sớm ra mắt! Bạn sẽ có thể cho biết mình có sẵn sàng nhận công việc chụp ảnh hay không.');
-    };
 
     // Calculate display images based on active tab
     const displayImages = useMemo(() => {
@@ -390,8 +396,53 @@ function ProfilePage() {
         updateImage(updatedImage._id, updatedImage);
     }, [updateImage]);
 
-    // Download image function - uses backend proxy to avoid CORS issues
-    const handleDownloadImage = useCallback(async (image: Image, e: React.MouseEvent) => {
+    // Update column count based on viewport size (like ImageGrid)
+    useEffect(() => {
+        const updateColumnCount = () => {
+            const width = window.innerWidth;
+            if (width < appConfig.mobileBreakpoint) {
+                setColumnCount(1); // Mobile: 1 column
+            } else if (width < appConfig.breakpoints.lg) {
+                setColumnCount(2); // Tablet: 2 columns
+            } else {
+                setColumnCount(3); // Desktop: 3 columns
+            }
+        };
+
+        updateColumnCount();
+        window.addEventListener('resize', updateColumnCount);
+        return () => window.removeEventListener('resize', updateColumnCount);
+    }, []);
+
+    // Handle image click (for MasonryGrid)
+    const handleImageClick = useCallback((image: Image) => {
+        // MOBILE ONLY: Navigate to ImagePage instead of opening modal
+        if (isMobile) {
+            // Set flag to indicate we're opening from grid
+            sessionStorage.setItem(appConfig.storage.imagePageFromGridKey, 'true');
+            // Pass images via state for navigation
+            const slug = generateImageSlug(image.imageTitle || '', image._id);
+            navigate(`/photos/${slug}`, {
+                state: {
+                    images: displayImages,
+                    fromGrid: true
+                }
+            });
+            return;
+        }
+
+        // DESKTOP: Use modal (existing behavior)
+        // Update URL when image is selected with slug
+        const slug = generateImageSlug(image.imageTitle || '', image._id);
+        setSearchParams(prev => {
+            const newParams = new URLSearchParams(prev);
+            newParams.set('image', slug);
+            return newParams;
+        });
+    }, [isMobile, displayImages, navigate, setSearchParams]);
+
+    // Handle download (for MasonryGrid)
+    const handleDownload = useCallback(async (image: Image, e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
 
@@ -455,6 +506,13 @@ function ProfilePage() {
         }
     }, []);
 
+    // Handle add to collection (for MasonryGrid)
+    const handleAddToCollection = useCallback((image: Image, e: React.MouseEvent) => {
+        e.stopPropagation();
+        // TODO: Implement collection modal for profile page
+        toast.info('Tính năng thêm vào bộ sưu tập sẽ sớm ra mắt!');
+    }, []);
+
     if (profileUserLoading) {
         return (
             <>
@@ -501,7 +559,6 @@ function ProfilePage() {
                         followStats={followStats}
                         onEditProfile={handleEditProfile}
                         onEditPins={handleEditPins}
-                        onUpdateAvailability={handleUpdateAvailability}
                         onTabChange={setActiveTab}
                     />
 
@@ -518,14 +575,9 @@ function ProfilePage() {
                     <div className="profile-content">
                         {activeTab === TABS.PHOTOS || activeTab === TABS.ILLUSTRATIONS ? (
                             loading ? (
-                                <div className="profile-image-grid" aria-label="Đang tải ảnh" aria-live="polite">
-                                    {Array.from({ length: uiConfig.skeleton.imageGridCount }).map((_, index) => (
-                                        <div
-                                            key={`skeleton-${index}`}
-                                            className={`profile-image-item ${index % 3 === 0 ? 'portrait' : 'landscape'}`}
-                                        >
-                                            <Skeleton className="w-full h-full min-h-[200px] rounded-lg" />
-                                        </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4" aria-label="Đang tải ảnh" aria-live="polite">
+                                    {Array.from({ length: 12 }).map((_, i) => (
+                                        <Skeleton key={i} className="w-full h-64" />
                                     ))}
                                 </div>
                             ) : displayImages.length === 0 ? (
@@ -540,56 +592,13 @@ function ProfilePage() {
                                     </Button>
                                 </div>
                             ) : (
-                                <div className="profile-image-grid">
-                                    {displayImages.map((image) => {
-                                        const imageType = imageTypes.get(image._id) || 'landscape';
-                                        return (
-                                            <div
-                                                key={image._id}
-                                                className={`profile-image-item ${imageType}`}
-                                                onClick={() => {
-                                                    // MOBILE ONLY: Navigate to ImagePage instead of opening modal
-                                                    if (isMobile) {
-                                                        // Set flag to indicate we're opening from grid
-                                                        sessionStorage.setItem(appConfig.storage.imagePageFromGridKey, 'true');
-                                                        // Pass images via state for navigation
-                                                        const slug = generateImageSlug(image.imageTitle, image._id);
-                                                        navigate(`/photos/${slug}`, {
-                                                            state: {
-                                                                images: displayImages,
-                                                                fromGrid: true
-                                                            }
-                                                        });
-                                                        return;
-                                                    }
-
-                                                    // DESKTOP: Use modal (existing behavior)
-                                                    // Update URL when image is selected with slug
-                                                    const slug = generateImageSlug(image.imageTitle, image._id);
-                                                    setSearchParams(prev => {
-                                                        const newParams = new URLSearchParams(prev);
-                                                        newParams.set('image', slug);
-                                                        return newParams;
-                                                    });
-                                                }}
-                                                style={{ cursor: 'pointer' }}
-                                            >
-                                                <ProgressiveImage
-                                                    src={image.imageUrl}
-                                                    thumbnailUrl={image.thumbnailUrl}
-                                                    smallUrl={image.smallUrl}
-                                                    regularUrl={image.regularUrl}
-                                                    alt={image.imageTitle || 'Photo'}
-                                                    onLoad={(img) => {
-                                                        if (!processedImages.current.has(image._id) && currentImageIds.has(image._id)) {
-                                                            handleImageLoad(image._id, img);
-                                                        }
-                                                    }}
-                                                />
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                                <MasonryGrid
+                                    images={displayImages}
+                                    onImageClick={handleImageClick}
+                                    columnCount={columnCount}
+                                    onDownload={handleDownload}
+                                    onAddToCollection={handleAddToCollection}
+                                />
                             )
                         ) : activeTab === TABS.COLLECTIONS ? (
                             collectionsLoading ? (
@@ -706,7 +715,7 @@ function ProfilePage() {
                                 return newParams;
                             });
                         }}
-                        onDownload={handleDownloadImage}
+                        onDownload={() => { /* Download handled by ImageModal internally */ }}
                         imageTypes={imageTypes}
                         onImageLoad={handleImageLoad}
                         currentImageIds={currentImageIds}

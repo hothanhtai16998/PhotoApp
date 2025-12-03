@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/Avatar";
 import { ProfileCompletion } from "./ProfileCompletion";
-import { Edit2, Star, XCircle, MapPin, Globe, Instagram, Twitter, Users, ImageIcon, Folder, Heart, Download, Eye as EyeIcon, UserPlus } from "lucide-react";
+import { Edit2, Star, MapPin, Globe, Instagram, Twitter, Users, ImageIcon, Folder, Heart, Download, Eye as EyeIcon, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import type { PublicUser } from "@/services/userService";
 import type { UserStats } from "@/services/userStatsService";
@@ -18,7 +18,6 @@ interface ProfileHeaderProps {
     followStats: { followers: number; following: number; isFollowing: boolean };
     onEditProfile: () => void;
     onEditPins: () => void;
-    onUpdateAvailability: () => void;
     onTabChange: (tab: 'photos' | 'illustrations' | 'collections' | 'stats') => void;
 }
 
@@ -34,7 +33,6 @@ export function ProfileHeader({
     followStats,
     onEditProfile,
     onEditPins,
-    onUpdateAvailability,
     onTabChange,
 }: ProfileHeaderProps) {
     return (
