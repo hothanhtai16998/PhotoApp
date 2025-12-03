@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import type { User, AdminRolePermissions } from '@/services/adminService';
 import { PERMISSION_GROUPS, getAllPermissionKeys } from '@/utils/permissionGroups';
 import { getInheritedPermissions, isPermissionInherited, getInheritedFromRole } from '@/utils/roleInheritance';
+import { t } from '@/i18n';
 
 interface CreateRoleModalProps {
     users: User[];
@@ -44,7 +45,7 @@ export function CreateRoleModal({ users, onClose, onSave }: CreateRoleModalProps
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedUserId) {
-            toast.error('Vui lòng chọn tài khoản để tạo quyền admin.');
+            toast.error(t('admin.selectAccountRequired'));
             return;
         }
         
@@ -68,19 +69,19 @@ export function CreateRoleModal({ users, onClose, onSave }: CreateRoleModalProps
         <div className="admin-modal-overlay" onClick={onClose}>
             <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="admin-modal-header">
-                    <h2>Thêm quyền admin</h2>
+                    <h2>{t('admin.addAdminRole')}</h2>
                     <button onClick={onClose}>×</button>
                 </div>
                 <form onSubmit={handleSubmit} className="admin-modal-form">
                     <div className="admin-form-group">
-                        <label>Chọn tài khoản</label>
+                        <label>{t('admin.selectAccount')}</label>
                         <select
                             value={selectedUserId}
                             onChange={(e) => setSelectedUserId(e.target.value)}
                             required
                             className="admin-select"
                         >
-                            <option value="">Vui lòng chọn tải khoản...</option>
+                            <option value="">{t('admin.selectAccountPlaceholder')}</option>
                             {users.filter(u => !u.isAdmin && !u.isSuperAdmin).map((u) => (
                                 <option key={u._id} value={u._id}>
                                     {u.displayName} ({u.username})
@@ -90,7 +91,7 @@ export function CreateRoleModal({ users, onClose, onSave }: CreateRoleModalProps
                     </div>
 
                     <div className="admin-form-group">
-                        <label>Vai trò</label>
+                        <label>{t('admin.roleLabel')}</label>
                         <select
                             value={role}
                             onChange={(e) => {
@@ -101,9 +102,9 @@ export function CreateRoleModal({ users, onClose, onSave }: CreateRoleModalProps
                             }}
                             className="admin-select"
                         >
-                            <option value="admin">Admin</option>
-                            <option value="moderator">Mod</option>
-                            <option value="super_admin">Super Admin</option>
+                            <option value="admin">{t('admin.adminRoleLabel')}</option>
+                            <option value="moderator">{t('admin.moderator')}</option>
+                            <option value="super_admin">{t('admin.superAdmin')}</option>
                         </select>
                     </div>
 
@@ -111,14 +112,14 @@ export function CreateRoleModal({ users, onClose, onSave }: CreateRoleModalProps
                         <div className="admin-security-settings">
                             <div className="admin-security-header">
                                 <span className="admin-security-icon">🔒</span>
-                                <label style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Thiết lập bảo mật</label>
-                                <span style={{ fontSize: '0.75rem', color: '#666', fontWeight: 'normal' }}>(Tùy chọn)</span>
+                                <label style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>{t('admin.securitySettings')}</label>
+                                <span style={{ fontSize: '0.75rem', color: '#666', fontWeight: 'normal' }}>{t('admin.optional')}</span>
                             </div>
                             
                             <div className="admin-security-content">
                                 <div className="admin-security-field">
                                     <label className="admin-security-field-label">
-                                        <span>📅 Ngày hết hạn</span>
+                                        <span>{t('admin.expiryDate')}</span>
                                     </label>
                                     <Input
                                         type="datetime-local"
@@ -127,7 +128,7 @@ export function CreateRoleModal({ users, onClose, onSave }: CreateRoleModalProps
                                         className="admin-security-input"
                                     />
                                     <p className="admin-security-help">
-                                        Để trống nếu không muốn đặt hạn
+                                        {t('admin.expiryDateHelp')}
                                     </p>
                                 </div>
                                 
@@ -140,25 +141,25 @@ export function CreateRoleModal({ users, onClose, onSave }: CreateRoleModalProps
                                             className="admin-security-checkbox"
                                         />
                                         <span className="admin-security-checkbox-text">
-                                            <strong>Kích hoạt quyền</strong>
-                                            <small>Bỏ chọn để tạm tắt quyền</small>
+                                            <strong>{t('admin.activateRole')}</strong>
+                                            <small>{t('admin.deactivateRole')}</small>
                                         </span>
                                     </label>
                                 </div>
                                 
                                 <div className="admin-security-field">
                                     <label className="admin-security-field-label">
-                                        <span>🌐 Giới hạn IP</span>
+                                        <span>{t('admin.ipLimit')}</span>
                                     </label>
                                     <Input
                                         type="text"
                                         value={allowedIPs}
                                         onChange={(e) => setAllowedIPs(e.target.value)}
-                                        placeholder="192.168.1.100, 10.0.0.0/24"
+                                        placeholder={t('admin.ipLimitPlaceholder')}
                                         className="admin-security-input"
                                     />
                                     <p className="admin-security-help">
-                                        Để trống để cho phép tất cả IP. Hỗ trợ IPv4, IPv6 và CIDR
+                                        {t('admin.ipLimitHelp')}
                                     </p>
                                 </div>
                             </div>
@@ -166,10 +167,10 @@ export function CreateRoleModal({ users, onClose, onSave }: CreateRoleModalProps
                     </div>
 
                     <div className="admin-form-group">
-                        <label>Quyền hạn</label>
+                        <label>{t('admin.permissionsLabel')}</label>
                         {role !== 'moderator' && (
                             <p className="admin-form-help" style={{ marginBottom: '12px', color: '#059669' }}>
-                                <strong>Lưu ý:</strong> Quyền từ vai trò thấp hơn sẽ tự động được kế thừa và không thể bỏ chọn.
+                                <strong>{t('admin.permissionsNote')}</strong>
                             </p>
                         )}
                         <div className="admin-permissions-container">
@@ -182,12 +183,13 @@ export function CreateRoleModal({ users, onClose, onSave }: CreateRoleModalProps
                                             const isInherited = isPermissionInherited(role, perm.key);
                                             const inheritedFrom = getInheritedFromRole(role, perm.key);
                                             const isChecked = permissions[permissionKey] || false;
+                                            const inheritedFromLabel = inheritedFrom === 'moderator' ? t('admin.moderator') : t('admin.adminRoleLabel');
                                             
                                             return (
                                                 <label 
                                                     key={perm.key} 
                                                     className={`admin-checkbox-label ${isInherited ? 'inherited-permission' : ''}`}
-                                                    title={isInherited ? `Kế thừa từ vai trò: ${inheritedFrom === 'moderator' ? 'Moderator' : 'Admin'}` : undefined}
+                                                    title={isInherited ? t('admin.inheritedFrom', { role: inheritedFromLabel }) : undefined}
                                                 >
                                                     <input
                                                         type="checkbox"
@@ -202,8 +204,8 @@ export function CreateRoleModal({ users, onClose, onSave }: CreateRoleModalProps
                                                     <span>
                                                         {perm.label}
                                                         {isInherited && (
-                                                            <span className="inherited-badge" title={`Kế thừa từ ${inheritedFrom === 'moderator' ? 'Moderator' : 'Admin'}`}>
-                                                                (Kế thừa)
+                                                            <span className="inherited-badge" title={t('admin.inheritedFrom', { role: inheritedFromLabel })}>
+                                                                {t('admin.inherited')}
                                                             </span>
                                                         )}
                                                     </span>
@@ -218,9 +220,9 @@ export function CreateRoleModal({ users, onClose, onSave }: CreateRoleModalProps
 
                     <div className="admin-modal-actions">
                         <Button type="button" variant="outline" onClick={onClose}>
-                            Huỷ
+                            {t('common.cancel')}
                         </Button>
-                        <Button type="submit">Thêm</Button>
+                        <Button type="submit">{t('admin.add')}</Button>
                     </div>
                 </form>
             </div>

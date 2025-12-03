@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
 import { Trash2, Search } from 'lucide-react';
+import { t } from '@/i18n';
 
 interface Favorite {
     _id: string;
@@ -28,7 +29,7 @@ export function AdminFavorites() {
 
     useEffect(() => {
         if (!isSuperAdmin() && !hasPermission('manageFavorites')) {
-            toast.error('Bạn không có quyền quản lý yêu thích');
+            toast.error(t('admin.noPermission'));
             return;
         }
         loadFavorites(1);
@@ -45,7 +46,7 @@ export function AdminFavorites() {
             setPagination(data.pagination);
         } catch (error: unknown) {
             const axiosError = error as { response?: { data?: { message?: string } } };
-            toast.error(axiosError.response?.data?.message || 'Lỗi khi tải danh sách yêu thích');
+            toast.error(axiosError.response?.data?.message || t('admin.loadFailed'));
         } finally {
             setLoading(false);
         }
@@ -57,28 +58,28 @@ export function AdminFavorites() {
     }, [search]);
 
     const handleDeleteFavorite = async (userId: string, imageId: string) => {
-        if (!confirm('Bạn có chắc muốn xóa yêu thích này?')) {
+        if (!confirm(t('admin.deleteConfirm'))) {
             return;
         }
 
         try {
             await adminService.deleteFavorite(userId, imageId);
-            toast.success('Đã xóa yêu thích thành công');
+            toast.success(t('admin.deleteSuccess'));
             loadFavorites(pagination.page);
         } catch (error: unknown) {
             const axiosError = error as { response?: { data?: { message?: string } } };
-            toast.error(axiosError.response?.data?.message || 'Lỗi khi xóa yêu thích');
+            toast.error(axiosError.response?.data?.message || t('admin.deleteFailed'));
         }
     };
 
     if (loading) {
-        return <div className="admin-loading">Đang tải...</div>;
+        return <div className="admin-loading">{t('admin.loading')}</div>;
     }
 
     return (
         <div className="admin-favorites">
             <div className="admin-header">
-                <h1 className="admin-title">Quản lý yêu thích</h1>
+                <h1 className="admin-title">{t('admin.manageFavorites')}</h1>
             </div>
 
             <div className="admin-search">
@@ -86,7 +87,7 @@ export function AdminFavorites() {
                     <Search size={20} />
                     <input
                         type="text"
-                        placeholder="Tìm kiếm yêu thích..."
+                        placeholder={t('admin.searchFavorites')}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         className="admin-search-input"
@@ -98,17 +99,17 @@ export function AdminFavorites() {
                 <table>
                     <thead>
                         <tr>
-                            <th>Người dùng</th>
-                            <th>Ảnh</th>
-                            <th>Ngày thêm</th>
-                            <th>Actions</th>
+                            <th>{t('admin.username')}</th>
+                            <th>{t('admin.imageTitle')}</th>
+                            <th>{t('admin.uploadDateLabel')}</th>
+                            <th>{t('admin.actions')}</th>
                         </tr>
                     </thead>
                     <tbody>
                             {favorites.length === 0 ? (
                                 <tr>
                                     <td colSpan={4} style={{ textAlign: 'center', padding: '40px' }}>
-                                        Chưa có dữ liệu yêu thích
+                                        {t('admin.noFavoritesData')}
                                     </td>
                                 </tr>
                             ) : (
@@ -116,7 +117,7 @@ export function AdminFavorites() {
                                     <tr key={fav._id}>
                                         <td>{fav.user?.displayName || fav.user?.username || fav.user?.email}</td>
                                         <td>{fav.image?.imageTitle || 'N/A'}</td>
-                                        <td>{new Date(fav.createdAt).toLocaleDateString('vi-VN')}</td>
+                                        <td>{new Date(fav.createdAt).toLocaleDateString()}</td>
                                     <td>
                                         <Button
                                             variant="outline"

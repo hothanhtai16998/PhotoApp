@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { t } from '@/i18n';
 
 interface CreateCategoryModalProps {
     onClose: () => void;
@@ -15,7 +16,7 @@ export function CreateCategoryModal({ onClose, onSave }: CreateCategoryModalProp
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name.trim()) {
-            toast.error('Không thể thiếu tên danh mục');
+            toast.error(t('admin.categoryNameRequired'));
             return;
         }
         await onSave({ name: name.trim(), description: description.trim() || undefined });
@@ -25,33 +26,33 @@ export function CreateCategoryModal({ onClose, onSave }: CreateCategoryModalProp
         <div className="admin-modal-overlay" onClick={onClose}>
             <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="admin-modal-header">
-                    <h2>Thêm danh mục mới</h2>
+                    <h2>{t('admin.modalAddCategory')}</h2>
                     <button onClick={onClose}>×</button>
                 </div>
                 <form onSubmit={handleSubmit} className="admin-modal-form">
                     <div className="admin-form-group">
-                        <label>Tên danh mục</label>
+                        <label>{t('admin.categoryNameLabel')}</label>
                         <Input
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             required
-                            placeholder="Chân dung, phong cảnh, sự kiện,..."
+                            placeholder={t('admin.categoryNamePlaceholder')}
                         />
                     </div>
                     <div className="admin-form-group">
-                        <label>Mô tả</label>
+                        <label>{t('admin.categoryDescriptionLabel')}</label>
                         <textarea
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             rows={3}
-                            placeholder="Thêm mô tả cho danh mục (có thể bỏ trống)"
+                            placeholder={t('admin.categoryDescriptionPlaceholder')}
                         />
                     </div>
                     <div className="admin-modal-actions">
                         <Button type="button" variant="outline" onClick={onClose}>
-                            Huỷ
+                            {t('common.cancel')}
                         </Button>
-                        <Button type="submit">Tạo</Button>
+                        <Button type="submit">{t('admin.create')}</Button>
                     </div>
                 </form>
             </div>

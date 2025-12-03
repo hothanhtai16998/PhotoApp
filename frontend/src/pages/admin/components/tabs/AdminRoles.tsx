@@ -3,6 +3,7 @@ import { Edit2, Trash2 } from 'lucide-react';
 import { CreateRoleModal, EditRoleModal } from '../modals';
 import type { User, AdminRole, AdminRolePermissions } from '@/services/adminService';
 import type { User as AuthUser } from '@/types/user';
+import { t } from '@/i18n';
 
 interface AdminRolesProps {
     roles: AdminRole[];
@@ -49,9 +50,9 @@ export function AdminRoles({
     return (
         <div className="admin-roles">
             <div className="admin-header">
-                <h1 className="admin-title">Quyền quản trị Admin</h1>
+                <h1 className="admin-title">{t('admin.manageRoles')}</h1>
                 <Button onClick={onCreateClick}>
-                    + Thêm quyền Admin
+                    {t('admin.addRole')}
                 </Button>
             </div>
 
@@ -59,12 +60,12 @@ export function AdminRoles({
                 <table>
                     <thead>
                         <tr>
-                            <th>Tên tài khoản</th>
-                            <th>Vai trò</th>
-                            <th>Trạng thái</th>
-                            <th>Quyền hạn</th>
-                            <th>Người cấp</th>
-                            <th>Actions</th>
+                            <th>{t('admin.username')}</th>
+                            <th>{t('admin.role')}</th>
+                            <th>{t('admin.status')}</th>
+                            <th>{t('admin.permissionsLabel')}</th>
+                            <th>{t('admin.grantedBy')}</th>
+                            <th>{t('admin.actions')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -82,34 +83,34 @@ export function AdminRoles({
                                     </td>
                                     <td>
                                         <span className={`admin-role-badge ${role.role}`}>
-                                            {role.role === 'super_admin' ? 'Super Admin' : role.role === 'admin' ? 'Admin' : 'Moderator'}
+                                            {role.role === 'super_admin' ? t('admin.superAdmin') : role.role === 'admin' ? t('admin.adminRoleLabel') : t('admin.moderator')}
                                         </span>
                                     </td>
                                     <td>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                             {role.active === false && (
                                                 <span className="admin-status-badge" style={{ background: '#fee2e2', color: '#991b1b' }}>
-                                                    Tạm tắt
+                                                    {t('admin.suspended')}
                                                 </span>
                                             )}
                                             {role.expiresAt && new Date(role.expiresAt) < new Date() && (
                                                 <span className="admin-status-badge" style={{ background: '#fef3c7', color: '#92400e' }}>
-                                                    Đã hết hạn
+                                                    {t('admin.expired')}
                                                 </span>
                                             )}
                                             {role.expiresAt && new Date(role.expiresAt) >= new Date() && (
                                                 <span className="admin-status-badge" style={{ background: '#dbeafe', color: '#1e40af' }}>
-                                                    Hết hạn: {new Date(role.expiresAt).toLocaleDateString('vi-VN')}
+                                                    {t('admin.expiresAt', { date: new Date(role.expiresAt).toLocaleDateString() })}
                                                 </span>
                                             )}
                                             {role.allowedIPs && role.allowedIPs.length > 0 && (
                                                 <span className="admin-status-badge" style={{ background: '#e0e7ff', color: '#3730a3' }}>
-                                                    IP: {role.allowedIPs.length} giới hạn
+                                                    {t('admin.ipLimited', { count: role.allowedIPs.length })}
                                                 </span>
                                             )}
                                             {(!role.expiresAt && role.active !== false && (!role.allowedIPs || role.allowedIPs.length === 0)) && (
                                                 <span className="admin-status-badge" style={{ background: '#d1fae5', color: '#065f46' }}>
-                                                    Hoạt động
+                                                    {t('admin.activeStatus2')}
                                                 </span>
                                             )}
                                         </div>
@@ -126,7 +127,7 @@ export function AdminRoles({
                                         </div>
                                     </td>
                                     <td>
-                                        {role.grantedBy?.displayName || role.grantedBy?.username || 'System'}
+                                        {role.grantedBy?.displayName || role.grantedBy?.username || t('admin.system')}
                                     </td>
                                     <td>
                                         <div className="admin-actions">
@@ -156,7 +157,7 @@ export function AdminRoles({
 
             {roles.length === 0 && (
                 <div className="admin-empty-state">
-                    <p>Chưa có quyền admin. Vui lòng tạo mới</p>
+                    <p>{t('admin.noRoles')}</p>
                 </div>
             )}
 

@@ -8,6 +8,7 @@ import { Folder, Heart } from 'lucide-react';
 import type { Collection } from '@/types/collection';
 import ProgressiveImage from '@/components/ProgressiveImage';
 import { toast } from 'sonner';
+import { t } from '@/i18n';
 import './FavoriteCollectionsPage.css';
 
 export default function FavoriteCollectionsPage() {
@@ -41,7 +42,7 @@ export default function FavoriteCollectionsPage() {
 			setCurrentPage(page);
 		} catch (error) {
 			console.error('Failed to fetch favorite collections:', error);
-			toast.error('Không thể tải bộ sưu tập yêu thích');
+			toast.error(t('favorites.loadFailed'));
 		} finally {
 			setLoading(false);
 		}
@@ -65,10 +66,10 @@ export default function FavoriteCollectionsPage() {
 			<>
 				<Header />
 				<div className="favorite-collections-page">
-					<div className="favorite-collections-loading">
-						<div className="loading-spinner" />
-						<p>Đang tải bộ sưu tập yêu thích...</p>
-					</div>
+				<div className="favorite-collections-loading">
+					<div className="loading-spinner" />
+					<p>{t('favorites.loadingFavoriteCollections')}</p>
+				</div>
 				</div>
 			</>
 		);
@@ -81,11 +82,11 @@ export default function FavoriteCollectionsPage() {
 				<div className="favorite-collections-header">
 					<h1>
 						<Heart size={28} fill="currentColor" />
-						Bộ sưu tập yêu thích
+						{t('favorites.favoriteCollections')}
 					</h1>
 					{pagination && (
 						<p className="favorite-collections-count">
-							{pagination.total} bộ sưu tập
+							{t('favorites.favoriteCollectionsCount', { count: pagination.total })}
 						</p>
 					)}
 				</div>
@@ -93,13 +94,13 @@ export default function FavoriteCollectionsPage() {
 				{collections.length === 0 ? (
 					<div className="favorite-collections-empty">
 						<Folder size={64} />
-						<h2>Chưa có bộ sưu tập yêu thích nào</h2>
-						<p>Bắt đầu thêm bộ sưu tập vào yêu thích để dễ dàng truy cập sau này</p>
+						<h2>{t('favorites.noFavoriteCollections')}</h2>
+						<p>{t('favorites.favoriteCollectionsHint')}</p>
 						<button
 							className="favorite-collections-empty-btn"
 							onClick={() => navigate('/collections')}
 						>
-							Khám phá bộ sưu tập
+							{t('favorites.exploreCollections')}
 						</button>
 					</div>
 				) : (
@@ -142,12 +143,12 @@ export default function FavoriteCollectionsPage() {
 											)}
 											<div className="favorite-collection-card-meta">
 												<span className="favorite-collection-card-count">
-													{collection.imageCount || 0} ảnh
+													{t('collections.imageCount', { count: collection.imageCount || 0 })}
 												</span>
 												{typeof collection.createdBy === 'object' &&
 													collection.createdBy && (
 														<span className="favorite-collection-card-author">
-															bởi {collection.createdBy.displayName || collection.createdBy.username}
+															{t('favorites.by')} {collection.createdBy.displayName || collection.createdBy.username}
 														</span>
 													)}
 											</div>
@@ -164,17 +165,17 @@ export default function FavoriteCollectionsPage() {
 									onClick={() => fetchFavoriteCollections(currentPage - 1)}
 									disabled={currentPage === 1}
 								>
-									← Trước
+									← {t('pagination.previous')}
 								</button>
 								<span className="pagination-info">
-									Trang {currentPage} / {pagination.pages}
+									{t('pagination.page', { current: currentPage, total: pagination.pages })}
 								</span>
 								<button
 									className="pagination-btn"
 									onClick={() => fetchFavoriteCollections(currentPage + 1)}
 									disabled={currentPage === pagination.pages}
 								>
-									Sau →
+									{t('pagination.next')} →
 								</button>
 							</div>
 						)}

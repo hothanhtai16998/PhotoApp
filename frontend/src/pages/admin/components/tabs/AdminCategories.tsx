@@ -2,6 +2,7 @@ import { Edit2, Trash2 } from 'lucide-react';
 import { CreateCategoryModal, EditCategoryModal } from '../modals';
 import type { Category } from '@/services/categoryService';
 import { PermissionButton } from '../PermissionButton';
+import { t } from '@/i18n';
 
 interface AdminCategoriesProps {
     categories: Category[];
@@ -31,13 +32,13 @@ export function AdminCategories({
     return (
         <div className="admin-categories">
             <div className="admin-header">
-                <h1 className="admin-title">Quản lý danh mục</h1>
+                <h1 className="admin-title">{t('admin.manageCategories')}</h1>
                 <PermissionButton
                     permission="createCategories"
-                    action="Tạo danh mục mới"
+                    action={t('admin.createCategory')}
                     onClick={onCreateClick}
                 >
-                    + Thêm danh mục
+                    {t('admin.addCategory')}
                 </PermissionButton>
             </div>
 
@@ -45,11 +46,11 @@ export function AdminCategories({
                 <table>
                     <thead>
                         <tr>
-                            <th>Tên</th>
-                            <th>Mô tả</th>
-                            <th>Số lượng ảnh hiện tại</th>
-                            <th>Trạng thái</th>
-                            <th>Actions</th>
+                            <th>{t('admin.name')}</th>
+                            <th>{t('admin.description')}</th>
+                            <th>{t('admin.currentImageCount')}</th>
+                            <th>{t('admin.status')}</th>
+                            <th>{t('admin.actions')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -60,14 +61,14 @@ export function AdminCategories({
                                 <td>{cat.imageCount || 0}</td>
                                 <td>
                                     <span className={`admin-status-badge ${cat.isActive ? 'admin' : 'none'}`}>
-                                        {cat.isActive ? 'Đang kích hoạt' : 'Inactive'}
+                                        {cat.isActive ? t('admin.activeStatus') : t('admin.inactive')}
                                     </span>
                                 </td>
                                 <td>
                                     <div className="admin-actions">
                                         <PermissionButton
                                             permission="editCategories"
-                                            action="Chỉnh sửa danh mục"
+                                            action={t('admin.editCategory')}
                                             variant="outline"
                                             size="sm"
                                             onClick={() => onEdit(cat)}
@@ -76,7 +77,7 @@ export function AdminCategories({
                                         </PermissionButton>
                                         <PermissionButton
                                             permission="deleteCategories"
-                                            action="Xóa danh mục"
+                                            action={t('admin.deleteCategory')}
                                             variant="outline"
                                             size="sm"
                                             onClick={() => onDelete(cat._id, cat.name)}
@@ -93,7 +94,7 @@ export function AdminCategories({
 
             {categories.length === 0 && (
                 <div className="admin-empty-state">
-                    <p>Không tìm thấy danh mục. Vui lòng tạo mới.</p>
+                    <p>{t('admin.noCategories')}</p>
                 </div>
             )}
 

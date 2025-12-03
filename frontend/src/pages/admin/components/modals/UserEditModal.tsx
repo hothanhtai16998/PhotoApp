@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { User } from '@/services/adminService';
+import { t } from '@/i18n';
 
 interface UserEditModalProps {
     user: User;
@@ -23,12 +24,12 @@ export function UserEditModal({ user, onClose, onSave }: UserEditModalProps) {
         <div className="admin-modal-overlay" onClick={onClose}>
             <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="admin-modal-header">
-                    <h2>Chỉnh sửa thông tin</h2>
+                    <h2>{t('admin.editUserInfo')}</h2>
                     <button onClick={onClose}>×</button>
                 </div>
                 <form onSubmit={handleSubmit} className="admin-modal-form">
                     <div className="admin-form-group">
-                        <label>Họ và tên</label>
+                        <label>{t('admin.fullNameLabel')}</label>
                         <Input
                             value={displayName}
                             onChange={(e) => setDisplayName(e.target.value)}
@@ -36,7 +37,7 @@ export function UserEditModal({ user, onClose, onSave }: UserEditModalProps) {
                         />
                     </div>
                     <div className="admin-form-group">
-                        <label>Email</label>
+                        <label>{t('admin.email')}</label>
                         <Input
                             type="email"
                             value={email}
@@ -45,7 +46,7 @@ export function UserEditModal({ user, onClose, onSave }: UserEditModalProps) {
                         />
                     </div>
                     <div className="admin-form-group">
-                        <label>Bio</label>
+                        <label>{t('admin.bioLabel')}</label>
                         <textarea
                             value={bio}
                             onChange={(e) => setBio(e.target.value)}
@@ -54,9 +55,9 @@ export function UserEditModal({ user, onClose, onSave }: UserEditModalProps) {
                     </div>
                     <div className="admin-modal-actions">
                         <Button type="button" variant="outline" onClick={onClose}>
-                            Huỷ
+                            {t('common.cancel')}
                         </Button>
-                        <Button type="submit">Lưu</Button>
+                        <Button type="submit">{t('admin.save')}</Button>
                     </div>
                 </form>
             </div>

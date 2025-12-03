@@ -5,6 +5,7 @@ import { ImageEditor } from './image/ImageEditor';
 import { TagInput } from './ui/TagInput';
 import { EditImageTabs } from './image/EditImageTabs';
 import { useEditImageForm } from './image/hooks/useEditImageForm';
+import { t } from '@/i18n';
 import './EditImageModal.css';
 
 interface EditImageModalProps {
@@ -69,8 +70,8 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
       <div className="edit-image-modal" onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
         <div className="edit-modal-header">
-          <h2>Sửa ảnh</h2>
-          <button className="edit-modal-close" onClick={onClose} aria-label="Đóng">
+          <h2>{t('image.editImage')}</h2>
+          <button className="edit-modal-close" onClick={onClose} aria-label={t('common.close')}>
             <X size={20} />
           </button>
         </div>
@@ -87,13 +88,13 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
           {activeTab === 'details' && (
             <div className="edit-modal-tab-panel">
               <div className="edit-form-group">
-                <label htmlFor="description">Mô tả</label>
+                <label htmlFor="description">{t('image.description')}</label>
                 <textarea
                   id="description"
                   className="edit-form-textarea"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Thêm mô tả"
+                  placeholder={t('image.descriptionPlaceholder')}
                   maxLength={600}
                   rows={4}
                 />
@@ -101,14 +102,14 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
               </div>
 
               <div className="edit-form-group">
-                <label htmlFor="title">Tiêu đề</label>
+                <label htmlFor="title">{t('image.title')}</label>
                 <input
                   id="title"
                   type="text"
                   className="edit-form-input"
                   value={imageTitle}
                   onChange={(e) => setImageTitle(e.target.value)}
-                  placeholder="Image title"
+                  placeholder={t('image.titlePlaceholder')}
                   required
                   maxLength={200}
                 />
@@ -117,7 +118,7 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
               <div className="edit-form-group">
                 <label htmlFor="location">
                   <MapPin size={16} />
-                  Địa điểm
+                  {t('image.location')}
                 </label>
                 <input
                   id="location"
@@ -125,7 +126,7 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
                   className="edit-form-input"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Add location"
+                  placeholder={t('image.locationPlaceholder')}
                   maxLength={200}
                 />
                 {location && (
@@ -133,7 +134,7 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
                     type="button"
                     className="edit-form-clear"
                     onClick={() => setLocation('')}
-                    aria-label="Clear location"
+                    aria-label={t('image.clearLocation')}
                   >
                     <X size={16} />
                   </button>
@@ -149,11 +150,11 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
                 <div className="edit-form-group">
                   <label htmlFor="cameraMake" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Camera size={16} />
-                    Hãng máy ảnh
+                    {t('image.cameraMake')}
                     <div className="tooltip-wrapper">
                       <HelpCircle size={14} className="tooltip-icon" />
                       <span className="tooltip-text">
-                        Tên hãng sản xuất máy ảnh (ví dụ: Canon, Nikon, Sony, iPhone)
+                        {t('image.cameraMakeTooltip')}
                       </span>
                     </div>
                   </label>
@@ -163,7 +164,7 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
                     className="edit-form-input"
                     value={cameraMake}
                     onChange={(e) => setCameraMake(e.target.value)}
-                    placeholder="Ví dụ: Canon, Nikon, Sony"
+                    placeholder={t('image.cameraMakePlaceholder')}
                     maxLength={50}
                   />
                 </div>
@@ -172,11 +173,11 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
                 <div className="edit-form-group">
                   <label htmlFor="cameraModel" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Camera size={16} />
-                    Model máy ảnh
+                    {t('image.cameraModel')}
                     <div className="tooltip-wrapper">
                       <HelpCircle size={14} className="tooltip-icon" />
                       <span className="tooltip-text">
-                        Tên model máy ảnh (ví dụ: Canon EOS 7D, iPhone X, Sony A7 III)
+                        {t('image.cameraModelTooltip')}
                       </span>
                     </div>
                   </label>
@@ -186,7 +187,7 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
                     className="edit-form-input"
                     value={cameraModel}
                     onChange={(e) => setCameraModel(e.target.value)}
-                    placeholder="Ví dụ: Canon EOS 7D"
+                    placeholder={t('image.cameraModelPlaceholder')}
                     maxLength={100}
                   />
                 </div>
@@ -194,11 +195,11 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
                 {/* Focal Length */}
                 <div className="edit-form-group">
                   <label htmlFor="focalLength" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    Tiêu cự (mm)
+                    {t('image.focalLength')}
                     <div className="tooltip-wrapper">
                       <HelpCircle size={14} className="tooltip-icon" />
                       <span className="tooltip-text">
-                        Độ dài tiêu cự của ống kính (tính bằng mm). Số càng nhỏ = góc rộng hơn, số càng lớn = zoom xa hơn. Ví dụ: 24mm (góc rộng), 50mm (bình thường), 200mm (tele)
+                        {t('image.focalLengthTooltip')}
                       </span>
                     </div>
                   </label>
@@ -210,18 +211,18 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
                     className="edit-form-input"
                     value={focalLength}
                     onChange={(e) => setFocalLength(e.target.value)}
-                    placeholder="Ví dụ: 60.0"
+                    placeholder="e.g., 60.0"
                   />
                 </div>
 
                 {/* Aperture */}
                 <div className="edit-form-group">
                   <label htmlFor="aperture" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    Khẩu độ (f)
+                    {t('image.aperture')}
                     <div className="tooltip-wrapper">
                       <HelpCircle size={14} className="tooltip-icon" />
                       <span className="tooltip-text">
-                        Độ mở của ống kính (f-stop). Số càng nhỏ = mở rộng hơn = xóa phông nhiều hơn. Số càng lớn = mở hẹp hơn = ảnh sắc nét hơn. Ví dụ: f/1.8 (mở rộng), f/9.0 (mở hẹp)
+                        {t('image.apertureTooltip')}
                       </span>
                     </div>
                   </label>
@@ -233,18 +234,18 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
                     className="edit-form-input"
                     value={aperture}
                     onChange={(e) => setAperture(e.target.value)}
-                    placeholder="Ví dụ: 9.0"
+                    placeholder="e.g., 9.0"
                   />
                 </div>
 
                 {/* Shutter Speed */}
                 <div className="edit-form-group">
                   <label htmlFor="shutterSpeed" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    Tốc độ màn trập (s)
+                    {t('image.shutterSpeed')}
                     <div className="tooltip-wrapper">
                       <HelpCircle size={14} className="tooltip-icon" />
                       <span className="tooltip-text">
-                        Thời gian màn trập mở (tính bằng giây). Nhanh (1/1000) = đóng băng chuyển động. Chậm (1/30) = làm mờ chuyển động. Ví dụ: 1/80 (nhanh), 2s (chậm)
+                        {t('image.shutterSpeedTooltip')}
                       </span>
                     </div>
                   </label>
@@ -254,7 +255,7 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
                     className="edit-form-input"
                     value={shutterSpeed}
                     onChange={(e) => setShutterSpeed(e.target.value)}
-                    placeholder="Ví dụ: 1/80 hoặc 2s"
+                    placeholder="e.g., 1/80 or 2s"
                     maxLength={20}
                   />
                 </div>
@@ -262,11 +263,11 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
                 {/* ISO */}
                 <div className="edit-form-group">
                   <label htmlFor="iso" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    ISO
+                    {t('image.iso')}
                     <div className="tooltip-wrapper">
                       <HelpCircle size={14} className="tooltip-icon" />
                       <span className="tooltip-text">
-                        Độ nhạy sáng của cảm biến. Số thấp (100-400) = ảnh sạch, ít nhiễu. Số cao (1600+) = ảnh sáng hơn nhưng nhiều nhiễu hơn. Ví dụ: 100 (thấp), 800 (trung bình), 3200 (cao)
+                        {t('image.isoTooltip')}
                       </span>
                     </div>
                   </label>
@@ -277,7 +278,7 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
                     className="edit-form-input"
                     value={iso}
                     onChange={(e) => setIso(e.target.value)}
-                    placeholder="Ví dụ: 100"
+                    placeholder="e.g., 100"
                   />
                 </div>
               </div>
@@ -289,7 +290,7 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
               <TagInput
                 tags={tags}
                 onChange={setTags}
-                placeholder="Nhập tag và nhấn Enter (ví dụ: nature, landscape, sunset)..."
+                placeholder="Enter tags and press Enter (e.g., nature, landscape, sunset)..."
                 maxTags={20}
                 maxTagLength={50}
               />
@@ -304,14 +305,14 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
               onClick={onClose}
               disabled={isSubmitting}
             >
-              Huỷ
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               className="edit-modal-btn edit-modal-btn-submit"
               disabled={isSubmitting || !canEdit}
             >
-              {isSubmitting ? 'Đang cập nhật...' : 'Cập nhật'}
+              {isSubmitting ? t('common.loading') : t('common.save')}
             </button>
           </div>
         </form>

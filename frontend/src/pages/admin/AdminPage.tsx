@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, lazy, Suspense, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '@/stores/useUserStore';
+import { useAuthStore } from '@/stores/useAuthStore';
 import { usePermissions } from '@/hooks/usePermissions';
 import type { AdminRolePermissions } from '@/services/adminService';
 import type { User as AuthUser } from '@/types/user';
@@ -58,6 +59,7 @@ type TabType = 'dashboard' | 'analytics' | 'users' | 'images' | 'categories' | '
 
 function AdminPage() {
     const { user, fetchMe } = useUserStore();
+    const { accessToken, isInitializing } = useAuthStore();
     const navigate = useNavigate();
     const { hasPermission, isSuperAdmin } = usePermissions();
     const [activeTab, setActiveTab] = useState<TabType>('dashboard');
@@ -69,13 +71,27 @@ function AdminPage() {
     const categoriesAdmin = useAdminCategories();
     const rolesAdmin = useAdminRoles();
 
-    // Check admin access on mount
+    // Check admin access on mount - wait for auth initialization
     useEffect(() => {
+        // Don't check until auth store has finished initializing
+        if (isInitializing) {
+            return;
+        }
+
         let isMounted = true;
 
         const checkAdmin = async () => {
+            // Check if user has access token - if not, redirect immediately
+            const currentToken = useAuthStore.getState().accessToken;
+            if (!currentToken) {
+                toast.error('Vui lòng đăng nhập lại.');
+                navigate('/signin');
+                return;
+            }
+
             let currentUser = useUserStore.getState().user;
 
+            // Only fetch user if we don't have user data yet
             if (!currentUser || (!currentUser.permissions && currentUser.isAdmin === undefined)) {
                 try {
                     await fetchMe();
@@ -84,11 +100,19 @@ function AdminPage() {
                     currentUser = useUserStore.getState().user;
                 } catch (error) {
                     if (!isMounted) return;
+                    // Check if error was 401/403 - if so, user is not authenticated
+                    const errorStatus = (error as { response?: { status?: number } })?.response?.status;
+                    if (errorStatus === 401 || errorStatus === 403) {
+                        toast.error('Vui lòng đăng nhập lại.');
+                        navigate('/signin');
+                        return;
+                    }
+                    // For other errors (network, 500, etc.), check if we have user data anyway
                     currentUser = useUserStore.getState().user;
                     if (!currentUser) {
                         console.error('AdminPage - Error fetching user:', error);
-                        toast.error('Vui lòng đăng nhập lại.');
-                        navigate('/signin');
+                        // Don't redirect on network errors - user might still be authenticated
+                        // The fetchMe error handler in the store will handle 401/403
                         return;
                     }
                 }
@@ -97,8 +121,8 @@ function AdminPage() {
             if (!isMounted) return;
 
             if (!currentUser) {
-                toast.error('Vui lòng đăng nhập lại.');
-                navigate('/signin');
+                // Only redirect if we're sure user is not authenticated
+                // (no access token check already handled above)
                 return;
             }
 
@@ -118,7 +142,7 @@ function AdminPage() {
         return () => {
             isMounted = false;
         };
-    }, [fetchMe, navigate]);
+    }, [isInitializing, accessToken, user, fetchMe, navigate]);
 
     // Store stable references to load functions to avoid infinite loops
     // This pattern is recommended when you want to call functions on mount/dependency change
@@ -202,6 +226,23 @@ function AdminPage() {
     const handleDeleteRole = useCallback(async (userId: string, username: string) => {
         await rolesAdmin.deleteRole(userId, username, usersAdmin.loadUsers, usersAdmin.pagination.page);
     }, [rolesAdmin, usersAdmin]);
+
+    // Show loading while auth is initializing
+    if (isInitializing) {
+        return (
+            <>
+                <Header />
+                <div className="admin-page">
+                    <div className="flex items-center justify-center p-8">
+                        <div className="flex flex-col items-center gap-4">
+                            <Skeleton className="h-8 w-32" />
+                            <Skeleton className="h-64 w-full max-w-4xl" />
+                        </div>
+                    </div>
+                </div>
+            </>
+        );
+    }
 
     return (
         <>

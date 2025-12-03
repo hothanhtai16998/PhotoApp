@@ -1,23 +1,36 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useUserStore } from '@/stores/useUserStore';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function AdminRoute() {
-    const { isInitializing } = useAuthStore();
-    const { user, fetchMe } = useUserStore();
+    const { isInitializing, accessToken } = useAuthStore();
+    const { user, fetchMe, loading: userLoading } = useUserStore();
+    const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
 
     useEffect(() => {
-        if (!user && !isInitializing) {
-            fetchMe();
+        // Only attempt to fetch if:
+        // 1. Auth initialization is complete
+        // 2. We have an access token (user might be authenticated)
+        // 3. We don't have user data yet
+        // 4. We haven't attempted to fetch yet
+        if (!isInitializing && accessToken && !user && !hasAttemptedFetch) {
+            setHasAttemptedFetch(true);
+            fetchMe().catch(() => {
+                // Error handled in fetchMe, just mark as attempted
+            });
         }
-    }, [user, isInitializing, fetchMe]);
+    }, [isInitializing, accessToken, user, hasAttemptedFetch, fetchMe]);
 
-    if (isInitializing) {
+    // Show loading while auth is initializing or while fetching user data
+    if (isInitializing || (accessToken && !user && !hasAttemptedFetch) || (accessToken && !user && userLoading)) {
         return <div>Đang tải...</div>;
     }
 
-    if (!user) {
+    // Only redirect to signin if:
+    // 1. We have no access token (definitely not authenticated)
+    // 2. OR we've attempted to fetch and still have no user (fetch failed or user doesn't exist)
+    if (!accessToken || (hasAttemptedFetch && !user)) {
         return <Navigate to="/signin" replace />;
     }
 

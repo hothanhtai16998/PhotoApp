@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/utils';
 import type { User as AuthUser } from '@/types/user';
 import { PermissionButton } from '../PermissionButton';
+import { t } from '@/i18n';
 
 interface AdminUsersProps {
     users: User[];
@@ -40,37 +41,37 @@ export function AdminUsers({
     onUserUpdated,
 }: AdminUsersProps) {
     const handleBan = async (user: User) => {
-        const reason = prompt('Nhập lý do cấm (tùy chọn):');
+        const reason = prompt(t('admin.banReason'));
         if (reason === null) return; // User cancelled
         
         try {
             await adminService.banUser(user._id, reason || undefined);
-            toast.success(`Đã cấm người dùng ${user.username}`);
+            toast.success(t('admin.banSuccess', { username: user.username }));
             onUserUpdated?.();
         } catch (error: unknown) {
-            toast.error(getErrorMessage(error, 'Lỗi khi cấm người dùng'));
+            toast.error(getErrorMessage(error, t('admin.banFailed')));
         }
     };
 
     const handleUnban = async (user: User) => {
-        if (!confirm(`Bạn có chắc chắn muốn bỏ cấm người dùng ${user.username}?`)) return;
+        if (!confirm(t('admin.unbanConfirm', { username: user.username }))) return;
         
         try {
             await adminService.unbanUser(user._id);
-            toast.success(`Đã bỏ cấm người dùng ${user.username}`);
+            toast.success(t('admin.unbanSuccess', { username: user.username }));
             onUserUpdated?.();
         } catch (error: unknown) {
-            toast.error(getErrorMessage(error, 'Lỗi khi bỏ cấm người dùng'));
+            toast.error(getErrorMessage(error, t('admin.unbanFailed')));
         }
     };
     return (
         <div className="admin-users">
             <div className="admin-header">
-                <h1 className="admin-title">Quản lý người dùng</h1>
+                <h1 className="admin-title">{t('admin.manageUsers')}</h1>
                 <div className="admin-search">
                     <Search size={20} />
                     <Input
-                        placeholder="Nhập tên tài khoản..."
+                        placeholder={t('admin.searchUsername')}
                         value={search}
                         onChange={(e) => onSearchChange(e.target.value)}
                         onKeyDown={(e) => {
@@ -79,7 +80,7 @@ export function AdminUsers({
                             }
                         }}
                     />
-                    <Button onClick={onSearch}>Tìm</Button>
+                    <Button onClick={onSearch}>{t('admin.search')}</Button>
                 </div>
             </div>
 
@@ -87,13 +88,13 @@ export function AdminUsers({
                 <table>
                     <thead>
                         <tr>
-                            <th>Tên tài khoản</th>
-                            <th>Email</th>
-                            <th>Họ và tên</th>
-                            <th>Quyền Admin</th>
-                            <th>Trạng thái</th>
-                            <th>Ảnh</th>
-                            <th>Actions</th>
+                            <th>{t('admin.username')}</th>
+                            <th>{t('admin.email')}</th>
+                            <th>{t('admin.fullName')}</th>
+                            <th>{t('admin.adminRole')}</th>
+                            <th>{t('admin.status')}</th>
+                            <th>{t('admin.photos')}</th>
+                            <th>{t('admin.actions')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -113,19 +114,19 @@ export function AdminUsers({
                                                 Admin
                                             </span>
                                         ) : (
-                                            <span className="admin-status-badge none" title="Regular User">
-                                                No
+                                            <span className="admin-status-badge none" title={t('admin.regularUser')}>
+                                                {t('admin.no')}
                                             </span>
                                         )}
                                     </div>
                                 </td>
                                 <td>
                                     {u.isBanned ? (
-                                        <span className="admin-status-badge banned" title={u.banReason || 'Bị cấm'}>
-                                            Bị cấm
+                                        <span className="admin-status-badge banned" title={u.banReason || t('admin.banned')}>
+                                            {t('admin.banned')}
                                         </span>
                                     ) : (
-                                        <span className="admin-status-badge active">Hoạt động</span>
+                                        <span className="admin-status-badge active">{t('admin.active')}</span>
                                     )}
                                 </td>
                                 <td>{u.imageCount || 0}</td>
@@ -133,7 +134,7 @@ export function AdminUsers({
                                     <div className="admin-actions">
                                         <PermissionButton
                                             permission="editUsers"
-                                            action="Chỉnh sửa người dùng"
+                                            action={t('admin.editUser')}
                                             variant="outline"
                                             size="sm"
                                             onClick={() => onEdit(u)}
@@ -144,7 +145,7 @@ export function AdminUsers({
                                         {u.isBanned ? (
                                             <PermissionButton
                                                 permission="unbanUsers"
-                                                action="Bỏ cấm người dùng"
+                                                action={t('admin.unbanUser')}
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => handleUnban(u)}
@@ -155,7 +156,7 @@ export function AdminUsers({
                                         ) : (
                                             <PermissionButton
                                                 permission="banUsers"
-                                                action="Cấm người dùng"
+                                                action={t('admin.banUser')}
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => handleBan(u)}
@@ -166,7 +167,7 @@ export function AdminUsers({
                                         )}
                                         <PermissionButton
                                             permission="deleteUsers"
-                                            action="Xóa người dùng"
+                                            action={t('admin.deleteUser')}
                                             variant="outline"
                                             size="sm"
                                             onClick={() => onDelete(u._id, u.username)}
@@ -188,16 +189,16 @@ export function AdminUsers({
                         disabled={pagination.page === 1}
                         onClick={() => onPageChange(pagination.page - 1)}
                     >
-                        Quay lại
+                        {t('admin.previous')}
                     </Button>
                     <span>
-                        Trang {pagination.page} trên {pagination.pages}
+                        {t('admin.pageOf', { current: pagination.page, total: pagination.pages })}
                     </span>
                     <Button
                         disabled={pagination.page === pagination.pages}
                         onClick={() => onPageChange(pagination.page + 1)}
                     >
-                        Tiếp theo
+                        {t('admin.next')}
                     </Button>
                 </div>
             )}

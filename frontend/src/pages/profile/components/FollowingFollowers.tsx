@@ -4,6 +4,7 @@ import { followService } from '@/services/followService';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import type { FollowUser } from '@/types/follow';
+import { t } from '@/i18n';
 import './FollowingFollowers.css';
 
 interface FollowingFollowersProps {
@@ -25,7 +26,7 @@ export function FollowingFollowers({ userId }: FollowingFollowersProps) {
                 setFollowing(response.following || []);
             } catch (error) {
                 console.error('Failed to load following:', error);
-                toast.error('Không thể tải danh sách đang theo dõi');
+                toast.error(t('profile.loadFollowingFailed'));
             } finally {
                 setFollowingLoading(false);
             }
@@ -38,7 +39,7 @@ export function FollowingFollowers({ userId }: FollowingFollowersProps) {
                 setFollowers(response.followers || []);
             } catch (error) {
                 console.error('Failed to load followers:', error);
-                toast.error('Không thể tải danh sách người theo dõi');
+                toast.error(t('profile.loadFollowersFailed'));
             } finally {
                 setFollowersLoading(false);
             }
@@ -58,7 +59,7 @@ export function FollowingFollowers({ userId }: FollowingFollowersProps) {
         <div className="following-followers-container">
             {/* Left Side - Following */}
             <div className="following-section">
-                <h3 className="section-title">Đang theo dõi</h3>
+                <h3 className="section-title">{t('profile.followingTitle')}</h3>
                 {followingLoading ? (
                     <div className="user-list">
                         {Array.from({ length: 5 }).map((_, i) => (
@@ -73,7 +74,7 @@ export function FollowingFollowers({ userId }: FollowingFollowersProps) {
                     </div>
                 ) : following.length === 0 ? (
                     <div className="empty-state">
-                        <p>Chưa theo dõi ai.</p>
+                        <p>{t('profile.noFollowing')}</p>
                     </div>
                 ) : (
                     <div className="user-list">
@@ -104,7 +105,7 @@ export function FollowingFollowers({ userId }: FollowingFollowersProps) {
 
             {/* Right Side - Followers */}
             <div className="followers-section">
-                <h3 className="section-title">Người theo dõi</h3>
+                <h3 className="section-title">{t('profile.followersTitle')}</h3>
                 {followersLoading ? (
                     <div className="user-list">
                         {Array.from({ length: 5 }).map((_, i) => (
@@ -119,7 +120,7 @@ export function FollowingFollowers({ userId }: FollowingFollowersProps) {
                     </div>
                 ) : followers.length === 0 ? (
                     <div className="empty-state">
-                        <p>Chưa có ai theo dõi.</p>
+                        <p>{t('profile.noFollowers')}</p>
                     </div>
                 ) : (
                     <div className="user-list">
