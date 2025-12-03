@@ -20,7 +20,7 @@ export const getUserAnalytics = asyncHandler(async (req, res) => {
 
     // Get all user's images with their stats
     const userImages = await Image.find({ uploadedBy: userId })
-        .select('imageTitle views downloads dailyViews dailyDownloads location imageCategory createdAt')
+        .select('imageTitle views downloads dailyViews dailyDownloads location imageCategory createdAt imageUrl thumbnailUrl smallUrl')
         .populate('imageCategory', 'name')
         .lean();
 
@@ -56,22 +56,57 @@ export const getUserAnalytics = asyncHandler(async (req, res) => {
         }
     });
 
-    // Fill in missing dates with 0
-    const allDates = [];
-    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+    // Find first date with actual data (for views and downloads separately)
+    // Only consider dates within the selected period
+    const viewsDates = Object.keys(viewsOverTime)
+        .filter(date => {
+            const dateObj = new Date(date);
+            return viewsOverTime[date] > 0 && 
+                   dateObj >= startDate && 
+                   dateObj <= endDate;
+        })
+        .sort();
+    
+    const downloadsDates = Object.keys(downloadsOverTime)
+        .filter(date => {
+            const dateObj = new Date(date);
+            return downloadsOverTime[date] > 0 && 
+                   dateObj >= startDate && 
+                   dateObj <= endDate;
+        })
+        .sort();
+    
+    const firstViewsDate = viewsDates.length > 0 ? new Date(viewsDates[0]) : null;
+    const firstDownloadsDate = downloadsDates.length > 0 ? new Date(downloadsDates[0]) : null;
+    
+    // For views: start from first date with data (within period), or startDate if no data
+    const viewsStartDate = firstViewsDate && firstViewsDate >= startDate ? firstViewsDate : startDate;
+    
+    // For downloads: start from first date with data (within period), or startDate if no data
+    const downloadsStartDate = firstDownloadsDate && firstDownloadsDate >= startDate ? firstDownloadsDate : startDate;
+
+    // Fill in missing dates from first data date (not from period start)
+    const viewsDatesToFill = [];
+    for (let d = new Date(viewsStartDate); d <= endDate; d.setDate(d.getDate() + 1)) {
         const dateStr = d.toISOString().split('T')[0];
-        allDates.push(dateStr);
+        viewsDatesToFill.push(dateStr);
         if (!viewsOverTime[dateStr]) viewsOverTime[dateStr] = 0;
+    }
+
+    const downloadsDatesToFill = [];
+    for (let d = new Date(downloadsStartDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        const dateStr = d.toISOString().split('T')[0];
+        downloadsDatesToFill.push(dateStr);
         if (!downloadsOverTime[dateStr]) downloadsOverTime[dateStr] = 0;
     }
 
-    // Convert to array format for charting
-    const viewsData = allDates.map(date => ({
+    // Convert to array format for charting - only include dates from first data date
+    const viewsData = viewsDatesToFill.map(date => ({
         date,
         value: viewsOverTime[date] || 0
     }));
 
-    const downloadsData = allDates.map(date => ({
+    const downloadsData = downloadsDatesToFill.map(date => ({
         date,
         value: downloadsOverTime[date] || 0
     }));
@@ -81,6 +116,9 @@ export const getUserAnalytics = asyncHandler(async (req, res) => {
         .map(img => ({
             _id: img._id,
             imageTitle: img.imageTitle,
+            imageUrl: img.imageUrl,
+            thumbnailUrl: img.thumbnailUrl || img.smallUrl || img.imageUrl,
+            smallUrl: img.smallUrl || img.imageUrl,
             views: img.views || 0,
             downloads: img.downloads || 0,
             totalEngagement: (img.views || 0) + (img.downloads || 0) * 2, // Downloads weighted 2x
@@ -145,9 +183,10 @@ export const getUserAnalytics = asyncHandler(async (req, res) => {
         .sort((a, b) => b.totalViews - a.totalViews)
         .slice(0, 10); // Top 10 categories
 
-    // Calculate summary stats
-    const totalViews = userImages.reduce((sum, img) => sum + (img.views || 0), 0);
-    const totalDownloads = userImages.reduce((sum, img) => sum + (img.downloads || 0), 0);
+    // Calculate summary stats - use views from the selected period (sum all data within period)
+    // Sum all values in viewsData and downloadsData (which now only include dates from first data date)
+    const totalViews = viewsData.reduce((sum, item) => sum + item.value, 0);
+    const totalDownloads = downloadsData.reduce((sum, item) => sum + item.value, 0);
     const totalImages = userImages.length;
     const avgViewsPerImage = totalImages > 0 ? Math.round(totalViews / totalImages) : 0;
     const avgDownloadsPerImage = totalImages > 0 ? Math.round(totalDownloads / totalImages) : 0;

@@ -17,6 +17,9 @@ export interface TimeSeriesData {
 export interface PopularImage {
 	_id: string;
 	imageTitle: string;
+	imageUrl: string;
+	thumbnailUrl?: string;
+	smallUrl?: string;
 	views: number;
 	downloads: number;
 	totalEngagement: number;

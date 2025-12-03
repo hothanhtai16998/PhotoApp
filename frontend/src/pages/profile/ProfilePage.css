@@ -430,10 +430,11 @@
 
   /* Profile tabs mobile */
   .profile-tabs {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+    width: calc(100% + 16px);
+    margin-left: -8px;
+    margin-right: -8px;
+    display: flex;
+    overflow: visible;
   }
 
   .profile-tabs::-webkit-scrollbar {
@@ -441,10 +442,12 @@
   }
 
   .profile-tab {
-    padding: 12px 16px;
+    flex: 1;
+    padding: 12px 8px;
     font-size: 0.875rem;
-    white-space: nowrap;
-    min-width: fit-content;
+    justify-content: center;
+    text-align: center;
+    min-width: 0;
   }
 }
 
@@ -745,9 +748,11 @@
   }
 
   .profile-tabs {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    width: calc(100% + 24px);
+    margin-left: -12px;
+    margin-right: -12px;
+    display: flex;
+    overflow: visible;
     margin-bottom: 0;
     margin-top: 0;
   }
@@ -757,9 +762,12 @@
   }
 
   .profile-tab {
-    flex-shrink: 0;
-    padding: 12px 16px;
+    flex: 1;
+    padding: 12px 8px;
     min-height: 44px; /* Better touch target */
+    justify-content: center;
+    text-align: center;
+    min-width: 0;
   }
 
   .profile-image-grid {
@@ -843,10 +851,24 @@
     font-size: 0.875rem;
   }
 
+  .profile-tabs {
+    width: calc(100% + 16px);
+    margin-left: -8px;
+    margin-right: -8px;
+    display: flex;
+    overflow: visible;
+    margin-bottom: 0;
+    margin-top: 0;
+  }
+
   .profile-tab {
-    padding: 10px 12px;
+    flex: 1;
+    padding: 10px 8px;
     font-size: 0.875rem;
     min-height: 44px;
+    justify-content: center;
+    text-align: center;
+    min-width: 0;
   }
 
   .tab-icon {
