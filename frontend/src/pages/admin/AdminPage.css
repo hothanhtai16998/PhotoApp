@@ -294,7 +294,11 @@
 .admin-quick-actions {
   margin-bottom: 32px;
   padding: 24px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(102, 126, 234, 0.05) 0%,
+    rgba(118, 75, 162, 0.05) 100%
+  );
   border-radius: 12px;
   border: 1px solid rgba(102, 126, 234, 0.1);
 }
@@ -329,7 +333,11 @@
 }
 
 .admin-quick-action-btn:hover {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(102, 126, 234, 0.08) 0%,
+    rgba(118, 75, 162, 0.08) 100%
+  );
   border-color: #667eea;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
@@ -658,9 +666,9 @@
 }
 
 .admin-status-badge.admin {
-  background: #dbeafe;
-  color: #1e40af;
-  border: 1px solid #93c5fd;
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
 }
 
 .admin-status-badge.none {
@@ -1143,14 +1151,15 @@
   .admin-mobile-menu-btn {
     display: flex;
   }
-  
+
   /* When menu is open, adjust button position */
   .admin-mobile-menu-btn.menu-open {
     left: 280px;
     background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6), 0 4px 12px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6),
+      0 4px 12px rgba(0, 0, 0, 0.3);
   }
-  
+
   @media (max-width: 480px) {
     .admin-mobile-menu-btn.menu-open {
       left: calc(85vw - 48px);
@@ -1231,7 +1240,7 @@
     justify-content: flex-start;
     border-radius: 8px;
   }
-  
+
   .admin-nav-item span {
     opacity: 1 !important;
     width: auto !important;
@@ -2475,7 +2484,7 @@
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
   }
-  
+
   .falcon-metric-tab:active {
     transform: scale(0.98);
   }
@@ -2721,7 +2730,7 @@
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
   }
-  
+
   .falcon-metric-tab:active {
     transform: scale(0.98);
   }
