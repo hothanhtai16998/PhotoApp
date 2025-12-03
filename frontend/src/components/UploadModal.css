@@ -856,3 +856,141 @@
   flex: 0 0 auto; /* Submit button: don't expand, use natural width */
   min-width: 120px; /* Ensure minimum width for submit button */
 }
+
+/* Multi-image upload styles */
+.upload-images-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.upload-images-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.upload-add-more-btn {
+  font-size: 14px;
+}
+
+.upload-add-more-btn svg {
+  margin-right: 8px;
+}
+
+.upload-images-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 24px;
+  margin-bottom: 24px;
+  align-items: start;
+}
+
+.upload-image-card {
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  padding: 16px;
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  height: fit-content;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Upload modal footer with proper positioning */
+.upload-modal-footer--form {
+  padding-top: 20px;
+  padding-bottom: 20px;
+  padding-left: 32px;
+  padding-right: 32px;
+  border-top: 1px solid #e5e5e5;
+  background-color: white;
+}
+
+.upload-modal-footer--form .footer-buttons {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+/* Submit button wrapper for tooltip */
+.upload-submit-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.upload-submit-btn {
+  min-width: 120px;
+}
+
+/* Tooltip for disabled submit button */
+.upload-submit-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  padding: 10px 14px;
+  background-color: #1f2937;
+  color: white;
+  border-radius: 8px;
+  font-size: 13px;
+  white-space: nowrap;
+  z-index: 10000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+}
+
+.upload-submit-tooltip-arrow {
+  position: absolute;
+  top: 100%;
+  right: 20px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #1f2937;
+}
+
+.upload-submit-tooltip .required-marker {
+  color: #ef4444;
+  font-weight: bold;
+}
+
+/* Scrollable content area */
+.upload-modal-content--scrollable {
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .upload-images-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .upload-modal-content--scrollable {
+    padding: 16px;
+  }
+
+  .upload-modal-footer--form {
+    padding: 16px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .upload-images-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .upload-add-more-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

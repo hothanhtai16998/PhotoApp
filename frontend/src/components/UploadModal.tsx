@@ -300,16 +300,17 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                 </div>
 
                 {/* Content - Scrollable container with all images and their forms */}
-                <div className="upload-modal-content" style={{ maxHeight: '80vh', overflowY: 'auto', padding: '20px' }}>
+                <div className="upload-modal-content upload-modal-content--scrollable">
                     {/* Header with add more button */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                        <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>
+                    <div className="upload-images-header">
+                        <h3>
                             Đã chọn {imagesData.length} {imagesData.length === 1 ? 'ảnh' : 'ảnh'}
                         </h3>
                         <Button
                             type="button"
                             variant="outline"
                             size="sm"
+                            className="upload-add-more-btn"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 const input = document.createElement('input');
@@ -326,32 +327,16 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                 };
                                 input.click();
                             }}
-                            style={{ fontSize: '14px' }}
                         >
-                            <Upload size={16} style={{ marginRight: '8px' }} />
+                            <Upload size={16} />
                             Thêm ảnh
                         </Button>
                     </div>
 
                     {/* Grid of images with individual forms */}
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
-                        gap: '24px',
-                        marginBottom: '24px',
-                        alignItems: 'start'
-                    }}>
+                    <div className="upload-images-grid">
                         {imagesData.map((imgData, index) => (
-                            <div key={index} style={{
-                                border: '1px solid #e5e5e5',
-                                borderRadius: '12px',
-                                padding: '16px',
-                                backgroundColor: 'white',
-                                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                                height: 'fit-content',
-                                display: 'flex',
-                                flexDirection: 'column'
-                            }}>
+                            <div key={index} className="upload-image-card">
                                 {/* Image Preview */}
                                 <UploadPreview
                                     imageData={imgData}
@@ -379,16 +364,13 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                 </div>
 
                 {/* Footer with Submit Button */}
-                <div className="upload-modal-footer" style={{ paddingTop: '20px', paddingBottom: '20px', paddingLeft: '32px', paddingRight: '32px', borderTop: '1px solid #e5e5e5', backgroundColor: 'white' }}>
-                    <div className="footer-buttons" style={{ position: 'relative', display: 'flex', gap: '12px', alignItems: 'center', justifyContent: 'flex-end', width: '100%' }}>
+                <div className="upload-modal-footer upload-modal-footer--form">
+                    <div className="footer-buttons">
                         <Button type="button" variant="outline" onClick={handleCancel}>
                             Huỷ
                         </Button>
                         <div
-                            style={{
-                                position: 'relative',
-                                display: 'inline-block'
-                            }}
+                            className="upload-submit-wrapper"
                             onMouseEnter={() => {
                                 if (!isFormValid && !loading) {
                                     setShowTooltip(true);
@@ -402,36 +384,14 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                 type="button"
                                 onClick={handleSubmit}
                                 disabled={loading || !isFormValid}
-                                style={{ minWidth: '120px' }}
+                                className="upload-submit-btn"
                             >
                                 {loading ? 'Đang tải...' : `Gửi ${imagesData.length} ảnh`}
                             </Button>
                             {showTooltip && !isFormValid && !loading && (
-                                <div style={{
-                                    position: 'absolute',
-                                    bottom: 'calc(100% + 8px)',
-                                    right: 0,
-                                    padding: '10px 14px',
-                                    backgroundColor: '#1f2937',
-                                    color: 'white',
-                                    borderRadius: '8px',
-                                    fontSize: '13px',
-                                    whiteSpace: 'nowrap',
-                                    zIndex: 10000,
-                                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                                    pointerEvents: 'none'
-                                }}>
-                                    Vui lòng điền đầy đủ các trường có dấu <span style={{ color: '#ef4444', fontWeight: 'bold' }}>*</span>
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: '100%',
-                                        right: '20px',
-                                        width: 0,
-                                        height: 0,
-                                        borderLeft: '6px solid transparent',
-                                        borderRight: '6px solid transparent',
-                                        borderTop: '6px solid #1f2937'
-                                    }}></div>
+                                <div className="upload-submit-tooltip">
+                                    Vui lòng điền đầy đủ các trường có dấu <span className="required-marker">*</span>
+                                    <div className="upload-submit-tooltip-arrow" />
                                 </div>
                             )}
                         </div>

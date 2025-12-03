@@ -4,6 +4,7 @@ import { authService } from '@/services/authService';
 import type { AuthState } from '@/types/store';
 import type { ApiErrorResponse, ValidationErrorResponse, HttpErrorResponse } from '@/types/errors';
 import { dispatchLogout, dispatchLoginSuccess } from '@/utils/authEvents';
+import { t } from '@/i18n';
 
 export const useAuthStore = create<AuthState>((set, get) => ({
 	accessToken: null,
@@ -46,13 +47,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 					bio
 				);
 
-				toast.success(
-					'Đăng ký thành công! Bạn sẽ được chuyển sang trang đăng nhập.'
-				);
+				toast.success(t('auth.signUpSuccess'));
 			} catch (error: unknown) {
 				const message =
 					(error as ApiErrorResponse)?.response?.data?.message ??
-					'Đăng ký thất bại. Vui lòng thử lại.';
+					t('auth.signUpFailed');
 				toast.error(message);
 			} finally {
 				set({ loading: false });
@@ -80,9 +79,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 				// Dispatch event to notify other stores to fetch user data (decoupled)
 				dispatchLoginSuccess();
 
-				toast.success(
-					'Chào mừng bạn quay lại 🎉'
-				);
+				toast.success(t('auth.welcomeBack'));
 			} catch (error: unknown) {
 				const errorResponse = error as ValidationErrorResponse;
 
@@ -100,14 +97,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 									'Validation failed'
 							)
 							.join(', ');
-					toast.error(
-						`Lỗi xác thực: ${validationErrors}`
-					);
+					toast.error(`${t('auth.validationError')}: ${validationErrors}`);
 				} else {
 					const message =
-						errorResponse.response?.data
-							?.message ??
-						'Đăng nhập thất bại. Kiểm tra lại tên tài khoản hoặc mật khẩu của bạn.';
+						errorResponse.response?.data?.message ?? t('auth.signInFailed');
 					toast.error(message);
 				}
 				// Re-throw error so form can handle navigation
@@ -121,7 +114,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 			try {
 				get().clearAuth();
 				await authService.signOut();
-				toast.success('Đăng xuất thành công!');
+				toast.success(t('auth.signOutSuccess'));
 			} catch {
 				// Don't show error toast on logout failure
 				// User is already logged out locally
@@ -142,7 +135,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 				const errorStatus = (error as HttpErrorResponse)?.response?.status;
 				// Only show error if it's not a 401/403 (expected when not logged in)
 				if (errorStatus !== 401 && errorStatus !== 403) {
-					toast.error('Session hết hạn. Vui lòng đăng nhập lại.');
+					toast.error(t('auth.sessionExpired'));
 				}
 				get().clearAuth();
 			}

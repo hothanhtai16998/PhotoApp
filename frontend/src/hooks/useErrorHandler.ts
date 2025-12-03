@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { parseRateLimitHeaders, getRateLimitMessage } from '@/utils/rateLimit';
+import { t } from '@/i18n';
 
 interface ErrorHandlerOptions {
   showToast?: boolean;
@@ -31,7 +32,7 @@ export function useErrorHandler(options: ErrorHandlerOptions = {}): {
 } {
   const {
     showToast = true,
-    fallbackMessage = 'Đã xảy ra lỗi. Vui lòng thử lại.',
+    fallbackMessage = t('errors.generic'),
     logError = true,
   } = options;
 
@@ -67,7 +68,7 @@ export function useErrorHandler(options: ErrorHandlerOptions = {}): {
 
         // Handle specific error codes
         if (apiError.code === 'ECONNABORTED' || apiError.message?.includes('timeout')) {
-          message = 'Yêu cầu hết thời gian. Vui lòng thử lại.';
+          message = t('errors.timeout');
         } else if (apiError.response?.status === 429) {
           // Rate limit error - parse headers and show user-friendly message
           // Axios normalizes headers to lowercase, but we check both cases
@@ -85,11 +86,11 @@ export function useErrorHandler(options: ErrorHandlerOptions = {}): {
           const rateLimitInfo = parseRateLimitHeaders(headers);
           message = getRateLimitMessage(rateLimitInfo);
         } else if (apiError.response?.status === 401 || apiError.response?.status === 403) {
-          message = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+          message = t('errors.unauthorized');
         } else if (apiError.response?.status === 404) {
-          message = 'Không tìm thấy tài nguyên.';
+          message = t('errors.notFound');
         } else if (apiError.response?.status === 500) {
-          message = 'Lỗi máy chủ. Vui lòng thử lại sau.';
+          message = t('errors.server');
         }
       } else if (error instanceof Error) {
         message = error.message ?? message;

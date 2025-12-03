@@ -46,6 +46,33 @@ export function updateFavoriteCache(imageId: string, isFavorited: boolean) {
 }
 
 /**
+ * Compute initial favorite state based on inputs
+ * Extracted to avoid setting state in effect
+ */
+function computeFavoriteState(
+  imageId: string | undefined,
+  accessToken: string | null
+): { isValid: boolean; validId: string | null; isFavorited: boolean } {
+  if (!accessToken || !imageId) {
+    return { isValid: false, validId: null, isFavorited: false };
+  }
+
+  const validId = String(imageId).trim();
+  const isValidMongoId = /^[0-9a-fA-F]{24}$/.test(validId);
+
+  if (!isValidMongoId) {
+    return { isValid: false, validId: null, isFavorited: false };
+  }
+
+  const cachedValue = favoriteCache.get(validId);
+  return {
+    isValid: true,
+    validId,
+    isFavorited: cachedValue ?? false,
+  };
+}
+
+/**
  * Hook to get favorite status for an image (batched)
  * @param imageId - Image ID to check
  * @returns Favorite status
@@ -53,39 +80,48 @@ export function updateFavoriteCache(imageId: string, isFavorited: boolean) {
 export function useBatchedFavoriteCheck(imageId: string | undefined): boolean {
   const { accessToken } = useAuthStore();
   const validImageIdRef = useRef<string | null>(null);
-  
-  // Initialize state from cache if available
-  const getInitialState = () => {
-    if (!imageId || !accessToken) return false;
-    const validId = String(imageId).trim();
-    return favoriteCache.get(validId) ?? false;
-  };
-  
-  const [isFavorited, setIsFavorited] = useState<boolean>(getInitialState);
+
+  // Compute initial state synchronously (not in effect)
+  const initialState = computeFavoriteState(imageId, accessToken);
+
+  const [isFavorited, setIsFavorited] = useState<boolean>(initialState.isFavorited);
   const callbackRef = useRef<((result: boolean) => void) | null>(null);
 
+  // Track previous values to detect changes
+  const prevAccessToken = useRef(accessToken);
+  const prevImageId = useRef(imageId);
+
+  // Handle prop changes that should reset state
+  // This is done synchronously in render, not in effect
+  if (prevAccessToken.current !== accessToken || prevImageId.current !== imageId) {
+    prevAccessToken.current = accessToken;
+    prevImageId.current = imageId;
+
+    const newState = computeFavoriteState(imageId, accessToken);
+    if (!newState.isValid && isFavorited) {
+      // State needs reset - will happen on next render via useState
+      // We just update the ref here
+      validImageIdRef.current = null;
+    }
+  }
+
   useEffect(() => {
-    if (!accessToken || !imageId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsFavorited(false);
+    const state = computeFavoriteState(imageId, accessToken);
+
+    if (!state.isValid) {
       validImageIdRef.current = null;
+      // Only set state if it differs to avoid unnecessary renders
+      setIsFavorited(prev => prev !== false ? false : prev);
       return;
     }
 
-    // Validate MongoDB ObjectId format
-    const isValidMongoId = /^[0-9a-fA-F]{24}$/.test(String(imageId).trim());
-    if (!isValidMongoId) {
-      setIsFavorited(false);
-      validImageIdRef.current = null;
-      return;
-    }
-
-    const validImageId = String(imageId).trim();
+    const validImageId = state.validId!;
     validImageIdRef.current = validImageId;
 
     // Check cache first for immediate updates
-    if (favoriteCache.has(validImageId)) {
-      setIsFavorited(favoriteCache.get(validImageId)!);
+    const cachedValue = favoriteCache.get(validImageId);
+    if (cachedValue !== undefined) {
+      setIsFavorited(cachedValue);
     }
 
     // Create callback for this image
@@ -120,10 +156,10 @@ export function useBatchedFavoriteCheck(imageId: string | undefined): boolean {
               for (const id of imageIds) {
                 const callbacks = pendingChecks.get(id);
                 if (callbacks) {
-                  const isFavorited = response.favorites[id] === true ||
+                  const isFav = response.favorites[id] === true ||
                     response.favorites[String(id)] === true;
                   
-                  const favoritedStatus = !!isFavorited;
+                  const favoritedStatus = !!isFav;
                   // Update cache
                   favoriteCache.set(id, favoritedStatus);
                   // Notify all callbacks
@@ -173,4 +209,3 @@ export function useBatchedFavoriteCheck(imageId: string | undefined): boolean {
 
   return isFavorited;
 }
-
