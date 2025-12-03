@@ -19,6 +19,8 @@ export const vi = {
     search: 'Tìm kiếm',
     noResults: 'Không có kết quả',
     tryAgain: 'Vui lòng thử lại',
+    saveChanges: 'Lưu thay đổi',
+    create: 'Tạo',
   },
 
   // Auth
@@ -63,6 +65,8 @@ export const vi = {
     noFavorites: 'Chưa có ảnh yêu thích nào',
     downloadSuccess: 'Tải ảnh thành công',
     downloadFailed: 'Tải ảnh thất bại. Vui lòng thử lại.',
+    listLabel: 'Danh sách ảnh yêu thích',
+    imageLabel: 'Ảnh yêu thích: {title}',
   },
 
   // Collections
@@ -101,6 +105,8 @@ export const vi = {
     editCollection: 'Chỉnh sửa bộ sưu tập',
     imageIdNotFound: 'Không tìm thấy ID ảnh',
     enterName: 'Vui lòng nhập tên bộ sưu tập',
+    createFromTemplateTitle: 'Tạo từ mẫu: {name}',
+    clearTemplate: 'Xóa mẫu',
   },
 
   // Upload
@@ -108,7 +114,7 @@ export const vi = {
     title: 'Thêm ảnh vào PhotoApp',
     addImage: 'Thêm ảnh',
     addMore: 'Thêm ảnh',
-    dragDrop: 'Kẻo thả hoặc',
+    dragDrop: 'Kéo thả hoặc',
     browse: 'Chọn',
     browseHint: 'ảnh từ máy tính, điện thoại (có thể chọn nhiều ảnh)',
     maxSize: 'Tối đa 10 MB',
@@ -141,6 +147,14 @@ export const vi = {
     signUpFree: 'Sign up for free',
   },
 
+  // Search
+  search: {
+    placeholder: 'Tìm kiếm ảnh, minh họa...',
+    label: 'Tìm kiếm ảnh',
+    clear: 'Xóa tìm kiếm',
+    hint: 'Nhập từ khóa để tìm kiếm ảnh. Sử dụng phím mũi tên để điều hướng, Enter để chọn, Escape để đóng.',
+  },
+
   // Admin
   admin: {
     title: 'Trang quản lý',
@@ -162,16 +176,16 @@ export const vi = {
   // Image
   image: {
     untitled: 'Không có tiêu đề',
-    download: 'Download',
-    downloadOptions: 'Download options',
-    addToCollection: 'Add to collection',
-    bookmark: 'Bookmark',
-    removeBookmark: 'Remove bookmark',
-    like: 'Like image',
-    small: 'Small',
-    medium: 'Medium',
-    large: 'Large',
-    original: 'Original',
+    download: 'Tải xuống',
+    downloadOptions: 'Tùy chọn tải xuống',
+    addToCollection: 'Thêm vào bộ sưu tập',
+    bookmark: 'Đánh dấu',
+    removeBookmark: 'Bỏ đánh dấu',
+    like: 'Thích ảnh',
+    small: 'Nhỏ',
+    medium: 'Vừa',
+    large: 'Lớn',
+    original: 'Gốc',
   },
 
   // Profile
@@ -191,6 +205,7 @@ export const vi = {
   a11y: {
     loading: 'Đang tải',
     loadingImages: 'Đang tải ảnh',
+    loadingFavorites: 'Đang tải ảnh yêu thích',
     favoriteImage: 'Ảnh yêu thích: {title}',
     previousPage: 'Trang trước',
     nextPage: 'Trang sau',

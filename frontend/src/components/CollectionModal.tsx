@@ -5,6 +5,7 @@ import { collectionTemplateService, type CollectionTemplate } from '@/services/c
 import type { Collection } from '@/types/collection';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/utils';
+import { t } from '@/i18n';
 import './CollectionModal.css';
 
 interface CollectionModalProps {
@@ -139,7 +140,7 @@ export default function CollectionModal({
 				setCollectionsContainingImage(containingIds);
 			} catch (error: unknown) {
 				console.error('Failed to load collections:', error);
-				toast.error('Không thể tải danh sách bộ sưu tập');
+				toast.error(t('collections.loadFailed'));
 			} finally {
 				setLoading(false);
 			}
@@ -161,7 +162,7 @@ export default function CollectionModal({
 	const handleToggleCollection = useCallback(
 		async (collectionId: string, isInCollection: boolean) => {
 			if (!imageId) {
-				toast.error('Không tìm thấy ID ảnh');
+				toast.error(t('collections.imageIdNotFound'));
 				return;
 			}
 			try {
@@ -172,7 +173,7 @@ export default function CollectionModal({
 						next.delete(collectionId);
 						return next;
 					});
-					toast.success('Đã xóa ảnh khỏi bộ sưu tập');
+					toast.success(t('collections.imageRemoved'));
 				} else {
 					await collectionService.addImageToCollection(collectionId, imageId);
 					setCollectionsContainingImage((prev) => {
@@ -180,13 +181,13 @@ export default function CollectionModal({
 						next.add(collectionId);
 						return next;
 					});
-					toast.success('Đã thêm ảnh vào bộ sưu tập');
+					toast.success(t('collections.imageAdded'));
 				}
 				onCollectionUpdate?.();
 			} catch (error: unknown) {
 				console.error('Failed to toggle collection:', error);
 				toast.error(
-					getErrorMessage(error, 'Không thể cập nhật bộ sưu tập. Vui lòng thử lại.')
+					getErrorMessage(error, t('collections.updateFailed'))
 				);
 			}
 		},
@@ -195,7 +196,7 @@ export default function CollectionModal({
 
 	const handleCreateCollection = useCallback(async () => {
 		if (!newCollectionName.trim()) {
-			toast.error('Vui lòng nhập tên bộ sưu tập');
+			toast.error(t('collections.enterName'));
 			return;
 		}
 
@@ -248,12 +249,12 @@ export default function CollectionModal({
 			setSelectedTemplate(null);
 			setShowTemplates(false);
 
-			toast.success('Đã tạo bộ sưu tập' + (imageId ? ' và thêm ảnh' : ''));
+			toast.success(imageId ? t('collections.createdAndAdded') : t('collections.created'));
 			onCollectionUpdate?.();
 		} catch (error: unknown) {
 			console.error('Failed to create collection:', error);
 			toast.error(
-				getErrorMessage(error, 'Không thể tạo bộ sưu tập. Vui lòng thử lại.')
+				getErrorMessage(error, t('collections.createFailed'))
 			);
 		} finally {
 			setCreating(false);
@@ -270,7 +271,7 @@ export default function CollectionModal({
 
 	const handleUpdateCollection = useCallback(async () => {
 		if (!collectionToEdit || !editCollectionName.trim()) {
-			toast.error('Vui lòng nhập tên bộ sưu tập');
+			toast.error(t('collections.enterName'));
 			return;
 		}
 
@@ -283,13 +284,13 @@ export default function CollectionModal({
 				tags: editCollectionTags.length > 0 ? editCollectionTags : undefined,
 			});
 
-			toast.success('Đã cập nhật bộ sưu tập');
+			toast.success(t('collections.updated'));
 			onCollectionUpdate?.();
 			onClose();
 		} catch (error: unknown) {
 			console.error('Failed to update collection:', error);
 			toast.error(
-				getErrorMessage(error, 'Không thể cập nhật bộ sưu tập. Vui lòng thử lại.')
+				getErrorMessage(error, t('collections.updateFailed'))
 			);
 		} finally {
 			setEditing(false);
@@ -311,8 +312,8 @@ export default function CollectionModal({
 			<div className="collection-modal-overlay" onClick={onClose} />
 			<div className="collection-modal" onClick={(e) => e.stopPropagation()}>
 				<div className="collection-modal-header">
-					<h2>{isEditMode ? 'Chỉnh sửa bộ sưu tập' : 'Lưu vào bộ sưu tập'}</h2>
-					<button className="collection-modal-close" onClick={onClose} aria-label="Đóng">
+					<h2>{isEditMode ? t('collections.editCollection') : t('collections.saveToCollection')}</h2>
+					<button className="collection-modal-close" onClick={onClose} aria-label={t('common.close')}>
 						<X size={20} />
 					</button>
 				</div>
@@ -320,26 +321,26 @@ export default function CollectionModal({
 				<div className="collection-modal-content">
 					{isEditMode ? (
 						<div className="collection-modal-create-form">
-							<h3>Chỉnh sửa bộ sưu tập</h3>
+							<h3>{t('collections.editCollection')}</h3>
 							<div className="collection-modal-form-group">
-								<label htmlFor="edit-collection-name">Tên bộ sưu tập *</label>
+								<label htmlFor="edit-collection-name">{t('collections.collectionName')} *</label>
 								<input
 									id="edit-collection-name"
 									type="text"
 									value={editCollectionName}
 									onChange={(e) => setEditCollectionName(e.target.value)}
-									placeholder="Ví dụ: Ảnh phong cảnh đẹp"
+									placeholder={t('collections.collectionNamePlaceholder')}
 									maxLength={100}
 									autoFocus
 								/>
 							</div>
 							<div className="collection-modal-form-group">
-								<label htmlFor="edit-collection-description">Mô tả (tùy chọn)</label>
+								<label htmlFor="edit-collection-description">{t('collections.description')}</label>
 								<textarea
 									id="edit-collection-description"
 									value={editCollectionDescription}
 									onChange={(e) => setEditCollectionDescription(e.target.value)}
-									placeholder="Mô tả ngắn về bộ sưu tập này..."
+									placeholder={t('collections.descriptionPlaceholder')}
 									maxLength={500}
 									rows={3}
 								/>
@@ -351,11 +352,11 @@ export default function CollectionModal({
 												checked={editCollectionPublic}
 												onChange={(e) => setEditCollectionPublic(e.target.checked)}
 											/>
-											<span>Công khai (mọi người có thể xem)</span>
+											<span>{t('collections.public')}</span>
 										</label>
 									</div>
 									<div className="collection-modal-form-group">
-										<label htmlFor="edit-collection-tags">Thẻ (tối đa 10)</label>
+										<label htmlFor="edit-collection-tags">{t('collections.tags')}</label>
 										<div className="collection-modal-tags-input-wrapper">
 											<input
 												id="edit-collection-tags"
@@ -363,7 +364,7 @@ export default function CollectionModal({
 												value={editTagInput}
 												onChange={(e) => setEditTagInput(e.target.value)}
 												onKeyDown={(e) => handleTagInputKeyDown(e, true)}
-												placeholder="Nhập thẻ và nhấn Enter hoặc dấu phẩy"
+												placeholder={t('collections.tagsPlaceholder')}
 											/>
 											<button
 												type="button"
@@ -397,20 +398,20 @@ export default function CollectionModal({
 									onClick={onClose}
 									disabled={editing}
 								>
-									Hủy
+									{t('common.cancel')}
 								</button>
 								<button
 									className="collection-modal-submit-btn"
 									onClick={handleUpdateCollection}
 									disabled={editing || !editCollectionName.trim()}
 								>
-									{editing ? 'Đang lưu...' : 'Lưu thay đổi'}
+									{editing ? t('collections.saving') : t('common.saveChanges')}
 								</button>
 							</div>
 						</div>
 					) : loading ? (
 						<div className="collection-modal-loading">
-							<p>Đang tải...</p>
+							<p>{t('common.loading')}</p>
 						</div>
 					) : (
 						<>
@@ -426,7 +427,7 @@ export default function CollectionModal({
 											}}
 										>
 											<Plus size={18} />
-											Tạo bộ sưu tập mới
+											{t('collections.createNew')}
 										</button>
 										{templates.length > 0 && (
 											<button
@@ -434,14 +435,14 @@ export default function CollectionModal({
 												onClick={() => setShowTemplates(!showTemplates)}
 											>
 												<Sparkles size={18} />
-												Tạo từ mẫu ({templates.length})
+												{t('collections.createFromTemplate')} ({templates.length})
 											</button>
 										)}
 									</div>
 
 									{showTemplates && (
 										<div className="collection-modal-templates">
-											<h4>Chọn mẫu</h4>
+											<h4>{t('collections.selectTemplate')}</h4>
 											<div className="collection-modal-templates-list">
 												{templates.map((template) => (
 													<button
@@ -487,9 +488,9 @@ export default function CollectionModal({
 									{collections.length === 0 ? (
 										<div className="collection-modal-empty">
 											<Folder size={48} />
-											<p>Bạn chưa có bộ sưu tập nào</p>
+											<p>{t('collections.empty')}</p>
 											<p className="collection-modal-empty-hint">
-												Tạo bộ sưu tập đầu tiên của bạn để lưu ảnh yêu thích
+												{t('collections.emptyHint')}
 											</p>
 										</div>
 									) : (
@@ -536,7 +537,7 @@ export default function CollectionModal({
 																	</p>
 																)}
 																<p className="collection-modal-item-count">
-																	{collection.imageCount || 0} ảnh
+																	{t('collections.imageCount', { count: collection.imageCount || 0 })}
 																</p>
 															</div>
 														</div>
@@ -557,8 +558,8 @@ export default function CollectionModal({
 									<div className="collection-modal-form-header">
 										<h3>
 											{selectedTemplate
-												? `Tạo từ mẫu: ${selectedTemplate.templateName}`
-												: 'Tạo bộ sưu tập mới'}
+												? t('collections.createFromTemplateTitle', { name: selectedTemplate.templateName })
+												: t('collections.createNew')}
 										</h3>
 										{selectedTemplate && (
 											<button
@@ -571,33 +572,33 @@ export default function CollectionModal({
 													setNewCollectionPublic(true);
 													setNewCollectionTags([]);
 												}}
-												title="Xóa mẫu"
+												title={t('collections.clearTemplate')}
 											>
 												<X size={16} />
 											</button>
 										)}
 									</div>
 									<div className="collection-modal-form-group">
-										<label htmlFor="collection-name">Tên bộ sưu tập *</label>
+										<label htmlFor="collection-name">{t('collections.collectionName')} *</label>
 										<input
 											id="collection-name"
 											type="text"
 											value={newCollectionName}
 											onChange={(e) => setNewCollectionName(e.target.value)}
-											placeholder="Ví dụ: Ảnh phong cảnh đẹp"
+											placeholder={t('collections.collectionNamePlaceholder')}
 											maxLength={100}
 											autoFocus
 										/>
 									</div>
 									<div className="collection-modal-form-group">
-										<label htmlFor="collection-description">Mô tả (tùy chọn)</label>
+										<label htmlFor="collection-description">{t('collections.description')}</label>
 										<textarea
 											id="collection-description"
 											value={newCollectionDescription}
 											onChange={(e) =>
 												setNewCollectionDescription(e.target.value)
 											}
-											placeholder="Mô tả ngắn về bộ sưu tập này..."
+											placeholder={t('collections.descriptionPlaceholder')}
 											maxLength={500}
 											rows={3}
 										/>
@@ -609,11 +610,11 @@ export default function CollectionModal({
 												checked={newCollectionPublic}
 												onChange={(e) => setNewCollectionPublic(e.target.checked)}
 											/>
-											<span>Công khai (mọi người có thể xem)</span>
+											<span>{t('collections.public')}</span>
 										</label>
 									</div>
 									<div className="collection-modal-form-group">
-										<label htmlFor="collection-tags">Thẻ (tối đa 10)</label>
+										<label htmlFor="collection-tags">{t('collections.tags')}</label>
 										<div className="collection-modal-tags-input-wrapper">
 											<input
 												id="collection-tags"
@@ -621,7 +622,7 @@ export default function CollectionModal({
 												value={newTagInput}
 												onChange={(e) => setNewTagInput(e.target.value)}
 												onKeyDown={(e) => handleTagInputKeyDown(e, false)}
-												placeholder="Nhập thẻ và nhấn Enter hoặc dấu phẩy"
+												placeholder={t('collections.tagsPlaceholder')}
 											/>
 											<button
 												type="button"
@@ -659,14 +660,14 @@ export default function CollectionModal({
 											}}
 											disabled={creating}
 										>
-											Hủy
+											{t('common.cancel')}
 										</button>
 										<button
 											className="collection-modal-submit-btn"
 											onClick={handleCreateCollection}
 											disabled={creating || !newCollectionName.trim()}
 										>
-											{creating ? 'Đang tạo...' : 'Tạo bộ sưu tập'}
+											{creating ? t('collections.creating') : t('collections.createNew')}
 										</button>
 									</div>
 								</div>

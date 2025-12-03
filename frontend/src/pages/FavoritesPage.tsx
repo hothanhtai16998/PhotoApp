@@ -139,14 +139,14 @@ function FavoritesPage() {
                     window.open(image.imageUrl, '_blank');
                 }
             } catch (fallbackError) {
-                console.error('Lỗi fallback khi tải ảnh:', fallbackError);
+                console.error('Fallback download error:', fallbackError);
             }
         }
     }, []);
 
     // Loading skeleton
     const FavoritesSkeleton = () => (
-        <div className="favorites-grid" aria-label="Đang tải ảnh yêu thích" aria-live="polite">
+        <div className="favorites-grid" aria-label={t('a11y.loadingFavorites')} aria-live="polite">
             {Array.from({ length: uiConfig.skeleton.imageGridCount }).map((_, index) => (
                 <div
                     key={`skeleton-${index}`}
@@ -169,11 +169,11 @@ function FavoritesPage() {
                             <Heart size={32} fill="currentColor" className="favorite-icon-filled" />
                         </div>
                         <div className="favorites-header-info">
-                            <h1 className="favorites-title">Ảnh yêu thích</h1>
+                            <h1 className="favorites-title">{t('favorites.title')}</h1>
                             <p className="favorites-subtitle">
                                 {pagination?.total
-                                    ? `${pagination.total} ảnh đã lưu`
-                                    : 'Chưa có ảnh yêu thích nào'}
+                                    ? t('favorites.count', { count: pagination.total })
+                                    : t('favorites.noFavorites')}
                             </p>
                         </div>
                     </div>
@@ -184,17 +184,17 @@ function FavoritesPage() {
                     ) : images.length === 0 ? (
                         <div className="favorites-empty" role="status" aria-live="polite">
                             <Heart size={64} className="empty-icon" />
-                            <h2>Chưa có ảnh yêu thích</h2>
-                            <p>Bắt đầu lưu những ảnh bạn yêu thích để xem lại sau</p>
+                            <h2>{t('favorites.empty')}</h2>
+                            <p>{t('favorites.emptyHint')}</p>
                             <button
                                 className="browse-button"
                                 onClick={() => navigate('/')}
                             >
-                                Khám phá ảnh
+                                {t('favorites.explore')}
                             </button>
                         </div>
                     ) : (
-                        <div className="favorites-grid" role="list" aria-label="Danh sách ảnh yêu thích">
+                        <div className="favorites-grid" role="list" aria-label={t('favorites.listLabel')}>
                             {images.map((image) => {
                                 const imageType = imageTypes.get(image._id) || 'landscape';
                                 return (
@@ -202,7 +202,7 @@ function FavoritesPage() {
                                         key={image._id}
                                         className={`favorites-item ${imageType}`}
                                         role="listitem"
-                                        aria-label={`Ảnh yêu thích: ${image.imageTitle || 'Không có tiêu đề'}`}
+                                        aria-label={t('favorites.imageLabel', { title: image.imageTitle || t('image.untitled') })}
                                         onClick={() => {
                                             // MOBILE ONLY: Navigate to ImagePage instead of opening modal
                                             if (isMobile) {
@@ -267,20 +267,20 @@ function FavoritesPage() {
                                 className="pagination-btn"
                                 onClick={() => fetchFavorites(currentPage - 1)}
                                 disabled={currentPage === 1}
-                                aria-label="Trang trước"
+                                aria-label={t('a11y.previousPage')}
                             >
-                                Trước
+                                {t('pagination.previous')}
                             </button>
                             <span className="pagination-info">
-                                Trang {currentPage} / {pagination.pages}
+                                {t('pagination.page', { current: currentPage, total: pagination.pages })}
                             </span>
                             <button
                                 className="pagination-btn"
                                 onClick={() => fetchFavorites(currentPage + 1)}
                                 disabled={currentPage >= pagination.pages}
-                                aria-label="Trang sau"
+                                aria-label={t('a11y.nextPage')}
                             >
-                                Sau
+                                {t('pagination.next')}
                             </button>
                         </div>
                     )}

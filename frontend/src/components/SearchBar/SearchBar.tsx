@@ -4,6 +4,7 @@ import { Search, X } from 'lucide-react';
 import { useImageStore } from '@/stores/useImageStore';
 import { onSearchFocusRequest } from '@/utils/searchFocusEvent';
 import { searchConfig } from '@/config/searchConfig';
+import { t } from '@/i18n';
 import SearchFilters from '../SearchFilters';
 import { SearchSuggestions } from './SearchSuggestions';
 import {
@@ -241,7 +242,7 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
                 }}
                 className="header-search"
                 role="search"
-                aria-label="Tìm kiếm ảnh"
+                aria-label={t('search.label')}
             >
                 <div className="search-icon-left" aria-hidden="true">
                     <Search size={20} />
@@ -249,7 +250,7 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
                 <input
                     ref={inputRef}
                     type="text"
-                    placeholder="Tìm kiếm ảnh, minh họa..."
+                    placeholder={t('search.placeholder')}
                     value={searchQuery}
                     onChange={(e) => {
                         setSearchQuery(e.target.value);
@@ -264,21 +265,21 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
                         e.stopPropagation();
                     }}
                     className="search-input"
-                    aria-label="Tìm kiếm ảnh"
+                    aria-label={t('search.label')}
                     aria-describedby="search-description"
                     aria-expanded={showSuggestions}
                     aria-autocomplete="list"
                     autoComplete="off"
                 />
                 <span id="search-description" className="sr-only">
-                    Nhập từ khóa để tìm kiếm ảnh. Sử dụng phím mũi tên để điều hướng, Enter để chọn, Escape để đóng.
+                    {t('search.hint')}
                 </span>
                 {searchQuery && (
                     <button
                         type="button"
                         onClick={handleClear}
                         className="search-clear"
-                        aria-label="Xóa tìm kiếm"
+                        aria-label={t('search.clear')}
                     >
                         <X size={16} />
                     </button>

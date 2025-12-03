@@ -19,6 +19,8 @@ export const en = {
     search: 'Search',
     noResults: 'No results found',
     tryAgain: 'Please try again',
+    saveChanges: 'Save changes',
+    create: 'Create',
   },
 
   // Auth
@@ -63,6 +65,8 @@ export const en = {
     noFavorites: 'No favorite photos yet',
     downloadSuccess: 'Image downloaded successfully',
     downloadFailed: 'Download failed. Please try again.',
+    listLabel: 'Favorite photos list',
+    imageLabel: 'Favorite photo: {title}',
   },
 
   // Collections
@@ -101,6 +105,8 @@ export const en = {
     editCollection: 'Edit collection',
     imageIdNotFound: 'Image ID not found',
     enterName: 'Please enter a collection name',
+    createFromTemplateTitle: 'Create from template: {name}',
+    clearTemplate: 'Clear template',
   },
 
   // Upload
@@ -139,6 +145,14 @@ export const en = {
     logIn: 'Log in',
     newToUnsplash: 'New to Unsplash?',
     signUpFree: 'Sign up for free',
+  },
+
+  // Search
+  search: {
+    placeholder: 'Search photos, illustrations...',
+    label: 'Search photos',
+    clear: 'Clear search',
+    hint: 'Enter keywords to search photos. Use arrow keys to navigate, Enter to select, Escape to close.',
   },
 
   // Admin
@@ -191,7 +205,8 @@ export const en = {
   a11y: {
     loading: 'Loading',
     loadingImages: 'Loading images',
-    favoriteImage: 'Favorite image: {title}',
+    loadingFavorites: 'Loading favorite photos',
+    favoriteImage: 'Favorite photo: {title}',
     previousPage: 'Previous page',
     nextPage: 'Next page',
     closeMenu: 'Close menu',
