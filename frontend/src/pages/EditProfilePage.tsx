@@ -89,7 +89,7 @@ function EditProfilePage() {
     // Define all available menu items
     const allMenuItems = [
         { id: SECTION_IDS.EDIT_PROFILE, label: 'Chỉnh sửa thông tin' },
-        { id: SECTION_IDS.DOWNLOAD_HISTORY, label: 'Lịch sử tải xuống' },
+        { id: SECTION_IDS.DOWNLOAD_HISTORY, label: 'Lịch sử tải' },
         { id: SECTION_IDS.CHANGE_PASSWORD, label: 'Đổi mật khẩu' },
     ];
 

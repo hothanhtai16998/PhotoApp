@@ -1,4 +1,3 @@
-import { CheckCircle2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -30,7 +29,6 @@ export const ProfileForm = ({
   bioCharCount,
   register,
   handleSubmit,
-  watch,
   handleAvatarChange,
   handleAvatarButtonClick,
   onSubmit,
@@ -38,7 +36,6 @@ export const ProfileForm = ({
 }: ProfileFormProps) => {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="profile-form">
-      <h1 className="form-title">{t('profile.editInfo')}</h1>
 
       {/* Profile Image Section */}
       <div className="profile-image-section">
@@ -94,10 +91,7 @@ export const ProfileForm = ({
             <div className="form-field">
               <Label htmlFor="lastName">{t('profile.lastName')}</Label>
               <Input id="lastName" {...register('lastName')} />
-              <div className="account-badge">
-                <CheckCircle2 size={16} />
-                <span>{t('profile.verified')}</span>
-              </div>
+
             </div>
           </div>
           <div className="form-field">
@@ -118,16 +112,9 @@ export const ProfileForm = ({
           <div className="form-field">
             <Label htmlFor="username">{t('auth.username')}</Label>
             <Input id="username" {...register('username')} readOnly />
-            <p className="field-hint">{t('profile.usernameHint')}</p>
-            <p className="field-url">https://photoapp.com/@{watch('username') || user.username}</p>
+
           </div>
         </div>
-      </div>
-
-      {/* Badge Section */}
-      <div className="form-section">
-        <h3 className="section-title">{t('profile.badges')}</h3>
-        <p className="empty-badge-message">{t('profile.noBadges')}</p>
       </div>
 
       {/* About Section */}
@@ -181,22 +168,6 @@ export const ProfileForm = ({
         </div>
       </div>
 
-      {/* Messaging Section */}
-      <div className="form-section">
-        <h3 className="section-title">{t('profile.messaging')}</h3>
-        <div className="checkbox-field">
-          <input
-            type="checkbox"
-            id="showMessageButton"
-            {...register('showMessageButton')}
-            className="checkbox-input"
-          />
-          <Label htmlFor="showMessageButton" className="checkbox-label">
-            {t('profile.showMessageButton')}
-          </Label>
-        </div>
-        <p className="field-hint">{t('profile.messageHint')}</p>
-      </div>
 
       {/* Submit Button */}
       <div className="form-actions">

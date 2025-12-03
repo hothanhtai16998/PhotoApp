@@ -23,8 +23,13 @@
 
 .profile-avatar-container {
   flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
-.profile-avatar {
+
+.profile-avatar,
+.profile-avatar-container .avatar-image {
   width: 120px;
   height: 120px;
   border-radius: 50%;
@@ -32,7 +37,8 @@
   background: #f5f5f5;
 }
 
-.profile-avatar-placeholder {
+.profile-avatar-placeholder,
+.profile-avatar-container .avatar-placeholder {
   width: 120px;
   height: 120px;
   border-radius: 50%;
@@ -539,40 +545,50 @@
   }
 
   .profile-header {
-    flex-direction: column;
-    gap: 16px;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 20px;
     padding-bottom: 16px;
     margin-bottom: 0;
     border-bottom: none; /* Remove border on mobile like Unsplash */
   }
 
   .profile-avatar-container {
-    align-self: center;
+    align-self: flex-start;
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+    flex-shrink: 0;
   }
 
   .profile-avatar,
-  .profile-avatar-placeholder {
-    width: 96px;
-    height: 96px;
+  .profile-avatar-placeholder,
+  .profile-avatar-container .avatar-image,
+  .profile-avatar-container .avatar-placeholder {
+    width: 110px !important;
+    height: 110px !important;
+    border-radius: 50% !important;
+    object-fit: cover;
   }
 
   .profile-info {
     width: 100%;
-    text-align: center;
-    align-items: center;
+    text-align: left;
+    align-items: flex-start;
     gap: 10px; /* Tighter spacing like Unsplash */
   }
 
   .profile-name-section {
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
     gap: 10px;
     width: 100%;
   }
 
   .profile-name {
     font-size: 1.5rem;
-    text-align: center;
+    text-align: left;
     margin: 0;
     font-weight: 600;
   }
@@ -582,7 +598,7 @@
     display: flex;
     flex-direction: row;
     gap: 10px;
-    justify-content: center;
+    justify-content: flex-start;
     margin-top: 4px;
   }
 
@@ -658,34 +674,50 @@
   }
 
   .profile-header {
-    gap: 14px;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 16px;
     padding-bottom: 14px;
     margin-bottom: 0;
     border-bottom: none; /* Remove border on mobile like Unsplash */
   }
 
   .profile-avatar-container {
-    width: 80px;
-    height: 80px;
+    width: auto;
+    height: auto;
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+    align-self: flex-start;
+    flex-shrink: 0;
   }
 
   .profile-avatar,
-  .profile-avatar-placeholder {
-    width: 80px;
-    height: 80px;
-    font-size: 36px;
+  .profile-avatar-placeholder,
+  .profile-avatar-container .avatar-image,
+  .profile-avatar-container .avatar-placeholder {
+    width: 100px !important;
+    height: 100px !important;
+    border-radius: 50% !important;
+    object-fit: cover;
+    font-size: 40px;
   }
 
   .profile-name {
     font-size: 1.5rem;
+    text-align: left;
   }
 
   .profile-info {
     gap: 8px;
+    text-align: left;
+    align-items: flex-start;
   }
 
   .profile-name-section {
     gap: 8px;
+    align-items: flex-start;
   }
 
   .profile-actions {
@@ -693,8 +725,12 @@
     display: flex;
     flex-direction: row;
     gap: 8px;
-    justify-content: center;
+    justify-content: flex-start;
     margin-top: 4px;
+  }
+
+  .profile-description {
+    text-align: left;
   }
 
   .edit-profile-btn,

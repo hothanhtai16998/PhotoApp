@@ -26,7 +26,6 @@ export const PasswordForm = ({
 }: PasswordFormProps) => {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="change-password-form">
-      <h1 className="form-title">{t('profile.currentPassword')}</h1>
 
       <div className="form-field">
         <Label htmlFor="password">{t('profile.currentPassword')}</Label>

@@ -33,7 +33,6 @@
 /* Left Sidebar */
 .profile-sidebar {
   position: sticky;
-  top: 100px;
   height: fit-content;
 }
 
@@ -710,14 +709,14 @@
   }
 
   .sidebar-nav {
-    gap: 6px;
+    gap: 3px;
     padding-bottom: 4px;
   }
 
   .sidebar-link {
-    padding: 10px 14px;
+    padding: 8px 8px;
     font-size: 0.8125rem;
-    min-height: 44px;
+    min-height: 30px;
   }
 
   .profile-form {
