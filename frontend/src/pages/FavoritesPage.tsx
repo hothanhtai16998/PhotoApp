@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { appConfig } from "@/config/appConfig";
 import { uiConfig } from "@/config/uiConfig";
 import { downloadImage } from "@/utils/downloadService";
+import { t } from "@/i18n";
 import "./FavoritesPage.css";
 
 // Lazy load ImageModal - conditionally rendered
@@ -127,10 +128,10 @@ function FavoritesPage() {
 
         try {
             await downloadImage(image);
-            toast.success('Tải ảnh thành công');
+            toast.success(t('favorites.downloadSuccess'));
         } catch (error) {
-            console.error('Tải ảnh thất bại:', error);
-            toast.error('Tải ảnh thất bại. Vui lòng thử lại.');
+            console.error('Download failed:', error);
+            toast.error(t('favorites.downloadFailed'));
 
             // Fallback: try opening in new tab if download fails
             try {

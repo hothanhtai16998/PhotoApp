@@ -8,8 +8,10 @@ import UploadModal from "./UploadModal"
 import { SearchBar, type SearchBarRef } from "./SearchBar"
 import { Avatar } from "./Avatar"
 import NotificationBell from "./NotificationBell"
+import { LanguageSwitcher } from "./LanguageSwitcher"
 import LOGO_CONFIG from "@/config/logo"
 import { updateFaviconWithImage } from "@/utils/faviconUpdater"
+import { t } from "@/i18n"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,7 +70,7 @@ export const Header = memo(function Header() {
             {accessToken ? (
               <>
                 {/* User Icon/Avatar */}
-                <Link to="/profile" className="mobile-header-icon" aria-label="Tài khoản">
+                <Link to="/profile" className="mobile-header-icon" aria-label={t('header.account')}>
                   {user ? (
                     <Avatar
                       user={user}
@@ -88,7 +90,7 @@ export const Header = memo(function Header() {
             ) : (
               <>
                 {/* User Icon for Sign In */}
-                <Link to="/signin" className="mobile-header-icon" aria-label="Đăng nhập">
+                <Link to="/signin" className="mobile-header-icon" aria-label={t('auth.signIn')}>
                   <User size={20} />
                 </Link>
               </>
@@ -97,7 +99,7 @@ export const Header = memo(function Header() {
             <button
               className="mobile-menu-button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Chuyển đổi menu"
+              aria-label={t('header.toggleMenu')}
               aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -111,11 +113,11 @@ export const Header = memo(function Header() {
           <div className="header-actions desktop-only">
             {accessToken ? (
               <>
-                <button onClick={() => setUploadModalOpen(true)} className="header-link header-upload-button">Thêm ảnh</button>
+                <button onClick={() => setUploadModalOpen(true)} className="header-link header-upload-button">{t('header.addImage')}</button>
                 <NotificationBell />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="header-link user-menu-trigger" aria-label="Menu người dùng">
+                    <button className="header-link user-menu-trigger" aria-label={t('header.userMenu')}>
                       {user ? (
                         <Avatar
                           user={user}
@@ -132,7 +134,7 @@ export const Header = memo(function Header() {
                     <DropdownMenuItem asChild>
                       <Link to="/favorites" className="user-menu-item">
                         <Heart size={16} />
-                        Yêu thích
+                        {t('header.favorites')}
                       </Link>
                     </DropdownMenuItem>
                     {user?.isAdmin && (
@@ -147,14 +149,18 @@ export const Header = memo(function Header() {
                     <DropdownMenuItem asChild>
                       <Link to="/about" className="user-menu-item">
                         <Info size={16} />
-                        Về chúng tôi
+                        {t('header.about')}
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link to="/profile" className="user-menu-item">
                         <User size={16} />
-                        Tài khoản
+                        {t('header.account')}
                       </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <LanguageSwitcher variant="menu-item" />
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -163,15 +169,15 @@ export const Header = memo(function Header() {
                       variant="destructive"
                     >
                       <LogOut size={16} />
-                      Đăng xuất
+                      {t('auth.signOut')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </>
             ) : (
               <>
-                <Link to="/signin" className="header-link">Đăng nhập</Link>
-                <button onClick={() => navigate('/signin')} className="header-button">Thêm ảnh</button>
+                <Link to="/signin" className="header-link">{t('auth.signIn')}</Link>
+                <button onClick={() => navigate('/signin')} className="header-button">{t('header.addImage')}</button>
               </>
             )}
           </div>
@@ -185,7 +191,7 @@ export const Header = memo(function Header() {
             <button
               className="mobile-menu-close"
               onClick={() => setMobileMenuOpen(false)}
-              aria-label="Đóng menu"
+              aria-label={t('a11y.closeMenu')}
             >
               <X size={24} />
             </button>
@@ -194,29 +200,34 @@ export const Header = memo(function Header() {
               <div className="mobile-menu-section">
                 <Link to="/about" className="mobile-menu-nav-item" onClick={() => setMobileMenuOpen(false)}>
                   <Building2 size={18} />
-                  <span>Công ty</span>
+                  <span>{t('header.company')}</span>
                   <ChevronDown size={16} className="mobile-menu-arrow" />
                 </Link>
                 <Link to="/" className="mobile-menu-nav-item" onClick={() => setMobileMenuOpen(false)}>
                   <Monitor size={18} />
-                  <span>Sản phẩm</span>
+                  <span>{t('header.products')}</span>
                   <ChevronDown size={16} className="mobile-menu-arrow" />
                 </Link>
                 <Link to="/" className="mobile-menu-nav-item" onClick={() => setMobileMenuOpen(false)}>
                   <Users size={18} />
-                  <span>Cộng đồng</span>
+                  <span>{t('header.community')}</span>
                   <ChevronDown size={16} className="mobile-menu-arrow" />
                 </Link>
                 <Link to="/" className="mobile-menu-nav-item" onClick={() => setMobileMenuOpen(false)}>
                   <Compass size={18} />
-                  <span>Khám phá</span>
+                  <span>{t('header.explore')}</span>
                   <ChevronDown size={16} className="mobile-menu-arrow" />
                 </Link>
                 <Link to="/about" className="mobile-menu-nav-item" onClick={() => setMobileMenuOpen(false)}>
                   <FileText size={18} />
-                  <span>Pháp lý</span>
+                  <span>{t('header.legal')}</span>
                   <ChevronDown size={16} className="mobile-menu-arrow" />
                 </Link>
+                <LanguageSwitcher 
+                  variant="menu-item" 
+                  className="mobile-menu-nav-item mobile-language-switcher"
+                  onSwitch={() => setMobileMenuOpen(false)}
+                />
               </div>
 
               {/* Action Buttons */}
@@ -227,14 +238,14 @@ export const Header = memo(function Header() {
                       onClick={() => { setUploadModalOpen(true); setMobileMenuOpen(false); }} 
                       className="mobile-menu-button-primary"
                     >
-                      Submit an image
+                      {t('header.submitImage')}
                     </button>
                     <Link 
                       to="/profile" 
                       className="mobile-menu-button-secondary"
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      Tài khoản
+                      {t('header.account')}
                     </Link>
                   </>
                 ) : (
@@ -243,17 +254,17 @@ export const Header = memo(function Header() {
                       onClick={() => { navigate('/signin'); setMobileMenuOpen(false); }} 
                       className="mobile-menu-button-primary"
                     >
-                      Submit an image
+                      {t('header.submitImage')}
                     </button>
                     <Link 
                       to="/signin" 
                       className="mobile-menu-button-secondary"
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      Log in
+                      {t('header.logIn')}
                     </Link>
                     <p className="mobile-menu-signup-text">
-                      New to Unsplash? <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>Sign up for free</Link>
+                      {t('header.newToUnsplash')} <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>{t('header.signUpFree')}</Link>
                     </p>
                   </>
                 )}
