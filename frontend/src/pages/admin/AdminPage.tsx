@@ -3,12 +3,10 @@ import { useUserStore } from '@/stores/useUserStore';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { ChevronLeft, ChevronRight, Menu, X } from 'lucide-react';
-import { QuickStatsWidget } from '@/components/admin/QuickStatsWidget';
 import type { AdminRolePermissions } from '@/services/adminService';
 import type { User as AuthUser } from '@/types/user';
 import Header from '@/components/Header';
 import {
-    LayoutDashboard,
     Users,
     Images,
     Shield,
@@ -24,7 +22,6 @@ import {
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-    useAdminDashboard,
     useAdminUsers,
     useAdminImages,
     useAdminCategories,
@@ -33,7 +30,6 @@ import {
 import './AdminPage.css';
 
 // Lazy load admin tab components to reduce initial bundle size
-const AdminDashboard = lazy(() => import('./components/tabs/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const AdminAnalytics = lazy(() => import('./components/tabs/AdminAnalytics').then(m => ({ default: m.AdminAnalytics })));
 const AdminUsersTab = lazy(() => import('./components/tabs/AdminUsers').then(m => ({ default: m.AdminUsers })));
 const AdminImagesTab = lazy(() => import('./components/tabs/AdminImages').then(m => ({ default: m.AdminImages })));
@@ -60,7 +56,7 @@ const AdminTabLoader = () => (
     </div>
 );
 
-type TabType = 'dashboard' | 'analytics' | 'users' | 'images' | 'categories' | 'collections' | 'roles' | 'permissions' | 'favorites' | 'moderation' | 'logs' | 'settings';
+type TabType = 'analytics' | 'users' | 'images' | 'categories' | 'collections' | 'roles' | 'permissions' | 'favorites' | 'moderation' | 'logs' | 'settings';
 
 function AdminPage() {
     // AdminRoute handles authentication and admin permission checks
@@ -68,7 +64,7 @@ function AdminPage() {
     const { user } = useUserStore();
     const { hasPermission, isSuperAdmin } = usePermissions();
     const isMobile = useIsMobile();
-    const [activeTab, setActiveTab] = useState<TabType>('dashboard');
+    const [activeTab, setActiveTab] = useState<TabType>('analytics');
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -85,7 +81,6 @@ function AdminPage() {
     }, []);
 
     // Use custom hooks for each domain
-    const dashboard = useAdminDashboard();
     const usersAdmin = useAdminUsers();
     const imagesAdmin = useAdminImages();
     const categoriesAdmin = useAdminCategories();
@@ -98,7 +93,6 @@ function AdminPage() {
     // This pattern is recommended when you want to call functions on mount/dependency change
     // without re-running when the function references change
     const loadFunctionsRef = useRef({
-        loadDashboardStats: dashboard.loadDashboardStats,
         loadUsers: usersAdmin.loadUsers,
         loadImages: imagesAdmin.loadImages,
         loadCategories: categoriesAdmin.loadCategories,
@@ -109,7 +103,6 @@ function AdminPage() {
     // Keep refs in sync with latest functions
     useEffect(() => {
         loadFunctionsRef.current = {
-            loadDashboardStats: dashboard.loadDashboardStats,
             loadUsers: usersAdmin.loadUsers,
             loadImages: imagesAdmin.loadImages,
             loadCategories: categoriesAdmin.loadCategories,
@@ -122,9 +115,6 @@ function AdminPage() {
     useEffect(() => {
         const fns = loadFunctionsRef.current;
         switch (activeTab) {
-            case 'dashboard':
-                fns.loadDashboardStats();
-                break;
             case 'users':
                 fns.loadUsers();
                 break;
@@ -140,27 +130,18 @@ function AdminPage() {
         }
     }, [activeTab]);
 
-    // Handler wrappers to refresh dashboard when needed
+    // Handler wrappers
     const handleDeleteUser = useCallback(async (userId: string, username: string) => {
-        const success = await usersAdmin.deleteUser(userId, username);
-        if (success && activeTab === 'dashboard') {
-            dashboard.loadDashboardStats();
-        }
-    }, [usersAdmin, activeTab, dashboard]);
+        await usersAdmin.deleteUser(userId, username);
+    }, [usersAdmin]);
 
     const handleUpdateUser = useCallback(async (userId: string, updates: Partial<AuthUser>) => {
-        const success = await usersAdmin.updateUser(userId, updates);
-        if (success && activeTab === 'dashboard') {
-            dashboard.loadDashboardStats();
-        }
-    }, [usersAdmin, activeTab, dashboard]);
+        await usersAdmin.updateUser(userId, updates);
+    }, [usersAdmin]);
 
     const handleDeleteImage = useCallback(async (imageId: string, imageTitle: string) => {
-        const success = await imagesAdmin.deleteImage(imageId, imageTitle);
-        if (success && activeTab === 'dashboard') {
-            dashboard.loadDashboardStats();
-        }
-    }, [imagesAdmin, activeTab, dashboard]);
+        await imagesAdmin.deleteImage(imageId, imageTitle);
+    }, [imagesAdmin]);
 
     const handleCreateRole = useCallback(async (data: {
         userId: string;
@@ -218,7 +199,7 @@ function AdminPage() {
                                         aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                                         title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                                     >
-                                        {sidebarCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+                                        {sidebarCollapsed ? <ChevronRight size={22} /> : <ChevronLeft size={22} />}
                                     </button>
                                 )}
                                 {isMobile && (
@@ -233,19 +214,6 @@ function AdminPage() {
                             </div>
                         </div>
                         <nav className="admin-nav">
-                            {(isSuperAdmin() || hasPermission('viewDashboard')) && (
-                                <button
-                                    className={`admin-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-                                    onClick={() => {
-                                        setActiveTab('dashboard');
-                                        if (isMobile) setMobileMenuOpen(false);
-                                    }}
-                                    title="Dashboard"
-                                >
-                                    <LayoutDashboard size={20} className="admin-nav-icon" />
-                                    {!sidebarCollapsed && <span>Dashboard</span>}
-                                </button>
-                            )}
                             {(isSuperAdmin() || hasPermission('viewAnalytics')) && (
                                 <button
                                     className={`admin-nav-item ${activeTab === 'analytics' ? 'active' : ''}`}
@@ -395,12 +363,6 @@ function AdminPage() {
                     {/* Main Content */}
                     <div className="admin-content">
                         <Suspense fallback={<AdminTabLoader />}>
-                            {activeTab === 'dashboard' && (
-                                <AdminDashboard
-                                    stats={dashboard.stats}
-                                    loading={dashboard.loading}
-                                />
-                            )}
                             {activeTab === 'analytics' && (
                                 <AdminAnalytics />
                             )}
@@ -484,7 +446,6 @@ function AdminPage() {
                     </div>
                 </div>
             </div>
-            <QuickStatsWidget stats={dashboard.stats} loading={dashboard.loading} />
         </>
     );
 }
