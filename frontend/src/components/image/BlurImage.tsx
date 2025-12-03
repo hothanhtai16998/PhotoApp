@@ -1,6 +1,5 @@
 
 import { useState, useCallback, useEffect } from 'react';
-import { useBlurImage } from '@/hooks/useBlurImage';
 import ImageSkeleton from './ImageSkeleton';
 import './BlurImage.css';
 
@@ -23,32 +22,32 @@ export const BlurImage = ({
   onLoad,
   onError,
 }: BlurImageProps) => {
-  const { isLoaded, hasError, isLoading, handleImageLoad, handleImageError } = useBlurImage();
-  const [imgElement, setImgElement] = useState<HTMLImageElement | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const isLoading = !isLoaded && !hasError;
 
   // Handle actual image load
   const handleLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
-    setImgElement(img);
-    handleImageLoad();
+    setIsLoaded(true);
     onLoad?.(img);
-  }, [handleImageLoad, onLoad]);
+  }, [onLoad]);
 
   // Handle image error
   const handleError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     console.error(`Image failed to load: ${src}`, e);
-    handleImageError();
+    setHasError(true);
     const error = new Error(`Failed to load image: ${src}`);
     onError?.(error);
-  }, [src, handleImageError, onError]);
+  }, [src, onError]);
 
   // Validate URLs
   useEffect(() => {
     if (!src) {
       console.warn('BlurImage: No src provided');
-      handleImageError();
+      setHasError(true);
     }
-  }, [src, handleImageError]);
+  }, [src]);
 
   return (
     <div className="blur-image-container">
@@ -70,9 +69,6 @@ export const BlurImage = ({
 
       {/* Main image */}
       <img
-        ref={(el) => {
-          if (el) setImgElement(el);
-        }}
         src={src}
         alt={alt}
         loading={loading}

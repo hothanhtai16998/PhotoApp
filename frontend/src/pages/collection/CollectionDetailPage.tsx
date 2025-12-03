@@ -338,7 +338,7 @@ export default function CollectionDetailPage() {
 					onImageSelect={(updatedImage) => {
 						handleImageUpdate(updatedImage);
 						// Update URL to reflect the selected image with slug
-						const slug = generateImageSlug(updatedImage.imageTitle, updatedImage._id);
+						const slug = generateImageSlug(updatedImage.imageTitle || 'Untitled', updatedImage._id);
 						setSearchParams(prev => {
 							const newParams = new URLSearchParams(prev);
 							newParams.set('image', slug);

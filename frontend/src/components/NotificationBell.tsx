@@ -251,7 +251,7 @@ export default function NotificationBell() {
 		fetchNotifications();
 
 		// Poll for updates - Option 3: Faster polling (5 seconds)
-		pollingIntervalRef.current = setInterval(() => {
+		pollingIntervalRef.current = window.setInterval(() => {
 			notificationService.getUnreadCount()
 				.then(count => {
 					// If count increased, fetch full notifications

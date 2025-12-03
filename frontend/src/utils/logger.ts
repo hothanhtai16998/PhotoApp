@@ -10,8 +10,6 @@
 
 const isDev = import.meta.env.DEV;
 
-type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-
 interface LogOptions {
   /** Optional prefix for the log message */
   prefix?: string;

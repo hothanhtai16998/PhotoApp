@@ -76,7 +76,7 @@ export const useSignUpValidation = (email: string, username: string) => {
     }
 
     // Debounce email availability check (500ms)
-    emailCheckTimeoutRef.current = setTimeout(async () => {
+    emailCheckTimeoutRef.current = window.setTimeout(async () => {
       try {
         const response = await authService.checkEmailAvailability(email);
         setEmailStatus({
@@ -138,7 +138,7 @@ export const useSignUpValidation = (email: string, username: string) => {
     }
 
     // Debounce username availability check (500ms)
-    usernameCheckTimeoutRef.current = setTimeout(async () => {
+    usernameCheckTimeoutRef.current = window.setTimeout(async () => {
       try {
         const response = await authService.checkUsernameAvailability(username);
         setUsernameStatus({

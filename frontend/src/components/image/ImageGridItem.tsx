@@ -1,6 +1,7 @@
 import { memo, useState, useCallback, useRef, useEffect } from 'react';
-import { Heart, Download, Eye } from 'lucide-react';
+import { Download, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { Image } from '@/types/image';
 
 interface ImageGridItemProps {
   image: Image;
@@ -28,7 +29,6 @@ export const ImageGridItem = memo(({
   isFadingOut = false,
 }: ImageGridItemProps) => {
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
 
   // Calculate height based on aspect ratio for consistent sizing
@@ -65,8 +65,6 @@ export const ImageGridItem = memo(({
       )}
       data-image-id={image._id}
       onClick={handleClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
       role="button"
       tabIndex={0}
       aria-label={`Xem ảnh: ${image.imageTitle || 'Không có tiêu đề'}`}

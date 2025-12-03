@@ -84,7 +84,7 @@ const MasonryGrid: React.FC<MasonryGridProps> = ({
                                         smallAvifUrl={image.smallAvifUrl}
                                         thumbnailAvifUrl={image.thumbnailAvifUrl}
                                         regularAvifUrl={image.regularAvifUrl}
-                                        alt={image.title || 'image'}
+                                        alt={image.imageTitle || 'image'}
                                         eager={false}
                                         className="progressive-image"
                                     />
@@ -285,7 +285,7 @@ const MobileImageCard: React.FC<MobileImageCardProps> = ({
                     smallAvifUrl={image.smallAvifUrl}
                     thumbnailAvifUrl={image.thumbnailAvifUrl}
                     regularAvifUrl={image.regularAvifUrl}
-                    alt={image.title || 'image'}
+                    alt={image.imageTitle || 'image'}
                     eager={false}
                     className="card-image-mobile"
                 />

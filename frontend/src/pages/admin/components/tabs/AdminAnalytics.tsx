@@ -3,7 +3,7 @@ import { adminService } from '@/services/adminService';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/utils';
 import { BarChart2, Calendar, ArrowUp, ArrowDown, MoreVertical } from 'lucide-react';
-import { AreaChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart } from 'recharts';
+import { AreaChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart } from 'recharts';
 import {
     ChartContainer,
     ChartTooltip,
@@ -517,7 +517,7 @@ export function AdminAnalytics() {
                                     />
                                     <Tooltip
                                         content={({ active, payload }) => {
-                                            if (active && payload?.length) {
+                                            if (active && payload?.length && payload[0]) {
                                                 const data = payload[0].payload;
                                                 return (
                                                     <div style={{

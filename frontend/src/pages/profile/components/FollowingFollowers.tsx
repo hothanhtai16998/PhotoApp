@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { followService } from '@/services/followService';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,10 +16,6 @@ export function FollowingFollowers({ userId }: FollowingFollowersProps) {
     const [followers, setFollowers] = useState<FollowUser[]>([]);
     const [followingLoading, setFollowingLoading] = useState(true);
     const [followersLoading, setFollowersLoading] = useState(true);
-    const [followingPage, setFollowingPage] = useState(1);
-    const [followersPage, setFollowersPage] = useState(1);
-    const [followingHasMore, setFollowingHasMore] = useState(true);
-    const [followersHasMore, setFollowersHasMore] = useState(true);
 
     useEffect(() => {
         const loadFollowing = async () => {
@@ -27,8 +23,6 @@ export function FollowingFollowers({ userId }: FollowingFollowersProps) {
                 setFollowingLoading(true);
                 const response = await followService.getUserFollowing(userId, { page: 1, limit: 20 });
                 setFollowing(response.following || []);
-                setFollowingHasMore(response.pagination.page < response.pagination.pages);
-                setFollowingPage(1);
             } catch (error) {
                 console.error('Failed to load following:', error);
                 toast.error('Không thể tải danh sách đang theo dõi');
@@ -42,8 +36,6 @@ export function FollowingFollowers({ userId }: FollowingFollowersProps) {
                 setFollowersLoading(true);
                 const response = await followService.getUserFollowers(userId, { page: 1, limit: 20 });
                 setFollowers(response.followers || []);
-                setFollowersHasMore(response.pagination.page < response.pagination.pages);
-                setFollowersPage(1);
             } catch (error) {
                 console.error('Failed to load followers:', error);
                 toast.error('Không thể tải danh sách người theo dõi');
@@ -96,7 +88,7 @@ export function FollowingFollowers({ userId }: FollowingFollowersProps) {
                                         <img src={user.avatarUrl} alt={user.displayName || user.username} />
                                     ) : (
                                         <div className="user-avatar-placeholder">
-                                            {(user.displayName || user.username || 'U')[0].toUpperCase()}
+                                            {((user.displayName || user.username || 'U')[0] || 'U').toUpperCase()}
                                         </div>
                                     )}
                                 </div>
@@ -142,7 +134,7 @@ export function FollowingFollowers({ userId }: FollowingFollowersProps) {
                                         <img src={user.avatarUrl} alt={user.displayName || user.username} />
                                     ) : (
                                         <div className="user-avatar-placeholder">
-                                            {(user.displayName || user.username || 'U')[0].toUpperCase()}
+                                            {((user.displayName || user.username || 'U')[0] || 'U').toUpperCase()}
                                         </div>
                                     )}
                                 </div>

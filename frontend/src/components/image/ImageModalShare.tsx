@@ -92,7 +92,7 @@ export const ImageModalShare = memo(({ image }: ImageModalShareProps) => {
 
   // Get share URL and text
   const getShareData = useCallback(() => {
-    const slug = generateImageSlug(image.imageTitle, image._id);
+    const slug = generateImageSlug(image.imageTitle || 'Untitled', image._id);
     // Use /photos/:slug for better SEO and sharing (instead of /?image=slug)
     const shareUrl = `${window.location.origin}/photos/${slug}`;
     const shareText = `Check out this photo: ${image.imageTitle || 'Untitled'}`;

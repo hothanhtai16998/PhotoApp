@@ -10,11 +10,8 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import {
-  LineChart,
-  Line,
   XAxis,
   YAxis,
-  CartesianGrid,
   Area,
   AreaChart,
 } from 'recharts';
@@ -62,7 +59,7 @@ export const UserAnalyticsDashboard = () => {
   }, [days]);
 
   // Calculate max values for charts
-  const { maxViews, maxDownloads } = useMemo(() => {
+  useMemo(() => {
     if (!analytics) return { maxViews: 0, maxDownloads: 0 };
     
     const maxViewsValue = Math.max(...analytics.viewsOverTime.map(d => d.value), 1);
@@ -117,7 +114,6 @@ export const UserAnalyticsDashboard = () => {
       
       const allValues = data.map(d => d.value);
       const maxValue = Math.max(...allValues);
-      const minValue = Math.min(...allValues);
       
       if (maxValue === 0) return ['auto', 'auto'];
       
@@ -266,8 +262,8 @@ export const UserAnalyticsDashboard = () => {
                 <ChartTooltip 
                   content={
                     <ChartTooltipContent 
-                      labelFormatter={(value, payload) => {
-                        if (!payload || payload.length === 0) return '';
+                      labelFormatter={(_value, payload) => {
+                        if (!payload || payload.length === 0 || !payload[0]) return '';
                         const date = new Date(payload[0].payload.date);
                         const day = String(date.getDate()).padStart(2, '0');
                         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -358,8 +354,8 @@ export const UserAnalyticsDashboard = () => {
                 <ChartTooltip 
                   content={
                     <ChartTooltipContent 
-                      labelFormatter={(value, payload) => {
-                        if (!payload || payload.length === 0) return '';
+                      labelFormatter={(_value, payload) => {
+                        if (!payload || payload.length === 0 || !payload[0]) return '';
                         const date = new Date(payload[0].payload.date);
                         const day = String(date.getDate()).padStart(2, '0');
                         const month = String(date.getMonth() + 1).padStart(2, '0');

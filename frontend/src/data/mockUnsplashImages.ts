@@ -50,9 +50,11 @@ export const generateMockImages = (count: number): UnsplashImage[] => {
   const colors = ['#1a1a1a', '#2d3748', '#4a5568', '#718096', '#a0aec0'];
   
   for (let i = 0; i < count; i++) {
-    const aspectRatio = aspectRatios[Math.floor(Math.random() * aspectRatios.length)];
+    const aspectRatio = aspectRatios[Math.floor(Math.random() * aspectRatios.length)]!;
     const width = 1080;
     const height = Math.round(width / aspectRatio);
+    const blurHash = blurHashes[i % blurHashes.length]!;
+    const color = colors[i % colors.length]!;
     
     images.push({
       id: `mock-${i}`,
@@ -66,7 +68,7 @@ export const generateMockImages = (count: number): UnsplashImage[] => {
         small: `https://picsum.photos/id/${i + 100}/400/${Math.round(400 / aspectRatio)}`,
         thumb: `https://picsum.photos/id/${i + 100}/200/${Math.round(200 / aspectRatio)}`,
       },
-      blurHash: blurHashes[i % blurHashes.length],
+      blurHash,
       alt: `Beautiful photo ${i + 1}`,
       user: {
         id: `user-${i % 10}`,
@@ -76,7 +78,7 @@ export const generateMockImages = (count: number): UnsplashImage[] => {
       },
       likes: Math.floor(Math.random() * 1000),
       downloads: Math.floor(Math.random() * 500),
-      color: colors[i % colors.length],
+      color,
     });
   }
   

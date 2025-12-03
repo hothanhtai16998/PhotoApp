@@ -119,7 +119,7 @@ export default function CollectionCollaborators({
 		}
 
 		if (searchQuery.length >= 2) {
-			searchTimeoutRef.current = setTimeout(() => {
+			searchTimeoutRef.current = window.setTimeout(() => {
 				handleSearch(searchQuery);
 			}, 500); // Increased debounce to 500ms to reduce API calls
 		} else {

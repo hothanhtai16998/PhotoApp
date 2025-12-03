@@ -1,8 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/Avatar";
 import { ProfileCompletion } from "./ProfileCompletion";
-import { Edit2, Star, MapPin, Globe, Instagram, Twitter, Users, ImageIcon, Folder, Heart, Download, Eye as EyeIcon, UserPlus } from "lucide-react";
-import { toast } from "sonner";
+import { Edit2, Star, MapPin, Globe, Instagram, Twitter, Users, ImageIcon, Folder, UserPlus } from "lucide-react";
 import type { PublicUser } from "@/services/userService";
 import type { UserStats } from "@/services/userStatsService";
 
@@ -18,7 +17,7 @@ interface ProfileHeaderProps {
     followStats: { followers: number; following: number; isFollowing: boolean };
     onEditProfile: () => void;
     onEditPins: () => void;
-    onTabChange: (tab: 'photos' | 'illustrations' | 'collections' | 'stats') => void;
+    onTabChange: (tab: 'photos' | 'following' | 'collections' | 'stats') => void;
 }
 
 export function ProfileHeader({
@@ -173,60 +172,7 @@ export function ProfileHeader({
                     </button>
                     <button
                         className="profile-stat-card"
-                        title="Tổng lượt thích nhận được trên ảnh của bạn"
-                    >
-                        <div className="stat-card-icon" style={{ backgroundColor: '#fce7f3' }}>
-                            <Heart size={20} color="#be185d" />
-                        </div>
-                        <div className="stat-card-content">
-                            <span className="stat-card-value">
-                                {(isSwitchingProfile || !userStats || statsUserId !== displayUserId) 
-                                    ? '-' 
-                                    : userStats.totalFavorites.toLocaleString()}
-                            </span>
-                            <span className="stat-card-label">Lượt thích</span>
-                        </div>
-                    </button>
-                    <button
-                        className="profile-stat-card"
-                        title="Tổng lượt tải xuống ảnh của bạn"
-                    >
-                        <div className="stat-card-icon" style={{ backgroundColor: '#d1fae5' }}>
-                            <Download size={20} color="#059669" />
-                        </div>
-                        <div className="stat-card-content">
-                            <span className="stat-card-value">
-                                {(isSwitchingProfile || !userStats || statsUserId !== displayUserId) 
-                                    ? '-' 
-                                    : userStats.totalDownloads.toLocaleString()}
-                            </span>
-                            <span className="stat-card-label">Lượt tải</span>
-                        </div>
-                    </button>
-                    {/* Profile views - Only show for own profile, but always render the card */}
-                    {isOwnProfile && (
-                        <button
-                            className="profile-stat-card"
-                            title="Lượt xem hồ sơ"
-                        >
-                            <div className="stat-card-icon" style={{ backgroundColor: '#e0e7ff' }}>
-                                <EyeIcon size={20} color="#4f46e5" />
-                            </div>
-                            <div className="stat-card-content">
-                                <span className="stat-card-value">
-                                    {(isSwitchingProfile || !userStats || statsUserId !== displayUserId || userStats.profileViews === 0)
-                                        ? '-' 
-                                        : userStats.profileViews.toLocaleString()}
-                                </span>
-                                <span className="stat-card-label">Lượt xem</span>
-                            </div>
-                        </button>
-                    )}
-                    <button
-                        className="profile-stat-card"
-                        onClick={() => {
-                            toast.info('Danh sách người theo dõi sẽ sớm ra mắt');
-                        }}
+                        onClick={() => onTabChange('following')}
                     >
                         <div className="stat-card-icon" style={{ backgroundColor: '#f3e8ff' }}>
                             <Users size={20} color="#7c3aed" />
@@ -240,9 +186,7 @@ export function ProfileHeader({
                     </button>
                     <button
                         className="profile-stat-card"
-                        onClick={() => {
-                            toast.info('Danh sách đang theo dõi sẽ sớm ra mắt');
-                        }}
+                        onClick={() => onTabChange('following')}
                     >
                         <div className="stat-card-icon" style={{ backgroundColor: '#fef3c7' }}>
                             <UserPlus size={20} color="#d97706" />

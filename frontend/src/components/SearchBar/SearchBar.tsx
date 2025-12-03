@@ -150,7 +150,7 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
                     break;
                 case 'Enter':
                     e.preventDefault();
-                    if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
+                    if (selectedIndex >= 0 && selectedIndex < suggestions.length && suggestions[selectedIndex]) {
                         handleSearch(suggestions[selectedIndex]);
                     } else {
                         handleSearch(searchQuery);
@@ -287,7 +287,10 @@ export const SearchBar = forwardRef<SearchBarRef>((_props, ref) => {
                 {/* Search Filters */}
                 <div className="search-filters-wrapper">
                     <SearchFilters
-                        filters={filters}
+                        filters={{
+                            ...filters,
+                            color: filters.color as 'all' | 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | 'brown' | 'black' | 'white' | 'gray'
+                        }}
                         onFiltersChange={handleFiltersChange}
                         onReset={resetFilters}
                     />

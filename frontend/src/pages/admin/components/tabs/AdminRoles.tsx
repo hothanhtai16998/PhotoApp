@@ -29,7 +29,7 @@ interface AdminRolesProps {
         expiresAt?: string | null;
         active?: boolean;
         allowedIPs?: string[];
-    }) => Promise<void>;
+    }) => Promise<boolean>;
 }
 
 export function AdminRoles({

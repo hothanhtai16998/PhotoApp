@@ -175,7 +175,7 @@ function Slider() {
 
     // Progress bar animation - synchronized with auto-play
     // Update every 16ms for smoother animation (60fps)
-    progressIntervalRef.current = setInterval(() => {
+    progressIntervalRef.current = window.setInterval(() => {
       // If progressStartTimeRef is null, don't update (but don't stop the interval)
       if (progressStartTimeRef.current === null) {
         // Keep the current progress value, don't update
@@ -213,14 +213,14 @@ function Slider() {
 
     if (startProgress > 0) {
       // Resume from pause - use setTimeout for the first slide change
-      timeoutId = setTimeout(() => {
+      timeoutId = window.setTimeout(() => {
         scheduleNextSlide();
         // Then set up the regular interval
-        autoPlayIntervalRef.current = setInterval(scheduleNextSlide, intervalMs);
+        autoPlayIntervalRef.current = window.setInterval(scheduleNextSlide, intervalMs);
       }, remainingTime);
     } else {
       // Start fresh - use regular interval
-      autoPlayIntervalRef.current = setInterval(scheduleNextSlide, intervalMs);
+      autoPlayIntervalRef.current = window.setInterval(scheduleNextSlide, intervalMs);
     }
 
     return () => {

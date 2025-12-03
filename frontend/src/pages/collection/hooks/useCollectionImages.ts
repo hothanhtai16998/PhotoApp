@@ -201,7 +201,7 @@ export const useCollectionImages = ({
       // Set flag to indicate we're opening from grid
       sessionStorage.setItem(appConfig.storage.imagePageFromGridKey, 'true');
       // Pass images via state for navigation
-      const slug = generateImageSlug(image.imageTitle, image._id);
+      const slug = generateImageSlug(image.imageTitle || 'Untitled', image._id);
       navigate(`/photos/${slug}`, {
         state: {
           images,
@@ -212,7 +212,7 @@ export const useCollectionImages = ({
     }
 
     // DESKTOP: Use modal (existing behavior)
-    const slug = generateImageSlug(image.imageTitle, image._id);
+    const slug = generateImageSlug(image.imageTitle || 'Untitled', image._id);
     setSearchParams(prev => {
       const newParams = new URLSearchParams(prev);
       newParams.set('image', slug);

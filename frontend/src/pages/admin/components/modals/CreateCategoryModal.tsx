@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 
 interface CreateCategoryModalProps {
     onClose: () => void;
-    onSave: (data: { name: string; description?: string }) => Promise<void>;
+    onSave: (data: { name: string; description?: string }) => Promise<boolean>;
 }
 
 export function CreateCategoryModal({ onClose, onSave }: CreateCategoryModalProps) {

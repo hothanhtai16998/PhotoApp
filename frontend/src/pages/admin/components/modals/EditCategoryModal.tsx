@@ -7,7 +7,7 @@ import type { Category } from '@/services/categoryService';
 interface EditCategoryModalProps {
     category: Category;
     onClose: () => void;
-    onSave: (categoryId: string, updates: { name?: string; description?: string; isActive?: boolean }) => Promise<void>;
+    onSave: (categoryId: string, updates: { name?: string; description?: string; isActive?: boolean }) => Promise<boolean>;
 }
 
 export function EditCategoryModal({ category, onClose, onSave }: EditCategoryModalProps) {

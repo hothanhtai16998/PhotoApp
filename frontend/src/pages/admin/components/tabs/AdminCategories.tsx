@@ -12,8 +12,8 @@ interface AdminCategoriesProps {
     onDelete: (categoryId: string, categoryName: string) => void;
     onCloseCreate: () => void;
     onCloseEdit: () => void;
-    onSaveCreate: (data: { name: string; description?: string }) => Promise<void>;
-    onSaveEdit: (categoryId: string, updates: { name?: string; description?: string; isActive?: boolean }) => Promise<void>;
+    onSaveCreate: (data: { name: string; description?: string }) => Promise<boolean>;
+    onSaveEdit: (categoryId: string, updates: { name?: string; description?: string; isActive?: boolean }) => Promise<boolean>;
 }
 
 export function AdminCategories({

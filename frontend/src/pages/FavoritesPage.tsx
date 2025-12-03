@@ -250,7 +250,7 @@ function FavoritesPage() {
                                                 // Set flag to indicate we're opening from grid
                                                 sessionStorage.setItem(appConfig.storage.imagePageFromGridKey, 'true');
                                                 // Pass images via state for navigation
-                                                const slug = generateImageSlug(image.imageTitle, image._id);
+                                                const slug = generateImageSlug(image.imageTitle || 'Untitled', image._id);
                                                 navigate(`/photos/${slug}`, {
                                                     state: {
                                                         images,
@@ -262,7 +262,7 @@ function FavoritesPage() {
 
                                             // DESKTOP: Use modal (existing behavior)
                                             // Update URL when image is selected with slug
-                                            const slug = generateImageSlug(image.imageTitle, image._id);
+                                            const slug = generateImageSlug(image.imageTitle || 'Untitled', image._id);
                                             setSearchParams(prev => {
                                                 const newParams = new URLSearchParams(prev);
                                                 newParams.set('image', slug);
@@ -346,7 +346,7 @@ function FavoritesPage() {
                     onImageSelect={(updatedImage) => {
                         handleImageUpdate(updatedImage);
                         // Update URL to reflect the selected image with slug
-                        const slug = generateImageSlug(updatedImage.imageTitle, updatedImage._id);
+                        const slug = generateImageSlug(updatedImage.imageTitle || 'Untitled', updatedImage._id);
                         setSearchParams(prev => {
                             const newParams = new URLSearchParams(prev);
                             newParams.set('image', slug);

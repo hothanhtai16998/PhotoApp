@@ -9,10 +9,10 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import './CategoryNavigation.css'
 
 export const CategoryNavigation = memo(function CategoryNavigation() {
-  const { fetchImages, currentCategory } = useImageStore()
+  const { currentCategory } = useImageStore()
   const navigate = useNavigate()
   const location = useLocation()
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [, setSearchParams] = useSearchParams();
   const { categorySlug } = useParams<{ categorySlug?: string }>();
   const [categoryNames, setCategoryNames] = useState<string[]>(['Tất cả'])
   const [categoryObjects, setCategoryObjects] = useState<Category[]>([])
@@ -53,7 +53,7 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
     let resizeTimer: number | null = null
     const handleResize = () => {
       if (resizeTimer) clearTimeout(resizeTimer)
-      resizeTimer = setTimeout(updateHeaderHeight, timingConfig.ui.resizeDebounceMs)
+      resizeTimer = window.setTimeout(updateHeaderHeight, timingConfig.ui.resizeDebounceMs)
     }
     window.addEventListener('resize', handleResize)
 
@@ -64,7 +64,7 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
       resizeObserver = new ResizeObserver(() => {
         // Debounce ResizeObserver updates too
         if (resizeTimer) clearTimeout(resizeTimer)
-        resizeTimer = setTimeout(updateHeaderHeight, timingConfig.ui.resizeDebounceMs)
+        resizeTimer = window.setTimeout(updateHeaderHeight, timingConfig.ui.resizeDebounceMs)
       })
       resizeObserver.observe(header)
     }

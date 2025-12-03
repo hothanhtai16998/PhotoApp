@@ -114,7 +114,7 @@ export function filterRecentUploads(
  * Merge new images with existing ones, avoiding duplicates
  */
 export function mergeImages(
-  existingImages: Image[],
+  _existingImages: Image[],
   newImages: Image[],
   recentUploads: Image[]
 ): Image[] {

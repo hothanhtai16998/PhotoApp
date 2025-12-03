@@ -69,7 +69,6 @@ function ProfilePage() {
         images,
         loading,
         photosCount,
-        illustrationsCount,
         imageTypes,
         fetchUserImages,
         setImageType,
@@ -500,7 +499,7 @@ function ProfilePage() {
     }, []);
 
     // Handle add to collection (for MasonryGrid)
-    const handleAddToCollection = useCallback((image: Image, e: React.MouseEvent) => {
+    const handleAddToCollection = useCallback((_image: Image, e: React.MouseEvent) => {
         e.stopPropagation();
         // TODO: Implement collection modal for profile page
         toast.info('Tính năng thêm vào bộ sưu tập sẽ sớm ra mắt!');
@@ -596,7 +595,7 @@ function ProfilePage() {
                             )
                         ) : activeTab === TABS.FOLLOWING ? (
                             <Suspense fallback={<div className="following-loading"><Skeleton className="h-64 w-full" /></div>}>
-                                <FollowingFollowers userId={displayUserId} />
+                                {displayUserId && <FollowingFollowers userId={displayUserId} />}
                             </Suspense>
                         ) : activeTab === TABS.COLLECTIONS ? (
                             collectionsLoading ? (
@@ -706,7 +705,7 @@ function ProfilePage() {
                         onImageSelect={(updatedImage) => {
                             handleImageUpdate(updatedImage);
                             // Update URL to reflect the selected image with slug
-                            const slug = generateImageSlug(updatedImage.imageTitle, updatedImage._id);
+                            const slug = generateImageSlug(updatedImage.imageTitle || 'Untitled', updatedImage._id);
                             setSearchParams(prev => {
                                 const newParams = new URLSearchParams(prev);
                                 newParams.set('image', slug);

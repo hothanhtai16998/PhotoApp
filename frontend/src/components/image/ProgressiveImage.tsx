@@ -86,11 +86,8 @@ const ProgressiveImage = memo(({
   blurhash, // Destructure blurhash
   thumbnailUrl,
   smallUrl,
-  regularUrl,
   thumbnailAvifUrl,
   smallAvifUrl,
-  regularAvifUrl,
-  imageAvifUrl,
   alt,
   className = '',
   onLoad,
@@ -101,19 +98,13 @@ const ProgressiveImage = memo(({
   // Generate URLs on-the-fly if not provided (for old images)
   const effectiveThumbnail = thumbnailUrl || generateThumbnailUrl(src);
   const effectiveSmall = smallUrl || generateSmallUrl(src);
-  const effectiveRegular = regularUrl || src;
   
   // AVIF URLs (for srcset generation, use null if not available to avoid duplicates)
   // For fallback in getCurrentUrls, we'll use WebP versions when AVIF is not available
-  const effectiveThumbnailAvif = thumbnailAvifUrl || null;
   const effectiveSmallAvif = smallAvifUrl || null;
-  const effectiveRegularAvif = regularAvifUrl || null;
-  const effectiveOriginalAvif = imageAvifUrl || null;
   
   // AVIF URLs for fallback (use WebP if AVIF not available)
   const effectiveThumbnailAvifFallback = thumbnailAvifUrl || effectiveThumbnail;
-  const effectiveSmallAvifFallback = smallAvifUrl || effectiveSmall;
-  const effectiveOriginalAvifFallback = imageAvifUrl || src;
 
   // Check if image was already loaded (from global cache or browser cache)
   // Synchronously check cache to prevent any flash
