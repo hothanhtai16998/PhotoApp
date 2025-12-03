@@ -1,12 +1,14 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Edit2, Trash2, Ban, Unlock } from 'lucide-react';
+import { Search, Edit2, Trash2, Ban, Unlock, Users } from 'lucide-react';
 import { UserEditModal } from '../modals';
 import { adminService, type User } from '@/services/adminService';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/utils';
 import type { User as AuthUser } from '@/types/user';
 import { PermissionButton } from '../PermissionButton';
+import { AdminBreadcrumbs } from '@/components/admin/AdminBreadcrumbs';
+import { AdminEmptyState } from '@/components/admin/AdminEmptyState';
 import { t } from '@/i18n';
 
 interface AdminUsersProps {
@@ -66,6 +68,7 @@ export function AdminUsers({
     };
     return (
         <div className="admin-users">
+            <AdminBreadcrumbs items={[{ label: t('admin.manageUsers') }]} />
             <div className="admin-header">
                 <h1 className="admin-title">{t('admin.manageUsers')}</h1>
                 <div className="admin-search">
@@ -182,6 +185,14 @@ export function AdminUsers({
                     </tbody>
                 </table>
             </div>
+
+            {users.length === 0 && (
+                <AdminEmptyState
+                    icon={Users}
+                    title={t('admin.noUsers')}
+                    description={search ? t('admin.noUsersFound') : t('admin.noUsersDescription')}
+                />
+            )}
 
             {pagination.pages > 1 && (
                 <div className="admin-pagination">

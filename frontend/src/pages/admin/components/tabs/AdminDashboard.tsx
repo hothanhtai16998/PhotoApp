@@ -2,9 +2,13 @@ import { adminService, type DashboardStats } from '@/services/adminService';
 import { useFormattedDate } from '@/hooks/useFormattedDate';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useState } from 'react';
-import { Download } from 'lucide-react';
+import { Download, Users, Image as ImageIcon, Tag, Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { AdminBreadcrumbs } from '@/components/admin/AdminBreadcrumbs';
+import { useNavigate } from 'react-router-dom';
+import { t } from '@/i18n';
 
 interface AdminDashboardProps {
     stats: DashboardStats | null;
@@ -19,6 +23,7 @@ function DateCell({ date }: { date: string }) {
 export function AdminDashboard({ stats, loading }: AdminDashboardProps) {
     const { hasPermission, isSuperAdmin } = usePermissions();
     const [isExporting, setIsExporting] = useState(false);
+    const navigate = useNavigate();
 
     const handleExportData = async () => {
         if (!isSuperAdmin() && !hasPermission('exportData')) {
@@ -50,15 +55,37 @@ export function AdminDashboard({ stats, loading }: AdminDashboardProps) {
     };
 
     if (loading) {
-        return <div className="admin-loading">Đang tải...</div>;
+        return (
+            <div className="admin-dashboard">
+                <AdminBreadcrumbs items={[]} />
+                <div className="admin-dashboard-skeleton">
+                    <Skeleton className="h-48 w-full mb-6" />
+                    <div className="admin-stats-grid">
+                        <Skeleton className="h-32 w-full" />
+                        <Skeleton className="h-32 w-full" />
+                        <Skeleton className="h-32 w-full" />
+                    </div>
+                    <Skeleton className="h-64 w-full mt-6" />
+                    <Skeleton className="h-64 w-full mt-6" />
+                </div>
+            </div>
+        );
     }
 
     if (!stats) {
-        return <div className="admin-loading">Không có dữ liệu</div>;
+        return (
+            <div className="admin-dashboard">
+                <AdminBreadcrumbs items={[]} />
+                <div className="admin-empty-state">
+                    <p>{t('admin.noData')}</p>
+                </div>
+            </div>
+        );
     }
 
     return (
         <div className="admin-dashboard">
+            <AdminBreadcrumbs items={[]} />
             <div className="admin-dashboard-hero" style={{ position: 'relative' }}>
                 <h1 className="admin-dashboard-title">
                     <span>📊</span>
@@ -83,6 +110,70 @@ export function AdminDashboard({ stats, loading }: AdminDashboardProps) {
                         {isExporting ? 'Đang xuất...' : 'Xuất dữ liệu'}
                     </Button>
                 )}
+            </div>
+
+            {/* Quick Actions */}
+            <div className="admin-quick-actions">
+                <h3 className="admin-quick-actions-title">{t('admin.quickActions')}</h3>
+                <div className="admin-quick-actions-grid">
+                    {(isSuperAdmin() || hasPermission('viewUsers')) && (
+                        <button
+                            className="admin-quick-action-btn"
+                            onClick={() => {
+                                // Use window.location to trigger tab change
+                                window.history.pushState({}, '', '/admin');
+                                window.dispatchEvent(new PopStateEvent('popstate'));
+                                setTimeout(() => {
+                                    const event = new CustomEvent('adminTabChange', { detail: 'users' });
+                                    window.dispatchEvent(event);
+                                }, 100);
+                            }}
+                            title={t('admin.manageUsers')}
+                        >
+                            <Users size={20} />
+                            <span>{t('admin.manageUsers')}</span>
+                        </button>
+                    )}
+                    {(isSuperAdmin() || hasPermission('viewImages')) && (
+                        <button
+                            className="admin-quick-action-btn"
+                            onClick={() => {
+                                const event = new CustomEvent('adminTabChange', { detail: 'images' });
+                                window.dispatchEvent(event);
+                            }}
+                            title={t('admin.manageImages')}
+                        >
+                            <ImageIcon size={20} />
+                            <span>{t('admin.manageImages')}</span>
+                        </button>
+                    )}
+                    {(isSuperAdmin() || hasPermission('viewCategories')) && (
+                        <button
+                            className="admin-quick-action-btn"
+                            onClick={() => {
+                                const event = new CustomEvent('adminTabChange', { detail: 'categories' });
+                                window.dispatchEvent(event);
+                            }}
+                            title={t('admin.manageCategories')}
+                        >
+                            <Tag size={20} />
+                            <span>{t('admin.manageCategories')}</span>
+                        </button>
+                    )}
+                    {(isSuperAdmin() || hasPermission('viewAnalytics')) && (
+                        <button
+                            className="admin-quick-action-btn"
+                            onClick={() => {
+                                const event = new CustomEvent('adminTabChange', { detail: 'analytics' });
+                                window.dispatchEvent(event);
+                            }}
+                            title={t('admin.analytics')}
+                        >
+                            <Search size={20} />
+                            <span>{t('admin.analytics')}</span>
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Stats Cards */}

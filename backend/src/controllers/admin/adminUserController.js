@@ -26,7 +26,7 @@ export const getAllUsers = asyncHandler(async (req, res) => {
         ];
     }
 
-    const [users, total] = await Promise.all([
+    const [usersRaw, total] = await Promise.all([
         User.find(query)
             .select('-hashedPassword')
             .sort({ createdAt: -1 })
@@ -36,8 +36,29 @@ export const getAllUsers = asyncHandler(async (req, res) => {
         User.countDocuments(query),
     ]);
 
+    // Enrich users with admin status from AdminRole
+    const { enrichUserWithAdminStatus } = await import('../../utils/adminUtils.js');
+    const clientIP = req.clientIP || null;
+    const users = await Promise.all(
+        usersRaw.map(user => enrichUserWithAdminStatus(user, clientIP))
+    );
+
+    // Get image counts for all users
+    const userIds = users.map(u => u._id);
+    const imageCounts = await Image.aggregate([
+        { $match: { uploadedBy: { $in: userIds } } },
+        { $group: { _id: '$uploadedBy', count: { $sum: 1 } } },
+    ]);
+    const imageCountMap = new Map(imageCounts.map(item => [item._id.toString(), item.count]));
+
+    // Add imageCount to each user
+    const usersWithImageCount = users.map(user => ({
+        ...user,
+        imageCount: imageCountMap.get(user._id.toString()) || 0,
+    }));
+
     res.status(200).json({
-        users,
+        users: usersWithImageCount,
         pagination: {
             page,
             limit,
@@ -54,13 +75,18 @@ export const getUserById = asyncHandler(async (req, res) => {
         return res.status(400).json({ message: 'Invalid user ID' });
     }
 
-    const user = await User.findById(userId).select('-hashedPassword').lean();
+    const userRaw = await User.findById(userId).select('-hashedPassword').lean();
 
-    if (!user) {
+    if (!userRaw) {
         return res.status(404).json({
             message: 'Không tìm thấy tên tài khoản',
         });
     }
+
+    // Enrich user with admin status from AdminRole
+    const { enrichUserWithAdminStatus } = await import('../../utils/adminUtils.js');
+    const clientIP = req.clientIP || null;
+    const user = await enrichUserWithAdminStatus(userRaw, clientIP);
 
     // Get user's image count
     const imageCount = await Image.countDocuments({ uploadedBy: userId });

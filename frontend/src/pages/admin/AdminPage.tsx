@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef, lazy, Suspense, useCallback } from 'react';
 import { useUserStore } from '@/stores/useUserStore';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { ChevronLeft, ChevronRight, Menu, X } from 'lucide-react';
+import { QuickStatsWidget } from '@/components/admin/QuickStatsWidget';
+import { ThemeToggle } from '@/components/admin/ThemeToggle';
 import type { AdminRolePermissions } from '@/services/adminService';
 import type { User as AuthUser } from '@/types/user';
 import Header from '@/components/Header';
@@ -45,11 +49,15 @@ const PermissionMatrix = lazy(() => import('./components/PermissionMatrix').then
 
 // Loading fallback for admin tabs
 const AdminTabLoader = () => (
-    <div className="flex items-center justify-center p-8">
-        <div className="flex flex-col items-center gap-4">
-            <Skeleton className="h-8 w-32" />
-            <Skeleton className="h-64 w-full max-w-4xl" />
+    <div className="admin-tab-loader">
+        <Skeleton className="h-6 w-48 mb-4" />
+        <Skeleton className="h-12 w-full mb-6" />
+        <div className="admin-loader-grid">
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
         </div>
+        <Skeleton className="h-64 w-full mt-6" />
     </div>
 );
 
@@ -60,7 +68,22 @@ function AdminPage() {
     // So user is guaranteed to exist and have admin access here
     const { user } = useUserStore();
     const { hasPermission, isSuperAdmin } = usePermissions();
+    const isMobile = useIsMobile();
     const [activeTab, setActiveTab] = useState<TabType>('dashboard');
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+    // Listen for tab change events from quick actions
+    useEffect(() => {
+        const handleTabChange = (e: Event) => {
+            const customEvent = e as CustomEvent<TabType>;
+            if (customEvent.detail) {
+                setActiveTab(customEvent.detail);
+            }
+        };
+        window.addEventListener('adminTabChange', handleTabChange as EventListener);
+        return () => window.removeEventListener('adminTabChange', handleTabChange as EventListener);
+    }, []);
 
     // Use custom hooks for each domain
     const dashboard = useAdminDashboard();
@@ -161,119 +184,210 @@ function AdminPage() {
             <Header />
             <div className="admin-page">
                 <div className="admin-container">
+                    {/* Mobile Menu Button */}
+                    {isMobile && (
+                        <button
+                            className="admin-mobile-menu-btn"
+                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                            aria-label="Toggle menu"
+                        >
+                            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                        </button>
+                    )}
+
+                    {/* Mobile Menu Overlay */}
+                    {isMobile && mobileMenuOpen && (
+                        <div 
+                            className="admin-mobile-overlay"
+                            onClick={() => setMobileMenuOpen(false)}
+                        />
+                    )}
+
                     {/* Sidebar */}
-                    <div className="admin-sidebar">
+                    <div className={`admin-sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${isMobile ? (mobileMenuOpen ? 'mobile-open' : 'mobile-closed') : ''}`}>
                         <div className="admin-sidebar-header">
-                            <Shield size={24} />
-                            <h2>Trang quản lý</h2>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+                                {!sidebarCollapsed && <Shield size={24} />}
+                                {!sidebarCollapsed && <h2>Trang quản lý</h2>}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {!isMobile && !sidebarCollapsed && <ThemeToggle />}
+                                {!isMobile && (
+                                    <button
+                                        className="admin-sidebar-toggle"
+                                        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                                        aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                                        title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                                    >
+                                        {sidebarCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+                                    </button>
+                                )}
+                                {isMobile && (
+                                    <button
+                                        className="admin-sidebar-close"
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        aria-label="Close menu"
+                                    >
+                                        <X size={20} />
+                                    </button>
+                                )}
+                            </div>
                         </div>
                         <nav className="admin-nav">
                             {(isSuperAdmin() || hasPermission('viewDashboard')) && (
                                 <button
                                     className={`admin-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-                                    onClick={() => setActiveTab('dashboard')}
+                                    onClick={() => {
+                                        setActiveTab('dashboard');
+                                        if (isMobile) setMobileMenuOpen(false);
+                                    }}
+                                    title="Dashboard"
                                 >
-                                    <LayoutDashboard size={20} />
-                                    Dashboard
+                                    <LayoutDashboard size={20} className="admin-nav-icon" />
+                                    {!sidebarCollapsed && <span>Dashboard</span>}
                                 </button>
                             )}
                             {(isSuperAdmin() || hasPermission('viewAnalytics')) && (
                                 <button
                                     className={`admin-nav-item ${activeTab === 'analytics' ? 'active' : ''}`}
-                                    onClick={() => setActiveTab('analytics')}
+                                    onClick={() => {
+                                        setActiveTab('analytics');
+                                        if (isMobile) setMobileMenuOpen(false);
+                                    }}
+                                    title="Phân tích"
                                 >
-                                    <BarChart2 size={20} />
-                                    Phân tích
+                                    <BarChart2 size={20} className="admin-nav-icon" />
+                                    {!sidebarCollapsed && <span>Phân tích</span>}
                                 </button>
                             )}
                             {(isSuperAdmin() || hasPermission('viewUsers')) && (
                                 <button
                                     className={`admin-nav-item ${activeTab === 'users' ? 'active' : ''}`}
-                                    onClick={() => setActiveTab('users')}
+                                    onClick={() => {
+                                        setActiveTab('users');
+                                        if (isMobile) setMobileMenuOpen(false);
+                                    }}
+                                    title="Người dùng"
                                 >
-                                    <Users size={20} />
-                                    Người dùng
+                                    <Users size={20} className="admin-nav-icon" />
+                                    {!sidebarCollapsed && <span>Người dùng</span>}
                                 </button>
                             )}
                             {(isSuperAdmin() || hasPermission('viewImages')) && (
                                 <button
                                     className={`admin-nav-item ${activeTab === 'images' ? 'active' : ''}`}
-                                    onClick={() => setActiveTab('images')}
+                                    onClick={() => {
+                                        setActiveTab('images');
+                                        if (isMobile) setMobileMenuOpen(false);
+                                    }}
+                                    title="Ảnh"
                                 >
-                                    <Images size={20} />
-                                    Ảnh
+                                    <Images size={20} className="admin-nav-icon" />
+                                    {!sidebarCollapsed && <span>Ảnh</span>}
                                 </button>
                             )}
                             {(isSuperAdmin() || hasPermission('viewCategories')) && (
                                 <button
                                     className={`admin-nav-item ${activeTab === 'categories' ? 'active' : ''}`}
-                                    onClick={() => setActiveTab('categories')}
+                                    onClick={() => {
+                                        setActiveTab('categories');
+                                        if (isMobile) setMobileMenuOpen(false);
+                                    }}
+                                    title="Danh mục ảnh"
                                 >
-                                    <Tag size={20} />
-                                    Danh mục ảnh
+                                    <Tag size={20} className="admin-nav-icon" />
+                                    {!sidebarCollapsed && <span>Danh mục ảnh</span>}
                                 </button>
                             )}
                             {(isSuperAdmin() || hasPermission('viewCollections')) && (
                                 <button
                                     className={`admin-nav-item ${activeTab === 'collections' ? 'active' : ''}`}
-                                    onClick={() => setActiveTab('collections')}
+                                    onClick={() => {
+                                        setActiveTab('collections');
+                                        if (isMobile) setMobileMenuOpen(false);
+                                    }}
+                                    title="Bộ sưu tập"
                                 >
-                                    <FolderDot size={20} />
-                                    Bộ sưu tập
+                                    <FolderDot size={20} className="admin-nav-icon" />
+                                    {!sidebarCollapsed && <span>Bộ sưu tập</span>}
                                 </button>
                             )}
                             {isSuperAdmin() && (
                                 <button
                                     className={`admin-nav-item ${activeTab === 'roles' ? 'active' : ''}`}
-                                    onClick={() => setActiveTab('roles')}
+                                    onClick={() => {
+                                        setActiveTab('roles');
+                                        if (isMobile) setMobileMenuOpen(false);
+                                    }}
+                                    title="Quyền quản trị"
                                 >
-                                    <UserCog size={20} />
-                                    Quyền quản trị
+                                    <UserCog size={20} className="admin-nav-icon" />
+                                    {!sidebarCollapsed && <span>Quyền quản trị</span>}
                                 </button>
                             )}
                             {(isSuperAdmin() || hasPermission('viewAdmins')) && (
                                 <button
                                     className={`admin-nav-item ${activeTab === 'permissions' ? 'active' : ''}`}
-                                    onClick={() => setActiveTab('permissions')}
+                                    onClick={() => {
+                                        setActiveTab('permissions');
+                                        if (isMobile) setMobileMenuOpen(false);
+                                    }}
+                                    title="Ma trận quyền hạn"
                                 >
-                                    <ShieldCheck size={20} />
-                                    Ma trận quyền hạn
+                                    <ShieldCheck size={20} className="admin-nav-icon" />
+                                    {!sidebarCollapsed && <span>Ma trận quyền hạn</span>}
                                 </button>
                             )}
                             {(isSuperAdmin() || hasPermission('manageFavorites')) && (
                                 <button
                                     className={`admin-nav-item ${activeTab === 'favorites' ? 'active' : ''}`}
-                                    onClick={() => setActiveTab('favorites')}
+                                    onClick={() => {
+                                        setActiveTab('favorites');
+                                        if (isMobile) setMobileMenuOpen(false);
+                                    }}
+                                    title="Quản lý yêu thích"
                                 >
-                                    <Heart size={20} />
-                                    Quản lý yêu thích
+                                    <Heart size={20} className="admin-nav-icon" />
+                                    {!sidebarCollapsed && <span>Quản lý yêu thích</span>}
                                 </button>
                             )}
                             {(isSuperAdmin() || hasPermission('moderateContent')) && (
                                 <button
                                     className={`admin-nav-item ${activeTab === 'moderation' ? 'active' : ''}`}
-                                    onClick={() => setActiveTab('moderation')}
+                                    onClick={() => {
+                                        setActiveTab('moderation');
+                                        if (isMobile) setMobileMenuOpen(false);
+                                    }}
+                                    title="Kiểm duyệt nội dung"
                                 >
-                                    <ShieldCheck size={20} />
-                                    Kiểm duyệt nội dung
+                                    <ShieldCheck size={20} className="admin-nav-icon" />
+                                    {!sidebarCollapsed && <span>Kiểm duyệt nội dung</span>}
                                 </button>
                             )}
                             {(isSuperAdmin() || hasPermission('viewLogs')) && (
                                 <button
                                     className={`admin-nav-item ${activeTab === 'logs' ? 'active' : ''}`}
-                                    onClick={() => setActiveTab('logs')}
+                                    onClick={() => {
+                                        setActiveTab('logs');
+                                        if (isMobile) setMobileMenuOpen(false);
+                                    }}
+                                    title="Nhật ký hệ thống"
                                 >
-                                    <FileText size={20} />
-                                    Nhật ký hệ thống
+                                    <FileText size={20} className="admin-nav-icon" />
+                                    {!sidebarCollapsed && <span>Nhật ký hệ thống</span>}
                                 </button>
                             )}
                             {(isSuperAdmin() || hasPermission('manageSettings')) && (
                                 <button
                                     className={`admin-nav-item ${activeTab === 'settings' ? 'active' : ''}`}
-                                    onClick={() => setActiveTab('settings')}
+                                    onClick={() => {
+                                        setActiveTab('settings');
+                                        if (isMobile) setMobileMenuOpen(false);
+                                    }}
+                                    title="Cài đặt"
                                 >
-                                    <Settings size={20} />
-                                    Cài đặt
+                                    <Settings size={20} className="admin-nav-icon" />
+                                    {!sidebarCollapsed && <span>Cài đặt</span>}
                                 </button>
                             )}
                         </nav>
@@ -371,6 +485,7 @@ function AdminPage() {
                     </div>
                 </div>
             </div>
+            <QuickStatsWidget stats={dashboard.stats} loading={dashboard.loading} />
         </>
     );
 }
