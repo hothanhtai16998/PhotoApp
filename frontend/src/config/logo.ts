@@ -1,5 +1,4 @@
-// import Logo11 from '@/assets/Logo11.png';
-import HeaderLogo from '@/assets/logo12.png';
+import HeaderLogo from '@/assets/logo.png';
 // import FaviconLogo from "@/assets/FaviconLogo.png" // Simpler/smaller version
 
 export const LOGO_CONFIG = {
