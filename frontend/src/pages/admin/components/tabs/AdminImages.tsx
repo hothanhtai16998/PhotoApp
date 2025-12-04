@@ -119,6 +119,7 @@ export function AdminImages({
                                         variant="outline"
                                         size="sm"
                                         onClick={() => handleModerate(img._id, 'approved')}
+                                        className="admin-action-approve"
                                     >
                                         <CheckCircle size={16} /> {t('admin.approve')}
                                     </PermissionButton>
@@ -131,6 +132,7 @@ export function AdminImages({
                                         variant="outline"
                                         size="sm"
                                         onClick={() => handleModerate(img._id, 'rejected')}
+                                        className="admin-action-reject"
                                     >
                                         <XCircle size={16} /> {t('admin.reject')}
                                     </PermissionButton>
@@ -143,6 +145,7 @@ export function AdminImages({
                                         variant="outline"
                                         size="sm"
                                         onClick={() => handleModerate(img._id, 'flagged')}
+                                        className="admin-action-flag"
                                     >
                                         <Flag size={16} /> {t('admin.flag')}
                                     </PermissionButton>

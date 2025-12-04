@@ -37,6 +37,7 @@ export function AdminCategories({
                     permission="createCategories"
                     action={t('admin.createCategory')}
                     onClick={onCreateClick}
+                    className="admin-add-category-btn"
                 >
                     {t('admin.addCategory')}
                 </PermissionButton>

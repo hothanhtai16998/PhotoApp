@@ -530,22 +530,11 @@
 }
 
 .admin-table tbody tr:hover {
-  background: linear-gradient(
-    90deg,
-    rgba(102, 126, 234, 0.08) 0%,
-    rgba(118, 75, 162, 0.05) 100%
-  );
-  transform: translateX(2px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: #e8e8e8;
 }
 
 .admin-table tbody tr:active {
-  transform: translateX(0);
-  background: linear-gradient(
-    90deg,
-    rgba(102, 126, 234, 0.12) 0%,
-    rgba(118, 75, 162, 0.08) 100%
-  );
+  background: #d0d0d0;
 }
 
 .admin-table tbody tr:last-child td {
@@ -574,6 +563,19 @@
   font-weight: 700;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
   letter-spacing: -0.02em;
+}
+
+/* Add Category Button - Light blue style like expiration badge */
+.admin-add-category-btn {
+  background: #dbeafe !important;
+  color: #1e40af !important;
+  border-color: #1e40af !important;
+}
+
+.admin-add-category-btn:hover {
+  background: #bfdbfe !important;
+  color: #1e3a8a !important;
+  border-color: #1e3a8a !important;
 }
 
 .admin-search {
@@ -724,6 +726,25 @@
   gap: 8px;
   flex-wrap: wrap;
   margin-top: 8px;
+}
+
+/* Hover styles for moderation action buttons */
+.admin-image-actions .admin-action-approve:hover {
+  background: #d1fae5 !important;
+  color: #065f46 !important;
+  border-color: #000000 !important;
+}
+
+.admin-image-actions .admin-action-reject:hover {
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+  border-color: #000000 !important;
+}
+
+.admin-image-actions .admin-action-flag:hover {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+  border-color: #000000 !important;
 }
 
 /* Images Grid */
