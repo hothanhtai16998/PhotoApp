@@ -1,5 +1,5 @@
 import { asyncHandler } from '../../middlewares/asyncHandler.js';
-import { getImageFromS3 } from '../../libs/s3.js';
+import { getImageFromR2 } from '../../libs/s3.js';
 import Image from '../../models/Image.js';
 import mongoose from 'mongoose';
 
@@ -60,7 +60,7 @@ export const proxyImage = asyncHandler(async (req, res) => {
         }
 
         // Get image from R2
-        const s3Response = await getImageFromS3(imageUrl);
+        const r2Response = await getImageFromR2(imageUrl);
 
         // Set CORS headers - allow all origins
         const origin = req.headers.origin;
@@ -75,13 +75,13 @@ export const proxyImage = asyncHandler(async (req, res) => {
         res.setHeader('Access-Control-Max-Age', '3600');
 
         // Set content type
-        res.setHeader('Content-Type', s3Response.ContentType || 'image/jpeg');
+        res.setHeader('Content-Type', r2Response.ContentType || 'image/jpeg');
         
         // Set cache headers
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
 
         // Stream the image
-        s3Response.Body.pipe(res);
+        r2Response.Body.pipe(res);
     } catch (error) {
         console.error('Error proxying image:', error);
         return res.status(500).json({

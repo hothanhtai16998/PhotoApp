@@ -880,8 +880,8 @@
 }
 
 .upload-images-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 24px;
   margin-bottom: 24px;
   align-items: start;
@@ -889,13 +889,31 @@
 
 .upload-image-card {
   border: 1px solid #e5e5e5;
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: 12px 12px 0 0; /* Only top corners rounded */
+  padding: 0;
   background-color: white;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   height: fit-content;
   display: flex;
   flex-direction: column;
+  width: fit-content;
+  max-width: 100%;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+/* Image preview container - determines card width, has top border radius */
+.upload-image-card > *:first-child {
+  width: 100%;
+  flex-shrink: 0;
+  align-self: stretch;
+  border-radius: 12px 12px 0 0;
+  overflow: hidden;
+}
+
+/* Form container - no border radius, matches image width exactly */
+.upload-image-card > *:not(:first-child) {
+  border-radius: 0;
 }
 
 /* Upload modal footer with proper positioning */
@@ -966,6 +984,28 @@
   padding: 20px;
 }
 
+/* Form fields container - matches image width exactly, no padding (title sticks to image), no border radius */
+.upload-image-card .upload-form-container {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  align-self: stretch;
+  border-radius: 0;
+  border-top: none;
+  background-color: white;
+  padding: 0;
+}
+
+/* Remove bottom border radius from card when form is present */
+.upload-image-card:has(.upload-form-container) {
+  border-radius: 12px 12px 0 0;
+}
+
+/* Add bottom border radius back to card if it's the last child or has no form */
+.upload-image-card:not(:has(.upload-form-container)) {
+  border-radius: 12px;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .upload-images-grid {
@@ -975,6 +1015,11 @@
 
   .upload-modal-content--scrollable {
     padding: 16px;
+  }
+
+  .upload-image-card {
+    width: 100%;
+    max-width: 100%;
   }
 
   .upload-modal-footer--form {

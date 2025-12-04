@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import { asyncHandler } from '../../middlewares/asyncHandler.js';
 import Image from '../../models/Image.js';
 import Settings from '../../models/Settings.js';
-import { uploadImageWithSizes, deleteImageFromS3 } from '../../libs/s3.js';
+import { uploadImageWithSizes, deleteImageFromR2 } from '../../libs/s3.js';
 import { extractDominantColors } from '../../utils/colorExtractor.js';
 import { clearCache } from '../../middlewares/cacheMiddleware.js';
 import { logger } from '../../utils/logger.js';
@@ -50,8 +50,8 @@ async function replaceSingleImage({ imageId, fileBuffer, mimetype, fileSize, use
     try {
         // Best-effort: delete old S3 object (don't fail replace if delete fails)
         if (image.publicId) {
-            deleteImageFromS3(image.publicId, 'photo-app-images').catch(err => {
-                logger.warn('Failed to delete old image from S3 (non-fatal):', err.message);
+            deleteImageFromR2(image.publicId, 'photo-app-images').catch(err => {
+                logger.warn('Failed to delete old image from R2 (non-fatal):', err.message);
             });
         }
 
@@ -103,7 +103,7 @@ async function replaceSingleImage({ imageId, fileBuffer, mimetype, fileSize, use
 
         // rollback uploaded assets if any
         if (uploadResult?.publicId) {
-            deleteImageFromS3(uploadResult.publicId, 'photo-app-images').catch(e => {
+            deleteImageFromR2(uploadResult.publicId, 'photo-app-images').catch(e => {
                 logger.error('Rollback delete failed', { publicId: uploadResult.publicId, error: e.message });
             });
         }

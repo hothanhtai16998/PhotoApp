@@ -53,21 +53,21 @@ export const useImageUpload = ({ onSuccess }: UseImageUploadProps = {}) => {
   }, []);
 
   // Shared validation function that returns images with errors
-  const validateImagesWithErrors = useCallback((imagesData: ImageData[]): ImageData[] => {
+  // Only requires category for admin users (normal users upload pending, admin adds category later)
+  const validateImagesWithErrors = useCallback((imagesData: ImageData[], isAdmin: boolean = false): ImageData[] => {
     return imagesData.map((img) => {
       const errors: { title?: string; category?: string } = {};
-      if (!img.title.trim()) {
-        errors.title = 'Title is required';
-      }
-      if (!img.category.trim()) {
+      // Title is no longer required for anyone
+      // Category is only required for admin users
+      if (isAdmin && !img.category.trim()) {
         errors.category = 'Category is required';
       }
       return { ...img, errors };
     });
   }, []);
 
-  const validateAllImages = useCallback((imagesData: ImageData[]): boolean => {
-    const updated = validateImagesWithErrors(imagesData);
+  const validateAllImages = useCallback((imagesData: ImageData[], isAdmin: boolean = false): boolean => {
+    const updated = validateImagesWithErrors(imagesData, isAdmin);
     return updated.every((img) => Object.keys(img.errors).length === 0);
   }, [validateImagesWithErrors]);
 
@@ -162,9 +162,9 @@ export const useImageUpload = ({ onSuccess }: UseImageUploadProps = {}) => {
   }, [preUploadSingleImage]);
 
   const handleSubmitAll = useCallback(
-    async (imagesData: ImageData[]) => {
-      // Validate all images
-      if (!validateAllImages(imagesData)) {
+    async (imagesData: ImageData[], isAdmin: boolean = false) => {
+      // Validate all images (only requires category for admin users)
+      if (!validateAllImages(imagesData, isAdmin)) {
         return false;
       }
 

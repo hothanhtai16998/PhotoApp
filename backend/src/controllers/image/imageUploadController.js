@@ -14,7 +14,7 @@ import Settings from '../../models/Settings.js';
 import {
     uploadImageWithSizes,
     uploadVideo,
-    deleteImageFromS3,
+    deleteImageFromR2,
     generatePresignedUploadUrl,
     deleteObjectByKey
 } from '../../libs/s3.js';
@@ -304,7 +304,7 @@ export const uploadImage = asyncHandler(async (req, res) => {
     } catch (error) {
         // Rollback S3 upload if DB save failed
         if (uploadResult?.publicId) {
-            deleteImageFromS3(uploadResult.publicId, 'photo-app-images').catch(err => {
+            deleteImageFromR2(uploadResult.publicId, 'photo-app-images').catch(err => {
                 logger.error('Rollback failed:', err.message);
             });
         }

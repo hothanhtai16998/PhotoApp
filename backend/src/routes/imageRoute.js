@@ -51,15 +51,15 @@ router.patch('/:imageId/download', optionalAuth, incrementDownload);
 // Public route - proxy image with CORS headers (for displaying images)
 router.get('/:imageId/proxy', proxyImage);
 
-// Public route - download image (proxy from S3 to avoid CORS)
+// Public route - download image (proxy from R2 to avoid CORS)
 // Use optionalAuth to populate req.user if user is logged in (for notifications)
 // Must be after PATCH route to avoid conflicts
 router.get('/:imageId/download', optionalAuth, downloadImage);
 
 // Protected routes (with CSRF protection for state-changing operations)
-// Pre-upload: Upload image to S3 only (no database record)
+// Pre-upload: Upload image to R2 only (no database record)
 router.post('/pre-upload', protectedRoute, uploadLimiter, preUploadImage);
-// Delete pre-uploaded file: Remove file from S3 if user cancels before finalization
+// Delete pre-uploaded file: Remove file from R2 if user cancels before finalization
 router.delete('/pre-upload', protectedRoute, deletePreUploadedFile);
 // Finalize: Link metadata to pre-uploaded image and create database record
 router.post('/finalize', protectedRoute, finalizeImageUpload);

@@ -6,7 +6,7 @@ import Notification from '../../models/Notification.js';
 import { asyncHandler } from '../../middlewares/asyncHandler.js';
 import { logger } from '../../utils/logger.js';
 const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
-import { deleteImageFromS3 } from '../../libs/s3.js';
+import { deleteImageFromR2 } from '../../libs/s3.js';
 import { clearCache } from '../../middlewares/cacheMiddleware.js';
 
 // Image Management
@@ -125,9 +125,9 @@ export const deleteImage = asyncHandler(async (req, res) => {
         });
     }
 
-    // Delete from S3
+    // Delete from R2
     try {
-        await deleteImageFromS3(image.publicId, 'photo-app-images');
+        await deleteImageFromR2(image.publicId, 'photo-app-images');
     } catch (error) {
         logger.warn(`Lỗi không thể xoá ảnh ${image.publicId} từ S3:`, error);
     }

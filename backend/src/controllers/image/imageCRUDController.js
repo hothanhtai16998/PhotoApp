@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { getImageFromS3 } from '../../libs/s3.js';
+import { getImageFromR2 } from '../../libs/s3.js';
 import Image from '../../models/Image.js';
 import Notification from '../../models/Notification.js';
 import { asyncHandler } from '../../middlewares/asyncHandler.js';
@@ -122,7 +122,7 @@ export const getImageById = asyncHandler(async (req, res) => {
     });
 });
 
-// Download image - proxy from S3 to avoid CORS issues
+// Download image - proxy from R2 to avoid CORS issues
 export const downloadImage = asyncHandler(async (req, res) => {
     const imageId = req.params.imageId;
     const userId = req.user?._id;
@@ -170,18 +170,18 @@ export const downloadImage = asyncHandler(async (req, res) => {
             });
         }
 
-        // Get image from S3
-        const s3Response = await getImageFromS3(imageUrl);
+        // Get image from R2
+        const r2Response = await getImageFromR2(imageUrl);
 
         // Set response headers
         const sanitizedTitle = (image.imageTitle || 'photo').replace(/[^a-z0-9]/gi, '_').toLowerCase();
         const urlExtension = imageUrl.match(/\.([a-z]+)(?:\?|$)/i)?.[1] || 'webp';
         const fileName = `${sanitizedTitle}.${urlExtension}`;
 
-        res.setHeader('Content-Type', s3Response.ContentType);
+        res.setHeader('Content-Type', r2Response.ContentType);
         res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-        if (s3Response.ContentLength) {
-            res.setHeader('Content-Length', s3Response.ContentLength);
+        if (r2Response.ContentLength) {
+            res.setHeader('Content-Length', r2Response.ContentLength);
         }
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
 
@@ -201,10 +201,10 @@ export const downloadImage = asyncHandler(async (req, res) => {
         }
 
         // Stream the image to response
-        s3Response.Body.pipe(res);
+        r2Response.Body.pipe(res);
 
         // Handle stream errors (only if headers not sent)
-        s3Response.Body.on('error', (streamError) => {
+        r2Response.Body.on('error', (streamError) => {
             logger.error('Stream error', { imageId, error: streamError.message });
             if (!res.headersSent) {
                 res.status(500).json({ message: 'Failed to download image' });
@@ -215,8 +215,8 @@ export const downloadImage = asyncHandler(async (req, res) => {
 
         // Handle client disconnect
         res.on('close', () => {
-            if (s3Response.Body?.destroy) {
-                s3Response.Body.destroy();
+            if (r2Response.Body?.destroy) {
+                r2Response.Body.destroy();
             }
         });
     } catch (error) {

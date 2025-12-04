@@ -1,5 +1,5 @@
 import { logger } from './logger.js';
-import { s3Client, getBucketName, deleteObjectByKey } from '../libs/s3.js';
+import { r2Client, getBucketName, deleteObjectByKey } from '../libs/s3.js';
 import { ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { RAW_UPLOAD_FOLDER } from './constants.js';
 const MAX_AGE_HOURS = 24; // Delete pre-uploaded files older than 24 hours
@@ -33,7 +33,7 @@ export const cleanupOldPreUploadedFiles = async () => {
             }
 
             const listCommand = new ListObjectsV2Command(listParams);
-            const listResponse = await s3Client.send(listCommand);
+            const listResponse = await r2Client.send(listCommand);
 
             if (!listResponse.Contents || listResponse.Contents.length === 0) {
                 break;

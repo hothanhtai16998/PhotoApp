@@ -272,3 +272,120 @@
     background-position: 102% 0;
   }
 }
+
+/* Responsive styles for portrait images */
+.upload-preview-container-portrait {
+  max-width: 440px;
+}
+
+.upload-preview-container-landscape {
+  width: 100%;
+}
+
+@media (max-width: 480px) {
+  .upload-preview-container-portrait {
+    max-width: 100%;
+    width: 100%;
+  }
+}
+
+/* Location Button - bottom left of image */
+.upload-location-button {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 50;
+  transition: background 0.2s ease;
+}
+
+.upload-location-button:hover {
+  background: rgba(0, 0, 0, 0.9);
+}
+
+/* Location Input Overlay - appears at button position */
+.upload-location-input-overlay {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  z-index: 50;
+  min-width: 300px;
+  width: 400px;
+  max-width: calc(100% - 16px);
+}
+
+.upload-location-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.upload-location-input {
+  width: 100%;
+  padding: 8px 40px 8px 12px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
+  outline: none;
+  box-sizing: border-box;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.upload-location-input::placeholder {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.upload-location-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.upload-location-detect-button {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #6366f1;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.upload-location-detect-button:hover:not(:disabled) {
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+}
+
+.upload-location-detect-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.upload-location-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(99, 102, 241, 0.3);
+  border-top: 2px solid #6366f1;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}

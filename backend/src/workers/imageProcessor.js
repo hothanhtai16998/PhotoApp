@@ -2,7 +2,7 @@ import os from 'os';
 import sharp from 'sharp';
 import Image from '../models/Image.js';
 import Notification from '../models/Notification.js';
-import { getObjectFromS3, uploadImageWithSizes, deleteObjectByKey } from '../libs/s3.js';
+import { getObjectFromR2, uploadImageWithSizes, deleteObjectByKey } from '../libs/s3.js';
 import { streamToBuffer, extractMetadata } from '../utils/imageHelpers.js';
 import { parseTags, validateCoordinates } from '../utils/imageHelpers.js';
 import { clearCache } from '../middlewares/cacheMiddleware.js';
@@ -24,7 +24,7 @@ export async function processUploadJob(job) {
         // === Download raw file from R2 ===
         log(`📥 Downloading ${uploadKey}...`);
         const downloadStart = Date.now();
-        const rawStream = await getObjectFromS3(uploadKey);
+        const rawStream = await getObjectFromR2(uploadKey);
         if (!rawStream?.Body) throw new Error('Raw upload not found in R2');
         const buffer = await streamToBuffer(rawStream.Body);
         const downloadMs = Date.now() - downloadStart;
@@ -69,7 +69,7 @@ export async function processUploadJob(job) {
         const filename = uploadKey.replace(/[\/\\]/g, '-').replace(/^photo-app-raw-/, '').replace(/\.(gif|jpg|jpeg|png|webp|mp4|webm)$/i, '');
         const uploadResult = await uploadImageWithSizes(buffer, 'photo-app-images', filename, mimetype);
         const uploadMs = Date.now() - uploadStart;
-        log(`✅ Uploaded to ${storageName} in ${uploadMs}ms`);
+        log(`✅ Uploaded to R2 in ${uploadMs}ms`);
 
         // === Create DB document ===
         log(`💾 Creating database record...`);

@@ -94,15 +94,17 @@ export const validateSignIn = [
  */
 export const validateImageUpload = [
     body('imageTitle')
+        .optional()
         .trim()
         .escape() // Sanitize: escape HTML entities
-        .isLength({ min: 1, max: 200 })
-        .withMessage('Image title must be between 1 and 200 characters'),
+        .isLength({ min: 0, max: 200 })
+        .withMessage('Image title must be less than 200 characters'),
     body('imageCategory')
+        .optional()
         .trim()
         .escape() // Sanitize: escape HTML entities
-        .notEmpty()
-        .withMessage('Image category is required'),
+        .isLength({ max: 200 })
+        .withMessage('Image category must be less than 200 characters'),
     body('location')
         .optional()
         .trim()

@@ -7,7 +7,7 @@ import Image from "../models/Image.js";
 import Collection from "../models/Collection.js";
 import Follow from "../models/Follow.js";
 import Notification from "../models/Notification.js";
-import { uploadAvatar, deleteAvatarFromS3 } from "../libs/s3.js";
+import { uploadAvatar, deleteAvatarFromR2 } from "../libs/s3.js";
 import { logger } from '../utils/logger.js';
 
 // Input validation constants
@@ -416,7 +416,7 @@ export const changeInfo = asyncHandler(async (req, res) => {
             // Delete old avatar if exists
             if (currentUser.avatarId) {
                 try {
-                    await deleteAvatarFromS3(currentUser.avatarId);
+                    await deleteAvatarFromR2(currentUser.avatarId);
                 } catch (deleteError) {
                     logger.warn('Failed to delete old avatar', { userId, avatarId: currentUser.avatarId });
                 }

@@ -8,7 +8,7 @@ import { getSingleExtensionFromMimeType } from '../utils/fileTypeUtils.js';
 
 // Initialize R2 storage client
 // R2 is S3-compatible, so we use the AWS S3 SDK
-const s3Client = new S3Client({
+const r2Client = new S3Client({
 	region: 'auto', // R2 uses 'auto' as region
 	endpoint: `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
 	credentials: {
@@ -32,7 +32,7 @@ const getPublicUrlBase = () => {
 const getPublicUrl = (key) => {
 	const publicUrlBase = getPublicUrlBase();
 
-	// For all storage (R2 custom domain, R2 dev URL, or AWS), include the full key
+	// For R2 storage, include the full key
 	// The key already includes the folder structure (e.g., "photo-app-images/filename.webp")
 	return `${publicUrlBase}/${key}`;
 };
@@ -44,7 +44,7 @@ const getPublicUrl = (key) => {
  * @param {string} contentType - MIME type
  * @returns {Promise<string>} Public URL of uploaded file
  */
-export const uploadToS3 = async (buffer, key, contentType) => {
+export const uploadToR2 = async (buffer, key, contentType) => {
 	try {
 		const command = new PutObjectCommand({
 			Bucket: getBucketName(),
@@ -54,7 +54,7 @@ export const uploadToS3 = async (buffer, key, contentType) => {
 			CacheControl: 'public, max-age=31536000, immutable', // Cache for 1 year, immutable for better performance
 		});
 
-		await s3Client.send(command);
+		await r2Client.send(command);
 
 		// Return public URL (handles custom domain bucket name stripping)
 		return getPublicUrl(key);
@@ -164,7 +164,7 @@ export async function uploadImageWithSizes(buffer, bucket, filename, mimetype = 
 			}
 
 			// Upload GIF directly (small GIFs or if conversion failed)
-			const originalUrl = await uploadToS3(
+			const originalUrl = await uploadToR2(
 				buffer,
 				`${bucket}/${filename}.gif`,
 				contentType || 'image/gif'
@@ -187,7 +187,7 @@ export async function uploadImageWithSizes(buffer, bucket, filename, mimetype = 
 		// SVGs are vector graphics, BMP/ICO are legacy formats
 		if (imageFormat === 'svg' || imageFormat === 'bmp' || imageFormat === 'ico') {
 			// Upload original file directly without processing
-			const originalUrl = await uploadToS3(
+			const originalUrl = await uploadToR2(
 				buffer,
 				`${bucket}/${filename}.${imageFormat}`,
 				contentType || `image/${imageFormat}`
@@ -217,10 +217,10 @@ export async function uploadImageWithSizes(buffer, bucket, filename, mimetype = 
 
 		// Upload all sizes in parallel to R2
 		const [thumb, small, regular, original] = await Promise.all([
-			uploadToS3(thumbnailBuffer, `${bucket}/${filename}-thumbnail.webp`, 'image/webp'),
-			uploadToS3(smallBuffer, `${bucket}/${filename}-small.webp`, 'image/webp'),
-			uploadToS3(regularBuffer, `${bucket}/${filename}-regular.webp`, 'image/webp'),
-			uploadToS3(avifBuffer, `${bucket}/${filename}.webp`, 'image/webp'),
+			uploadToR2(thumbnailBuffer, `${bucket}/${filename}-thumbnail.webp`, 'image/webp'),
+			uploadToR2(smallBuffer, `${bucket}/${filename}-small.webp`, 'image/webp'),
+			uploadToR2(regularBuffer, `${bucket}/${filename}-regular.webp`, 'image/webp'),
+			uploadToR2(avifBuffer, `${bucket}/${filename}.webp`, 'image/webp'),
 		]);
 
 		return {
@@ -259,7 +259,7 @@ export async function uploadVideo(videoBuffer, bucket, filename, mimetype) {
 		const { generateVideoThumbnail, getVideoDuration } = await import('../utils/videoConverter.js');
 
 		// Upload video directly to R2
-		const videoUrl = await uploadToS3(
+		const videoUrl = await uploadToR2(
 			videoBuffer,
 			`${bucket}/${filename}.${extension}`,
 			contentType
@@ -317,7 +317,7 @@ export const uploadAvatar = async (imageBuffer, folder = 'photo-app-avatars', fi
 			.toBuffer();
 
 		// Upload to R2
-		const avatarUrl = await uploadToS3(
+		const avatarUrl = await uploadToR2(
 			avatar,
 			`${folder}/${baseFilename}.${extension}`,
 			'image/webp'
@@ -337,7 +337,7 @@ export const uploadAvatar = async (imageBuffer, folder = 'photo-app-avatars', fi
  * @param {string} publicId - Base public ID (without size suffix)
  * @param {string} folder - Folder path
  */
-export const deleteImageFromS3 = async (publicId, folder = 'photo-app-images') => {
+export const deleteImageFromR2 = async (publicId, folder = 'photo-app-images') => {
 	try {
 		const sizes = ['thumbnail', 'small', 'regular', 'original'];
 		const formats = ['webp', 'avif']; // Delete both WebP and AVIF versions
@@ -349,7 +349,7 @@ export const deleteImageFromS3 = async (publicId, folder = 'photo-app-images') =
 					Bucket: getBucketName(),
 					Key: key,
 				});
-				return s3Client.send(command);
+				return r2Client.send(command);
 			})
 		);
 
@@ -364,7 +364,7 @@ export const deleteImageFromS3 = async (publicId, folder = 'photo-app-images') =
  * Delete avatar from R2
  * @param {string} publicId - Public ID (with folder prefix)
  */
-export const deleteAvatarFromS3 = async (publicId) => {
+export const deleteAvatarFromR2 = async (publicId) => {
 	try {
 		const extension = 'webp';
 		const key = `${publicId}.${extension}`;
@@ -372,7 +372,7 @@ export const deleteAvatarFromS3 = async (publicId) => {
 			Bucket: getBucketName(),
 			Key: key,
 		});
-		await s3Client.send(command);
+		await r2Client.send(command);
 	} catch (error) {
 		// Log error but don't throw - deletion is not critical
 		console.error(`Failed to delete avatar from R2: ${error.message}`);
@@ -384,7 +384,7 @@ export const deleteAvatarFromS3 = async (publicId) => {
  * @param {string} imageUrl - Full R2 URL or R2 key
  * @returns {Promise<{Body: ReadableStream, ContentType: string, ContentLength: number}>}
  */
-export const getImageFromS3 = async (imageUrl) => {
+export const getImageFromR2 = async (imageUrl) => {
 	try {
 		// Extract R2 key from URL
 		// Handle both full URLs and keys
@@ -403,7 +403,7 @@ export const getImageFromS3 = async (imageUrl) => {
 			Key: key,
 		});
 
-		const response = await s3Client.send(command);
+		const response = await r2Client.send(command);
 		return {
 			Body: response.Body,
 			ContentType: response.ContentType || 'image/webp',
@@ -419,8 +419,8 @@ export const getImageFromS3 = async (imageUrl) => {
 	}
 };
 
-export { s3Client };
-export default s3Client;
+export { r2Client };
+export default r2Client;
 
 /**
  * Generate a pre-signed URL that allows uploading directly to R2
@@ -435,19 +435,19 @@ export const generatePresignedUploadUrl = async (key, contentType, expiresIn = 3
 		ContentType: contentType || 'application/octet-stream',
 	});
 
-	return getSignedUrl(s3Client, command, { expiresIn });
+	return getSignedUrl(r2Client, command, { expiresIn });
 };
 
 /**
  * Get object from R2 and return the stream/body
  */
-export async function getObjectFromS3(key) {
+export async function getObjectFromR2(key) {
 	const params = {
 		Bucket: getBucketName(),
 		Key: key,
 	};
 	const command = new GetObjectCommand(params);
-	return await s3Client.send(command);
+	return await r2Client.send(command);
 }
 
 /**
@@ -459,5 +459,5 @@ export async function deleteObjectByKey(key) {
 		Key: key,
 	};
 	const command = new DeleteObjectCommand(params);
-	return await s3Client.send(command);
+	return await r2Client.send(command);
 }

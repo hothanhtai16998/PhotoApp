@@ -5,7 +5,7 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import sharp from 'sharp';
 import { logger } from './logger.js';
-import { uploadToS3 } from '../libs/s3.js';
+import { uploadToR2 } from '../libs/s3.js';
 
 const execAsync = promisify(exec);
 
@@ -96,11 +96,11 @@ export async function convertGifToVideo(gifBuffer, filename, bucket = 'photo-app
                 readFile(thumbnailPath).catch(() => null), // Thumbnail is optional
             ]);
 
-            // Upload to S3
+            // Upload to R2
             const [videoUrl, thumbnailUrl] = await Promise.all([
-                uploadToS3(mp4Buffer, `${bucket}/${filename}.mp4`, 'video/mp4'),
+                uploadToR2(mp4Buffer, `${bucket}/${filename}.mp4`, 'video/mp4'),
                 thumbnailBuffer
-                    ? uploadToS3(thumbnailBuffer, `${bucket}/${filename}-thumb.jpg`, 'image/jpeg')
+                    ? uploadToR2(thumbnailBuffer, `${bucket}/${filename}-thumb.jpg`, 'image/jpeg')
                     : Promise.resolve(null),
             ]);
 
@@ -167,8 +167,8 @@ export async function generateVideoThumbnail(videoBuffer, filename, bucket = 'ph
             // Read thumbnail
             const thumbnailBuffer = await readFile(thumbnailPath);
 
-            // Upload thumbnail to S3
-            const thumbnailUrl = await uploadToS3(
+            // Upload thumbnail to R2
+            const thumbnailUrl = await uploadToR2(
                 thumbnailBuffer,
                 `${bucket}/${filename}-thumb.jpg`,
                 'image/jpeg'

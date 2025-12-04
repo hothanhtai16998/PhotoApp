@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useUserStore } from '@/stores/useUserStore';
 import { useNavigate } from 'react-router-dom';
 import { X, Upload, ArrowRight } from 'lucide-react';
 import { useImageUpload } from './upload/hooks/useImageUpload';
@@ -20,6 +21,8 @@ interface UploadModalProps {
 
 function UploadModal({ isOpen, onClose }: UploadModalProps) {
     const { accessToken } = useAuthStore();
+    const { user } = useUserStore();
+    const isAdmin = user?.isAdmin === true || user?.isSuperAdmin === true;
     const navigate = useNavigate();
     const { settings } = useSiteSettings();
 
@@ -69,18 +72,18 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
     }, [isOpen, loadCategories]);
 
     // Check if all images have required fields filled AND all are pre-uploaded
+    // Title is no longer required, category is only required for admin users
     const isFormValid = imagesData.length > 0 &&
         imagesData.every(img =>
-            img.title.trim().length > 0 &&
-            img.category.trim().length > 0 &&
+            (isAdmin ? img.category.trim().length > 0 : true) && // Category only required for admin
             img.preUploadData && // Must be pre-uploaded
             !img.isUploading && // Not currently uploading
             !img.uploadError // No upload errors
         );
 
     const handleSubmit = async () => {
-        // Use shared validation function to avoid duplication
-        const validatedImages = validateImagesWithErrors(imagesData);
+        // Use shared validation function to avoid duplication (only requires category for admin)
+        const validatedImages = validateImagesWithErrors(imagesData, isAdmin);
         setImagesData(validatedImages);
 
         // Check if all images are valid
@@ -88,7 +91,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
             return;
         }
 
-        await handleSubmitAll(imagesData);
+        await handleSubmitAll(imagesData, isAdmin);
     };
 
     const handleViewProfile = () => {
@@ -428,6 +431,9 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                         const newFiles = selectedFiles.filter((_, i) => i !== index);
                                         setSelectedFiles(newFiles);
                                         setImagesData(prev => prev.filter((_, i) => i !== index));
+                                    }}
+                                    onLocationUpdate={(location) => {
+                                        updateImageData(index, 'location', location);
                                     }}
                                 />
 

@@ -4,7 +4,7 @@ import Image from '../../models/Image.js';
 import Notification from '../../models/Notification.js';
 import { asyncHandler } from '../../middlewares/asyncHandler.js';
 import { logger } from '../../utils/logger.js';
-import { deleteImageFromS3 } from '../../libs/s3.js';
+import { deleteImageFromR2 } from '../../libs/s3.js';
 
 const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
 
@@ -205,10 +205,10 @@ export const deleteUser = asyncHandler(async (req, res) => {
     // Get all user's images
     const userImages = await Image.find({ uploadedBy: userId }).select('publicId');
 
-    // Delete images from S3
+    // Delete images from R2
     for (const image of userImages) {
         try {
-            await deleteImageFromS3(image.publicId, 'photo-app-images');
+            await deleteImageFromR2(image.publicId, 'photo-app-images');
         } catch (error) {
             logger.warn(`Lỗi không thể xoá ảnh ${image.publicId} từ S3:`, error);
         }
