@@ -49,12 +49,6 @@ export const PERMISSIONS = {
     VIEW_LOGS: 'viewLogs',
     EXPORT_DATA: 'exportData',
     MANAGE_SETTINGS: 'manageSettings',
-    
-    // Legacy permissions (for backward compatibility - map to new permissions)
-    MANAGE_USERS: 'manageUsers', // Maps to: viewUsers, editUsers
-    MANAGE_IMAGES: 'manageImages', // Maps to: viewImages, editImages
-    MANAGE_CATEGORIES: 'manageCategories', // Maps to: viewCategories, createCategories, editCategories
-    MANAGE_ADMINS: 'manageAdmins', // Maps to: viewAdmins, createAdmins, editAdmins
 };
 
 /**
@@ -87,32 +81,7 @@ export const hasPermission = async (userId, permission, clientIP = null) => {
     }
 
     // Check specific permission
-    // Also check legacy permission mappings for backward compatibility
-    if (adminRole.permissions[permission] === true) {
-        return true;
-    }
-    
-    // Legacy permission mappings
-    const legacyMappings = {
-        'manageUsers': ['viewUsers', 'editUsers'],
-        'manageImages': ['viewImages', 'editImages'],
-        'manageCategories': ['viewCategories', 'createCategories', 'editCategories'],
-        'manageAdmins': ['viewAdmins', 'createAdmins', 'editAdmins'],
-    };
-    
-    // If checking a new permission, check if legacy permission grants it
-    if (legacyMappings[permission]) {
-        return legacyMappings[permission].some(p => adminRole.permissions[p] === true);
-    }
-    
-    // If checking a new permission, check if any legacy permission that maps to it is granted
-    for (const [legacyPerm, newPerms] of Object.entries(legacyMappings)) {
-        if (newPerms.includes(permission) && adminRole.permissions[legacyPerm] === true) {
-            return true;
-        }
-    }
-    
-    return false;
+    return adminRole.permissions[permission] === true;
 };
 
 /**
@@ -172,34 +141,10 @@ export const requirePermission = (permission) => {
             return next();
         }
 
-        // Check specific permission (with legacy mapping support)
+        // Check specific permission
         const hasPerm = adminRole.permissions[permission] === true;
         
-        // Check legacy permission mappings for backward compatibility
-        let hasLegacyPerm = false;
-        const legacyMappings = {
-            'manageUsers': ['viewUsers', 'editUsers'],
-            'manageImages': ['viewImages', 'editImages'],
-            'manageCategories': ['viewCategories', 'createCategories', 'editCategories'],
-            'manageAdmins': ['viewAdmins', 'createAdmins', 'editAdmins'],
-        };
-        
-        // If checking a new permission, check if legacy permission grants it
-        if (legacyMappings[permission]) {
-            hasLegacyPerm = legacyMappings[permission].some(p => adminRole.permissions[p] === true);
-        }
-        
-        // If checking a new permission, check if any legacy permission that maps to it is granted
-        if (!hasPerm && !hasLegacyPerm) {
-            for (const [legacyPerm, newPerms] of Object.entries(legacyMappings)) {
-                if (newPerms.includes(permission) && adminRole.permissions[legacyPerm] === true) {
-                    hasLegacyPerm = true;
-                    break;
-                }
-            }
-        }
-        
-        if (!hasPerm && !hasLegacyPerm) {
+        if (!hasPerm) {
             return res.status(403).json({
                 message: `Permission denied: ${permission} required`,
             });

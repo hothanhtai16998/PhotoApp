@@ -1,6 +1,7 @@
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Trash2, CheckCircle, XCircle, Flag } from 'lucide-react';
+import { Search, Trash2, CheckCircle, XCircle, Flag, X } from 'lucide-react';
 import { adminService, type AdminImage } from '@/services/adminService';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/utils';
@@ -28,6 +29,25 @@ export function AdminImages({
     onDelete,
     onImageUpdated,
 }: AdminImagesProps) {
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+    // Close modal on ESC key
+    useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setSelectedImage(null);
+            }
+        };
+        if (selectedImage) {
+            document.addEventListener('keydown', handleEscape);
+            document.body.style.overflow = 'hidden';
+        }
+        return () => {
+            document.removeEventListener('keydown', handleEscape);
+            document.body.style.overflow = '';
+        };
+    }, [selectedImage]);
+
     const handleModerate = async (imageId: string, status: 'approved' | 'rejected' | 'flagged') => {
         const notes = prompt(t('admin.moderationNotes'));
         if (notes === null && status !== 'approved') return; // User cancelled (except for approve which doesn't need notes)
@@ -68,7 +88,12 @@ export function AdminImages({
             <div className="admin-images-grid">
                 {images.map((img) => (
                     <div key={img._id} className="admin-image-card">
-                        <img src={img.imageUrl} alt={img.imageTitle} />
+                        <img 
+                            src={img.imageUrl} 
+                            alt={img.imageTitle}
+                            onClick={() => setSelectedImage(img.imageUrl)}
+                            style={{ cursor: 'pointer' }}
+                        />
                         <div className="admin-image-info">
                             <h3>{img.imageTitle}</h3>
                             <p>{t('admin.categoryLabel2')} {typeof img.imageCategory === 'string'
@@ -86,33 +111,42 @@ export function AdminImages({
                                 </p>
                             )}
                             <div className="admin-image-actions">
-                                <PermissionButton
-                                    permission="moderateImages"
-                                    action={t('admin.approveImage')}
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleModerate(img._id, 'approved')}
-                                >
-                                    <CheckCircle size={16} /> {t('admin.approve')}
-                                </PermissionButton>
-                                <PermissionButton
-                                    permission="moderateImages"
-                                    action={t('admin.rejectImage')}
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleModerate(img._id, 'rejected')}
-                                >
-                                    <XCircle size={16} /> {t('admin.reject')}
-                                </PermissionButton>
-                                <PermissionButton
-                                    permission="moderateImages"
-                                    action={t('admin.flagImage')}
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleModerate(img._id, 'flagged')}
-                                >
-                                    <Flag size={16} /> {t('admin.flag')}
-                                </PermissionButton>
+                                {/* Show Approve button only if status is NOT approved (pending, rejected, or flagged) */}
+                                {img.moderationStatus !== 'approved' && (
+                                    <PermissionButton
+                                        permission="moderateImages"
+                                        action={t('admin.approveImage')}
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleModerate(img._id, 'approved')}
+                                    >
+                                        <CheckCircle size={16} /> {t('admin.approve')}
+                                    </PermissionButton>
+                                )}
+                                {/* Show Reject button only if status is NOT rejected (pending, approved, or flagged) */}
+                                {img.moderationStatus !== 'rejected' && (
+                                    <PermissionButton
+                                        permission="moderateImages"
+                                        action={t('admin.rejectImage')}
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleModerate(img._id, 'rejected')}
+                                    >
+                                        <XCircle size={16} /> {t('admin.reject')}
+                                    </PermissionButton>
+                                )}
+                                {/* Show Flag button only if status is NOT flagged (pending, approved, or rejected) */}
+                                {img.moderationStatus !== 'flagged' && (
+                                    <PermissionButton
+                                        permission="moderateImages"
+                                        action={t('admin.flagImage')}
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleModerate(img._id, 'flagged')}
+                                    >
+                                        <Flag size={16} /> {t('admin.flag')}
+                                    </PermissionButton>
+                                )}
                                 <PermissionButton
                                     permission="deleteImages"
                                     action={t('admin.deleteImage')}
@@ -145,6 +179,31 @@ export function AdminImages({
                     >
                         {t('admin.next')}
                     </Button>
+                </div>
+            )}
+
+            {/* Fullscreen Image Viewer */}
+            {selectedImage && (
+                <div 
+                    className="admin-image-viewer-overlay"
+                    onClick={() => setSelectedImage(null)}
+                >
+                    <button
+                        className="admin-image-viewer-close"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedImage(null);
+                        }}
+                        aria-label="Close"
+                    >
+                        <X size={24} />
+                    </button>
+                    <img 
+                        src={selectedImage} 
+                        alt="Fullscreen view"
+                        className="admin-image-viewer-image"
+                        onClick={(e) => e.stopPropagation()}
+                    />
                 </div>
             )}
         </div>

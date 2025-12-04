@@ -83,13 +83,46 @@ router.post('/make-admin', async (req, res) => {
             userId: user._id,
             role: 'admin',
             permissions: {
-                manageUsers: true,
+                // User Management
+                viewUsers: true,
+                editUsers: true,
                 deleteUsers: true,
-                manageImages: true,
+                banUsers: true,
+                unbanUsers: true,
+                
+                // Image Management
+                viewImages: true,
+                editImages: true,
                 deleteImages: true,
-                manageCategories: true,
-                manageAdmins: false,
+                moderateImages: true,
+                
+                // Category Management
+                viewCategories: true,
+                createCategories: true,
+                editCategories: true,
+                deleteCategories: true,
+                
+                // Admin Management (view only for admin role)
+                viewAdmins: true,
+                
+                // Dashboard & Analytics
                 viewDashboard: true,
+                viewAnalytics: true,
+                
+                // Collections
+                viewCollections: true,
+                manageCollections: true,
+                
+                // Favorites
+                manageFavorites: true,
+                
+                // Content Moderation
+                moderateContent: true,
+                
+                // System
+                viewLogs: true,
+                exportData: true,
+                manageSettings: true,
             },
         });
         

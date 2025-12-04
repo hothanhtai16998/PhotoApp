@@ -99,7 +99,7 @@ const makeAdmin = async (username) => {
         logger.info(`✅ User "${username}" is now an admin!`);
         logger.info(`   Email: ${user.email}`);
         logger.info(`   Display Name: ${user.displayName}`);
-        logger.info(`   Admin Role created with full permissions (except manageAdmins)`);
+        logger.info(`   Admin Role created with full permissions (except admin management)`);
 
         await mongoose.connection.close();
         process.exit(0);

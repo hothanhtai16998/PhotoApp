@@ -116,12 +116,6 @@ export const getAllowedPermissions = (role) => {
                 'viewLogs',
                 'exportData',
                 'manageSettings',
-                
-                // Legacy permissions (for backward compatibility)
-                'manageUsers',
-                'manageImages',
-                'manageCategories',
-                'manageAdmins',
             ];
         default:
             return [];

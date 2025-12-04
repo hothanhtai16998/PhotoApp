@@ -89,12 +89,6 @@ export interface AdminRolePermissions {
     viewLogs?: boolean;
     exportData?: boolean;
     manageSettings?: boolean;
-    
-    // Legacy permissions (for backward compatibility)
-    manageUsers?: boolean;
-    manageImages?: boolean;
-    manageCategories?: boolean;
-    manageAdmins?: boolean;
 }
 
 export interface AdminRole {

@@ -137,24 +137,6 @@ const adminRoleSchema = new mongoose.Schema(
                 type: Boolean,
                 default: false,
             },
-            
-            // Legacy permissions (for backward compatibility)
-            manageUsers: {
-                type: Boolean,
-                default: false,
-            },
-            manageImages: {
-                type: Boolean,
-                default: false,
-            },
-            manageCategories: {
-                type: Boolean,
-                default: false,
-            },
-            manageAdmins: {
-                type: Boolean,
-                default: false,
-            },
         },
         grantedBy: {
             type: mongoose.Schema.Types.ObjectId,
