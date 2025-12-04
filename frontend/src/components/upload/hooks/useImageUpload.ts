@@ -196,7 +196,7 @@ export const useImageUpload = ({ onSuccess }: UseImageUploadProps = {}) => {
               uploadId: imgData.preUploadData.uploadId,
               uploadKey: imgData.preUploadData.uploadKey,
               imageTitle: imgData.title.trim() || undefined, // Title is optional
-              imageCategory: imgData.category.trim() || undefined, // Category is optional for normal users
+              imageCategory: imgData.category && imgData.category.trim() ? imgData.category.trim() : undefined, // Category is optional for normal users, but required for admin
               location: imgData.location.trim() || undefined,
               coordinates: imgData.coordinates,
               cameraModel: imgData.cameraModel.trim() || undefined,

@@ -53,11 +53,9 @@ export const getAllImagesAdmin = asyncHandler(async (req, res) => {
             });
         }
     }
-    // Always ensure imageCategory exists and is not null (even when no category filter)
-    // This prevents images with invalid/null categories from appearing
-    if (!query.imageCategory) {
-        query.imageCategory = { $exists: true, $ne: null };
-    }
+    // For admin page, show all images including pending ones without categories
+    // Only filter by category if a specific category filter is applied
+    // This allows admins to see pending images that need category assignment
 
     if (userId && mongoose.Types.ObjectId.isValid(userId)) {
         query.uploadedBy = userId;

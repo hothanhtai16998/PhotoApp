@@ -71,6 +71,25 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
         }
     }, [isOpen, loadCategories]);
 
+    // Auto-select first category for admin users when categories are loaded and images are selected
+    useEffect(() => {
+        if (isAdmin && categories.length > 0 && imagesData.length > 0) {
+            const firstCategoryId = categories[0]._id;
+            setImagesData(prev => {
+                const needsUpdate = prev.some(img => !img.category || img.category.trim() === '');
+                if (!needsUpdate) return prev; // No changes needed
+                
+                return prev.map(img => {
+                    // Only auto-select if category is empty
+                    if (!img.category || img.category.trim() === '') {
+                        return { ...img, category: firstCategoryId };
+                    }
+                    return img;
+                });
+            });
+        }
+    }, [isAdmin, categories.length, imagesData.length]);
+
     // Check if all images have required fields filled AND all are pre-uploaded
     // Title is no longer required, category is only required for admin users
     const isFormValid = imagesData.length > 0 &&

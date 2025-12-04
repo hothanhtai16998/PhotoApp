@@ -60,7 +60,7 @@ export const useUploadModalState = ({ preUploadAllImages }: UseUploadModalStateP
           return {
             file,
             title: '',
-            category: '',
+            category: '', // Will be auto-filled for admin users
             location: '',
             coordinates: undefined,
             cameraModel: '',

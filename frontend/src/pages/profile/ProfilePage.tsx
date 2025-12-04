@@ -312,8 +312,12 @@ function ProfilePage() {
                 const categoryName = typeof img.imageCategory === 'string'
                     ? img.imageCategory
                     : img.imageCategory?.name;
-                return categoryName &&
-                    !categoryName.toLowerCase().includes('illustration') &&
+                // Show images without categories (pending approval) or with valid categories
+                // Only filter out illustration and svg categories if category exists
+                if (!categoryName) {
+                    return true; // Show images without categories (pending approval)
+                }
+                return !categoryName.toLowerCase().includes('illustration') &&
                     !categoryName.toLowerCase().includes('svg');
             });
         }

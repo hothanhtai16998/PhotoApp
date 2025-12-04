@@ -1,5 +1,6 @@
 import os from 'os';
 import sharp from 'sharp';
+import mongoose from 'mongoose';
 import Image from '../models/Image.js';
 import Notification from '../models/Notification.js';
 import { getObjectFromR2, uploadImageWithSizes, deleteObjectByKey } from '../libs/s3.js';
@@ -79,6 +80,22 @@ export async function processUploadJob(job) {
 
         const isVideo = uploadResult.isVideo || mimetype?.startsWith('video/') || false;
         
+        // Convert category string to ObjectId if provided
+        let categoryObjectId = undefined;
+        if (imageCategory) {
+            if (mongoose.Types.ObjectId.isValid(imageCategory)) {
+                categoryObjectId = new mongoose.Types.ObjectId(imageCategory);
+            } else {
+                logError('Invalid category ObjectId:', imageCategory);
+                categoryObjectId = undefined;
+            }
+        }
+        
+        // Convert userId string to ObjectId
+        const userIdObjectId = mongoose.Types.ObjectId.isValid(userId) 
+            ? new mongoose.Types.ObjectId(userId) 
+            : userId;
+        
         const newImage = await Image.create({
             imageUrl: uploadResult.imageUrl,
             thumbnailUrl: uploadResult.thumbnailUrl,
@@ -86,9 +103,9 @@ export async function processUploadJob(job) {
             regularUrl: uploadResult.regularUrl,
             imageAvifUrl: uploadResult.imageAvifUrl,
             publicId: uploadResult.publicId,
-            imageTitle: imageTitle?.substring(0, 255),
-            imageCategory,
-            uploadedBy: userId,
+            imageTitle: imageTitle?.substring(0, 255) || undefined,
+            imageCategory: categoryObjectId,
+            uploadedBy: userIdObjectId,
             location: location?.trim() || undefined,
             coordinates: parsedCoords,
             cameraMake: exifData.cameraMake || undefined,
