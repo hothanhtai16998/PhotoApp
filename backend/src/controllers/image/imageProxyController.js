@@ -59,7 +59,7 @@ export const proxyImage = asyncHandler(async (req, res) => {
             });
         }
 
-        // Get image from S3/CloudFront
+        // Get image from R2
         const s3Response = await getImageFromS3(imageUrl);
 
         // Set CORS headers - allow all origins

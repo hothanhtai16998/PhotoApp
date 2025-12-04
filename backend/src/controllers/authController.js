@@ -477,7 +477,7 @@ export const googleCallback = asyncHandler(async (req, res) => {
                 // Only update if it's different (to avoid unnecessary saves)
                 if (user.avatarUrl !== googleUser.picture) {
                     user.avatarUrl = googleUser.picture;
-                    // Clear avatarId since we're using Google's avatar, not Cloudinary
+                    // Clear avatarId since we're using Google's avatar
                     user.avatarId = undefined;
                     await user.save();
                 }

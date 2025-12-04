@@ -1,8 +1,7 @@
 import { logger } from './logger.js';
 import { s3Client, getBucketName, deleteObjectByKey } from '../libs/s3.js';
 import { ListObjectsV2Command } from '@aws-sdk/client-s3';
-
-const RAW_UPLOAD_FOLDER = 'photo-app-raw';
+import { RAW_UPLOAD_FOLDER } from './constants.js';
 const MAX_AGE_HOURS = 24; // Delete pre-uploaded files older than 24 hours
 const MAX_AGE_MS = MAX_AGE_HOURS * 60 * 60 * 1000;
 

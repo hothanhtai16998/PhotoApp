@@ -10,7 +10,8 @@ import { logger } from './logger.js';
  * Usage: node src/utils/updateR2CORS.js
  */
 
-if (!env.USE_R2) {
+// R2 is now required (AWS S3 support removed)
+if (!env.R2_ACCOUNT_ID || !env.R2_ACCESS_KEY_ID || !env.R2_SECRET_ACCESS_KEY || !env.R2_BUCKET_NAME) {
 	logger.error('❌ R2 is not configured. Please set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, and R2_BUCKET_NAME');
 	process.exit(1);
 }
@@ -36,7 +37,10 @@ async function updateR2CORS() {
 			'http://localhost:3000',
 			'http://localhost:5173',
 			env.CLIENT_URL,
+			env.FRONTEND_URL,
 			'https://uploadanh.cloud', // Production domain
+			env.R2_PUBLIC_URL, // R2 custom domain
+			`https://pub-${env.R2_ACCOUNT_ID}.r2.dev`, // R2 dev URL
 		].filter(Boolean);
 
 		// Remove duplicates

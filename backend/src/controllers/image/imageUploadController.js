@@ -2,7 +2,9 @@ import mongoose from 'mongoose';
 import crypto from 'crypto';
 import { asyncHandler } from '../../middlewares/asyncHandler.js';
 import { addJob } from '../../workers/jobQueue.js';
-import { findCategory } from '../../utils/imageHelpers.js';
+import { findCategory, parseTags, validateCoordinates, streamToBuffer } from '../../utils/imageHelpers.js';
+import { RAW_UPLOAD_FOLDER } from '../../utils/constants.js';
+import { mimeToExtension, extensionMap, validateFileType, getExtensionsFromMimeType } from '../../utils/fileTypeUtils.js';
 
 import Image from '../../models/Image.js';
 import Category from '../../models/Category.js';
@@ -28,13 +30,7 @@ const MAX_FILE_SIZE_BYTES = MAX_FILE_BYTES; // alias for older/other usages
 const MAX_IMAGE_TITLE_LENGTH = 255;
 const MAX_TAG_LENGTH = 50;
 const MAX_TAGS_PER_IMAGE = 20;
-const RAW_UPLOAD_FOLDER = 'photo-app-raw';
 const UPLOAD_ID_PATTERN = /^image-\d+-[a-f0-9]{8}$/;
-
-const extensionMap = {
-    jpeg: 'jpg',
-    'svg+xml': 'svg',
-};
 
 // Safe wrapper for optional async helpers (prevents "reading 'catch' of undefined")
 const safeAsync = (fn, ...args) => {
@@ -75,39 +71,6 @@ const getFileExtension = (fileName = '', fileType = '') => {
     return 'bin';
 };
 
-const streamToBuffer = async (stream) => {
-    const chunks = [];
-    for await (const chunk of stream) {
-        chunks.push(chunk);
-    }
-    return Buffer.concat(chunks);
-};
-
-/**
- * Validate and parse coordinates
- */
-const validateCoordinates = (coordinates) => {
-    if (!coordinates) return undefined;
-
-    try {
-        const parsed = typeof coordinates === 'string' ? JSON.parse(coordinates) : coordinates;
-
-        if (parsed.latitude === undefined || parsed.longitude === undefined) return undefined;
-
-        const lat = parseFloat(parsed.latitude);
-        const lng = parseFloat(parsed.longitude);
-
-        if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-            return undefined;
-        }
-
-        return { latitude: lat, longitude: lng };
-    } catch (error) {
-        logger.warn('Invalid coordinates format:', error.message);
-        return undefined;
-    }
-};
-
 /**
  * Find category by ID or name
  */
@@ -134,35 +97,6 @@ const validateCoordinates = (coordinates) => {
 
 //     return categoryDoc;
 // };
-
-/**
- * Parse and validate tags
- */
-const parseTags = (tagsInput) => {
-    let tagsArray = [];
-
-    if (!tagsInput) return [];
-
-    try {
-        tagsArray = typeof tagsInput === 'string' ? JSON.parse(tagsInput) : tagsInput;
-        if (!Array.isArray(tagsArray)) return [];
-    } catch (error) {
-        logger.warn('Invalid tags format:', error.message);
-        return [];
-    }
-
-    // Use Set for O(n) deduplication instead of O(n²) filter
-    const uniqueTags = new Set();
-    return tagsArray
-        .map(tag => (typeof tag === 'string' ? tag : String(tag)).trim().toLowerCase())
-        .filter(tag => tag.length > 0 && tag.length <= MAX_TAG_LENGTH)
-        .filter(tag => {
-            if (uniqueTags.has(tag)) return false;
-            uniqueTags.add(tag);
-            return true;
-        })
-        .slice(0, MAX_TAGS_PER_IMAGE);
-};
 
 /**
  * Extract metadata from image buffer in parallel
@@ -274,30 +208,12 @@ export const uploadImage = asyncHandler(async (req, res) => {
     const systemSettings = await Settings.findOne({ key: 'system' });
     const allowedFileTypes = systemSettings?.value?.allowedFileTypes || ['jpg', 'jpeg', 'png', 'webp'];
     
-    // Map MIME types to file extensions
-    const mimeToExtension = {
-        'image/jpeg': ['jpg', 'jpeg'],
-        'image/jpg': ['jpg', 'jpeg'],
-        'image/png': ['png'],
-        'image/webp': ['webp'],
-        'image/gif': ['gif'],
-        'image/svg+xml': ['svg'],
-        'image/bmp': ['bmp'],
-        'image/x-icon': ['ico'],
-        'image/vnd.microsoft.icon': ['ico'],
-        'video/mp4': ['mp4'],
-        'video/webm': ['webm'],
-    };
-
-    // Check if the MIME type is allowed based on settings
+    // Validate file type against settings
     const allowedExtensions = Array.isArray(allowedFileTypes) 
         ? allowedFileTypes.map(t => t.toLowerCase())
         : allowedFileTypes.split(',').map(t => t.trim().toLowerCase());
     
-    const mimeTypeExtensions = mimeToExtension[req.file.mimetype.toLowerCase()] || [];
-    const isAllowed = mimeTypeExtensions.some(ext => allowedExtensions.includes(ext));
-    
-    if (!isAllowed) {
+    if (!validateFileType(req.file.mimetype, req.file.originalname, allowedFileTypes)) {
         return res.status(400).json({
             message: `Định dạng file không được phép. Các định dạng được phép: ${allowedExtensions.join(', ')}`,
         });
@@ -443,33 +359,12 @@ export const preUploadImage = asyncHandler(async (req, res) => {
         });
     }
 
-    // Map MIME types to file extensions
-    const mimeToExtension = {
-        'image/jpeg': ['jpg', 'jpeg'],
-        'image/jpg': ['jpg', 'jpeg'],
-        'image/png': ['png'],
-        'image/webp': ['webp'],
-        'image/gif': ['gif'],
-        'image/svg+xml': ['svg'],
-        'image/bmp': ['bmp'],
-        'image/x-icon': ['ico'],
-        'image/vnd.microsoft.icon': ['ico'],
-        'video/mp4': ['mp4'],
-        'video/webm': ['webm'],
-    };
-
     // Validate file type against settings
-    const fileExtension = fileName.split('.').pop()?.toLowerCase();
     const allowedExtensions = Array.isArray(allowedFileTypes) 
         ? allowedFileTypes.map(t => t.toLowerCase())
         : allowedFileTypes.split(',').map(t => t.trim().toLowerCase());
     
-    // Check both file extension and MIME type
-    const mimeTypeExtensions = mimeToExtension[fileType.toLowerCase()] || [];
-    const isValidExtension = fileExtension && allowedExtensions.includes(fileExtension);
-    const isValidMimeType = mimeTypeExtensions.some(ext => allowedExtensions.includes(ext));
-    
-    if (!isValidExtension && !isValidMimeType) {
+    if (!validateFileType(fileType, fileName, allowedFileTypes)) {
         return res.status(400).json({
             message: `Định dạng file không được phép. Các định dạng được phép: ${allowedExtensions.join(', ')}`,
         });

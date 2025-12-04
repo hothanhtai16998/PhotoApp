@@ -21,17 +21,17 @@ export async function processUploadJob(job) {
     const { uploadKey, userId, isAdmin, imageTitle, imageCategory, location, cameraModel, coordinates, tags } = job;
 
     try {
-        // === Download raw file from S3 ===
+        // === Download raw file from R2 ===
         log(`📥 Downloading ${uploadKey}...`);
         const downloadStart = Date.now();
         const rawStream = await getObjectFromS3(uploadKey);
-        if (!rawStream?.Body) throw new Error('Raw upload not found in S3');
+        if (!rawStream?.Body) throw new Error('Raw upload not found in R2');
         const buffer = await streamToBuffer(rawStream.Body);
         const downloadMs = Date.now() - downloadStart;
         log(`✅ Downloaded ${(buffer.length / 1024).toFixed(2)}KB in ${downloadMs}ms`);
 
-        // Detect mimetype from file extension first (more reliable than S3 ContentType)
-        // S3 ContentType can be incorrect, especially for GIFs
+        // Detect mimetype from file extension first (more reliable than R2 ContentType)
+        // R2 ContentType can be incorrect, especially for GIFs
         const ext = uploadKey.split('.').pop()?.toLowerCase();
         const extToMime = {
             'gif': 'image/gif',
@@ -49,7 +49,7 @@ export async function processUploadJob(job) {
         
         // Log both detected values for debugging
         const fileSizeMB = (buffer.length / (1024 * 1024)).toFixed(2);
-        log(`📋 File: ${uploadKey}, Size: ${fileSizeMB}MB, Extension: ${ext || 'none'}, S3 ContentType: ${rawStream.ContentType || 'none'}, Final mimetype: ${mimetype || 'unknown'}`);
+        log(`📋 File: ${uploadKey}, Size: ${fileSizeMB}MB, Extension: ${ext || 'none'}, R2 ContentType: ${rawStream.ContentType || 'none'}, Final mimetype: ${mimetype || 'unknown'}`);
 
         // === Extract metadata ===
         log(`🔍 Extracting metadata...`);
@@ -64,9 +64,7 @@ export async function processUploadJob(job) {
         log(`✅ Metadata extracted in ${metadataMs}ms`);
 
         // === Upload processed sizes ===
-        const { env } = await import('../libs/env.js');
-        const storageName = env.USE_R2 ? 'R2' : 'S3';
-        log(`📤 Uploading resized images to ${storageName}...`);
+        log(`📤 Uploading resized images to R2...`);
         const uploadStart = Date.now();
         const filename = uploadKey.replace(/[\/\\]/g, '-').replace(/^photo-app-raw-/, '').replace(/\.(gif|jpg|jpeg|png|webp|mp4|webm)$/i, '');
         const uploadResult = await uploadImageWithSizes(buffer, 'photo-app-images', filename, mimetype);

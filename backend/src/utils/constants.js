@@ -2,6 +2,9 @@
  * Application constants
  */
 
+// Upload folder constants
+export const RAW_UPLOAD_FOLDER = 'photo-app-raw';
+
 export const PAGINATION = {
     DEFAULT_PAGE: 1,
     DEFAULT_LIMIT: 20,

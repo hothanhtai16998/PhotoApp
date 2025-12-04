@@ -52,7 +52,7 @@ if (env.NODE_ENV === 'production') {
         contentSecurityPolicy: {
             directives: {
                 defaultSrc: ["'self'"],
-                imgSrc: ["'self'", "https://res.cloudinary.com", "data:", "https:", "blob:"],
+                imgSrc: ["'self'", "data:", "https:", "blob:"],
                 // Production: use nonce for inline scripts instead of unsafe-inline
                 scriptSrc: ["'self'", "data:"],
                 // Allow inline styles and event handlers (needed for some libraries)
@@ -61,11 +61,8 @@ if (env.NODE_ENV === 'production') {
                 scriptSrcAttr: ["'unsafe-inline'"],
                 connectSrc: [
                     "'self'",
-                    // Dynamic storage URL (R2 or S3)
-                    ...(env.USE_R2 
-                        ? [env.R2_PUBLIC_URL || `https://pub-${env.R2_ACCOUNT_ID}.r2.dev`]
-                        : [env.AWS_CLOUDFRONT_URL || `https://${env.AWS_S3_BUCKET_NAME}.s3.${env.AWS_REGION}.amazonaws.com`]
-                    ),
+                    // R2 storage URL
+                    env.R2_PUBLIC_URL || `https://pub-${env.R2_ACCOUNT_ID}.r2.dev`,
                     "https://nominatim.openstreetmap.org",
                     "https://uploadanh.cloud"
                 ],
@@ -75,7 +72,7 @@ if (env.NODE_ENV === 'production') {
                 frameSrc: ["'none'"],
             },
         },
-        crossOriginEmbedderPolicy: false, // Allow Cloudinary images
+        crossOriginEmbedderPolicy: false,
     }));
 } else {
     // Development: Use less strict CSP or disable it for Vite dev server

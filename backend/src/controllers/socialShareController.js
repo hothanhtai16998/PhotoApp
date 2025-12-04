@@ -76,7 +76,6 @@ function generateSocialShareHTML(image, url, req) {
   let imageUrl = image.regularUrl || image.smallUrl || image.imageUrl;
 
   // Ensure image URL is absolute (Facebook requires absolute URLs)
-  // Most image URLs should already be absolute (Cloudinary URLs), but check anyway
   if (imageUrl && !imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
     // If relative URL, make it absolute
     const protocol = req.protocol || (req.secure ? 'https' : 'http');

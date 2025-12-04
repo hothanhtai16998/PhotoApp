@@ -11,18 +11,7 @@ import { logger } from '../../utils/logger.js';
 const MAX_FILE_BYTES = 25 * 1024 * 1024; // 25MB
 const CONCURRENCY = 5; // batch concurrency
 
-// Map MIME types to file extensions
-const mimeToExtension = {
-    'image/jpeg': ['jpg', 'jpeg'],
-    'image/jpg': ['jpg', 'jpeg'],
-    'image/png': ['png'],
-    'image/webp': ['webp'],
-    'image/gif': ['gif'],
-    'image/svg+xml': ['svg'],
-    'image/bmp': ['bmp'],
-    'image/x-icon': ['ico'],
-    'image/vnd.microsoft.icon': ['ico'],
-};
+import { getExtensionsFromMimeType, validateFileType } from '../../utils/fileTypeUtils.js';
 
 async function replaceSingleImage({ imageId, fileBuffer, mimetype, fileSize, userId, isAdmin, index, allowedFileTypes }) {
     if (!mongoose.Types.ObjectId.isValid(imageId)) {
@@ -39,14 +28,10 @@ async function replaceSingleImage({ imageId, fileBuffer, mimetype, fileSize, use
 
     // Validate file type against settings (if provided)
     if (allowedFileTypes) {
-        const allowedExtensions = Array.isArray(allowedFileTypes) 
-            ? allowedFileTypes.map(t => t.toLowerCase())
-            : allowedFileTypes.split(',').map(t => t.trim().toLowerCase());
-        
-        const mimeTypeExtensions = mimeToExtension[mimetype.toLowerCase()] || [];
-        const isAllowed = mimeTypeExtensions.some(ext => allowedExtensions.includes(ext));
-        
-        if (!isAllowed) {
+        if (!validateFileType(mimetype, `image.${mimetype.split('/')[1] || 'jpg'}`, allowedFileTypes)) {
+            const allowedExtensions = Array.isArray(allowedFileTypes) 
+                ? allowedFileTypes.map(t => t.toLowerCase())
+                : allowedFileTypes.split(',').map(t => t.trim().toLowerCase());
             return { ok: false, imageId, error: `File type not allowed. Allowed types: ${allowedExtensions.join(', ')}` };
         }
     }

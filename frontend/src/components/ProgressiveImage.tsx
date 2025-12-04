@@ -40,7 +40,7 @@ const globalLoadedImages = new LRUSet(500);
 const isImageCached = (url: string): Promise<boolean> => {
   return new Promise((resolve) => {
     const img = new Image();
-    // Removed crossOrigin to avoid CORS issues with CloudFront
+    // Removed crossOrigin to avoid CORS issues
     // img.crossOrigin = 'anonymous';
     let resolved = false;
 

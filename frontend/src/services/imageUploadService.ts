@@ -16,7 +16,7 @@ export const imageUploadService = {
     });
   },
 
-  // Pre-upload: Upload image to S3 only (no database record)
+  // Pre-upload: Upload image to R2 only (no database record)
   preUploadImage: async (
     imageFile: File,
     onUploadProgress?: (progress: number) => void

@@ -4,55 +4,43 @@ import { env } from './env.js';
 import { Upload } from '@aws-sdk/lib-storage';
 import sharp from 'sharp';
 import { logger } from '../utils/logger.js';
+import { getSingleExtensionFromMimeType } from '../utils/fileTypeUtils.js';
 
-// Initialize storage client (R2 or S3)
-// R2 is S3-compatible, so we can use the same SDK
-const s3Client = env.USE_R2
-	? new S3Client({
-		region: 'auto', // R2 uses 'auto' as region
-		endpoint: `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-		credentials: {
-			accessKeyId: env.R2_ACCESS_KEY_ID,
-			secretAccessKey: env.R2_SECRET_ACCESS_KEY,
-		},
-		forcePathStyle: true, // Required for R2
-	})
-	: new S3Client({
-		region: env.AWS_REGION,
-		credentials: {
-			accessKeyId: env.AWS_ACCESS_KEY_ID,
-			secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
-		},
-	});
+// Initialize R2 storage client
+// R2 is S3-compatible, so we use the AWS S3 SDK
+const s3Client = new S3Client({
+	region: 'auto', // R2 uses 'auto' as region
+	endpoint: `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+	credentials: {
+		accessKeyId: env.R2_ACCESS_KEY_ID,
+		secretAccessKey: env.R2_SECRET_ACCESS_KEY,
+	},
+	forcePathStyle: true, // Required for R2
+});
 
 // Get bucket name
-export const getBucketName = () => env.USE_R2 ? env.R2_BUCKET_NAME : env.AWS_S3_BUCKET_NAME;
+export const getBucketName = () => env.R2_BUCKET_NAME;
 
 // Get public URL base
 const getPublicUrlBase = () => {
-	if (env.USE_R2) {
-		// R2: Use custom domain or R2.dev subdomain
-		return env.R2_PUBLIC_URL || `https://pub-${env.R2_ACCOUNT_ID}.r2.dev`;
-	} else {
-		// AWS: Use CloudFront or S3 URL
-		return env.AWS_CLOUDFRONT_URL || `https://${env.AWS_S3_BUCKET_NAME}.s3.${env.AWS_REGION}.amazonaws.com`;
-	}
+	// R2: Use custom domain or R2.dev subdomain
+	return env.R2_PUBLIC_URL || `https://pub-${env.R2_ACCOUNT_ID}.r2.dev`;
 };
 
 // Get public URL for uploaded file
 // Note: R2 custom domains serve files directly from bucket root, so we keep the full key path
 const getPublicUrl = (key) => {
 	const publicUrlBase = getPublicUrlBase();
-	
+
 	// For all storage (R2 custom domain, R2 dev URL, or AWS), include the full key
 	// The key already includes the folder structure (e.g., "photo-app-images/filename.webp")
 	return `${publicUrlBase}/${key}`;
 };
 
 /**
- * Upload a single file to S3
+ * Upload a single file to R2
  * @param {Buffer} buffer - File buffer
- * @param {string} key - S3 object key (path)
+ * @param {string} key - R2 object key (path)
  * @param {string} contentType - MIME type
  * @returns {Promise<string>} Public URL of uploaded file
  */
@@ -74,30 +62,29 @@ export const uploadToS3 = async (buffer, key, contentType) => {
 		// Provide more detailed error information
 		const errorMessage = error.message || 'Unknown error';
 		const errorCode = error.Code || error.code || 'UNKNOWN';
-		console.error('S3 Upload Error:', {
+		console.error('R2 Upload Error:', {
 			code: errorCode,
 			message: errorMessage,
 			bucket: getBucketName(),
 			key: key,
-			region: env.AWS_REGION,
 		});
-		throw new Error(`Failed to upload to S3 (${errorCode}): ${errorMessage}`);
+		throw new Error(`Failed to upload to R2 (${errorCode}): ${errorMessage}`);
 	}
 };
 
 /**
- * Upload image with multiple sizes using parallel multipart (lib-storage)
+ * Upload image with multiple sizes to R2
  * For GIFs and other formats that shouldn't be processed, upload directly
  */
 export async function uploadImageWithSizes(buffer, bucket, filename, mimetype = null) {
 	try {
 		const fileSizeMB = buffer.length / (1024 * 1024);
 		logger.info(`[UPLOAD] Processing file: ${filename}, mimetype: ${mimetype || 'unknown'}, size: ${fileSizeMB.toFixed(2)}MB`);
-		
+
 		// Detect image format from buffer or use provided mimetype
 		let imageFormat = null;
 		let contentType = 'image/webp';
-		
+
 		if (mimetype) {
 			// Extract format from MIME type
 			const mimeToFormat = {
@@ -115,7 +102,7 @@ export async function uploadImageWithSizes(buffer, bucket, filename, mimetype = 
 			contentType = mimetype;
 			logger.info(`[UPLOAD] Detected format from mimetype: ${imageFormat}`);
 		}
-		
+
 		// For GIFs, skip Sharp processing (it can be slow for large GIFs)
 		// If not detected from mimetype, try to detect from buffer
 		if (!imageFormat && mimetype && !mimetype.toLowerCase().includes('gif')) {
@@ -128,15 +115,15 @@ export async function uploadImageWithSizes(buffer, bucket, filename, mimetype = 
 				logger.warn('[UPLOAD] Could not detect image format from buffer:', err?.message);
 			}
 		}
-		
+
 		// For GIFs: Check if large, convert to video; otherwise upload as-is
 		if (imageFormat === 'gif') {
 			const gifSizeMB = buffer.length / (1024 * 1024);
 			logger.info(`[GIF] Detected GIF file: ${gifSizeMB.toFixed(2)}MB`);
-			
+
 			// Check if GIF-to-video conversion is enabled (skip on free tier hosting)
 			const enableGifConversion = process.env.ENABLE_GIF_TO_VIDEO !== 'false';
-			
+
 			// Convert large GIFs (>2MB) to video for better performance
 			if (gifSizeMB > 2 && enableGifConversion) {
 				logger.info(`[GIF] GIF is ${gifSizeMB.toFixed(2)}MB, attempting conversion to video...`);
@@ -144,7 +131,7 @@ export async function uploadImageWithSizes(buffer, bucket, filename, mimetype = 
 					const { convertGifToVideo } = await import('../utils/videoConverter.js');
 					logger.info(`[GIF] Starting conversion for ${filename}...`);
 					const videoResult = await convertGifToVideo(buffer, filename, bucket);
-					
+
 					if (videoResult) {
 						logger.info(`[GIF] Successfully converted to video: ${videoResult.videoUrl}`);
 						// Successfully converted to video
@@ -175,7 +162,7 @@ export async function uploadImageWithSizes(buffer, bucket, filename, mimetype = 
 			} else {
 				logger.info(`[GIF] GIF is ${gifSizeMB.toFixed(2)}MB, keeping as GIF (no conversion needed)`);
 			}
-			
+
 			// Upload GIF directly (small GIFs or if conversion failed)
 			const originalUrl = await uploadToS3(
 				buffer,
@@ -195,7 +182,7 @@ export async function uploadImageWithSizes(buffer, bucket, filename, mimetype = 
 				regularAvifUrl: originalUrl,
 			};
 		}
-		
+
 		// For SVGs, BMPs, and ICOs, upload directly without processing
 		// SVGs are vector graphics, BMP/ICO are legacy formats
 		if (imageFormat === 'svg' || imageFormat === 'bmp' || imageFormat === 'ico') {
@@ -228,7 +215,7 @@ export async function uploadImageWithSizes(buffer, bucket, filename, mimetype = 
 			sharp(buffer).webp().toBuffer(),
 		]);
 
-		// Upload all sizes in parallel using existing uploadToS3 function
+		// Upload all sizes in parallel to R2
 		const [thumb, small, regular, original] = await Promise.all([
 			uploadToS3(thumbnailBuffer, `${bucket}/${filename}-thumbnail.webp`, 'image/webp'),
 			uploadToS3(smallBuffer, `${bucket}/${filename}-small.webp`, 'image/webp'),
@@ -254,35 +241,30 @@ export async function uploadImageWithSizes(buffer, bucket, filename, mimetype = 
 }
 
 /**
- * Upload video to S3 with thumbnail generation
+ * Upload video to R2 with thumbnail generation
  * @param {Buffer} videoBuffer - Video file buffer
- * @param {string} bucket - S3 bucket name
+ * @param {string} bucket - R2 bucket name
  * @param {string} filename - Base filename (without extension)
  * @param {string} mimetype - MIME type (e.g., 'video/mp4', 'video/webm')
  * @returns {Promise<Object>} Object with video URL and thumbnail URL
  */
+
 export async function uploadVideo(videoBuffer, bucket, filename, mimetype) {
 	try {
 		// Extract format from MIME type
-		const mimeToExtension = {
-			'video/mp4': 'mp4',
-			'video/webm': 'webm',
-			'video/quicktime': 'mov',
-		};
-		
-		const extension = mimeToExtension[mimetype.toLowerCase()] || 'mp4';
+		const extension = getSingleExtensionFromMimeType(mimetype);
 		const contentType = mimetype || 'video/mp4';
-		
+
 		// Import video utilities
 		const { generateVideoThumbnail, getVideoDuration } = await import('../utils/videoConverter.js');
-		
-		// Upload video directly to S3
+
+		// Upload video directly to R2
 		const videoUrl = await uploadToS3(
 			videoBuffer,
 			`${bucket}/${filename}.${extension}`,
 			contentType
 		);
-		
+
 		// Generate thumbnail and get duration in parallel
 		const [thumbnailUrl, duration] = await Promise.all([
 			generateVideoThumbnail(videoBuffer, filename, bucket).catch(err => {
@@ -294,7 +276,7 @@ export async function uploadVideo(videoBuffer, bucket, filename, mimetype) {
 				return null;
 			}),
 		]);
-		
+
 		return {
 			publicId: filename,
 			videoUrl,
@@ -311,9 +293,9 @@ export async function uploadVideo(videoBuffer, bucket, filename, mimetype) {
 }
 
 /**
- * Upload avatar to S3 (single size, 200x200)
+ * Upload avatar to R2 (single size, 200x200)
  * @param {Buffer} imageBuffer - Original image buffer
- * @param {string} folder - Folder path in S3 (e.g., 'photo-app-avatars')
+ * @param {string} folder - Folder path in R2 (e.g., 'photo-app-avatars')
  * @param {string} filename - Base filename (without extension)
  * @returns {Promise<Object>} Object with URL and publicId
  */
@@ -334,7 +316,7 @@ export const uploadAvatar = async (imageBuffer, folder = 'photo-app-avatars', fi
 			.webp({ quality: 85 })
 			.toBuffer();
 
-		// Upload to S3
+		// Upload to R2
 		const avatarUrl = await uploadToS3(
 			avatar,
 			`${folder}/${baseFilename}.${extension}`,
@@ -351,7 +333,7 @@ export const uploadAvatar = async (imageBuffer, folder = 'photo-app-avatars', fi
 };
 
 /**
- * Delete image from S3 (all sizes)
+ * Delete image from R2 (all sizes)
  * @param {string} publicId - Base public ID (without size suffix)
  * @param {string} folder - Folder path
  */
@@ -374,12 +356,12 @@ export const deleteImageFromS3 = async (publicId, folder = 'photo-app-images') =
 		await Promise.all(deletePromises);
 	} catch (error) {
 		// Log error but don't throw - deletion is not critical
-		console.error(`Failed to delete image from S3: ${error.message}`);
+		console.error(`Failed to delete image from R2: ${error.message}`);
 	}
 };
 
 /**
- * Delete avatar from S3
+ * Delete avatar from R2
  * @param {string} publicId - Public ID (with folder prefix)
  */
 export const deleteAvatarFromS3 = async (publicId) => {
@@ -393,23 +375,23 @@ export const deleteAvatarFromS3 = async (publicId) => {
 		await s3Client.send(command);
 	} catch (error) {
 		// Log error but don't throw - deletion is not critical
-		console.error(`Failed to delete avatar from S3: ${error.message}`);
+		console.error(`Failed to delete avatar from R2: ${error.message}`);
 	}
 };
 
 /**
- * Get image from S3 as a stream
- * @param {string} imageUrl - Full S3 URL or S3 key
+ * Get image from R2 as a stream
+ * @param {string} imageUrl - Full R2 URL or R2 key
  * @returns {Promise<{Body: ReadableStream, ContentType: string, ContentLength: number}>}
  */
 export const getImageFromS3 = async (imageUrl) => {
 	try {
-		// Extract S3 key from URL
+		// Extract R2 key from URL
 		// Handle both full URLs and keys
 		let key;
 		if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
 			// Extract key from URL
-			// Format: https://bucket.s3.region.amazonaws.com/key or https://cloudfront.net/key
+			// Format: https://custom-domain.com/bucket/key or https://pub-account-id.r2.dev/bucket/key
 			const url = new URL(imageUrl);
 			key = url.pathname.startsWith('/') ? url.pathname.substring(1) : url.pathname;
 		} else {
@@ -428,12 +410,12 @@ export const getImageFromS3 = async (imageUrl) => {
 			ContentLength: response.ContentLength,
 		};
 	} catch (error) {
-		console.error('S3 Get Error:', {
+		console.error('R2 Get Error:', {
 			message: error.message,
 			code: error.Code || error.code,
 			imageUrl,
 		});
-		throw new Error(`Failed to get image from S3: ${error.message}`);
+		throw new Error(`Failed to get image from R2: ${error.message}`);
 	}
 };
 
@@ -441,8 +423,8 @@ export { s3Client };
 export default s3Client;
 
 /**
- * Generate a pre-signed URL that allows uploading directly to S3
- * @param {string} key - Target S3 object key
+ * Generate a pre-signed URL that allows uploading directly to R2
+ * @param {string} key - Target R2 object key
  * @param {string} contentType - MIME type of the object
  * @param {number} expiresIn - Expiration in seconds (default 5 minutes)
  */
@@ -457,7 +439,7 @@ export const generatePresignedUploadUrl = async (key, contentType, expiresIn = 3
 };
 
 /**
- * Get object from S3 and return the stream/body
+ * Get object from R2 and return the stream/body
  */
 export async function getObjectFromS3(key) {
 	const params = {
@@ -469,7 +451,7 @@ export async function getObjectFromS3(key) {
 }
 
 /**
- * Delete object from S3 by key
+ * Delete object from R2 by key
  */
 export async function deleteObjectByKey(key) {
 	const params = {
