@@ -347,15 +347,13 @@ export const en = {
     unbanConfirm: 'Are you sure you want to unban user {username}?',
     unbanSuccess: 'Unbanned user {username}',
     unbanFailed: 'Error unbanning user',
-    deleteUserConfirm:
-      'Are you sure you want to delete user "{username}"? This action will delete all their photos.',
+    deleteUserConfirm: 'Are you sure you want to delete user "{username}"? This action will delete all their photos.',
     // Images Management
     manageImages: 'Manage Images',
     searchImage: 'Enter image name...',
     moderationNotes: 'Enter moderation notes (optional):',
     moderationNotesPlaceholder: 'Enter moderation notes (optional)...',
-    approveRequiresCategory:
-      'You need to select a category before approving the image',
+    approveRequiresCategory: 'You need to select a category before approving the image',
     approveImage: 'Approve image',
     rejectImage: 'Reject image',
     flagImage: 'Flag image',
@@ -394,8 +392,8 @@ export const en = {
     manageRoles: 'Admin Roles',
     addRole: '+ Add Admin Role',
     deleteRole: 'Delete admin role',
-    deleteRoleConfirm:
-      'Are you sure you want to delete admin role for account "{username}"?',
+    deleteRoleConfirm: 'Are you sure you want to delete admin role for account "{username}"?',
+    addCategory: 'Add Category',
     role: 'Role',
     permissionsLabel: 'Permissions',
     grantedBy: 'Granted By',
@@ -469,8 +467,7 @@ export const en = {
     userOverview: 'User Overview',
     categoryDistribution: 'Distribution by Category',
     deleteImageConfirm: 'Do you want to delete image "{title}"?',
-    deleteCategoryConfirm:
-      'Do you want to delete category "{name}"? It can only be deleted if there are no images in this category.',
+    deleteCategoryConfirm: 'Do you want to delete category "{name}"? It can only be deleted if there are no images in this category.',
     searchCollections: 'Search collections...',
     noCollections: 'No collections found',
     collectionName: 'Collection Name',
@@ -485,14 +482,15 @@ export const en = {
     hide: 'Hide',
     show: 'Show',
     deleteCollection: 'Delete collection',
-    deleteCollectionConfirm:
-      'Are you sure you want to delete collection "{name}"?',
+    deleteCollectionConfirm: 'Are you sure you want to delete collection "{name}"?',
     deleteCollectionSuccess: 'Collection deleted successfully',
     collectionMadePublic: 'Collection made public',
     collectionMadePrivate: 'Collection hidden',
+    role: 'Role',
     note: 'Note',
     superAdminAllPermissions: 'Super Admin has all permissions',
     hasPermission: 'Has Permission',
+    noPermission: 'No Permission',
     viewUsers: 'View users',
     editUsers: 'Edit users',
     deleteUsers: 'Delete users',
@@ -514,8 +512,10 @@ export const en = {
     viewAnalytics: 'View analytics',
     viewCollections: 'View collections',
     manageCollections: 'Manage collections',
+    manageFavorites: 'Manage favorites',
     moderateContent: 'Moderate content',
     viewLogs: 'View logs',
+    exportData: 'Export data',
     manageSettings: 'Manage settings',
     manageAdmins: 'Admin Management',
     dashboardAnalytics: 'Dashboard & Analytics',
@@ -533,8 +533,7 @@ export const en = {
     saving: 'Saving...',
     saveSettings: 'Save Settings',
     systemNotifications: 'System Notifications',
-    systemNotificationsDescription:
-      'Send notifications to all users or specific users',
+    systemNotificationsDescription: 'Send notifications to all users or specific users',
     createNotification: 'Create New Notification',
   },
 
@@ -697,8 +696,7 @@ export const en = {
     activeSessions: 'Active Sessions',
     activeSessionsTitle: 'Active Sessions',
     signOutAllDevices: 'Sign out all other devices',
-    signOutAllDevicesConfirm:
-      'Are you sure you want to sign out all other devices?',
+    signOutAllDevicesConfirm: 'Are you sure you want to sign out all other devices?',
     signOutAllDevicesSuccess: 'All other devices have been signed out',
     signOutAllDevicesFailed: 'Failed to sign out all devices',
     signOutDevice: 'Sign out',
@@ -714,8 +712,7 @@ export const en = {
     lastActive: 'Last Active',
     processing: 'Processing...',
     loadSessionsFailed: 'Could not load active sessions list',
-    activeSessionsDescription:
-      'Manage devices that are logged into your account. You can sign out any device at any time.',
+    activeSessionsDescription: 'Manage devices that are logged into your account. You can sign out any device at any time.',
     // Profile Form additional
     badges: 'Badges',
     about: 'About',
