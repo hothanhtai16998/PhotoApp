@@ -345,7 +345,8 @@ export const vi = {
     unbanConfirm: 'Bạn có chắc chắn muốn bỏ cấm người dùng {username}?',
     unbanSuccess: 'Đã bỏ cấm người dùng {username}',
     unbanFailed: 'Lỗi khi bỏ cấm người dùng',
-    deleteUserConfirm: 'Bạn có chắc muốn xóa người dùng "{username}"? Hành động này không thể hoàn tác.',
+    deleteUserConfirm:
+      'Bạn có chắc muốn xóa người dùng "{username}"? Hành động này không thể hoàn tác.',
     // Images Management
     manageImages: 'Quản lý hình ảnh',
     searchImage: 'Nhập tên ảnh...',
@@ -388,7 +389,8 @@ export const vi = {
     manageRoles: 'Quyền quản trị Admin',
     addRole: '+ Thêm quyền Admin',
     deleteRole: 'Xóa quyền admin',
-    deleteRoleConfirm: 'Bạn có chắc muốn xóa quyền admin của tài khoản "{username}"?',
+    deleteRoleConfirm:
+      'Bạn có chắc muốn xóa quyền admin của tài khoản "{username}"?',
     role: 'Vai trò',
     permissionsLabel: 'Quyền hạn',
     grantedBy: 'Người cấp',
@@ -461,7 +463,8 @@ export const vi = {
     userOverview: 'Tổng quan người dùng',
     categoryDistribution: 'Phân bố theo danh mục',
     deleteImageConfirm: 'Bạn có muốn xoá ảnh "{title}" không?',
-    deleteCategoryConfirm: 'Bạn có muốn xoá danh mục "{name}" không? Chỉ xoá được nếu không có ảnh nào thuộc loại danh mục này.',
+    deleteCategoryConfirm:
+      'Bạn có muốn xoá danh mục "{name}" không? Chỉ xoá được nếu không có ảnh nào thuộc loại danh mục này.',
     searchCollections: 'Tìm kiếm bộ sưu tập...',
     noCollections: 'Không có bộ sưu tập nào',
     collectionName: 'Tên bộ sưu tập',
@@ -480,11 +483,9 @@ export const vi = {
     deleteCollectionSuccess: 'Xóa bộ sưu tập thành công',
     collectionMadePublic: 'Bộ sưu tập đã được công khai',
     collectionMadePrivate: 'Bộ sưu tập đã được ẩn',
-    role: 'Vai trò',
     note: 'Lưu ý',
     superAdminAllPermissions: 'Super Admin có tất cả quyền hạn',
     hasPermission: 'Có quyền',
-    noPermission: 'Không có quyền',
     viewUsers: 'Xem người dùng',
     editUsers: 'Chỉnh sửa người dùng',
     deleteUsers: 'Xóa người dùng',
@@ -506,10 +507,8 @@ export const vi = {
     viewAnalytics: 'Xem phân tích',
     viewCollections: 'Xem bộ sưu tập',
     manageCollections: 'Quản lý bộ sưu tập',
-    manageFavorites: 'Quản lý yêu thích',
     moderateContent: 'Kiểm duyệt nội dung',
     viewLogs: 'Xem nhật ký',
-    exportData: 'Xuất dữ liệu',
     manageSettings: 'Quản lý cài đặt',
     manageAdmins: 'Quản lý Admin',
     dashboardAnalytics: 'Dashboard & Phân tích',
@@ -527,7 +526,8 @@ export const vi = {
     saving: 'Đang lưu...',
     saveSettings: 'Lưu cài đặt',
     systemNotifications: 'Thông báo hệ thống',
-    systemNotificationsDescription: 'Gửi thông báo đến tất cả người dùng hoặc người dùng cụ thể',
+    systemNotificationsDescription:
+      'Gửi thông báo đến tất cả người dùng hoặc người dùng cụ thể',
     createNotification: 'Tạo thông báo mới',
   },
 
@@ -692,7 +692,8 @@ export const vi = {
     activeSessions: 'Phiên đăng nhập',
     activeSessionsTitle: 'Phiên đăng nhập',
     signOutAllDevices: 'Đăng xuất tất cả thiết bị khác',
-    signOutAllDevicesConfirm: 'Bạn có chắc chắn muốn đăng xuất tất cả thiết bị khác?',
+    signOutAllDevicesConfirm:
+      'Bạn có chắc chắn muốn đăng xuất tất cả thiết bị khác?',
     signOutAllDevicesSuccess: 'Đã đăng xuất tất cả thiết bị khác',
     signOutAllDevicesFailed: 'Không thể đăng xuất tất cả thiết bị',
     signOutDevice: 'Đăng xuất',
@@ -708,7 +709,8 @@ export const vi = {
     lastActive: 'Hoạt động lần cuối',
     processing: 'Đang xử lý...',
     loadSessionsFailed: 'Không thể tải danh sách phiên đăng nhập',
-    activeSessionsDescription: 'Quản lý các thiết bị đã đăng nhập vào tài khoản của bạn. Bạn có thể đăng xuất bất kỳ thiết bị nào bất cứ lúc nào.',
+    activeSessionsDescription:
+      'Quản lý các thiết bị đã đăng nhập vào tài khoản của bạn. Bạn có thể đăng xuất bất kỳ thiết bị nào bất cứ lúc nào.',
     // Profile Form additional
     badges: 'Huy hiệu',
     about: 'Giới thiệu',
