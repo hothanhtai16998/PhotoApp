@@ -140,6 +140,12 @@
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   position: relative;
   overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.upload-modal.drag-active {
+  border: 2px dashed #0066cc;
+  background: #f0f7ff;
 }
 
 /* Header */
@@ -208,13 +214,14 @@
 .upload-dropzone {
   border: 2px dashed #d1d1d1;
   border-radius: 8px;
-  padding: 80px 40px;
+  padding: 160px 80px;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s ease;
   background: #fafafa;
   margin-bottom: 32px;
   position: relative;
+  min-height: 640px;
 }
 
 .upload-dropzone:hover {
@@ -872,18 +879,57 @@
   font-weight: 600;
 }
 
-.upload-add-more-btn {
-  font-size: 14px;
+/* Add More Images Card - Unsplash Style */
+.upload-add-more-card {
+  border: 2px dashed #d1d1d1;
+  border-radius: 8px;
+  padding: 0;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #fafafa;
+  margin-bottom: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 440px;
+  height: 100px;
 }
 
-.upload-add-more-btn svg {
-  margin-right: 8px;
+.upload-add-more-card:hover {
+  border-color: #111;
+  background: #f5f5f5;
+}
+
+.upload-add-more-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #0066cc;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  transition: background 0.2s ease;
+}
+
+.upload-add-more-card:hover .upload-add-more-icon {
+  background: #0052a3;
+}
+
+.upload-add-more-text {
+  font-size: 14px;
+  color: #767676;
+  margin: 0;
+  font-weight: 500;
 }
 
 .upload-images-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 24px;
+  gap: 16px;
   margin-bottom: 24px;
   align-items: start;
 }
@@ -1036,8 +1082,22 @@
     align-items: flex-start;
   }
 
-  .upload-add-more-btn {
-    width: 100%;
-    justify-content: center;
+  .upload-add-more-card {
+    padding: 40px 20px;
+    min-height: 150px;
+  }
+
+  .upload-add-more-icon {
+    width: 56px;
+    height: 56px;
+  }
+
+  .upload-add-more-icon svg {
+    width: 28px;
+    height: 28px;
+  }
+
+  .upload-add-more-text {
+    font-size: 13px;
   }
 }

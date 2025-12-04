@@ -171,6 +171,11 @@ export const useUploadModalState = ({ preUploadAllImages }: UseUploadModalStateP
   }, [imagesData.length, preUploadAllImages]); // Only trigger when imagesData length changes (new files added)
 
   const handleDrag = useCallback((e: React.DragEvent) => {
+    // Only handle file drags, ignore other drag operations
+    if (!e.dataTransfer.types.includes('Files')) {
+      return;
+    }
+    
     e.preventDefault();
     e.stopPropagation();
     if (e.type === 'dragenter' || e.type === 'dragover') {
@@ -184,6 +189,11 @@ export const useUploadModalState = ({ preUploadAllImages }: UseUploadModalStateP
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
+
+    // Only handle file drops, ignore other drag operations
+    if (!e.dataTransfer.types.includes('Files')) {
+      return;
+    }
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const files = Array.from(e.dataTransfer.files);
@@ -204,7 +214,13 @@ export const useUploadModalState = ({ preUploadAllImages }: UseUploadModalStateP
       }
 
       if (validFiles.length > 0) {
-        setSelectedFiles(validFiles);
+        // Append new files to existing ones instead of replacing
+        setSelectedFiles(prev => {
+          // Check for duplicates by name and size
+          const existingFileKeys = new Set(prev.map(f => `${f.name}-${f.size}`));
+          const newFiles = validFiles.filter(f => !existingFileKeys.has(`${f.name}-${f.size}`));
+          return [...prev, ...newFiles];
+        });
         if (validFiles.length < files.length) {
           toast.warning(`${validFiles.length} of ${files.length} files were accepted`);
         }
@@ -232,11 +248,20 @@ export const useUploadModalState = ({ preUploadAllImages }: UseUploadModalStateP
       }
 
       if (validFiles.length > 0) {
-        setSelectedFiles(validFiles);
+        // Append new files to existing ones instead of replacing
+        setSelectedFiles(prev => {
+          // Check for duplicates by name and size
+          const existingFileKeys = new Set(prev.map(f => `${f.name}-${f.size}`));
+          const newFiles = validFiles.filter(f => !existingFileKeys.has(`${f.name}-${f.size}`));
+          return [...prev, ...newFiles];
+        });
         if (validFiles.length < files.length) {
           toast.warning(`${validFiles.length} of ${files.length} files were accepted`);
         }
       }
+      
+      // Reset the input so the same file can be selected again if needed
+      e.target.value = '';
     }
   }, [validateFile]);
 

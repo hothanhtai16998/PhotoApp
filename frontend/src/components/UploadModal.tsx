@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useUserStore } from '@/stores/useUserStore';
 import { useNavigate } from 'react-router-dom';
-import { X, Upload, ArrowRight } from 'lucide-react';
+import { X, Upload, ArrowRight, Plus } from 'lucide-react';
 import { useImageUpload } from './upload/hooks/useImageUpload';
 import { useUploadModalState } from './upload/hooks/useUploadModalState';
 import { UploadProgress } from './upload/UploadProgress';
@@ -299,7 +299,22 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
     if (selectedFiles.length === 0) {
         return (
             <div className="upload-modal-overlay" onClick={handleCancel}>
-                <div className="upload-modal" onClick={(e) => e.stopPropagation()}>
+                <div 
+                    className={`upload-modal ${dragActive ? 'drag-active' : ''}`}
+                    onClick={(e) => e.stopPropagation()}
+                    onDragEnter={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDragOver={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleDrag(e);
+                    }}
+                    onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleDrop(e);
+                    }}
+                >
                     {/* Header */}
                     <div className="upload-modal-header">
                         <h2 className="upload-modal-title">{t('upload.title')}</h2>
@@ -385,7 +400,22 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
     // Form View (when image is selected)
     return (
         <div className="upload-modal-overlay" onClick={handleCancel}>
-            <div className="upload-modal" onClick={(e) => e.stopPropagation()}>
+            <div 
+                className={`upload-modal ${dragActive ? 'drag-active' : ''}`}
+                onClick={(e) => e.stopPropagation()}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDrag(e);
+                }}
+                onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDrop(e);
+                }}
+            >
                 {/* Header */}
                 <div className="upload-modal-header">
                     <h2 className="upload-modal-title">{t('upload.title')}</h2>
@@ -396,16 +426,17 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
 
                 {/* Content - Scrollable container with all images and their forms */}
                 <div className="upload-modal-content upload-modal-content--scrollable">
-                    {/* Header with add more button */}
+                    {/* Header */}
                     <div className="upload-images-header">
                         <h3>
                             {t('upload.selected', { count: imagesData.length })}
                         </h3>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="upload-add-more-btn"
+                    </div>
+
+                    {/* Add More Images Card - Unsplash Style */}
+                    {imagesData.length < 10 && (
+                        <div 
+                            className="upload-add-more-card"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 const input = document.createElement('input');
@@ -423,15 +454,26 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                 input.click();
                             }}
                         >
-                            <Upload size={16} />
-                            {t('upload.addMore')}
-                        </Button>
-                    </div>
+                            <div className="upload-add-more-icon">
+                                <Plus size={24} />
+                            </div>
+                            <p className="upload-add-more-text">
+                                {t('upload.addMore') || 'Add more'}
+                            </p>
+                        </div>
+                    )}
 
                     {/* Grid of images with individual forms */}
                     <div className="upload-images-grid">
                         {imagesData.map((imgData, index) => (
-                            <div key={index} className="upload-image-card">
+                            <div 
+                                key={index} 
+                                className="upload-image-card"
+                                draggable={false}
+                                onDragEnter={(e) => e.stopPropagation()}
+                                onDragOver={(e) => e.stopPropagation()}
+                                onDragLeave={(e) => e.stopPropagation()}
+                            >
                                 {/* Image Preview */}
                                 <UploadPreview
                                     imageData={imgData}
