@@ -22,7 +22,8 @@ function handler(event) {
         'http://localhost:3000',
         'http://localhost:5173',
         'https://uploadanh.cloud',
-        'https://www.uploadanh.cloud'
+        'https://www.uploadanh.cloud',
+        'https://photoapp-pgq4.onrender.com'
     ];
     
     // Check if origin is in allowed list, or allow all in development
