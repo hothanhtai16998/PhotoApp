@@ -10,7 +10,7 @@ function extractFileName(response: { headers: Record<string, string> }, image: I
     const contentDisposition = response.headers['content-disposition'];
     if (contentDisposition) {
         const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
-        if (fileNameMatch) {
+        if (fileNameMatch && fileNameMatch[1]) {
             return fileNameMatch[1];
         }
     }
@@ -56,7 +56,7 @@ export async function downloadImage(image: Image, size?: DownloadSize): Promise<
     });
     const blobUrl = URL.createObjectURL(blob);
 
-    const fileName = extractFileName(response, image);
+    const fileName = extractFileName(response as { headers: Record<string, string> }, image);
     triggerDownload(blobUrl, fileName);
 
     // Clean up blob URL

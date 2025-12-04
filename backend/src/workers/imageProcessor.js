@@ -30,17 +30,44 @@ export async function processUploadJob(job) {
         const downloadMs = Date.now() - downloadStart;
         log(`✅ Downloaded ${(buffer.length / 1024).toFixed(2)}KB in ${downloadMs}ms`);
 
+        // Detect mimetype from file extension first (more reliable than S3 ContentType)
+        // S3 ContentType can be incorrect, especially for GIFs
+        const ext = uploadKey.split('.').pop()?.toLowerCase();
+        const extToMime = {
+            'gif': 'image/gif',
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'png': 'image/png',
+            'webp': 'image/webp',
+            'svg': 'image/svg+xml',
+            'bmp': 'image/bmp',
+            'ico': 'image/x-icon',
+            'mp4': 'video/mp4',
+            'webm': 'video/webm',
+        };
+        let mimetype = extToMime[ext] || rawStream.ContentType || null;
+        
+        // Log both detected values for debugging
+        const fileSizeMB = (buffer.length / (1024 * 1024)).toFixed(2);
+        log(`📋 File: ${uploadKey}, Size: ${fileSizeMB}MB, Extension: ${ext || 'none'}, S3 ContentType: ${rawStream.ContentType || 'none'}, Final mimetype: ${mimetype || 'unknown'}`);
+
         // === Extract metadata ===
         log(`🔍 Extracting metadata...`);
         const metadataStart = Date.now();
-        const { dominantColors, exifData } = await extractMetadata(buffer);
+        // Skip metadata extraction for videos and large GIFs (will be converted to video)
+        const isVideoFile = mimetype?.startsWith('video/');
+        const isLargeGif = mimetype === 'image/gif' && (buffer.length / (1024 * 1024)) > 2;
+        const { dominantColors, exifData } = (isVideoFile || isLargeGif) 
+            ? { dominantColors: [], exifData: {} }
+            : await extractMetadata(buffer);
         const metadataMs = Date.now() - metadataStart;
         log(`✅ Metadata extracted in ${metadataMs}ms`);
 
         // === Upload processed sizes ===
         log(`📤 Uploading resized images to S3...`);
         const uploadStart = Date.now();
-        const uploadResult = await uploadImageWithSizes(buffer, 'photo-app-images', uploadKey.replace(/[\/\\]/g, '-'));
+        const filename = uploadKey.replace(/[\/\\]/g, '-').replace(/^photo-app-raw-/, '').replace(/\.(gif|jpg|jpeg|png|webp|mp4|webm)$/i, '');
+        const uploadResult = await uploadImageWithSizes(buffer, 'photo-app-images', filename, mimetype);
         const uploadMs = Date.now() - uploadStart;
         log(`✅ Uploaded to S3 in ${uploadMs}ms`);
 
@@ -50,6 +77,8 @@ export async function processUploadJob(job) {
         const parsedTags = parseTags(tags);
         const parsedCoords = validateCoordinates(coordinates);
 
+        const isVideo = uploadResult.isVideo || mimetype?.startsWith('video/') || false;
+        
         const newImage = await Image.create({
             imageUrl: uploadResult.imageUrl,
             thumbnailUrl: uploadResult.thumbnailUrl,
@@ -72,6 +101,13 @@ export async function processUploadJob(job) {
             tags: parsedTags?.length ? parsedTags : undefined,
             moderationStatus: isAdmin ? 'approved' : 'pending',
             isModerated: !!isAdmin,
+            // Video fields
+            isVideo: isVideo,
+            ...(isVideo && uploadResult.videoUrl ? {
+                videoUrl: uploadResult.videoUrl,
+                videoThumbnail: uploadResult.videoThumbnail || uploadResult.thumbnailUrl,
+                videoDuration: uploadResult.videoDuration || undefined,
+            } : {}),
             ...(isAdmin ? { moderatedAt: new Date(), moderatedBy: userId } : {}),
         });
         const dbMs = Date.now() - dbStart;

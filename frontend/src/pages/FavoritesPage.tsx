@@ -1,7 +1,5 @@
 import { useEffect, useCallback, useMemo, useRef, lazy, Suspense } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useAuthStore } from "@/stores/useAuthStore";
-import { useUserStore } from "@/stores/useUserStore";
 import { useFavoriteStore } from "@/stores/useFavoriteStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import Header from "@/components/Header";
@@ -21,8 +19,6 @@ import "./FavoritesPage.css";
 const ImageModal = lazy(() => import("@/components/ImageModal"));
 
 function FavoritesPage() {
-    const { accessToken } = useAuthStore();
-    const { user } = useUserStore();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
 

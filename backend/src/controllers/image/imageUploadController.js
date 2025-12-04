@@ -314,10 +314,14 @@ export const uploadImage = asyncHandler(async (req, res) => {
     try {
         // Generate secure filename
         const filename = `image-${Date.now()}-${crypto.randomBytes(8).toString('hex')}`;
+        
+        const fileSizeMB = req.file.buffer.length / (1024 * 1024);
+        logger.info(`[UPLOAD CONTROLLER] File received: mimetype=${req.file.mimetype}, size=${fileSizeMB.toFixed(2)}MB, isVideo=${isVideo}`);
 
         // Upload video or image to S3
         // Note: Large GIFs (>2MB) will be automatically converted to video by uploadImageWithSizes
         if (isVideo) {
+            logger.info(`[UPLOAD CONTROLLER] Uploading as video...`);
             uploadResult = await uploadVideo(
                 req.file.buffer,
                 'photo-app-images',
@@ -325,6 +329,7 @@ export const uploadImage = asyncHandler(async (req, res) => {
                 req.file.mimetype
             );
         } else {
+            logger.info(`[UPLOAD CONTROLLER] Uploading as image (will check for GIF conversion)...`);
             uploadResult = await uploadImageWithSizes(
                 req.file.buffer,
                 'photo-app-images',
@@ -332,6 +337,8 @@ export const uploadImage = asyncHandler(async (req, res) => {
                 req.file.mimetype
             );
         }
+        
+        logger.info(`[UPLOAD CONTROLLER] Upload result: isVideo=${uploadResult.isVideo || false}`);
 
         // Check if GIF was converted to video
         const wasConvertedToVideo = uploadResult.isVideo || false;

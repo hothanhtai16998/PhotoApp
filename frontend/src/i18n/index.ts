@@ -23,7 +23,7 @@ import { vi, en, type TranslationKeys } from './locales';
 export type Locale = 'vi' | 'en';
 
 // Translation dictionaries
-const translations: Record<Locale, TranslationKeys> = {
+const translations: Record<Locale, TranslationKeys | typeof en> = {
     vi,
     en,
 };

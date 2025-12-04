@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { Image } from '@/types/image';
 import { imageService } from '@/services/imageService';
-import { appConfig } from '@/config/appConfig';
 import { searchConfig } from '@/config/searchConfig';
 import type { SearchFiltersType } from '@/components/SearchBar/hooks/useSearchFilters';
 import { applyImageFilters } from '@/utils/imageFilters';

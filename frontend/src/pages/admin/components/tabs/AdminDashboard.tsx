@@ -2,11 +2,10 @@ import { adminService, type DashboardStats } from '@/services/adminService';
 import { useFormattedDate } from '@/hooks/useFormattedDate';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useState } from 'react';
-import { Download, Users, Image as ImageIcon, Tag, Plus, Search } from 'lucide-react';
+import { Download, Users, Image as ImageIcon, Tag, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
 import { t } from '@/i18n';
 
 interface AdminDashboardProps {
@@ -22,7 +21,6 @@ function DateCell({ date }: { date: string }) {
 export function AdminDashboard({ stats, loading }: AdminDashboardProps) {
     const { hasPermission, isSuperAdmin } = usePermissions();
     const [isExporting, setIsExporting] = useState(false);
-    const navigate = useNavigate();
 
     const handleExportData = async () => {
         if (!isSuperAdmin() && !hasPermission('exportData')) {

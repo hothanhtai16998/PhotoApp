@@ -60,6 +60,9 @@ export const uploadToS3 = async (buffer, key, contentType) => {
  */
 export async function uploadImageWithSizes(buffer, bucket, filename, mimetype = null) {
 	try {
+		const fileSizeMB = buffer.length / (1024 * 1024);
+		logger.info(`[UPLOAD] Processing file: ${filename}, mimetype: ${mimetype || 'unknown'}, size: ${fileSizeMB.toFixed(2)}MB`);
+		
 		// Detect image format from buffer or use provided mimetype
 		let imageFormat = null;
 		let contentType = 'image/webp';
@@ -79,16 +82,19 @@ export async function uploadImageWithSizes(buffer, bucket, filename, mimetype = 
 			};
 			imageFormat = mimeToFormat[mimetype.toLowerCase()];
 			contentType = mimetype;
+			logger.info(`[UPLOAD] Detected format from mimetype: ${imageFormat}`);
 		}
 		
+		// For GIFs, skip Sharp processing (it can be slow for large GIFs)
 		// If not detected from mimetype, try to detect from buffer
-		if (!imageFormat) {
+		if (!imageFormat && mimetype && !mimetype.toLowerCase().includes('gif')) {
 			try {
 				const metadata = await sharp(buffer).metadata();
 				imageFormat = metadata.format;
+				logger.info(`[UPLOAD] Detected format from buffer: ${imageFormat}`);
 			} catch (err) {
 				// If Sharp can't read it, it might be a format we need to handle specially
-				logger.warn('Could not detect image format from buffer:', err?.message);
+				logger.warn('[UPLOAD] Could not detect image format from buffer:', err?.message);
 			}
 		}
 		
@@ -97,8 +103,11 @@ export async function uploadImageWithSizes(buffer, bucket, filename, mimetype = 
 			const gifSizeMB = buffer.length / (1024 * 1024);
 			logger.info(`[GIF] Detected GIF file: ${gifSizeMB.toFixed(2)}MB`);
 			
+			// Check if GIF-to-video conversion is enabled (skip on free tier hosting)
+			const enableGifConversion = process.env.ENABLE_GIF_TO_VIDEO !== 'false';
+			
 			// Convert large GIFs (>2MB) to video for better performance
-			if (gifSizeMB > 2) {
+			if (gifSizeMB > 2 && enableGifConversion) {
 				logger.info(`[GIF] GIF is ${gifSizeMB.toFixed(2)}MB, attempting conversion to video...`);
 				try {
 					const { convertGifToVideo } = await import('../utils/videoConverter.js');
@@ -130,6 +139,8 @@ export async function uploadImageWithSizes(buffer, bucket, filename, mimetype = 
 					logger.error(`[GIF] GIF to video conversion failed, uploading as GIF:`, error);
 					// Fall through to upload as GIF
 				}
+			} else if (gifSizeMB > 2 && !enableGifConversion) {
+				logger.info(`[GIF] GIF is ${gifSizeMB.toFixed(2)}MB, but conversion is disabled (ENABLE_GIF_TO_VIDEO=false). Uploading as GIF.`);
 			} else {
 				logger.info(`[GIF] GIF is ${gifSizeMB.toFixed(2)}MB, keeping as GIF (no conversion needed)`);
 			}

@@ -57,9 +57,9 @@ export default function NotificationBell() {
 			case 'collection_shared':
 				return t('notifications.collectionShared', { actor: actorName, collection: collectionName });
 			case 'upload_completed':
-				return t('notifications.uploadCompleted', { image: notification.image?.imageTitle || notification.metadata?.imageTitle || t('notifications.yourPhoto') });
+				return t('notifications.uploadCompleted', { image: String(notification.image?.imageTitle || notification.metadata?.imageTitle || t('notifications.yourPhoto')) });
 			case 'upload_failed':
-				return t('notifications.uploadFailed', { image: notification.metadata?.imageTitle || t('notifications.yourPhoto'), error: notification.metadata?.error || t('notifications.unknownError') });
+				return t('notifications.uploadFailed', { image: String(notification.metadata?.imageTitle || t('notifications.yourPhoto')), error: String(notification.metadata?.error || t('notifications.unknownError')) });
 			case 'upload_processing':
 				return t('notifications.uploadProcessing');
 			case 'bulk_upload_completed': {
@@ -157,27 +157,27 @@ export default function NotificationBell() {
 				return t('notifications.passwordChanged', { ip: changeIp });
 			}
 			case 'email_changed': {
-				const oldEmail = notification.metadata?.oldEmail || 'old@email.com';
-				const newEmail = notification.metadata?.newEmail || 'new@email.com';
+				const oldEmail = String(notification.metadata?.oldEmail || 'old@email.com');
+				const newEmail = String(notification.metadata?.newEmail || 'new@email.com');
 				return t('notifications.emailChanged', { oldEmail, newEmail });
 			}
 			case 'two_factor_enabled':
 				return t('notifications.twoFactorEnabled');
 			case 'system_announcement': {
-				const announcementTitle = notification.metadata?.title || t('notifications.title');
-				return t('notifications.systemAnnouncement', { title: announcementTitle, message: notification.metadata?.message || t('notifications.newNotification') });
+				const announcementTitle = String(notification.metadata?.title || t('notifications.title'));
+				return t('notifications.systemAnnouncement', { title: announcementTitle, message: String(notification.metadata?.message || t('notifications.newNotification')) });
 			}
 			case 'feature_update': {
-				const featureTitle = notification.metadata?.title || t('notifications.title');
-				return t('notifications.featureUpdate', { title: featureTitle, message: notification.metadata?.message || t('notifications.newNotification') });
+				const featureTitle = String(notification.metadata?.title || t('notifications.title'));
+				return t('notifications.featureUpdate', { title: featureTitle, message: String(notification.metadata?.message || t('notifications.newNotification')) });
 			}
 			case 'maintenance_scheduled': {
-				const maintenanceTitle = notification.metadata?.title || t('notifications.title');
-				return t('notifications.maintenanceScheduled', { title: maintenanceTitle, message: notification.metadata?.message || t('notifications.newNotification') });
+				const maintenanceTitle = String(notification.metadata?.title || t('notifications.title'));
+				return t('notifications.maintenanceScheduled', { title: maintenanceTitle, message: String(notification.metadata?.message || t('notifications.newNotification')) });
 			}
 			case 'terms_updated': {
-				const termsTitle = notification.metadata?.title || t('notifications.title');
-				return t('notifications.termsUpdated', { title: termsTitle, message: notification.metadata?.message || t('notifications.newNotification') });
+				const termsTitle = String(notification.metadata?.title || t('notifications.title'));
+				return t('notifications.termsUpdated', { title: termsTitle, message: String(notification.metadata?.message || t('notifications.newNotification')) });
 			}
 			case 'image_reported': {
 				const imageReportReason = notification.metadata?.reason || t('notifications.unknownReason');

@@ -271,7 +271,10 @@ export const UserAnalyticsDashboard = () => {
                         const year = date.getFullYear();
                         return `${day}/${month}/${year}`;
                       }}
-                      formatter={(value) => [t('profile.viewedTimes', { value }), '']}
+                      formatter={(value) => {
+                        const result = t('profile.viewedTimes', { value: Number(value) });
+                        return result;
+                      }}
                     />
                   } 
                 />
@@ -363,7 +366,10 @@ export const UserAnalyticsDashboard = () => {
                         const year = date.getFullYear();
                         return `${day}/${month}/${year}`;
                       }}
-                      formatter={(value) => [t('profile.downloadedTimes', { value }), '']}
+                      formatter={(value) => {
+                        const result = t('profile.downloadedTimes', { value: Number(value) });
+                        return result;
+                      }}
                     />
                   } 
                 />

@@ -104,6 +104,8 @@ function App() {
         };
       }
     }
+    // Return undefined if no cleanup needed
+    return undefined;
   }, [settings.maintenanceMode, location.pathname]);
   
   // When navigating to a photo from the grid, keep the previous

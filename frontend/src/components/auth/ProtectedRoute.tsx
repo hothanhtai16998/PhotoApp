@@ -3,7 +3,6 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { useUserStore } from "@/stores/useUserStore";
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { t } from "@/i18n";
 
 const ProtectedRoute = () => {
     const { isInitializing, accessToken } = useAuthStore();

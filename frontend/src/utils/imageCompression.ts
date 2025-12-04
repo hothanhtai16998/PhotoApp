@@ -17,6 +17,19 @@ export async function compressImage(
 	file: File,
 	options: CompressionOptions = {}
 ): Promise<File> {
+	// Skip compression for GIFs - they should be uploaded as-is
+	// Large GIFs (>2MB) will be converted to video on the backend
+	if (file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif')) {
+		console.log(`[COMPRESSION] Skipping compression for GIF: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+		return file;
+	}
+
+	// Skip compression for videos - they should be uploaded as-is
+	if (file.type.startsWith('video/')) {
+		console.log(`[COMPRESSION] Skipping compression for video: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+		return file;
+	}
+
 	const defaultOptions: CompressionOptions = {
 		maxSizeMB: 4, // Maximum file size in MB (4MB for better quality in photo apps)
 		maxWidthOrHeight: 2560, // Maximum width or height (2K resolution for high-DPI displays)

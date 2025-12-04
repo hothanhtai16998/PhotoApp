@@ -65,7 +65,7 @@ export function QuickStatsWidget({ stats, loading }: QuickStatsWidgetProps) {
                     <div className="quick-stat-item">
                         <Folder size={18} />
                         <div>
-                            <div className="quick-stat-value">{stats.stats.totalCategories}</div>
+                            <div className="quick-stat-value">{stats.stats.categoryStats.length}</div>
                             <div className="quick-stat-label">{t('admin.totalCategories')}</div>
                         </div>
                     </div>

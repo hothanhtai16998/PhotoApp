@@ -36,6 +36,13 @@ export async function convertGifToVideo(gifBuffer, filename, bucket = 'photo-app
             return null;
         }
 
+        // Skip conversion for very large GIFs (>50MB) to prevent resource exhaustion
+        // These are likely too large to convert efficiently
+        if (gifSizeMB > 50) {
+            logger.warn(`[VIDEO CONVERTER] GIF is ${gifSizeMB.toFixed(2)}MB, too large to convert (max 50MB). Uploading as GIF.`);
+            return null;
+        }
+
         // Create temporary files
         const tempDir = tmpdir();
         const gifPath = join(tempDir, `${filename}.gif`);
@@ -58,9 +65,16 @@ export async function convertGifToVideo(gifBuffer, filename, bucket = 'photo-app
             // -pix_fmt yuv420p: ensure compatibility
             // -movflags +faststart: enable streaming
             logger.info(`[VIDEO CONVERTER] Running ffmpeg conversion...`);
-            await execAsync(
-                `ffmpeg -y -i "${gifPath}" -vf "scale='min(1080,iw)':'min(1080,ih)':force_original_aspect_ratio=decrease,fps=15" -c:v libx264 -preset medium -crf 23 -pix_fmt yuv420p -movflags +faststart "${mp4Path}"`
-            );
+            // Add timeout: 5 minutes max for conversion (prevents hanging on very large/complex GIFs)
+            const conversionTimeout = 5 * 60 * 1000; // 5 minutes
+            await Promise.race([
+                execAsync(
+                    `ffmpeg -y -i "${gifPath}" -vf "scale='min(1080,iw)':'min(1080,ih)':force_original_aspect_ratio=decrease,fps=15" -c:v libx264 -preset medium -crf 23 -pix_fmt yuv420p -movflags +faststart "${mp4Path}"`
+                ),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Conversion timeout after 5 minutes')), conversionTimeout)
+                )
+            ]);
             logger.info(`[VIDEO CONVERTER] Conversion complete, generating thumbnail...`);
 
             // Generate thumbnail from first frame
