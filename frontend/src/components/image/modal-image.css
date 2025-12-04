@@ -12,6 +12,8 @@
   margin: 0;
   overflow: hidden;
   will-change: auto;
+  /* Prevent layout shift */
+  contain: layout;
 }
 
 .modal-image-wrapper {
@@ -19,6 +21,10 @@
   align-items: center;
   justify-content: center;
   will-change: transform;
+  /* Constrain wrapper to prevent image "blow up" */
+  max-width: 100%;
+  max-height: calc(100vh - 240px);
+  width: 100%;
 }
 
 .modal-image {
@@ -28,20 +34,27 @@
   height: auto;
   object-fit: contain;
   border-radius: 4px;
-  transition: opacity 0.25s ease-out, background-color 0.25s ease-out;
+  /* Placeholder background is always visible */
   background-color: #f0f0f0;
-  will-change: opacity;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  /* Prevent layout shift - maintain aspect ratio from start */
+  contain: layout;
+  /* Keep image visible - let browser handle image swap naturally */
+  opacity: 1 !important;
+  /* NO transition */
+  transition: none;
 }
 
 .modal-image.loading {
-  opacity: 0.85;
-  background-color: #e8e8e8;
+  /* Even in loading state, keep visible to prevent flash */
+  opacity: 1 !important;
+  background-color: #f0f0f0;
 }
 
 .modal-image.loaded {
-  opacity: 1;
+  /* Always visible */
+  opacity: 1 !important;
   background-color: transparent;
 }
 
@@ -190,4 +203,3 @@
     display: block;
   }
 }
-

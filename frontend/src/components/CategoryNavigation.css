@@ -23,6 +23,17 @@
   transform: translateZ(0); /* Force GPU acceleration */
 }
 
+/* Hide category navigation when modal is open to prevent layout shift */
+.category-navigation-container.modal-open {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  /* Keep position to prevent layout shift */
+  position: fixed;
+  /* Smooth transition */
+  transition: opacity 0.15s ease-out, visibility 0.15s ease-out;
+}
+
 .category-navigation-wrapper {
   margin: 0 auto;
   padding: 0 20px;

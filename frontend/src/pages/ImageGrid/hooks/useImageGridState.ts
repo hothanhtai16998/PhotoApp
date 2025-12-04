@@ -191,8 +191,26 @@ export function useImageGridState({ category }: UseImageGridStateProps) {
         newMap.set(imageId, imageType);
         return newMap;
       });
+
+      // Preload modal image URL (regularUrl) when grid image loads
+      // This helps prevent flashing when opening the modal
+      const image = images.find(img => img._id === imageId);
+      if (image) {
+        const modalImageUrl = image.regularUrl || image.imageUrl || image.smallUrl;
+        if (modalImageUrl) {
+          // Preload the modal image in the background
+          const preloadImg = new Image();
+          preloadImg.src = modalImageUrl;
+          preloadImg.onload = () => {
+            // Add to modal cache to prevent flashing
+            if (typeof window !== 'undefined' && (window as any).modalImageCache) {
+              (window as any).modalImageCache.add(modalImageUrl);
+            }
+          };
+        }
+      }
     },
-    []
+    [images]
   );
 
   return {

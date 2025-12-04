@@ -9,7 +9,11 @@ interface UseImagePreloadReturn {
 }
 
 // Global cache to track loaded images across modal navigation
+// Also accessible via window for cross-component access
 const modalImageCache = new Set<string>();
+if (typeof window !== 'undefined') {
+  (window as any).modalImageCache = modalImageCache;
+}
 
 /**
  * Check if an image URL is already loaded in browser cache
@@ -55,6 +59,7 @@ const isImageCached = (url: string): Promise<boolean> => {
 /**
  * Synchronously check if an image is likely cached
  * This is used for initial state to prevent flashing
+ * Returns true optimistically to prevent flashing, then we verify asynchronously
  */
 const checkImageCacheSync = (url: string): boolean => {
   // Check our cache first (most reliable)
@@ -62,26 +67,20 @@ const checkImageCacheSync = (url: string): boolean => {
     return true;
   }
 
-  // Try to check browser cache synchronously
-  // Note: This is a best-effort check and may not be 100% accurate
-  // but it helps prevent flashing for most cached images
-  try {
-    const testImg = new Image();
-    // Don't set crossOrigin for synchronous check to avoid CORS issues
-    testImg.src = url;
-    // If image is already complete, it's likely cached
-    // We check naturalWidth to ensure it's actually an image
-    // Note: complete might be true immediately if cached, or might need a moment
-    // We check both complete and naturalWidth > 0
-    if (testImg.complete && testImg.naturalWidth > 0) {
-      // Add to our cache for future checks
-      modalImageCache.add(url);
-      return true;
-    }
-    return false;
-  } catch {
-    return false;
+  // Try to check if the image is in browser cache synchronously
+  // Create a test image element
+  const img = new Image();
+  img.src = url;
+
+  // If image loads synchronously (complete = true immediately), it's cached
+  if (img.complete && img.naturalWidth > 0) {
+    modalImageCache.add(url);
+    return true;
   }
+
+  // If not immediately available, assume not cached
+  // Better to show loading state briefly than flash on cached images
+  return false;
 };
 
 /**
@@ -92,7 +91,7 @@ const checkImageCacheSync = (url: string): boolean => {
 export const useImagePreload = (image: Image): UseImagePreloadReturn => {
   // Calculate image URLs once for initial state
   const fullImage = image.regularUrl || image.imageUrl || image.smallUrl || '';
-  
+
   // Initialize isLoaded based on synchronous cache check to prevent flashing
   // This ensures cached images start with loaded=true from the first render
   const [isLoaded, setIsLoaded] = useState(() => {
@@ -110,6 +109,7 @@ export const useImagePreload = (image: Image): UseImagePreloadReturn => {
   // This is intentional - we need synchronous updates to prevent visual flashing
   useLayoutEffect(() => {
     const imageId = image._id;
+    const imageChanged = previousImageIdRef.current !== imageId;
     previousImageIdRef.current = imageId;
     currentImageIdRef.current = imageId;
 
@@ -131,6 +131,22 @@ export const useImagePreload = (image: Image): UseImagePreloadReturn => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPlaceholderSrc(placeholder);
     setImageSrc(fullImage);
+
+    // CRITICAL: Only update isLoaded state if image is NOT cached
+    // This prevents the flash from true -> false -> true for cached images
+    if (imageChanged && fullImage) {
+      const isCached = checkImageCacheSync(fullImage);
+      // Only set isLoaded to false if image is NOT cached
+      // If cached, keep isLoaded as true to prevent any state changes
+      if (!isCached) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setIsLoaded(false);
+      } else {
+        // Image is cached, ensure isLoaded is true
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setIsLoaded(true);
+      }
+    }
   }, [
     image._id,
     image.thumbnailUrl,
@@ -155,40 +171,52 @@ export const useImagePreload = (image: Image): UseImagePreloadReturn => {
     const fullImage =
       image.regularUrl || image.imageUrl || image.smallUrl || '';
 
-    // Check cache before resetting isLoaded to prevent flashing
+    // Verify cache status asynchronously
+    // We start optimistically (isLoaded = true) to prevent flashing
+    // Then verify if it's actually cached
     if (fullImage) {
-      // If image changed, check cache again (in case it wasn't cached initially)
       if (imageChanged) {
-        // Quick synchronous check - if image is already complete, it's cached
+        // Quick check - if image is in our cache, keep isLoaded = true
+        if (modalImageCache.has(fullImage)) {
+          // Already in cache, keep loaded state
+          return;
+        }
+
+        // Check if image is in browser cache (async, but fast)
+        // Use a short timeout to detect if image loads quickly (cached)
         const testImg = new Image();
         testImg.crossOrigin = 'anonymous';
+        let resolved = false;
+
+        const checkComplete = () => {
+          if (resolved || currentImageIdRef.current !== imageId) return;
+          if (testImg.complete && testImg.naturalWidth > 0) {
+            resolved = true;
+            modalImageCache.add(fullImage);
+            // Image is cached, keep isLoaded = true
+            return;
+          }
+          // If not complete after a short delay, it might not be cached
+          // But we keep isLoaded = true optimistically to prevent flash
+          // The actual image onLoad will handle the real loading state
+        };
+
+        testImg.onload = () => {
+          if (!resolved && currentImageIdRef.current === imageId) {
+            resolved = true;
+            modalImageCache.add(fullImage);
+            // Image loaded quickly, it was cached
+          }
+        };
+
         testImg.src = fullImage;
 
-        if (testImg.complete && testImg.naturalWidth > 0) {
-          // Image is already loaded (browser cache)
-          modalImageCache.add(fullImage);
-          // Set state synchronously to prevent flashing - this is intentional
-          // Note: This triggers a linter warning, but it's necessary to prevent flashing
-          // eslint-disable-next-line react-hooks/set-state-in-effect
-          setIsLoaded(true);
-        } else {
-          // Check cache asynchronously
-          isImageCached(fullImage).then((cached) => {
-            if (currentImageIdRef.current === imageId) {
-              if (cached) {
-                setIsLoaded(true);
-              } else {
-                // Only reset if image actually changed and not cached
-                setIsLoaded(false);
-              }
-            }
-          });
-        }
+        // Check immediately (might be cached)
+        setTimeout(checkComplete, 0);
+        // Also check after a very short delay
+        setTimeout(checkComplete, 10);
       }
-      // If image didn't change and isLoaded is already true, keep it true
-      // (don't reset for same image)
-    } else if (imageChanged) {
-      setIsLoaded(false);
+      // If image didn't change, keep current isLoaded state
     }
 
     // If we have a full-size imageUrl and it's different from regularUrl, preload it

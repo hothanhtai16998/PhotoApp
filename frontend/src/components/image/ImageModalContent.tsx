@@ -1,4 +1,5 @@
 import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import type { Image } from '@/types/image';
 import type { UseImageZoomReturn } from './hooks/useImageZoom';
 
@@ -40,6 +41,26 @@ export const ImageModalContent = ({
     handleTouchEnd,
   } = zoomProps;
 
+  // Track previous image to detect changes
+  const prevImageIdRef = useRef<string | null>(null);
+
+  // Update image src manually without re-rendering to prevent flash
+  useEffect(() => {
+    const img = zoomImageRef.current;
+    if (!img) return;
+
+    const imageChanged = prevImageIdRef.current !== image._id;
+    if (!imageChanged) return;
+
+    prevImageIdRef.current = image._id;
+
+    // Update src without causing React re-render
+    const newSrc = modalImageSrc ?? image.regularUrl ?? image.smallUrl ?? image.imageUrl;
+    if (img.src !== newSrc) {
+      img.src = newSrc;
+    }
+  }, [image._id, modalImageSrc, image.regularUrl, image.smallUrl, image.imageUrl, zoomImageRef]);
+
   return (
     <div
       className="modal-main-image-container"
@@ -63,7 +84,7 @@ export const ImageModalContent = ({
         style={{
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
           transformOrigin: 'center center',
-          transition: zoom === 1 ? 'transform 0.3s ease' : 'none',
+          transition: 'none',
         }}
       >
         {image.imageAvifUrl || image.regularAvifUrl || image.smallAvifUrl || image.thumbnailAvifUrl ? (
@@ -91,7 +112,6 @@ export const ImageModalContent = ({
             {/* Fallback img element with blur-up technique */}
             <img
               ref={zoomImageRef}
-              src={modalImageSrc ?? image.regularUrl ?? image.smallUrl ?? image.imageUrl}
               alt={image.imageTitle ?? 'Photo'}
               style={{
                 backgroundImage: modalPlaceholderSrc
@@ -99,7 +119,11 @@ export const ImageModalContent = ({
                   : undefined,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                backgroundColor: '#f0f0f0', // Fallback color while placeholder loads
+                backgroundColor: '#f0f0f0',
+                maxWidth: '100%',
+                maxHeight: 'calc(100vh - 240px)',
+                width: 'auto',
+                height: 'auto',
               }}
               className={`modal-image ${isModalImageLoaded ? 'loaded' : 'loading'} ${(imageTypes.get(image._id) ?? 'landscape') === 'landscape' ? 'landscape' : 'portrait'}`}
               loading="eager"
@@ -124,7 +148,6 @@ export const ImageModalContent = ({
         ) : (
           <img
             ref={zoomImageRef}
-            src={modalImageSrc || image.regularUrl || image.smallUrl || image.imageUrl}
             srcSet={
               image.thumbnailUrl && image.smallUrl && image.regularUrl && image.imageUrl
                 ? `${image.thumbnailUrl} 200w, ${image.smallUrl} 800w, ${image.regularUrl} 1080w, ${image.imageUrl} 1920w`
@@ -138,7 +161,11 @@ export const ImageModalContent = ({
                 : undefined,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
-              backgroundColor: '#f0f0f0', // Fallback color while placeholder loads
+              backgroundColor: '#f0f0f0',
+              maxWidth: '100%',
+              maxHeight: 'calc(100vh - 240px)',
+              width: 'auto',
+              height: 'auto',
             }}
             className={`modal-image ${isModalImageLoaded ? 'loaded' : 'loading'} ${(imageTypes.get(image._id) ?? 'landscape') === 'landscape' ? 'landscape' : 'portrait'}`}
             loading="eager"

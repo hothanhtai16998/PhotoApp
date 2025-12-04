@@ -108,10 +108,18 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
     }
   }, [categoryObjects, isSticky])
 
-  // Preserve sticky state when modal opens
+  // Hide category navigation when modal opens to prevent layout shift
+  const [isModalOpen, setIsModalOpen] = useState(false)
+
   useEffect(() => {
     const checkModalState = () => {
-      if (document.body.classList.contains('image-modal-open')) {
+      // Check for scroll-locked class (added by useScrollLock when modal opens)
+      // or image-modal-open class (if used elsewhere)
+      const modalOpen = document.body.classList.contains('scroll-locked') || 
+                       document.body.classList.contains('image-modal-open')
+      setIsModalOpen(modalOpen)
+      
+      if (modalOpen) {
         // Modal is open - preserve current sticky state, don't let it change
         // The scroll handler will skip updates, so we just need to ensure state is preserved
       }
@@ -165,7 +173,8 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
 
     const handleScroll = () => {
       // Don't update sticky state when image modal is open
-      if (document.body.classList.contains('image-modal-open')) {
+      if (document.body.classList.contains('image-modal-open') || 
+          document.body.classList.contains('scroll-locked')) {
         return
       }
 
@@ -390,7 +399,7 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
         />
       )}
       <div
-        className={`category-navigation-container ${isSticky ? 'is-sticky' : ''}`}
+        className={`category-navigation-container ${isSticky ? 'is-sticky' : ''} ${isModalOpen ? 'modal-open' : ''}`}
         ref={categoryNavRef}
       >
         <div className="category-navigation-wrapper">

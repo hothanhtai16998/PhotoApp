@@ -67,6 +67,11 @@ const ImageModal = ({
     doubleClickZoom: 2,
   });
 
+  // Reset zoom when image changes
+  useEffect(() => {
+    zoomProps.resetZoom();
+  }, [image._id]);
+
   // Actions hook
   const {
     showEditModal,
@@ -139,16 +144,16 @@ const ImageModal = ({
       // Get positions relative to the scroll container
       const containerRect = scrollContainer.getBoundingClientRect();
       const relatedRect = relatedImagesElement.getBoundingClientRect();
-      
+
       // Calculate position of related images relative to the top of the scroll container viewport
       // The banner is sticky at top: 0, so we check when related images reaches that position
       const relatedTopRelativeToContainer = relatedRect.top - containerRect.top;
-      
+
       // Only hide when related images section reaches or passes the top of the container
       // (where the sticky banner is positioned at top: 0)
       // Use a small threshold (20px) to trigger slightly before exact hit for smoother UX
       const shouldHide = relatedTopRelativeToContainer <= 20 && scrollContainer.scrollTop > 50;
-      
+
       setIsHeaderHidden(shouldHide);
     };
 
@@ -205,9 +210,12 @@ const ImageModal = ({
   // Lock body scroll when modal is open (only when rendered as modal, not page and when enabled)
   useScrollLock(lockBodyScroll && !renderAsPage, '.image-modal-content');
 
+  // Avoid initial flash: only show overlay/container when we have at least a placeholder
+  const isVisualReady = !!(modalPlaceholderSrc || modalImageSrc);
+
   return (
     <>
-      {!renderAsPage && (
+      {!renderAsPage && isVisualReady && (
         <div
           className="image-modal-overlay"
           onClick={onClose}
@@ -215,6 +223,7 @@ const ImageModal = ({
       )}
       <div
         className={`image-modal ${renderAsPage ? 'image-modal-page' : ''}`}
+        aria-hidden={!isVisualReady && !renderAsPage ? true : undefined}
         onClick={(e) => !renderAsPage && e.stopPropagation()}
         onWheel={(e) => {
           // Prevent scroll events from bubbling to body
