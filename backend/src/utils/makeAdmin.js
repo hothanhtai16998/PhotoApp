@@ -44,17 +44,51 @@ const makeAdmin = async (username) => {
         }
 
         // Create AdminRole entry (single source of truth)
+        // Use new granular permissions instead of legacy permissions
         const adminRole = await AdminRole.create({
             userId: user._id,
             role: 'admin',
             permissions: {
-                manageUsers: true,
+                // User Management
+                viewUsers: true,
+                editUsers: true,
                 deleteUsers: true,
-                manageImages: true,
+                banUsers: true,
+                unbanUsers: true,
+                
+                // Image Management
+                viewImages: true,
+                editImages: true,
                 deleteImages: true,
-                manageCategories: true,
-                manageAdmins: false, // Only super admin can manage admins
+                moderateImages: true,
+                
+                // Category Management
+                viewCategories: true,
+                createCategories: true,
+                editCategories: true,
+                deleteCategories: true,
+                
+                // Admin Management (view only for admin role)
+                viewAdmins: true,
+                
+                // Dashboard & Analytics
                 viewDashboard: true,
+                viewAnalytics: true,
+                
+                // Collections
+                viewCollections: true,
+                manageCollections: true,
+                
+                // Favorites
+                manageFavorites: true,
+                
+                // Content Moderation
+                moderateContent: true,
+                
+                // System
+                viewLogs: true,
+                exportData: true,
+                manageSettings: true,
             },
         });
 

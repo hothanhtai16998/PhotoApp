@@ -875,15 +875,21 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 80px 20px 20px 20px;
+  overflow-y: auto;
 }
 
 .admin-modal {
   background: white;
   border-radius: 8px;
-  width: 90%;
-  max-width: min(500px, 96%);
-  max-height: 90vh;
-  overflow-y: auto;
+  width: 95%;
+  max-width: min(1400px, 98%);
+  max-height: calc(100vh - 100px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  margin: auto;
 }
 
 .admin-modal-header {
@@ -892,6 +898,11 @@
   align-items: center;
   padding: 20px;
   border-bottom: 1px solid #e5e5e5;
+  flex-shrink: 0;
+  background: white;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .admin-modal-header h2 {
@@ -921,17 +932,90 @@
 
 .admin-modal-form {
   padding: 20px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+}
+
+.admin-modal-form-content {
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+}
+
+.admin-modal-form-left {
+  flex: 0 0 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 12px;
+}
+
+.admin-modal-form-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
 }
 
 .admin-form-group {
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.admin-form-group:not(:last-of-type) {
+  flex-shrink: 0;
+}
+
+.admin-form-group:last-of-type {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin-bottom: 0;
+}
+
+/* Two-column layout for edit role modal */
+.admin-modal-form-left .admin-form-group {
   margin-bottom: 20px;
+}
+
+.admin-modal-form-left .admin-form-group:last-child {
+  margin-bottom: 0;
+}
+
+.admin-modal-form-right .admin-form-group {
+  margin-bottom: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.admin-modal-form-right .admin-form-group > label {
+  flex-shrink: 0;
+}
+
+.admin-modal-form-right .admin-form-help {
+  flex-shrink: 0;
 }
 
 .admin-form-group label {
   display: block;
   margin-bottom: 8px;
-  font-weight: 500;
-  color: #111;
+  font-weight: 600;
+  color: #111827;
+  font-size: 0.9375rem;
 }
 
 .admin-form-group textarea {
@@ -948,7 +1032,12 @@
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  margin-top: 30px;
+  padding: 20px 0 0 0;
+  border-top: 1px solid #e5e5e5;
+  flex-shrink: 0;
+  background: white;
+  margin-top: 20px;
+  width: 100%;
 }
 
 /* Permission Components */
@@ -1431,6 +1520,31 @@
     padding: 6px 12px;
     font-size: 0.8125rem;
   }
+
+  .admin-modal {
+    max-width: 95%;
+    max-height: 95vh;
+  }
+
+  .admin-modal-form-content {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .admin-modal-form-left {
+    flex: 1;
+    flex-basis: auto;
+    padding-right: 0;
+  }
+
+  .admin-modal-form-right {
+    flex: 1;
+  }
+
+  .admin-permissions-container {
+    grid-template-columns: 1fr;
+    max-height: 300px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1655,6 +1769,40 @@
   .admin-category-chart {
     padding: 20px 16px;
   }
+
+  .admin-modal {
+    max-width: 98%;
+    max-height: 98vh;
+  }
+
+  .admin-modal-form {
+    padding: 16px;
+  }
+
+  .admin-modal-form-content {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .admin-modal-form-left {
+    flex: 1;
+    flex-basis: auto;
+    padding-right: 0;
+  }
+
+  .admin-modal-form-right {
+    flex: 1;
+  }
+
+  .admin-permissions-container {
+    grid-template-columns: 1fr;
+    max-height: 250px;
+    padding: 8px;
+  }
+
+  .admin-permission-group {
+    padding: 8px;
+  }
 }
 
 /* Role Management */
@@ -1746,8 +1894,10 @@
 
 /* Inherited Permissions Styling */
 .admin-checkbox-label.inherited-permission {
-  opacity: 0.85;
+  opacity: 1;
   position: relative;
+  background: #f0fdf4;
+  border: 1px solid #d1fae5;
 }
 
 .admin-checkbox-label.inherited-permission input[type='checkbox'] {
@@ -1766,16 +1916,24 @@
   background-color: #16a34a;
 }
 
+.admin-checkbox-label.inherited-permission span {
+  color: #1f2937;
+  font-weight: 500;
+}
+
 .inherited-badge {
   display: inline-block;
-  margin-left: 6px;
-  padding: 2px 6px;
+  margin-left: 8px;
+  padding: 3px 8px;
   background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-  color: #166534;
+  color: #065f46;
   border-radius: 4px;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
   border: 1px solid #86efac;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 /* Security Settings Section */
@@ -1804,14 +1962,14 @@
 .admin-security-content {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 .admin-security-field {
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  padding: 16px;
+  padding: 12px;
   transition: all 0.2s ease;
 }
 
@@ -1895,52 +2053,117 @@
 }
 
 .admin-permissions-container {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  margin-top: 8px;
-  max-height: 500px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  margin-top: 12px;
   overflow-y: auto;
-  padding: 8px;
+  overflow-x: hidden;
+  padding: 16px;
   border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  background: #ffffff;
+  flex: 1;
+  min-height: 0;
+  max-height: 100%;
+  align-content: start;
+  align-items: start;
+  grid-auto-rows: min-content;
+}
+
+.admin-permissions-container::-webkit-scrollbar {
+  width: 12px;
+}
+
+.admin-permissions-container::-webkit-scrollbar-track {
+  background: #f1f3f5;
   border-radius: 6px;
-  background: #fafafa;
+  border: 1px solid #e5e7eb;
+}
+
+.admin-permissions-container::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 6px;
+  border: 2px solid #f1f3f5;
+}
+
+.admin-permissions-container::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
 }
 
 .admin-permission-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  background: white;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  min-height: fit-content;
+  overflow: visible;
+  height: auto;
+  max-height: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  align-self: start;
 }
 
 .admin-permission-group-title {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #374151;
-  margin: 0;
-  padding-bottom: 4px;
-  border-bottom: 1px solid #e5e5e5;
+  color: #111;
+  margin: 0 0 10px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e5e7eb;
+  word-wrap: break-word;
+  word-break: break-word;
+  line-height: 1.4;
 }
 
 .admin-permissions-checkboxes {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 4px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  margin-top: 0;
+  overflow: visible;
 }
 
 .admin-checkbox-label {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-start;
+  gap: 10px;
   cursor: pointer;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
+  padding: 8px 10px;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+  line-height: 1.6;
+  width: 100%;
+  color: #1f2937;
+}
+
+.admin-checkbox-label span {
+  flex: 1;
+  min-width: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.6;
+  display: inline-block;
+  color: #1f2937;
+  font-weight: 500;
+}
+
+.admin-checkbox-label:hover {
+  background: #f8f9fa;
 }
 
 .admin-checkbox-label input[type='checkbox'] {
   width: 18px;
   height: 18px;
+  min-width: 18px;
+  min-height: 18px;
   cursor: pointer;
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .admin-checkbox-label input[type='checkbox']:disabled {

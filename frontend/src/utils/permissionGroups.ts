@@ -75,15 +75,6 @@ export const PERMISSION_GROUPS = [
             { key: 'manageSettings', label: 'Quản lý cài đặt' },
         ],
     },
-    {
-        label: 'Quyền cũ (tương thích ngược)',
-        permissions: [
-            { key: 'manageUsers', label: 'Quản lý người dùng (cũ)' },
-            { key: 'manageImages', label: 'Quản lý ảnh (cũ)' },
-            { key: 'manageCategories', label: 'Quản lý danh mục (cũ)' },
-            { key: 'manageAdmins', label: 'Quản lý admin (cũ)' },
-        ],
-    },
 ] as const;
 
 /**

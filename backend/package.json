@@ -9,6 +9,8 @@
 		"make:admin": "node src/utils/makeAdmin.js",
 		"make:superadmin": "node src/utils/makeSuperAdmin.js",
 		"migrate:cloudfront": "node src/migrations/migrateToCloudFront.js",
+		"migrate:permissions": "node src/migrations/migrateLegacyPermissions.js",
+		"verify:permissions": "node src/migrations/verifyPermissions.js",
 		"update:cors": "node src/utils/updateCloudFrontCORS.js",
 		"test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
 		"test:watch": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --watch",

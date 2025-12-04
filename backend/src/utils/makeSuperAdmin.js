@@ -45,30 +45,103 @@ const makeSuperAdmin = async (username) => {
         // If user has a regular admin role, update it to super_admin
         if (existingRole) {
             existingRole.role = 'super_admin';
-            // Super admin has all permissions
+            // Super admin has all permissions - use new granular permissions
             existingRole.permissions = {
-                manageUsers: true,
+                // User Management
+                viewUsers: true,
+                editUsers: true,
                 deleteUsers: true,
-                manageImages: true,
+                banUsers: true,
+                unbanUsers: true,
+                
+                // Image Management
+                viewImages: true,
+                editImages: true,
                 deleteImages: true,
-                manageCategories: true,
-                manageAdmins: true,
+                moderateImages: true,
+                
+                // Category Management
+                viewCategories: true,
+                createCategories: true,
+                editCategories: true,
+                deleteCategories: true,
+                
+                // Admin Management
+                viewAdmins: true,
+                createAdmins: true,
+                editAdmins: true,
+                deleteAdmins: true,
+                
+                // Dashboard & Analytics
                 viewDashboard: true,
+                viewAnalytics: true,
+                
+                // Collections
+                viewCollections: true,
+                manageCollections: true,
+                
+                // Favorites
+                manageFavorites: true,
+                
+                // Content Moderation
+                moderateContent: true,
+                
+                // System
+                viewLogs: true,
+                exportData: true,
+                manageSettings: true,
             };
             await existingRole.save();
         } else {
             // Create new AdminRole entry with super_admin role
+            // Super admin has all permissions - use new granular permissions
             await AdminRole.create({
                 userId: user._id,
                 role: 'super_admin',
                 permissions: {
-                    manageUsers: true,
+                    // User Management
+                    viewUsers: true,
+                    editUsers: true,
                     deleteUsers: true,
-                    manageImages: true,
+                    banUsers: true,
+                    unbanUsers: true,
+                    
+                    // Image Management
+                    viewImages: true,
+                    editImages: true,
                     deleteImages: true,
-                    manageCategories: true,
-                    manageAdmins: true,
+                    moderateImages: true,
+                    
+                    // Category Management
+                    viewCategories: true,
+                    createCategories: true,
+                    editCategories: true,
+                    deleteCategories: true,
+                    
+                    // Admin Management
+                    viewAdmins: true,
+                    createAdmins: true,
+                    editAdmins: true,
+                    deleteAdmins: true,
+                    
+                    // Dashboard & Analytics
                     viewDashboard: true,
+                    viewAnalytics: true,
+                    
+                    // Collections
+                    viewCollections: true,
+                    manageCollections: true,
+                    
+                    // Favorites
+                    manageFavorites: true,
+                    
+                    // Content Moderation
+                    moderateContent: true,
+                    
+                    // System
+                    viewLogs: true,
+                    exportData: true,
+                    manageSettings: true,
                 },
             });
         }
