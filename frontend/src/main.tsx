@@ -17,7 +17,7 @@ createRoot(document.getElementById('root')!).render(
 		<ErrorBoundary>
 			<BrowserRouter>
 				<AuthInitializer>
-					<Toaster position="top-right" richColors />
+					<Toaster position="bottom-right" richColors />
 					<App />
 				</AuthInitializer>
 			</BrowserRouter>

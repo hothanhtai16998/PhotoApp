@@ -8,6 +8,7 @@ import { getErrorMessage } from '@/lib/utils';
 import { PermissionButton } from '../PermissionButton';
 import { t } from '@/i18n';
 import type { Category } from '@/services/categoryService';
+import { ModerationNotesModal } from '../modals/ModerationNotesModal';
 
 interface AdminImagesProps {
     images: AdminImage[];
@@ -34,6 +35,11 @@ export function AdminImages({
 }: AdminImagesProps) {
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [updatingCategory, setUpdatingCategory] = useState<string | null>(null);
+    const [moderationModal, setModerationModal] = useState<{
+        isOpen: boolean;
+        imageId: string;
+        status: 'approved' | 'rejected' | 'flagged';
+    } | null>(null);
 
     // Close modal on ESC key
     useEffect(() => {
@@ -52,7 +58,7 @@ export function AdminImages({
         };
     }, [selectedImage]);
 
-    const handleModerate = async (imageId: string, status: 'approved' | 'rejected' | 'flagged', imageCategory?: string | { _id: string; name: string } | null) => {
+    const handleModerate = (imageId: string, status: 'approved' | 'rejected' | 'flagged', imageCategory?: string | { _id: string; name: string } | null) => {
         // Check if trying to approve without category
         if (status === 'approved') {
             const hasCategory = imageCategory && (
@@ -65,17 +71,26 @@ export function AdminImages({
             }
         }
 
-        const notes = prompt(t('admin.moderationNotes'));
-        if (notes === null && status !== 'approved') return; // User cancelled (except for approve which doesn't need notes)
-        
+        // Open modal for notes (optional for approve, required for reject/flag)
+        setModerationModal({
+            isOpen: true,
+            imageId,
+            status,
+        });
+    };
+
+    const handleModerationConfirm = async (notes: string | undefined) => {
+        if (!moderationModal) return;
+
         try {
-            await adminService.moderateImage(imageId, status, notes || undefined);
-            const successMessage = status === 'approved' 
+            await adminService.moderateImage(moderationModal.imageId, moderationModal.status, notes);
+            const successMessage = moderationModal.status === 'approved' 
                 ? t('admin.approveSuccess')
-                : status === 'rejected' 
+                : moderationModal.status === 'rejected' 
                 ? t('admin.rejectSuccess')
                 : t('admin.flagSuccess');
             toast.success(successMessage);
+            setModerationModal(null);
             onImageUpdated?.();
         } catch (error: unknown) {
             toast.error(getErrorMessage(error, t('admin.moderationFailed')));
@@ -273,6 +288,24 @@ export function AdminImages({
                         onClick={(e) => e.stopPropagation()}
                     />
                 </div>
+            )}
+
+            {/* Moderation Notes Modal */}
+            {moderationModal && (
+                <ModerationNotesModal
+                    isOpen={moderationModal.isOpen}
+                    onClose={() => setModerationModal(null)}
+                    onConfirm={handleModerationConfirm}
+                    title={
+                        moderationModal.status === 'approved' 
+                            ? t('admin.approveImage')
+                            : moderationModal.status === 'rejected'
+                            ? t('admin.rejectImage')
+                            : t('admin.flagImage')
+                    }
+                    placeholder={t('admin.moderationNotesPlaceholder') || 'Nhập ghi chú kiểm duyệt (tùy chọn)...'}
+                    isOptional={moderationModal.status === 'approved'}
+                />
             )}
         </div>
     );

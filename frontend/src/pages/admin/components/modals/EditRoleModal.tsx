@@ -19,6 +19,28 @@ interface EditRoleModalProps {
 }
 
 export function EditRoleModal({ role, onClose, onSave }: EditRoleModalProps) {
+    // Prevent editing system-created roles
+    if (!role.grantedBy) {
+        return (
+            <div className="admin-modal-overlay" onClick={onClose}>
+                <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+                    <div className="admin-modal-header">
+                        <h2>{t('admin.cannotEditSystemRole') || 'Không thể chỉnh sửa'}</h2>
+                        <button onClick={onClose}>×</button>
+                    </div>
+                    <div className="admin-modal-form">
+                        <p>{t('admin.cannotEditSystemRole') || 'Không thể chỉnh sửa quyền được tạo bởi hệ thống'}</p>
+                        <div className="admin-modal-actions">
+                            <Button type="button" onClick={onClose}>
+                                {t('common.close')}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     // Get all available permissions
     const allPermissions = getAllPermissionKeys();
 

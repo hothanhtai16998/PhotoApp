@@ -4,11 +4,11 @@ import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { t } from '@/i18n';
 import './ThemeToggle.css';
 
-// Initialize theme on module load
+// Initialize theme on module load - default to light
 (function initializeTheme() {
     const saved = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const shouldBeDark = saved ? saved === 'dark' : prefersDark;
+    // Only use dark if explicitly saved as 'dark', otherwise default to light
+    const shouldBeDark = saved === 'dark';
     
     if (shouldBeDark) {
         document.documentElement.classList.add('dark-theme');
@@ -20,8 +20,8 @@ import './ThemeToggle.css';
 export function ThemeToggle({ asMenuItem = false }: { asMenuItem?: boolean }) {
     const [isDark, setIsDark] = useState(() => {
         const saved = localStorage.getItem('theme');
-        if (saved) return saved === 'dark';
-        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+        // Only return true if explicitly saved as 'dark', otherwise default to light (false)
+        return saved === 'dark';
     });
 
     useEffect(() => {

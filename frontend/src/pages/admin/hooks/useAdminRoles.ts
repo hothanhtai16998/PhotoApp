@@ -148,12 +148,8 @@ export function useAdminRoles(): UseAdminRolesReturn {
       loadUsersCallback?: (page: number) => Promise<void>,
       usersPage?: number
     ): Promise<boolean> => {
-      if (
-        !confirm(`Bạn có muốn xoá quyền ad của tài khoản "${username}" không?`)
-      ) {
-        return false;
-      }
-
+      // Note: Confirmation is now handled by the modal in AdminRoles component
+      // This function is called after confirmation
       try {
         await adminService.deleteAdminRole(userId);
         toast.success('Quyền admin đã được xoá thành công');

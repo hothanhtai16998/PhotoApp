@@ -78,14 +78,8 @@ export function useAdminUsers(): UseAdminUsersReturn {
         return false;
       }
 
-      if (
-        !confirm(
-          `Bạn có muốn xoá người dùng "${username}" không? Sẽ xoá cả ảnh mà người này đã đăng.`
-        )
-      ) {
-        return false;
-      }
-
+      // Note: Confirmation is now handled by the modal in AdminUsers component
+      // This function is called after confirmation
       try {
         await adminService.deleteUser(userId);
         toast.success('Xoá người dùng thành công');

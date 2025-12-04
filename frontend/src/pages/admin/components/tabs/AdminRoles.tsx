@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Edit2, Trash2 } from 'lucide-react';
-import { CreateRoleModal, EditRoleModal } from '../modals';
+import { CreateRoleModal, EditRoleModal, ConfirmModal } from '../modals';
 import type { User, AdminRole, AdminRolePermissions } from '@/services/adminService';
 import type { User as AuthUser } from '@/types/user';
 import { t } from '@/i18n';
+import { toast } from 'sonner';
 
 interface AdminRolesProps {
     roles: AdminRole[];
@@ -47,6 +49,23 @@ export function AdminRoles({
     onSaveCreate,
     onSaveEdit,
 }: AdminRolesProps) {
+    const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; userId: string; username: string } | null>(null);
+
+    const handleDeleteClick = (userId: string, username: string, role: AdminRole) => {
+        // Prevent deleting system-created roles
+        if (!role.grantedBy) {
+            toast.error(t('admin.cannotDeleteSystemRole') || 'Không thể xóa quyền được tạo bởi hệ thống');
+            return;
+        }
+        setDeleteModal({ isOpen: true, userId, username });
+    };
+
+    const handleDeleteConfirm = () => {
+        if (!deleteModal) return;
+        onDelete(deleteModal.userId, deleteModal.username);
+        setDeleteModal(null);
+    };
+
     return (
         <div className="admin-roles">
             <div className="admin-header">
@@ -157,23 +176,39 @@ export function AdminRoles({
                                     </td>
                                     <td>
                                         <div className="admin-actions">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => onEdit(role)}
-                                                className="admin-action-edit"
-                                            >
-                                                <Edit2 size={16} />
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => onDelete(userId || '', username)}
-                                                disabled={userId === currentUser?._id}
-                                                className="admin-action-delete"
-                                            >
-                                                <Trash2 size={16} />
-                                            </Button>
+                                            {/* System-created roles cannot be edited or deleted */}
+                                            {!role.grantedBy ? (
+                                                <span style={{ color: '#666', fontSize: '14px' }}>
+                                                    {t('admin.systemProtected') || 'Được bảo vệ bởi hệ thống'}
+                                                </span>
+                                            ) : (
+                                                <>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            // Double-check: prevent editing system roles
+                                                            if (!role.grantedBy) {
+                                                                toast.error(t('admin.cannotEditSystemRole') || 'Không thể chỉnh sửa quyền được tạo bởi hệ thống');
+                                                                return;
+                                                            }
+                                                            onEdit(role);
+                                                        }}
+                                                        className="admin-action-edit"
+                                                    >
+                                                        <Edit2 size={16} />
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleDeleteClick(userId || '', username, role)}
+                                                        disabled={userId === currentUser?._id}
+                                                        className="admin-action-delete"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </Button>
+                                                </>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
@@ -202,6 +237,19 @@ export function AdminRoles({
                     role={editingRole}
                     onClose={onCloseEdit}
                     onSave={onSaveEdit}
+                />
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteModal && (
+                <ConfirmModal
+                    isOpen={deleteModal.isOpen}
+                    onClose={() => setDeleteModal(null)}
+                    onConfirm={handleDeleteConfirm}
+                    title={t('admin.deleteRole') || 'Xóa quyền admin'}
+                    message={t('admin.deleteRoleConfirm', { username: deleteModal.username }) || `Bạn có chắc muốn xóa quyền admin của tài khoản "${deleteModal.username}"?`}
+                    confirmText={t('admin.delete') || 'Xóa'}
+                    variant="danger"
                 />
             )}
         </div>

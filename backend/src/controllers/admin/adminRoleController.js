@@ -217,6 +217,13 @@ export const updateAdminRole = asyncHandler(async (req, res) => {
         });
     }
 
+    // System-created roles (grantedBy is null) cannot be edited, even by super admins
+    if (!adminRole.grantedBy) {
+        return res.status(403).json({
+            message: 'Không thể chỉnh sửa quyền được tạo bởi hệ thống',
+        });
+    }
+
     // Super admins can edit any admin role, including their own and other super admins
 
     // Store old role data for audit logging
@@ -373,6 +380,13 @@ export const deleteAdminRole = asyncHandler(async (req, res) => {
     if (!adminRole) {
         return res.status(404).json({
             message: 'Tải khoản này không có quyền admin',
+        });
+    }
+
+    // System-created roles (grantedBy is null) cannot be deleted, even by super admins
+    if (!adminRole.grantedBy) {
+        return res.status(403).json({
+            message: 'Không thể xóa quyền được tạo bởi hệ thống',
         });
     }
 

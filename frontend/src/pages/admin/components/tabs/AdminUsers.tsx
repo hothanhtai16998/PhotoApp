@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, Edit2, Trash2, Ban, Unlock, Users } from 'lucide-react';
-import { UserEditModal } from '../modals';
+import { UserEditModal, ConfirmModal } from '../modals';
+import { ModerationNotesModal } from '../modals/ModerationNotesModal';
 import { adminService, type User } from '@/services/adminService';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/utils';
@@ -42,29 +44,52 @@ export function AdminUsers({
     onSaveEdit,
     onUserUpdated,
 }: AdminUsersProps) {
-    const handleBan = async (user: User) => {
-        const reason = prompt(t('admin.banReason'));
-        if (reason === null) return; // User cancelled
+    const [banModal, setBanModal] = useState<{ isOpen: boolean; user: User | null }>({ isOpen: false, user: null });
+    const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; userId: string; username: string } | null>(null);
+    const [unbanModal, setUnbanModal] = useState<{ isOpen: boolean; user: User | null }>({ isOpen: false, user: null });
+
+    const handleBan = (user: User) => {
+        setBanModal({ isOpen: true, user });
+    };
+
+    const handleBanConfirm = async (reason: string | undefined) => {
+        if (!banModal.user) return;
         
         try {
-            await adminService.banUser(user._id, reason || undefined);
-            toast.success(t('admin.banSuccess', { username: user.username }));
+            await adminService.banUser(banModal.user._id, reason);
+            toast.success(t('admin.banSuccess', { username: banModal.user.username }));
+            setBanModal({ isOpen: false, user: null });
             onUserUpdated?.();
         } catch (error: unknown) {
             toast.error(getErrorMessage(error, t('admin.banFailed')));
         }
     };
 
-    const handleUnban = async (user: User) => {
-        if (!confirm(t('admin.unbanConfirm', { username: user.username }))) return;
+    const handleUnban = (user: User) => {
+        setUnbanModal({ isOpen: true, user });
+    };
+
+    const handleUnbanConfirm = async () => {
+        if (!unbanModal.user) return;
         
         try {
-            await adminService.unbanUser(user._id);
-            toast.success(t('admin.unbanSuccess', { username: user.username }));
+            await adminService.unbanUser(unbanModal.user._id);
+            toast.success(t('admin.unbanSuccess', { username: unbanModal.user.username }));
+            setUnbanModal({ isOpen: false, user: null });
             onUserUpdated?.();
         } catch (error: unknown) {
             toast.error(getErrorMessage(error, t('admin.unbanFailed')));
         }
+    };
+
+    const handleDeleteClick = (userId: string, username: string) => {
+        setDeleteModal({ isOpen: true, userId, username });
+    };
+
+    const handleDeleteConfirm = () => {
+        if (!deleteModal) return;
+        onDelete(deleteModal.userId, deleteModal.username);
+        setDeleteModal(null);
     };
     return (
         <div className="admin-users">
@@ -176,7 +201,7 @@ export function AdminUsers({
                                             action={t('admin.deleteUser')}
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => onDelete(u._id, u.username)}
+                                            onClick={() => handleDeleteClick(u._id, u.username)}
                                             disabled={u._id === currentUser?._id || (u.isSuperAdmin && !currentUser?.isSuperAdmin)}
                                             className="admin-action-delete"
                                         >
@@ -223,6 +248,44 @@ export function AdminUsers({
                     user={editingUser}
                     onClose={onCloseEdit}
                     onSave={onSaveEdit}
+                />
+            )}
+
+            {/* Ban Modal */}
+            {banModal.isOpen && banModal.user && (
+                <ModerationNotesModal
+                    isOpen={banModal.isOpen}
+                    onClose={() => setBanModal({ isOpen: false, user: null })}
+                    onConfirm={handleBanConfirm}
+                    title={t('admin.banUser')}
+                    placeholder={t('admin.banReasonPlaceholder') || 'Nhập lý do cấm (tùy chọn)...'}
+                    isOptional={true}
+                />
+            )}
+
+            {/* Unban Confirmation Modal */}
+            {unbanModal.isOpen && unbanModal.user && (
+                <ConfirmModal
+                    isOpen={unbanModal.isOpen}
+                    onClose={() => setUnbanModal({ isOpen: false, user: null })}
+                    onConfirm={handleUnbanConfirm}
+                    title={t('admin.unbanUser')}
+                    message={t('admin.unbanConfirm', { username: unbanModal.user.username })}
+                    confirmText={t('admin.unban') || 'Bỏ cấm'}
+                    variant="info"
+                />
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteModal && (
+                <ConfirmModal
+                    isOpen={deleteModal.isOpen}
+                    onClose={() => setDeleteModal(null)}
+                    onConfirm={handleDeleteConfirm}
+                    title={t('admin.deleteUser')}
+                    message={t('admin.deleteUserConfirm', { username: deleteModal.username }) || `Bạn có chắc muốn xóa người dùng "${deleteModal.username}"?`}
+                    confirmText={t('admin.delete') || 'Xóa'}
+                    variant="danger"
                 />
             )}
         </div>
