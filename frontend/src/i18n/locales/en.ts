@@ -468,6 +468,19 @@ export const en = {
     realtimeData: 'Real-time data',
     userOverview: 'User Overview',
     categoryDistribution: 'Distribution by Category',
+    // Analytics time periods
+    lastNDays: 'Last {count} days',
+    last7Days: 'Last 7 days',
+    lastMonth: 'Last month',
+    last90Days: 'Last 90 days',
+    lastYear: 'Last year',
+    // Analytics metrics
+    usersOnline: 'Users Online',
+    pageViewsPerSecond: 'Page Views Per Second',
+    newUsers: 'New Users (Last {days} days)',
+    bannedUsers: 'Banned Users',
+    newImages: 'New Images (Last {days} days)',
+    dailyUploads: 'Daily Uploads',
     deleteImageConfirm: 'Do you want to delete image "{title}"?',
     deleteCategoryConfirm:
       'Do you want to delete category "{name}"? It can only be deleted if there are no images in this category.',

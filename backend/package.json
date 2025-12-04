@@ -10,6 +10,7 @@
 		"make:superadmin": "node src/utils/makeSuperAdmin.js",
 		"migrate:permissions": "node src/migrations/migrateLegacyPermissions.js",
 		"migrate:cloudfront-to-r2": "node src/migrations/migrateCloudFrontToR2.js",
+		"migrate:r2-to-custom-domain": "node src/migrations/migrateR2ToCustomDomain.js",
 		"verify:permissions": "node src/migrations/verifyPermissions.js",
 		"verify:r2": "node src/utils/verifyR2Config.js",
 		"debug:r2": "node src/utils/debugR2Images.js",

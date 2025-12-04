@@ -2,7 +2,7 @@
  * Internationalization (i18n) Module
  * 
  * Simple i18n implementation for PhotoApp.
- * Default language is Vietnamese (vi).
+ * Default language is Vietnamese (vi) - always defaults to Vietnamese.
  * 
  * Usage:
  *   import { t, setLocale, getLocale } from '@/i18n';
@@ -35,27 +35,25 @@ let currentLocale: Locale = 'vi';
 const LOCALE_STORAGE_KEY = 'app_locale';
 
 /**
- * Initialize locale from storage or browser preference
+ * Initialize locale from storage
+ * Default language is Vietnamese (vi)
  */
 function initLocale(): void {
     if (typeof window === 'undefined') return;
 
     try {
-        // Check localStorage first
+        // Check localStorage for saved preference
         const stored = localStorage.getItem(LOCALE_STORAGE_KEY);
         if (stored && (stored === 'vi' || stored === 'en')) {
             currentLocale = stored;
             return;
         }
 
-        // Fall back to browser language
-        const browserLang = navigator.language.split('-')[0];
-        if (browserLang === 'en') {
-            currentLocale = 'en';
-        }
-        // Default is 'vi' (already set)
+        // Default is 'vi' (Vietnamese) - always default to Vietnamese
+        currentLocale = 'vi';
     } catch {
-        // Ignore storage errors
+        // Ignore storage errors - default to Vietnamese
+        currentLocale = 'vi';
     }
 }
 

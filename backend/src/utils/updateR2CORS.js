@@ -33,15 +33,28 @@ async function updateR2CORS() {
 		logger.info(`🌍 Account ID: ${env.R2_ACCOUNT_ID}`);
 
 		// Collect all allowed origins
+		// Note: CORS doesn't support wildcard ports, so we need to list common ports explicitly
 		const allowedOrigins = [
 			'http://localhost:3000',
 			'http://localhost:5173',
+			'http://localhost:5174',
+			'http://127.0.0.1:3000',
+			'http://127.0.0.1:5173',
+			'http://127.0.0.1:5174',
 			env.CLIENT_URL,
 			env.FRONTEND_URL,
 			'https://uploadanh.cloud', // Production domain
-			env.R2_PUBLIC_URL, // R2 custom domain
-			`https://pub-${env.R2_ACCOUNT_ID}.r2.dev`, // R2 dev URL
+			'https://www.uploadanh.cloud', // Production domain with www
 		].filter(Boolean);
+
+		// Only add R2 URLs if they're valid HTTP(S) URLs (not null/undefined)
+		if (env.R2_PUBLIC_URL && env.R2_PUBLIC_URL.startsWith('http')) {
+			allowedOrigins.push(env.R2_PUBLIC_URL);
+		}
+		
+		if (env.R2_ACCOUNT_ID) {
+			allowedOrigins.push(`https://pub-${env.R2_ACCOUNT_ID}.r2.dev`);
+		}
 
 		// Remove duplicates
 		const uniqueOrigins = [...new Set(allowedOrigins)];
@@ -70,7 +83,9 @@ async function updateR2CORS() {
 		corsConfiguration.CORSRules[0].AllowedOrigins.forEach(origin => {
 			logger.info(`   - ${origin}`);
 		});
-		logger.info('\n✅ R2 automatically serves files with CORS headers - no additional configuration needed!');
+		logger.info('\n⚠️  IMPORTANT: R2 bucket CORS only works for API access.');
+		logger.info('   For R2 public URLs (pub-*.r2.dev), you MUST use Cloudflare Transform Rules.');
+		logger.info('   See: FIX_R2_CORS_TRANSFORM_RULES.md for instructions');
 
 	} catch (error) {
 		logger.error('❌ Failed to update R2 CORS configuration:', error.message);

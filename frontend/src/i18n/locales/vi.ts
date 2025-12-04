@@ -462,6 +462,19 @@ export const vi = {
     realtimeData: 'Dữ liệu thời gian thực',
     userOverview: 'Tổng quan người dùng',
     categoryDistribution: 'Phân bố theo danh mục',
+    // Analytics time periods
+    lastNDays: '{count} ngày qua',
+    last7Days: '7 ngày qua',
+    lastMonth: 'Tháng trước',
+    last90Days: '90 ngày qua',
+    lastYear: 'Năm ngoái',
+    // Analytics metrics
+    usersOnline: 'Người dùng trực tuyến',
+    pageViewsPerSecond: 'Lượt xem mỗi giây',
+    newUsers: 'Người dùng mới ({days} ngày qua)',
+    bannedUsers: 'Người dùng bị cấm',
+    newImages: 'Ảnh mới ({days} ngày qua)',
+    dailyUploads: 'Lượt tải lên hàng ngày',
     deleteImageConfirm: 'Bạn có muốn xoá ảnh "{title}" không?',
     deleteCategoryConfirm:
       'Bạn có muốn xoá danh mục "{name}" không? Chỉ xoá được nếu không có ảnh nào thuộc loại danh mục này.',
