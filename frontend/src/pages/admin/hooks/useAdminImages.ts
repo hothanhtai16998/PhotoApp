@@ -92,21 +92,30 @@ export function useAdminImages(): UseAdminImagesReturn {
         removeImage(imageId);
 
         // Trigger a refresh of the ImageGrid store to sync with backend
+        // Use a small delay to ensure the deletion is processed
         setTimeout(() => {
-          const storeImages = useImageStore.getState().images;
-          const storePagination = useImageStore.getState().pagination;
-          if (storeImages.length > 0 || storePagination) {
+          const storeState = useImageStore.getState();
+          // Always refresh if there are images or pagination data
+          if (storeState.images.length > 0 || storeState.pagination) {
             fetchImages({
-              page: imageStorePagination?.page || 1,
+              page: imageStorePagination?.page || storeState.pagination?.page || 1,
               search: currentSearch,
               category: currentCategory,
-              _refresh: true,
+              _refresh: true, // Force cache bust
+            }).catch(() => {
+              // Silently fail - the image is already removed from store
             });
           }
-        }, 200);
+        }, 100);
 
         toast.success('Xoá ảnh thành công');
+        
+        // Reload admin images list
         await loadImages(pagination.page);
+        
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new CustomEvent('imageDeleted', { detail: { imageId } }));
+        
         return true;
       } catch (error: unknown) {
         const axiosError = error as {

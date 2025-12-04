@@ -31,7 +31,7 @@ export const imageUploadService = {
     );
 
     const preUploadData: PreUploadResponse = metadataRes.data;
-    console.log(`[UPLOAD] Got presigned URL, uploading ${fileSizeMB}MB to S3...`);
+    console.log(`[UPLOAD] Got presigned URL, uploading ${fileSizeMB}MB to storage...`);
 
     // PUT to presigned URL must not include cookies/credentials
     await axios.put(preUploadData.uploadUrl, imageFile, {
@@ -56,7 +56,7 @@ export const imageUploadService = {
       },
     });
 
-    console.log(`[UPLOAD] Upload to S3 complete!`);
+    console.log(`[UPLOAD] Upload to storage complete!`);
     onUploadProgress?.(100);
     return preUploadData;
   },

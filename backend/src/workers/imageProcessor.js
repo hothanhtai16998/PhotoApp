@@ -64,12 +64,14 @@ export async function processUploadJob(job) {
         log(`✅ Metadata extracted in ${metadataMs}ms`);
 
         // === Upload processed sizes ===
-        log(`📤 Uploading resized images to S3...`);
+        const { env } = await import('../libs/env.js');
+        const storageName = env.USE_R2 ? 'R2' : 'S3';
+        log(`📤 Uploading resized images to ${storageName}...`);
         const uploadStart = Date.now();
         const filename = uploadKey.replace(/[\/\\]/g, '-').replace(/^photo-app-raw-/, '').replace(/\.(gif|jpg|jpeg|png|webp|mp4|webm)$/i, '');
         const uploadResult = await uploadImageWithSizes(buffer, 'photo-app-images', filename, mimetype);
         const uploadMs = Date.now() - uploadStart;
-        log(`✅ Uploaded to S3 in ${uploadMs}ms`);
+        log(`✅ Uploaded to ${storageName} in ${uploadMs}ms`);
 
         // === Create DB document ===
         log(`💾 Creating database record...`);

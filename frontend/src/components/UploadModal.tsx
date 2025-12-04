@@ -106,6 +106,19 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
         onClose();
     }, [onClose, showProgress, showSuccess, resetUploadState, resetState]);
 
+    // Handle closing the modal after successful upload
+    const handleCloseAfterSuccess = useCallback(() => {
+        if (!showSuccess) return; // Only allow closing if upload was successful
+        resetState();
+        resetUploadState();
+        onClose();
+        // Dispatch refresh event immediately when modal closes to ensure grid refreshes
+        // Use setTimeout to ensure modal is fully closed before refreshing
+        setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('imageUploaded'));
+        }, 50);
+    }, [onClose, showSuccess, resetUploadState, resetState]);
+
     // Handle ESC key
     useEffect(() => {
         if (!isOpen) return;
@@ -198,7 +211,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
     // Success Screen
     if (showSuccess) {
         return (
-            <div className="upload-modal-overlay" onClick={onClose}>
+            <div className="upload-modal-overlay" onClick={handleCloseAfterSuccess}>
                 <div className="upload-success-screen" onClick={(e) => e.stopPropagation()}>
                     <div className="confetti-container" id="confetti-container"></div>
                     <div className="success-content">

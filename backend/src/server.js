@@ -180,6 +180,12 @@ app.get('/api/health', (req, res) => {
 // CSRF token endpoint (for frontend to retrieve token)
 app.get('/api/csrf-token', getCsrfToken);
 
+// Public settings endpoint (no authentication required)
+app.get('/api/settings', async (req, res, next) => {
+    const { getPublicSettings } = await import('./controllers/admin/adminSystemController.js');
+    getPublicSettings(req, res, next);
+});
+
 // API Routes
 app.use('/api/auth', authRoute);
 app.use('/api/users', userRoute);

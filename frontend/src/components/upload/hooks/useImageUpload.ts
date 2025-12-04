@@ -275,6 +275,9 @@ export const useImageUpload = ({ onSuccess }: UseImageUploadProps = {}) => {
             detail: { categoryName },
           });
           window.dispatchEvent(refreshEvent);
+          
+          // Also dispatch imageUploaded event to refresh all image grids (including "All" category)
+          window.dispatchEvent(new CustomEvent('imageUploaded'));
         }, 300);
 
         onSuccess?.();

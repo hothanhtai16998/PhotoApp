@@ -411,10 +411,11 @@ export const adminService = {
         return res.data;
     },
 
-    // Settings Management
+    // Settings Management (public - no auth required)
     getSettings: async (): Promise<{ settings: Record<string, unknown> }> => {
-        const res = await api.get('/admin/settings', {
-            withCredentials: true,
+        // Use public endpoint (no auth required)
+        const res = await api.get('/settings', {
+            withCredentials: false, // Public endpoint doesn't need credentials
         });
         return res.data;
     },

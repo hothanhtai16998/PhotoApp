@@ -66,7 +66,7 @@ export function useImageGridState({ category }: UseImageGridStateProps) {
         return () => window.removeEventListener('filterChange', handleFilterChange);
     }, []);
 
-    const fetchImages = useCallback(async (currentPage: number, categoryName: string, colorFilter?: string) => {
+    const fetchImages = useCallback(async (currentPage: number, categoryName: string, colorFilter?: string, forceRefresh = false) => {
         if (currentPage === 1) {
             setLoading(true);
         } else {
@@ -78,6 +78,7 @@ export function useImageGridState({ category }: UseImageGridStateProps) {
                 limit: 20,
                 category: categoryName === 'all' ? undefined : categoryName,
                 color: colorFilter && colorFilter !== 'all' ? colorFilter : undefined,
+                _refresh: forceRefresh || currentPage === 1, // Always refresh on first page to get latest images
             });
             const newImages = response.images || [];
             setImages(prev => currentPage === 1 ? newImages : [...prev, ...newImages]);
@@ -98,7 +99,21 @@ export function useImageGridState({ category }: UseImageGridStateProps) {
         setImages([]);
         setPage(1);
         setHasMore(true);
-        fetchImages(1, category, filters.color);
+        fetchImages(1, category, filters.color, true); // Force refresh when category changes
+    }, [category, filters.color, fetchImages]);
+
+    // Listen for new image uploads to refresh the grid
+    useEffect(() => {
+        const handleImageUploaded = () => {
+            // Refresh images when a new image is uploaded
+            setImages([]);
+            setPage(1);
+            setHasMore(true);
+            fetchImages(1, category, filters.color, true);
+        };
+
+        window.addEventListener('imageUploaded', handleImageUploaded);
+        return () => window.removeEventListener('imageUploaded', handleImageUploaded);
     }, [category, filters.color, fetchImages]);
 
     const handleLoadMore = useCallback(() => {

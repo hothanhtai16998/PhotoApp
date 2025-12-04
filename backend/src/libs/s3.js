@@ -39,6 +39,16 @@ const getPublicUrlBase = () => {
 	}
 };
 
+// Get public URL for uploaded file
+// Note: R2 custom domains serve files directly from bucket root, so we keep the full key path
+const getPublicUrl = (key) => {
+	const publicUrlBase = getPublicUrlBase();
+	
+	// For all storage (R2 custom domain, R2 dev URL, or AWS), include the full key
+	// The key already includes the folder structure (e.g., "photo-app-images/filename.webp")
+	return `${publicUrlBase}/${key}`;
+};
+
 /**
  * Upload a single file to S3
  * @param {Buffer} buffer - File buffer
@@ -58,8 +68,8 @@ export const uploadToS3 = async (buffer, key, contentType) => {
 
 		await s3Client.send(command);
 
-		// Return public URL
-		return `${getPublicUrlBase()}/${key}`;
+		// Return public URL (handles custom domain bucket name stripping)
+		return getPublicUrl(key);
 	} catch (error) {
 		// Provide more detailed error information
 		const errorMessage = error.message || 'Unknown error';

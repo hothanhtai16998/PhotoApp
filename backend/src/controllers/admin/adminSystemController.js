@@ -61,7 +61,36 @@ export const getSystemLogs = asyncHandler(async (req, res) => {
     });
 });
 
-// Settings Management
+// Public Settings (read-only, no authentication required)
+export const getPublicSettings = asyncHandler(async (req, res) => {
+    const settings = await Settings.findOne({ key: 'system' });
+
+    if (!settings) {
+        // Return default settings without creating them (public endpoint shouldn't modify data)
+        return res.json({
+            settings: {
+                siteName: 'PhotoApp',
+                siteDescription: 'Discover beautiful photos',
+                maxUploadSize: 10,
+                allowedFileTypes: ['jpg', 'jpeg', 'png', 'webp'],
+                maintenanceMode: false,
+            },
+        });
+    }
+
+    // Return only public settings (exclude sensitive data if any)
+    const publicSettings = {
+        siteName: settings.value.siteName || 'PhotoApp',
+        siteDescription: settings.value.siteDescription || 'Discover beautiful photos',
+        maxUploadSize: settings.value.maxUploadSize || 10,
+        allowedFileTypes: settings.value.allowedFileTypes || ['jpg', 'jpeg', 'png', 'webp'],
+        maintenanceMode: settings.value.maintenanceMode || false,
+    };
+
+    res.json({ settings: publicSettings });
+});
+
+// Settings Management (admin only)
 export const getSettings = asyncHandler(async (req, res) => {
     // Permission check is handled by requirePermission('manageSettings') middleware
 
