@@ -10,6 +10,7 @@ interface ProfileTabsProps {
     followersCount: number;
     collectionsCount: number;
     onTabChange: (tab: TabType) => void;
+    isOwnProfile?: boolean;
 }
 
 export function ProfileTabs({
@@ -19,6 +20,7 @@ export function ProfileTabs({
     followersCount,
     collectionsCount,
     onTabChange,
+    isOwnProfile = false,
 }: ProfileTabsProps) {
     return (
         <div className="profile-tabs">
@@ -46,13 +48,16 @@ export function ProfileTabs({
                 <span className="tab-label">{t('profile.collections')}</span>
                 <span className="tab-count">{collectionsCount}</span>
             </button>
-            <button
-                className={`profile-tab ${activeTab === 'stats' ? 'active' : ''}`}
-                onClick={() => onTabChange('stats')}
-            >
-                <BarChart3 size={18} className="tab-icon" />
-                <span className="tab-label">{t('profile.stats')}</span>
-            </button>
+            {/* Statistics tab - Hidden for now, may be used later */}
+            {/* {isOwnProfile && (
+                <button
+                    className={`profile-tab ${activeTab === 'stats' ? 'active' : ''}`}
+                    onClick={() => onTabChange('stats')}
+                >
+                    <BarChart3 size={18} className="tab-icon" />
+                    <span className="tab-label">{t('profile.stats')}</span>
+                </button>
+            )} */}
         </div>
     );
 }

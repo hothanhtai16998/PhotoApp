@@ -137,6 +137,10 @@ function AdminPage() {
                 break;
             case 'images':
                 fns.loadImages();
+                // Also load categories for the category selector
+                if (categoriesAdmin.categories.length === 0) {
+                    fns.loadCategories();
+                }
                 break;
             case 'categories':
                 fns.loadCategories();
@@ -145,7 +149,7 @@ function AdminPage() {
                 fns.loadAdminRoles(fns.loadUsers, fns.getUsersLength());
                 break;
         }
-    }, [activeTab]);
+    }, [activeTab, categoriesAdmin.categories.length]);
 
     // Handler wrappers
     const handleDeleteUser = useCallback(async (userId: string, username: string) => {
@@ -436,6 +440,7 @@ function AdminPage() {
                                     onPageChange={imagesAdmin.loadImages}
                                     onDelete={handleDeleteImage}
                                     onImageUpdated={() => imagesAdmin.loadImages(imagesAdmin.pagination.page)}
+                                    categories={categoriesAdmin.categories}
                                 />
                             )}
                             {activeTab === 'categories' && (

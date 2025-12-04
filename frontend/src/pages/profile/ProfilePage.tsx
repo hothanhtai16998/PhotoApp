@@ -125,6 +125,13 @@ function ProfilePage() {
         return displayUserId === currentUser?._id;
     }, [displayUserId, currentUser?._id]);
 
+    // Statistics tab - Hidden for now, redirect to photos if accessed
+    useEffect(() => {
+        if (activeTab === TABS.STATS) {
+            setActiveTab(TABS.PHOTOS);
+        }
+    }, [activeTab]);
+
     // Reset all state immediately when params change to prevent flashing old data
     useEffect(() => {
         // Create a unique key from params to detect changes
@@ -581,6 +588,7 @@ function ProfilePage() {
                         followersCount={followStats.followers}
                         collectionsCount={collectionsCount}
                         onTabChange={setActiveTab}
+                        isOwnProfile={isOwnProfile}
                     />
 
                     {/* Content Area */}
@@ -697,11 +705,12 @@ function ProfilePage() {
                                     })}
                                 </div>
                             )
-                        ) : (
-                            <Suspense fallback={<div className="profile-stats-loading"><Skeleton className="h-64 w-full" /></div>}>
-                                <UserAnalyticsDashboard />
-                            </Suspense>
-                        )}
+                        ) : activeTab === TABS.STATS ? (
+                            // Statistics tab content - Hidden for now, may be used later
+                            <div className="empty-state" role="status" aria-live="polite">
+                                <p>{t('profile.statsPrivate') || 'Statistics are private and only visible to the account owner.'}</p>
+                            </div>
+                        ) : null}
                     </div>
                 </div>
             </main>

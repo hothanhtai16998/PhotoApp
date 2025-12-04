@@ -170,7 +170,7 @@ export const deleteImage = asyncHandler(async (req, res) => {
 // Update image (location, title, etc.)
 export const updateImage = asyncHandler(async (req, res) => {
     const { imageId } = req.params;
-    const { location, coordinates, imageTitle, cameraModel } = req.body;
+    const { location, coordinates, imageTitle, cameraModel, imageCategory } = req.body;
 
     // Permission check is handled by requirePermission('editImages') middleware
 
@@ -222,6 +222,25 @@ export const updateImage = asyncHandler(async (req, res) => {
     if (cameraModel !== undefined) {
         const cm = String(cameraModel || '').trim();
         updateData.cameraModel = cm.length ? cm : null;
+    }
+
+    if (imageCategory !== undefined) {
+        // Handle category update: can be ObjectId string, null, or empty string
+        if (imageCategory === null || imageCategory === '') {
+            updateData.imageCategory = null;
+        } else if (mongoose.Types.ObjectId.isValid(imageCategory)) {
+            // Verify category exists and is active
+            const category = await Category.findById(imageCategory);
+            if (!category) {
+                return res.status(400).json({ message: 'Category not found' });
+            }
+            if (!category.isActive) {
+                return res.status(400).json({ message: 'Category is not active' });
+            }
+            updateData.imageCategory = new mongoose.Types.ObjectId(imageCategory);
+        } else {
+            return res.status(400).json({ message: 'Invalid category ID' });
+        }
     }
 
     // Update image

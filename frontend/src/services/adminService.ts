@@ -200,6 +200,7 @@ export const adminService = {
         coordinates?: Coordinates | null;
         imageTitle?: string;
         cameraModel?: string;
+        imageCategory?: string | null;
     }): Promise<{ image: AdminImage }> => {
         const res = await api.put(`/admin/images/${imageId}`, updates, {
             withCredentials: true,

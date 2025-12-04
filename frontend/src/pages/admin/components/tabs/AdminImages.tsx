@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/utils';
 import { PermissionButton } from '../PermissionButton';
 import { t } from '@/i18n';
+import type { Category } from '@/services/categoryService';
 
 interface AdminImagesProps {
     images: AdminImage[];
@@ -17,6 +18,7 @@ interface AdminImagesProps {
     onPageChange: (page: number) => void;
     onDelete: (imageId: string, imageTitle: string) => void;
     onImageUpdated?: () => void;
+    categories?: Category[];
 }
 
 export function AdminImages({
@@ -28,8 +30,10 @@ export function AdminImages({
     onPageChange,
     onDelete,
     onImageUpdated,
+    categories = [],
 }: AdminImagesProps) {
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [updatingCategory, setUpdatingCategory] = useState<string | null>(null);
 
     // Close modal on ESC key
     useEffect(() => {
@@ -48,7 +52,19 @@ export function AdminImages({
         };
     }, [selectedImage]);
 
-    const handleModerate = async (imageId: string, status: 'approved' | 'rejected' | 'flagged') => {
+    const handleModerate = async (imageId: string, status: 'approved' | 'rejected' | 'flagged', imageCategory?: string | { _id: string; name: string } | null) => {
+        // Check if trying to approve without category
+        if (status === 'approved') {
+            const hasCategory = imageCategory && (
+                typeof imageCategory === 'string' || 
+                (typeof imageCategory === 'object' && imageCategory._id)
+            );
+            if (!hasCategory) {
+                toast.error('Bạn cần chọn danh mục trước khi phê duyệt ảnh');
+                return;
+            }
+        }
+
         const notes = prompt(t('admin.moderationNotes'));
         if (notes === null && status !== 'approved') return; // User cancelled (except for approve which doesn't need notes)
         
@@ -64,6 +80,25 @@ export function AdminImages({
         } catch (error: unknown) {
             toast.error(getErrorMessage(error, t('admin.moderationFailed')));
         }
+    };
+
+    const handleCategoryChange = async (imageId: string, categoryId: string | null) => {
+        setUpdatingCategory(imageId);
+        try {
+            await adminService.updateImage(imageId, { imageCategory: categoryId });
+            toast.success(t('admin.categoryUpdateSuccess') || 'Category updated successfully');
+            onImageUpdated?.();
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error, t('admin.categoryUpdateFailed') || 'Failed to update category'));
+        } finally {
+            setUpdatingCategory(null);
+        }
+    };
+
+    const getCurrentCategoryId = (img: AdminImage): string | null => {
+        if (!img.imageCategory) return null;
+        if (typeof img.imageCategory === 'string') return img.imageCategory;
+        return img.imageCategory._id || null;
     };
     return (
         <div className="admin-images">
@@ -96,9 +131,38 @@ export function AdminImages({
                         />
                         <div className="admin-image-info">
                             <h3>{img.imageTitle}</h3>
-                            <p>{t('admin.categoryLabel2')} {typeof img.imageCategory === 'string'
-                                ? img.imageCategory
-                                : img.imageCategory?.name || t('admin.unknown')}</p>
+                            <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <label style={{ fontSize: '14px', fontWeight: '500', whiteSpace: 'nowrap' }}>
+                                    {t('admin.categoryLabel2')}
+                                    {!getCurrentCategoryId(img) && (
+                                        <span style={{ color: '#ef4444', marginLeft: '2px' }}>*</span>
+                                    )}
+                                </label>
+                                <select
+                                    value={getCurrentCategoryId(img) || ''}
+                                    onChange={(e) => handleCategoryChange(img._id, e.target.value || null)}
+                                    disabled={updatingCategory === img._id}
+                                    style={{
+                                        flex: '1',
+                                        maxWidth: '200px',
+                                        padding: '6px 8px',
+                                        border: '1px solid #e5e5e5',
+                                        borderRadius: '4px',
+                                        fontSize: '14px',
+                                        backgroundColor: updatingCategory === img._id ? '#f5f5f5' : 'white',
+                                        cursor: updatingCategory === img._id ? 'not-allowed' : 'pointer',
+                                    }}
+                                >
+                                    <option value="">Thêm danh mục</option>
+                                    {categories
+                                        .filter(cat => cat.isActive !== false)
+                                        .map(cat => (
+                                            <option key={cat._id} value={cat._id}>
+                                                {cat.name}
+                                            </option>
+                                        ))}
+                                </select>
+                            </div>
                             <p>{t('admin.uploaderLabel')} {img.uploadedBy.displayName || img.uploadedBy.username}</p>
                             <p>{t('admin.uploadDateLabel')} {img.createdAt}</p>
                             {img.moderationStatus && (
@@ -118,7 +182,7 @@ export function AdminImages({
                                         action={t('admin.approveImage')}
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => handleModerate(img._id, 'approved')}
+                                        onClick={() => handleModerate(img._id, 'approved', img.imageCategory)}
                                         className="admin-action-approve"
                                     >
                                         <CheckCircle size={16} /> {t('admin.approve')}
