@@ -262,21 +262,9 @@ export const useImageUpload = ({ onSuccess }: UseImageUploadProps = {}) => {
         // Dispatch refresh events
         window.dispatchEvent(new CustomEvent('refreshProfile'));
 
-        // Get category names (use first successful image's category for refresh)
-        const firstSuccessfulIndex = successfulUploads[0] ?? 0;
-        const firstCategoryId = imagesData[firstSuccessfulIndex]?.category;
-        const firstCategory = categories.find(
-          (cat) => cat._id === firstCategoryId
-        );
-        const categoryName = firstCategory?.name || null;
-
+        // Dispatch imageUploaded event immediately after upload completes to refresh all grids
+        // This way the grid refreshes when user clicks "Gửi 1 ảnh", not when they close the modal
         setTimeout(() => {
-          const refreshEvent = new CustomEvent('refreshImages', {
-            detail: { categoryName },
-          });
-          window.dispatchEvent(refreshEvent);
-          
-          // Also dispatch imageUploaded event to refresh all image grids (including "All" category)
           window.dispatchEvent(new CustomEvent('imageUploaded'));
         }, 300);
 

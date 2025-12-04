@@ -495,6 +495,45 @@ export const preUploadImage = asyncHandler(async (req, res) => {
     }
 });
 
+/**
+ * Delete a pre-uploaded file (before finalization)
+ * This is called when user removes an image from the upload modal after pre-upload
+ */
+export const deletePreUploadedFile = asyncHandler(async (req, res) => {
+    const { uploadKey } = req.body;
+
+    if (!uploadKey) {
+        return res.status(400).json({
+            message: 'Thiếu uploadKey',
+        });
+    }
+
+    // Security: Only allow deletion of files in the raw upload folder
+    if (!uploadKey.startsWith(RAW_UPLOAD_FOLDER + '/')) {
+        return res.status(403).json({
+            message: 'Không được phép xóa file này',
+        });
+    }
+
+    try {
+        await deleteObjectByKey(uploadKey);
+        logger.info(`Deleted pre-uploaded file: ${uploadKey}`);
+        res.status(200).json({
+            message: 'Đã xóa file tải lên',
+        });
+    } catch (error) {
+        logger.error('Failed to delete pre-uploaded file:', error.message);
+        // Don't fail if file doesn't exist (might have been deleted already)
+        if (error.name === 'NoSuchKey' || error.Code === 'NoSuchKey') {
+            res.status(200).json({
+                message: 'File đã được xóa hoặc không tồn tại',
+            });
+        } else {
+            throw new Error('Không thể xóa file. Vui lòng thử lại.');
+        }
+    }
+});
+
 export const finalizeImageUpload = asyncHandler(async (req, res) => {
     const userId = req.user?._id;
     const isAdmin = req.user?.isAdmin || req.user?.isSuperAdmin;

@@ -38,6 +38,7 @@ interface GetImagesResponse {
 export const imageService = {
   // Upload operations
   preUploadImage: imageUploadService.preUploadImage,
+  deletePreUploadedFile: imageUploadService.deletePreUploadedFile,
   finalizeImageUpload: imageUploadService.finalizeImageUpload,
   uploadImage: imageUploadService.uploadImage,
   createBulkUploadNotification: imageUploadService.createBulkUploadNotification,

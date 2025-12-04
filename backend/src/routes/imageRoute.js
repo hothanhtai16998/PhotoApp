@@ -3,6 +3,7 @@ import {
     uploadImage,
     preUploadImage,
     finalizeImageUpload,
+    deletePreUploadedFile,
     getImagesByUserId,
     downloadImage,
     getImageById,
@@ -58,6 +59,8 @@ router.get('/:imageId/download', optionalAuth, downloadImage);
 // Protected routes (with CSRF protection for state-changing operations)
 // Pre-upload: Upload image to S3 only (no database record)
 router.post('/pre-upload', protectedRoute, uploadLimiter, preUploadImage);
+// Delete pre-uploaded file: Remove file from S3 if user cancels before finalization
+router.delete('/pre-upload', protectedRoute, deletePreUploadedFile);
 // Finalize: Link metadata to pre-uploaded image and create database record
 router.post('/finalize', protectedRoute, finalizeImageUpload);
 // Bulk upload notification

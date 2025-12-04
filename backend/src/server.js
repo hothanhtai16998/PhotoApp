@@ -30,6 +30,7 @@ import { requestQueue } from './middlewares/requestQueue.js';
 import { csrfToken, validateCsrf, getCsrfToken } from './middlewares/csrfMiddleware.js';
 import { logger } from './utils/logger.js';
 import { startSessionCleanup, stopSessionCleanup } from './utils/sessionCleanup.js';
+import { startPreUploadCleanup, stopPreUploadCleanup } from './utils/preUploadCleanup.js';
 import { checkSocialScraper } from './controllers/socialShareController.js';
 import 'dotenv/config';
 
@@ -296,6 +297,9 @@ const startServer = async () => {
 
         // Start session cleanup scheduler
         startSessionCleanup();
+        
+        // Start pre-upload cleanup scheduler
+        startPreUploadCleanup();
 
         const PORT = env.PORT;
         app.listen(PORT, '0.0.0.0', () => {
@@ -307,12 +311,14 @@ const startServer = async () => {
         process.on('SIGTERM', () => {
             logger.info('SIGTERM received, shutting down gracefully...');
             stopSessionCleanup();
+            stopPreUploadCleanup();
             process.exit(0);
         });
 
         process.on('SIGINT', () => {
             logger.info('SIGINT received, shutting down gracefully...');
             stopSessionCleanup();
+            stopPreUploadCleanup();
             process.exit(0);
         });
     } catch (error) {

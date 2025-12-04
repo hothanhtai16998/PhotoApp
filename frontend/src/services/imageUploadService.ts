@@ -8,6 +8,14 @@ import type {
 } from '@/types/image';
 
 export const imageUploadService = {
+  // Delete pre-uploaded file (before finalization)
+  deletePreUploadedFile: async (uploadKey: string): Promise<void> => {
+    await api.delete('/images/pre-upload', {
+      data: { uploadKey },
+      withCredentials: true,
+    });
+  },
+
   // Pre-upload: Upload image to S3 only (no database record)
   preUploadImage: async (
     imageFile: File,

@@ -10,6 +10,7 @@ import { UploadPreview } from './upload/UploadPreview';
 import { UploadForm } from './upload/UploadForm';
 import { t } from '@/i18n';
 import { useSiteSettings } from '@/hooks/useSiteSettings';
+import { imageService } from '@/services/imageService';
 import './UploadModal.css';
 
 interface UploadModalProps {
@@ -99,12 +100,40 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
         navigate('/profile');
     };
 
-    const handleCancel = useCallback(() => {
+    // Cleanup pre-uploaded files that weren't finalized
+    const cleanupPreUploadedFiles = useCallback(async () => {
+        // Find all images that were pre-uploaded (regardless of success state)
+        // This function is only called when modal closes without finalization
+        const preUploadedImages = imagesData.filter(
+            img => img.preUploadData?.uploadKey
+        );
+
+        // Delete all pre-uploaded files in parallel
+        if (preUploadedImages.length > 0) {
+            const deletePromises = preUploadedImages.map(async (img) => {
+                if (img.preUploadData?.uploadKey) {
+                    try {
+                        await imageService.deletePreUploadedFile(img.preUploadData.uploadKey);
+                    } catch (error) {
+                        console.error('Failed to delete pre-uploaded file:', error);
+                        // Continue even if some deletions fail
+                    }
+                }
+            });
+            await Promise.all(deletePromises);
+        }
+    }, [imagesData]);
+
+    const handleCancel = useCallback(async () => {
         if (showProgress || showSuccess) return; // Prevent closing during upload/success
+        
+        // Cleanup pre-uploaded files before closing
+        await cleanupPreUploadedFiles();
+        
         resetState();
         resetUploadState();
         onClose();
-    }, [onClose, showProgress, showSuccess, resetUploadState, resetState]);
+    }, [onClose, showProgress, showSuccess, resetUploadState, resetState, cleanupPreUploadedFiles]);
 
     // Handle closing the modal after successful upload
     const handleCloseAfterSuccess = useCallback(() => {
@@ -112,11 +141,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
         resetState();
         resetUploadState();
         onClose();
-        // Dispatch refresh event immediately when modal closes to ensure grid refreshes
-        // Use setTimeout to ensure modal is fully closed before refreshing
-        setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('imageUploaded'));
-        }, 50);
+        // No need to dispatch refresh here - it already happened when "Gửi 1 ảnh" was clicked
     }, [onClose, showSuccess, resetUploadState, resetState]);
 
     // Handle ESC key
@@ -155,6 +180,21 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
             document.body.style.overflow = '';
         };
     }, [isOpen]);
+
+    // Cleanup pre-uploaded files when modal closes (only if upload wasn't successful)
+    useEffect(() => {
+        // When modal closes (isOpen becomes false), cleanup any pre-uploaded files
+        // Only cleanup if: modal is closed, there are images, upload wasn't successful, and not currently uploading
+        if (!isOpen && imagesData.length > 0 && !showSuccess && !showProgress) {
+            const preUploadedImages = imagesData.filter(
+                img => img.preUploadData?.uploadKey
+            );
+            if (preUploadedImages.length > 0) {
+                // Fire and forget - don't block UI
+                cleanupPreUploadedFiles().catch(console.error);
+            }
+        }
+    }, [isOpen, imagesData, showSuccess, showProgress, cleanupPreUploadedFiles]);
 
     // Redirect to sign-in if not authenticated
     useEffect(() => {
@@ -375,7 +415,16 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                     imageData={imgData}
                                     index={index}
                                     totalImages={imagesData.length}
-                                    onRemove={() => {
+                                    onRemove={async () => {
+                                        // If image was pre-uploaded, delete it from S3/R2
+                                        if (imgData.preUploadData?.uploadKey) {
+                                            try {
+                                                await imageService.deletePreUploadedFile(imgData.preUploadData.uploadKey);
+                                            } catch (error) {
+                                                console.error('Failed to delete pre-uploaded file:', error);
+                                                // Continue with removal even if delete fails
+                                            }
+                                        }
                                         const newFiles = selectedFiles.filter((_, i) => i !== index);
                                         setSelectedFiles(newFiles);
                                         setImagesData(prev => prev.filter((_, i) => i !== index));

@@ -1,4 +1,4 @@
-import { S3Client, GetObjectCommand, DeleteObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, GetObjectCommand, DeleteObjectCommand, PutObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { env } from './env.js';
 import { Upload } from '@aws-sdk/lib-storage';
@@ -26,7 +26,7 @@ const s3Client = env.USE_R2
 	});
 
 // Get bucket name
-const getBucketName = () => env.USE_R2 ? env.R2_BUCKET_NAME : env.AWS_S3_BUCKET_NAME;
+export const getBucketName = () => env.USE_R2 ? env.R2_BUCKET_NAME : env.AWS_S3_BUCKET_NAME;
 
 // Get public URL base
 const getPublicUrlBase = () => {
@@ -437,6 +437,7 @@ export const getImageFromS3 = async (imageUrl) => {
 	}
 };
 
+export { s3Client };
 export default s3Client;
 
 /**
