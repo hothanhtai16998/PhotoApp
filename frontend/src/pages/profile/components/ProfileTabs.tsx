@@ -48,8 +48,8 @@ export function ProfileTabs({
                 <span className="tab-label">{t('profile.collections')}</span>
                 <span className="tab-count">{collectionsCount}</span>
             </button>
-            {/* Statistics tab - Hidden for now, may be used later */}
-            {/* {isOwnProfile && (
+            {/* Statistics tab - Only visible for own profile */}
+            {isOwnProfile && (
                 <button
                     className={`profile-tab ${activeTab === 'stats' ? 'active' : ''}`}
                     onClick={() => onTabChange('stats')}
@@ -57,7 +57,7 @@ export function ProfileTabs({
                     <BarChart3 size={18} className="tab-icon" />
                     <span className="tab-label">{t('profile.stats')}</span>
                 </button>
-            )} */}
+            )}
         </div>
     );
 }

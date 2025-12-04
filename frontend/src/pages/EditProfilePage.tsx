@@ -5,12 +5,14 @@ import Header from "@/components/Header";
 import { useProfileEdit } from "./profile/hooks/useProfileEdit";
 import { ProfileForm } from "./profile/components/ProfileForm";
 import { PasswordForm } from "./profile/components/PasswordForm";
+import { ActiveSessions } from "./profile/components/ActiveSessions";
 import "./EditProfilePage.css";
 
 // Profile settings section IDs
 const SECTION_IDS = {
     EDIT_PROFILE: 'edit-profile',
     CHANGE_PASSWORD: 'change-password',
+    ACTIVE_SESSIONS: 'active-sessions',
     DOWNLOAD_HISTORY: 'download-history',
 } as const;
 
@@ -34,7 +36,9 @@ function canChangePassword(user: { isOAuthUser?: boolean } | null | undefined): 
 
 // Helper function to check if section is a "coming soon" section
 function isComingSoonSection(activeSection: string): boolean {
-    return activeSection !== SECTION_IDS.EDIT_PROFILE && activeSection !== SECTION_IDS.CHANGE_PASSWORD;
+    return activeSection !== SECTION_IDS.EDIT_PROFILE && 
+           activeSection !== SECTION_IDS.CHANGE_PASSWORD && 
+           activeSection !== SECTION_IDS.ACTIVE_SESSIONS;
 }
 
 type SectionId = typeof SECTION_IDS[keyof typeof SECTION_IDS];
@@ -89,6 +93,7 @@ function EditProfilePage() {
     // Define all available menu items
     const allMenuItems = [
         { id: SECTION_IDS.EDIT_PROFILE, label: 'Chỉnh sửa thông tin' },
+        { id: SECTION_IDS.ACTIVE_SESSIONS, label: 'Phiên đăng nhập' },
         { id: SECTION_IDS.DOWNLOAD_HISTORY, label: 'Lịch sử tải' },
         { id: SECTION_IDS.CHANGE_PASSWORD, label: 'Đổi mật khẩu' },
     ];
@@ -148,6 +153,10 @@ function EditProfilePage() {
                                 passwordError={passwordError}
                                 passwordSuccess={passwordSuccess}
                             />
+                        )}
+
+                        {activeSection === SECTION_IDS.ACTIVE_SESSIONS && (
+                            <ActiveSessions />
                         )}
 
                         {isComingSoonSection(activeSection) && (

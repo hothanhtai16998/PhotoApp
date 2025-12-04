@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, XCircle, Search } from 'lucide-react';
+import { ModerationNotesModal } from '../modals/ModerationNotesModal';
 
 export function AdminModeration() {
     const { hasPermission, isSuperAdmin } = usePermissions();
@@ -18,6 +19,8 @@ export function AdminModeration() {
     const [pendingContent, setPendingContent] = useState<PendingContentItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [showRejectModal, setShowRejectModal] = useState(false);
+    const [contentToReject, setContentToReject] = useState<string | null>(null);
 
     useEffect(() => {
         if (!isSuperAdmin() && !hasPermission('moderateContent')) {
@@ -52,12 +55,20 @@ export function AdminModeration() {
         }
     };
 
-    const handleReject = async (contentId: string) => {
-        const reason = prompt('Lý do từ chối (tùy chọn):');
+    const handleRejectClick = (contentId: string) => {
+        setContentToReject(contentId);
+        setShowRejectModal(true);
+    };
+
+    const handleRejectConfirm = async (reason?: string) => {
+        if (!contentToReject) return;
+
         try {
-            await adminService.rejectContent(contentId, reason || undefined);
+            await adminService.rejectContent(contentToReject, reason || undefined);
             toast.success('Đã từ chối nội dung');
             loadPendingContent();
+            setShowRejectModal(false);
+            setContentToReject(null);
         } catch (error: unknown) {
             const axiosError = error as { response?: { data?: { message?: string } } };
             toast.error(axiosError.response?.data?.message || 'Lỗi khi từ chối nội dung');
@@ -128,7 +139,7 @@ export function AdminModeration() {
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                onClick={() => handleReject(item._id)}
+                                                onClick={() => handleRejectClick(item._id)}
                                             >
                                                 <XCircle size={16} />
                                             </Button>
@@ -140,6 +151,18 @@ export function AdminModeration() {
                     </tbody>
                 </table>
             </div>
+
+            <ModerationNotesModal
+                isOpen={showRejectModal}
+                onClose={() => {
+                    setShowRejectModal(false);
+                    setContentToReject(null);
+                }}
+                onConfirm={handleRejectConfirm}
+                title="Từ chối nội dung"
+                placeholder="Lý do từ chối (tùy chọn)..."
+                isOptional={true}
+            />
         </div>
     );
 }

@@ -220,14 +220,9 @@ export const useCollectionImages = ({
     });
   }, [selectionMode, isMobile, navigate, images, toggleImageSelection, setSearchParams]);
 
-  // Handle bulk remove
+  // Handle bulk remove - Note: Confirmation is now handled by the component using ConfirmModal
   const handleBulkRemove = useCallback(async () => {
     if (!collectionId || selectedImageIds.size === 0) return;
-
-    const count = selectedImageIds.size;
-    if (!confirm(`Bạn có chắc chắn muốn xóa ${count} ảnh khỏi bộ sưu tập này?`)) {
-      return;
-    }
 
     const imageIdsArray = Array.from(selectedImageIds);
     await bulkRemoveImages(collectionId, imageIdsArray);

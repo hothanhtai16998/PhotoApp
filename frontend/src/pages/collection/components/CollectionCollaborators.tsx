@@ -5,6 +5,7 @@ import type { Collection } from '@/types/collection';
 import { toast } from 'sonner';
 import { useUserStore } from '@/stores/useUserStore';
 import { userService, type UserSearchResult } from '@/services/userService';
+import { ConfirmModal } from '@/pages/admin/components/modals';
 import './CollectionCollaborators.css';
 
 // Custom event to trigger notification refresh
@@ -36,6 +37,7 @@ export default function CollectionCollaborators({
 	const [showCollaborators, setShowCollaborators] = useState(true);
 	const [updatingPermission, setUpdatingPermission] = useState<string | null>(null);
 	const [removingCollaborator, setRemovingCollaborator] = useState<string | null>(null);
+	const [showRemoveModal, setShowRemoveModal] = useState(false);
 
 	// User search state
 	const [searchQuery, setSearchQuery] = useState('');
@@ -207,11 +209,15 @@ export default function CollectionCollaborators({
 		}
 	};
 
-	const handleRemoveCollaborator = async (collaboratorId: string) => {
-		if (!confirm('Bạn có chắc chắn muốn xóa cộng tác viên này?')) {
-			return;
-		}
+	const handleRemoveCollaboratorClick = (collaboratorId: string) => {
+		setRemovingCollaborator(collaboratorId);
+		setShowRemoveModal(true);
+	};
 
+	const handleRemoveCollaboratorConfirm = async () => {
+		if (!removingCollaborator) return;
+
+		const collaboratorId = removingCollaborator;
 		setRemovingCollaborator(collaboratorId);
 		try {
 			const updatedCollection = await collectionService.removeCollaborator(
@@ -226,6 +232,7 @@ export default function CollectionCollaborators({
 			toast.error(axiosError.response?.data?.message || 'Không thể xóa cộng tác viên. Vui lòng thử lại.');
 		} finally {
 			setRemovingCollaborator(null);
+			setShowRemoveModal(false);
 		}
 	};
 
@@ -373,7 +380,7 @@ export default function CollectionCollaborators({
 											{canEdit && (
 												<button
 													className="collection-collaborator-remove-btn"
-													onClick={() => handleRemoveCollaborator(collaboratorUser._id)}
+													onClick={() => handleRemoveCollaboratorClick(collaboratorUser._id)}
 													disabled={removingCollaborator === collaboratorUser._id}
 													title="Xóa cộng tác viên"
 												>

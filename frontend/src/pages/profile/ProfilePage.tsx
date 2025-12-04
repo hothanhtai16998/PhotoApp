@@ -125,12 +125,12 @@ function ProfilePage() {
         return displayUserId === currentUser?._id;
     }, [displayUserId, currentUser?._id]);
 
-    // Statistics tab - Hidden for now, redirect to photos if accessed
+    // Statistics tab - Only allow access for own profile
     useEffect(() => {
-        if (activeTab === TABS.STATS) {
+        if (activeTab === TABS.STATS && !isOwnProfile) {
             setActiveTab(TABS.PHOTOS);
         }
-    }, [activeTab]);
+    }, [activeTab, isOwnProfile]);
 
     // Reset all state immediately when params change to prevent flashing old data
     useEffect(() => {
@@ -706,10 +706,20 @@ function ProfilePage() {
                                 </div>
                             )
                         ) : activeTab === TABS.STATS ? (
-                            // Statistics tab content - Hidden for now, may be used later
-                            <div className="empty-state" role="status" aria-live="polite">
-                                <p>{t('profile.statsPrivate') || 'Statistics are private and only visible to the account owner.'}</p>
-                            </div>
+                            // Statistics tab content - Only visible for own profile
+                            isOwnProfile ? (
+                                <Suspense fallback={
+                                    <div className="empty-state" role="status" aria-live="polite">
+                                        <Skeleton className="h-64 w-full" />
+                                    </div>
+                                }>
+                                    <UserAnalyticsDashboard />
+                                </Suspense>
+                            ) : (
+                                <div className="empty-state" role="status" aria-live="polite">
+                                    <p>{t('profile.statsPrivate') || 'Statistics are private and only visible to the account owner.'}</p>
+                                </div>
+                            )
                         ) : null}
                     </div>
                 </div>

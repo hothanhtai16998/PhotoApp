@@ -90,4 +90,49 @@ export const authService = {
 		);
 		return res.data;
 	},
+
+	/**
+	 * Get all active sessions for the current user
+	 */
+	getActiveSessions: async (): Promise<{ success: boolean; sessions: Session[] }> => {
+		const res = await api.get<{ success: boolean; sessions: Session[] }>(
+			'/auth/sessions',
+			{ withCredentials: true }
+		);
+		return res.data;
+	},
+
+	/**
+	 * Sign out all devices except the current one
+	 */
+	signOutAllDevices: async (): Promise<{ success: boolean; message: string; deletedCount: number }> => {
+		const res = await api.post<{ success: boolean; message: string; deletedCount: number }>(
+			'/auth/sessions/signout-all',
+			{},
+			{ withCredentials: true }
+		);
+		return res.data;
+	},
+
+	/**
+	 * Sign out a specific session
+	 */
+	signOutSession: async (sessionId: string): Promise<{ success: boolean; message: string }> => {
+		const res = await api.delete<{ success: boolean; message: string }>(
+			`/auth/sessions/${sessionId}`,
+			{ withCredentials: true }
+		);
+		return res.data;
+	},
 };
+
+export interface Session {
+	_id: string;
+	deviceName: string;
+	browserName: string;
+	ipAddress: string;
+	location: string;
+	isCurrentSession: boolean;
+	lastActive: string;
+	createdAt: string;
+}

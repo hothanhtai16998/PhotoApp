@@ -13,6 +13,7 @@ import { CollectionImageGrid } from './components/CollectionImageGrid';
 import { CollectionVersionHistory } from './components/CollectionVersionHistory';
 import { CollectionBulkActions } from './components/CollectionBulkActions';
 import CollectionCollaborators from './components/CollectionCollaborators';
+import { ConfirmModal } from '@/pages/admin/components/modals';
 import api from '@/lib/axios';
 import { appConfig } from '@/config/appConfig';
 import './CollectionDetailPage.css';
@@ -152,24 +153,41 @@ export default function CollectionDetailPage() {
 
 	// Handle restore version
 	const [restoringVersion, setRestoringVersion] = useState<number | null>(null);
-	const handleRestoreVersion = useCallback(async (versionNumber: number) => {
-		if (!collectionId) return;
+	const [showRestoreModal, setShowRestoreModal] = useState(false);
+	const [versionToRestore, setVersionToRestore] = useState<number | null>(null);
+	const [showBulkRemoveModal, setShowBulkRemoveModal] = useState(false);
 
-		if (!confirm(`Bạn có chắc chắn muốn khôi phục bộ sưu tập về phiên bản ${versionNumber}? Tất cả thay đổi sau phiên bản này sẽ bị mất.`)) {
-			return;
-		}
+	const handleRestoreVersionClick = useCallback((versionNumber: number) => {
+		setVersionToRestore(versionNumber);
+		setShowRestoreModal(true);
+	}, []);
 
-		setRestoringVersion(versionNumber);
+	const handleRestoreVersionConfirm = useCallback(async () => {
+		if (!collectionId || versionToRestore === null) return;
+
+		setRestoringVersion(versionToRestore);
 		try {
-			await restoreVersion(collectionId, versionNumber);
+			await restoreVersion(collectionId, versionToRestore);
 			// Reload collection to sync with backend
 			await fetchCollection(collectionId);
+			setShowRestoreModal(false);
+			setVersionToRestore(null);
 		} catch {
 			// Error already handled in store
 		} finally {
 			setRestoringVersion(null);
 		}
-	}, [collectionId, restoreVersion, fetchCollection]);
+	}, [collectionId, versionToRestore, restoreVersion, fetchCollection]);
+
+	const handleBulkRemoveClick = useCallback(() => {
+		if (selectedImageIds.size === 0) return;
+		setShowBulkRemoveModal(true);
+	}, [selectedImageIds.size]);
+
+	const handleBulkRemoveConfirm = useCallback(async () => {
+		await handleBulkRemove();
+		setShowBulkRemoveModal(false);
+	}, [handleBulkRemove]);
 
 	// Handle export collection
 	const handleExportCollection = useCallback(async () => {
@@ -280,7 +298,7 @@ export default function CollectionDetailPage() {
 					loadingVersions={loadingVersions}
 					restoringVersion={restoringVersion}
 					canEdit={canEdit}
-					onRestoreVersion={handleRestoreVersion}
+					onRestoreVersion={handleRestoreVersionClick}
 				/>
 
 				{/* Bulk Action Bar */}
@@ -289,7 +307,7 @@ export default function CollectionDetailPage() {
 					selectedImageIds={selectedImageIds}
 					totalImages={images.length}
 					isBulkRemoving={isBulkRemoving}
-					onBulkRemove={handleBulkRemove}
+					onBulkRemove={handleBulkRemoveClick}
 					onSelectAll={selectAllImages}
 					onDeselectAll={deselectAllImages}
 				/>
@@ -354,6 +372,33 @@ export default function CollectionDetailPage() {
 				/>
 				</Suspense>
 			)}
+
+			{/* Restore Version Modal */}
+			<ConfirmModal
+				isOpen={showRestoreModal}
+				onClose={() => {
+					setShowRestoreModal(false);
+					setVersionToRestore(null);
+				}}
+				onConfirm={handleRestoreVersionConfirm}
+				title="Khôi phục phiên bản"
+				message={versionToRestore !== null ? `Bạn có chắc chắn muốn khôi phục bộ sưu tập về phiên bản ${versionToRestore}? Tất cả thay đổi sau phiên bản này sẽ bị mất.` : ''}
+				confirmText="Khôi phục"
+				cancelText="Hủy"
+				variant="warning"
+			/>
+
+			{/* Bulk Remove Modal */}
+			<ConfirmModal
+				isOpen={showBulkRemoveModal}
+				onClose={() => setShowBulkRemoveModal(false)}
+				onConfirm={handleBulkRemoveConfirm}
+				title="Xóa ảnh khỏi bộ sưu tập"
+				message={`Bạn có chắc chắn muốn xóa ${selectedImageIds.size} ảnh khỏi bộ sưu tập này?`}
+				confirmText="Xóa"
+				cancelText="Hủy"
+				variant="danger"
+			/>
 		</>
 	);
 }

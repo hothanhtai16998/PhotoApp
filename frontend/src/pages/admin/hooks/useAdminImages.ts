@@ -80,9 +80,8 @@ export function useAdminImages(): UseAdminImagesReturn {
         return false;
       }
 
-      if (!confirm(`Bạn có muốn xoá ảnh "${imageTitle}" không?`)) {
-        return false;
-      }
+      // Note: Confirmation is now handled by the component using ConfirmModal
+      // This function just performs the deletion
 
       try {
         await adminService.deleteImage(imageId);

@@ -9,6 +9,7 @@ import { PermissionButton } from '../PermissionButton';
 import { t } from '@/i18n';
 import type { Category } from '@/services/categoryService';
 import { ModerationNotesModal } from '../modals/ModerationNotesModal';
+import { ConfirmModal } from '@/pages/admin/components/modals';
 
 interface AdminImagesProps {
     images: AdminImage[];
@@ -40,6 +41,8 @@ export function AdminImages({
         imageId: string;
         status: 'approved' | 'rejected' | 'flagged';
     } | null>(null);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [imageToDelete, setImageToDelete] = useState<{ id: string; title: string } | null>(null);
 
     // Close modal on ESC key
     useEffect(() => {
@@ -234,7 +237,10 @@ export function AdminImages({
                                     action={t('admin.deleteImage')}
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => onDelete(img._id, img.imageTitle)}
+                                    onClick={() => {
+                                        setImageToDelete({ id: img._id, title: img.imageTitle });
+                                        setShowDeleteModal(true);
+                                    }}
                                     className="admin-action-delete"
                                 >
                                     <Trash2 size={16} /> {t('admin.deleteImage')}
@@ -289,6 +295,27 @@ export function AdminImages({
                     />
                 </div>
             )}
+
+            {/* Delete Image Modal */}
+            <ConfirmModal
+                isOpen={showDeleteModal}
+                onClose={() => {
+                    setShowDeleteModal(false);
+                    setImageToDelete(null);
+                }}
+                onConfirm={async () => {
+                    if (imageToDelete) {
+                        await onDelete(imageToDelete.id, imageToDelete.title);
+                        setShowDeleteModal(false);
+                        setImageToDelete(null);
+                    }
+                }}
+                title="Xóa ảnh"
+                message={imageToDelete ? `Bạn có muốn xoá ảnh "${imageToDelete.title}" không?` : ''}
+                confirmText="Xóa"
+                cancelText="Hủy"
+                variant="danger"
+            />
 
             {/* Moderation Notes Modal */}
             {moderationModal && (

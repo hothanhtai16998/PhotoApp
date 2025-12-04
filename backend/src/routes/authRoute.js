@@ -8,10 +8,15 @@ import {
     googleCallback,
     checkEmailAvailability,
     checkUsernameAvailability,
+    getActiveSessions,
+    signOutAllDevices,
+    signOutSession,
 } from '../controllers/authController.js';
 import { authLimiter } from '../middlewares/rateLimiter.js';
 import { validateSignUp, validateSignIn } from '../middlewares/validationMiddleware.js';
 import { env } from '../libs/env.js';
+import { protectedRoute } from '../middlewares/authMiddleware.js';
+import { validateCsrf } from '../middlewares/csrfMiddleware.js';
 
 const router = express.Router();
 
@@ -30,6 +35,11 @@ router.post('/refresh', refreshToken);
 // Google OAuth routes
 router.get('/google', googleAuth);
 router.get('/google/callback', googleCallback);
+
+// Session management routes (require authentication)
+router.get('/sessions', protectedRoute, getActiveSessions);
+router.post('/sessions/signout-all', protectedRoute, validateCsrf, signOutAllDevices);
+router.delete('/sessions/:sessionId', protectedRoute, validateCsrf, signOutSession);
 
 // Test endpoint to check Google OAuth configuration
 router.get('/google/test', (req, res) => {

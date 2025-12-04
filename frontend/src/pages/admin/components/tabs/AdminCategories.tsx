@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { Edit2, Trash2 } from 'lucide-react';
 import { CreateCategoryModal, EditCategoryModal } from '../modals';
+import { ConfirmModal } from '@/pages/admin/components/modals';
 import type { Category } from '@/services/categoryService';
 import { PermissionButton } from '../PermissionButton';
 import { t } from '@/i18n';
@@ -29,6 +31,23 @@ export function AdminCategories({
     onSaveCreate,
     onSaveEdit,
 }: AdminCategoriesProps) {
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [categoryToDelete, setCategoryToDelete] = useState<{ id: string; name: string } | null>(null);
+
+    const handleDeleteClick = (categoryId: string, categoryName: string) => {
+        setCategoryToDelete({ id: categoryId, name: categoryName });
+        setShowDeleteModal(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!categoryToDelete) return;
+        const success = await onDelete(categoryToDelete.id, categoryToDelete.name);
+        if (success) {
+            setShowDeleteModal(false);
+            setCategoryToDelete(null);
+        }
+    };
+
     return (
         <div className="admin-categories">
             <div className="admin-header">
@@ -82,7 +101,7 @@ export function AdminCategories({
                                             action={t('admin.deleteCategory')}
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => onDelete(cat._id, cat.name)}
+                                            onClick={() => handleDeleteClick(cat._id, cat.name)}
                                             className="admin-action-delete"
                                         >
                                             <Trash2 size={16} />
@@ -115,6 +134,20 @@ export function AdminCategories({
                     onSave={onSaveEdit}
                 />
             )}
+
+            <ConfirmModal
+                isOpen={showDeleteModal}
+                onClose={() => {
+                    setShowDeleteModal(false);
+                    setCategoryToDelete(null);
+                }}
+                onConfirm={handleDeleteConfirm}
+                title="Xóa danh mục"
+                message={categoryToDelete ? `Bạn có muốn xoá danh mục "${categoryToDelete.name}" không? Chỉ xoá được nếu không có ảnh nào thuộc loại danh mục này.` : ''}
+                confirmText="Xóa"
+                cancelText="Hủy"
+                variant="danger"
+            />
         </div>
     );
 }

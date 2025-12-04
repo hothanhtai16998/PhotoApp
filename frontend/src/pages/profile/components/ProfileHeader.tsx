@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/Avatar";
-import { ProfileCompletion } from "./ProfileCompletion";
+// import { ProfileCompletion } from "./ProfileCompletion";
 import { Star, MapPin, Globe, Instagram, Twitter, Users } from "lucide-react";
 import type { PublicUser } from "@/services/userService";
 import type { UserStats } from "@/services/userStatsService";
@@ -126,13 +126,13 @@ export function ProfileHeader({
                     </div>
                 )}
 
-                {/* Profile Completion - Only show for own profile and when not 100% */}
-                {isOwnProfile && userStats?.profileCompletion && userStats.profileCompletion.percentage < 100 && (
+                {/* Profile Completion - Commented out, not using it now */}
+                {/* {isOwnProfile && userStats?.profileCompletion && userStats.profileCompletion.percentage < 100 && (
                     <ProfileCompletion
                         completion={userStats.profileCompletion}
                         onEditProfile={onEditProfile}
                     />
-                )}
+                )} */}
             </div>
         </div>
     );

@@ -103,16 +103,17 @@ export const UploadPreview = ({ imageData, index, totalImages, onRemove, onLocat
     }
   };
 
-  // Unsplash-style: use image's natural width for portrait (capped at 440px), full width for landscape
+  // Unsplash-style: use image's natural width for portrait (capped at 440px), constrained width for landscape
   const portraitWidth = isPortrait && imageWidth ? `${imageWidth}px` : (isPortrait ? '440px' : '100%');
   
   // Outer container - this will be the shared width for both image and form
   // In Unsplash, this container has the exact width (440px), and both image and form are siblings with 100% width
+  // For landscape images, cap at 350px to prevent them from being too wide
   const containerStyle: React.CSSProperties = {
     position: 'relative',
     display: 'block',
     width: isPortrait ? portraitWidth : '100%',
-    maxWidth: isPortrait ? portraitWidth : '100%',
+    maxWidth: isPortrait ? portraitWidth : '350px',
     marginBottom: 0,
   };
 

@@ -5,6 +5,7 @@ import { getErrorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, Trash2, FolderDot } from 'lucide-react';
+import { ConfirmModal } from '@/pages/admin/components/modals';
 import type { Pagination } from '@/types/common';
 
 interface Collection {
@@ -28,6 +29,8 @@ export function AdminCollections() {
     const [collections, setCollections] = useState<Collection[]>([]);
     const [pagination, setPagination] = useState<Pagination>({ page: 1, pages: 1, total: 0, limit: 20 });
     const [search, setSearch] = useState('');
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [collectionToDelete, setCollectionToDelete] = useState<{ id: string; name: string } | null>(null);
 
     const loadCollections = async (page: number = 1) => {
         try {
@@ -51,15 +54,20 @@ export function AdminCollections() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [search]);
 
-    const handleDelete = async (collectionId: string, name: string) => {
-        if (!confirm(`Bạn có chắc chắn muốn xóa bộ sưu tập "${name}"?`)) {
-            return;
-        }
+    const handleDeleteClick = (collectionId: string, name: string) => {
+        setCollectionToDelete({ id: collectionId, name });
+        setShowDeleteModal(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!collectionToDelete) return;
 
         try {
-            await adminService.deleteCollection(collectionId);
+            await adminService.deleteCollection(collectionToDelete.id);
             toast.success('Xóa bộ sưu tập thành công');
             loadCollections(pagination.page);
+            setShowDeleteModal(false);
+            setCollectionToDelete(null);
         } catch (error: unknown) {
             toast.error(getErrorMessage(error, 'Lỗi khi xóa bộ sưu tập'));
         }
@@ -154,7 +162,7 @@ export function AdminCollections() {
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
-                                                    onClick={() => handleDelete(collection._id, collection.name)}
+                                                    onClick={() => handleDeleteClick(collection._id, collection.name)}
                                                     title="Xóa bộ sưu tập"
                                                     className="admin-action-delete"
                                                 >
@@ -192,6 +200,20 @@ export function AdminCollections() {
                     )}
                 </>
             )}
+
+            <ConfirmModal
+                isOpen={showDeleteModal}
+                onClose={() => {
+                    setShowDeleteModal(false);
+                    setCollectionToDelete(null);
+                }}
+                onConfirm={handleDeleteConfirm}
+                title="Xóa bộ sưu tập"
+                message={collectionToDelete ? `Bạn có chắc chắn muốn xóa bộ sưu tập "${collectionToDelete.name}"?` : ''}
+                confirmText="Xóa"
+                cancelText="Hủy"
+                variant="danger"
+            />
         </div>
     );
 }

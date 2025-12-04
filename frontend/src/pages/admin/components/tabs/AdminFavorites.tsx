@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
 import { Trash2, Search } from 'lucide-react';
+import { ConfirmModal } from '@/pages/admin/components/modals';
 import { t } from '@/i18n';
 
 interface Favorite {
@@ -26,6 +27,8 @@ export function AdminFavorites() {
     const [favorites, setFavorites] = useState<Favorite[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [favoriteToDelete, setFavoriteToDelete] = useState<{ userId: string; imageId: string } | null>(null);
 
     useEffect(() => {
         if (!isSuperAdmin() && !hasPermission('manageFavorites')) {
@@ -57,15 +60,20 @@ export function AdminFavorites() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [search]);
 
-    const handleDeleteFavorite = async (userId: string, imageId: string) => {
-        if (!confirm(t('admin.deleteConfirm'))) {
-            return;
-        }
+    const handleDeleteClick = (userId: string, imageId: string) => {
+        setFavoriteToDelete({ userId, imageId });
+        setShowDeleteModal(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!favoriteToDelete) return;
 
         try {
-            await adminService.deleteFavorite(userId, imageId);
+            await adminService.deleteFavorite(favoriteToDelete.userId, favoriteToDelete.imageId);
             toast.success(t('admin.deleteSuccess'));
             loadFavorites(pagination.page);
+            setShowDeleteModal(false);
+            setFavoriteToDelete(null);
         } catch (error: unknown) {
             const axiosError = error as { response?: { data?: { message?: string } } };
             toast.error(axiosError.response?.data?.message || t('admin.deleteFailed'));
@@ -122,7 +130,7 @@ export function AdminFavorites() {
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => handleDeleteFavorite(fav.user._id, fav.image._id)}
+                                            onClick={() => handleDeleteClick(fav.user._id, fav.image._id)}
                                         >
                                             <Trash2 size={16} />
                                         </Button>
@@ -133,6 +141,20 @@ export function AdminFavorites() {
                     </tbody>
                 </table>
             </div>
+
+            <ConfirmModal
+                isOpen={showDeleteModal}
+                onClose={() => {
+                    setShowDeleteModal(false);
+                    setFavoriteToDelete(null);
+                }}
+                onConfirm={handleDeleteConfirm}
+                title="Xóa yêu thích"
+                message={t('admin.deleteConfirm')}
+                confirmText="Xóa"
+                cancelText="Hủy"
+                variant="danger"
+            />
         </div>
     );
 }

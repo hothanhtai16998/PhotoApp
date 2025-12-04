@@ -13,6 +13,7 @@ import { Folder, Plus, Trash2, Edit2, Eye, Copy, Lock, Unlock, Search, X, Filter
 import ProgressiveImage from '@/components/ProgressiveImage';
 import { CollectionShare } from '@/components/collection/CollectionShare';
 import { collectionTemplateService } from '@/services/collectionTemplateService';
+import { ConfirmModal, ModerationNotesModal } from '@/pages/admin/components/modals';
 import { t } from '@/i18n';
 import './CollectionsPage.css';
 
@@ -55,6 +56,13 @@ export default function CollectionsPage() {
 	const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
 	const [showEditModal, setShowEditModal] = useState(false);
 	const [savingAsTemplate, setSavingAsTemplate] = useState<string | null>(null);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [collectionToDelete, setCollectionToDelete] = useState<string | null>(null);
+	const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+	const [collectionToDuplicate, setCollectionToDuplicate] = useState<Collection | null>(null);
+	const [showTemplateModal, setShowTemplateModal] = useState(false);
+	const [collectionForTemplate, setCollectionForTemplate] = useState<Collection | null>(null);
+	const [templateName, setTemplateName] = useState('');
 
 	useEffect(() => {
 		if (!accessToken) {
@@ -94,12 +102,17 @@ export default function CollectionsPage() {
 
 	// Filtering and sorting is now handled in the store
 
-	const handleDeleteCollection = async (collectionId: string) => {
-		if (!confirm(t('collections.deleteConfirm'))) {
-			return;
-		}
+	const handleDeleteClick = (collectionId: string) => {
+		setCollectionToDelete(collectionId);
+		setShowDeleteModal(true);
+	};
 
-		await deleteCollection(collectionId);
+	const handleDeleteConfirm = async () => {
+		if (collectionToDelete) {
+			await deleteCollection(collectionToDelete);
+			setShowDeleteModal(false);
+			setCollectionToDelete(null);
+		}
 	};
 
 	const handleCollectionClick = (collection: Collection) => {
@@ -145,19 +158,27 @@ export default function CollectionsPage() {
 		}
 	};
 
-	const handleSaveAsTemplate = async (e: React.MouseEvent, collection: Collection) => {
+	const handleSaveAsTemplateClick = (e: React.MouseEvent, collection: Collection) => {
 		e.stopPropagation();
-		const templateName = prompt(t('collections.enterTemplateName', { name: collection.name }), collection.name);
-		if (!templateName?.trim()) {
+		setCollectionForTemplate(collection);
+		setTemplateName(collection.name);
+		setShowTemplateModal(true);
+	};
+
+	const handleSaveAsTemplateConfirm = async (templateNameInput?: string) => {
+		if (!collectionForTemplate || !templateNameInput?.trim()) {
 			return;
 		}
 
-		setSavingAsTemplate(collection._id);
+		setSavingAsTemplate(collectionForTemplate._id);
 		try {
-			await collectionTemplateService.saveCollectionAsTemplate(collection._id, {
-				templateName: templateName.trim(),
+			await collectionTemplateService.saveCollectionAsTemplate(collectionForTemplate._id, {
+				templateName: templateNameInput.trim(),
 			});
 			toast.success(t('collections.saveAsTemplateSuccess'));
+			setShowTemplateModal(false);
+			setCollectionForTemplate(null);
+			setTemplateName('');
 		} catch (error: unknown) {
 			console.error('Failed to save as template:', error);
 			toast.error(getErrorMessage(error, t('collections.saveAsTemplateFailed')));
@@ -166,25 +187,28 @@ export default function CollectionsPage() {
 		}
 	};
 
-	const handleDuplicateCollection = async (e: React.MouseEvent, collection: Collection) => {
+	const handleDuplicateClick = (e: React.MouseEvent, collection: Collection) => {
 		e.stopPropagation();
-		if (!confirm(t('collections.duplicateConfirm', { name: collection.name }))) {
-			return;
-		}
+		setCollectionToDuplicate(collection);
+		setShowDuplicateModal(true);
+	};
+
+	const handleDuplicateConfirm = async () => {
+		if (!collectionToDuplicate) return;
 
 		try {
 			const newCollection = await collectionService.createCollection({
-				name: t('collections.copyName', { name: collection.name }),
-				description: collection.description || undefined,
+				name: t('collections.copyName', { name: collectionToDuplicate.name }),
+				description: collectionToDuplicate.description || undefined,
 				isPublic: false, // Duplicates are private by default
 			});
 
 			// Copy images if any
-			if (collection.images && Array.isArray(collection.images) && collection.images.length > 0) {
-				const imageIds = collection.images
+			if (collectionToDuplicate.images && Array.isArray(collectionToDuplicate.images) && collectionToDuplicate.images.length > 0) {
+				const imageIds = collectionToDuplicate.images
 					.filter((img): img is string => typeof img === 'string')
 					.concat(
-						collection.images
+						collectionToDuplicate.images
 							.filter((img): img is Image => typeof img === 'object' && img !== null && '_id' in img)
 							.map(img => img._id)
 					);
@@ -409,7 +433,7 @@ export default function CollectionsPage() {
 												</button>
 												<button
 													className="collection-card-action-btn"
-													onClick={(e) => handleDuplicateCollection(e, collection)}
+													onClick={(e) => handleDuplicateClick(e, collection)}
 													title={t('collections.duplicate')}
 												>
 													<Copy size={18} />
@@ -423,7 +447,7 @@ export default function CollectionsPage() {
 												</button>
 												<button
 													className="collection-card-action-btn action-secondary"
-													onClick={(e) => handleSaveAsTemplate(e, collection)}
+													onClick={(e) => handleSaveAsTemplateClick(e, collection)}
 													disabled={savingAsTemplate === collection._id}
 													title={t('collections.saveAsTemplate')}
 												>
@@ -433,7 +457,7 @@ export default function CollectionsPage() {
 													className="collection-card-action-btn action-danger"
 													onClick={(e) => {
 														e.stopPropagation();
-														handleDeleteCollection(collection._id);
+														handleDeleteClick(collection._id);
 													}}
 													disabled={deletingId === collection._id}
 													title={t('common.delete')}
@@ -497,6 +521,50 @@ export default function CollectionsPage() {
 			/>
 				</Suspense>
 			)}
+
+			{/* Delete Collection Modal */}
+			<ConfirmModal
+				isOpen={showDeleteModal}
+				onClose={() => {
+					setShowDeleteModal(false);
+					setCollectionToDelete(null);
+				}}
+				onConfirm={handleDeleteConfirm}
+				title="Xóa bộ sưu tập"
+				message={t('collections.deleteConfirm')}
+				confirmText="Xóa"
+				cancelText="Hủy"
+				variant="danger"
+			/>
+
+			{/* Duplicate Collection Modal */}
+			<ConfirmModal
+				isOpen={showDuplicateModal}
+				onClose={() => {
+					setShowDuplicateModal(false);
+					setCollectionToDuplicate(null);
+				}}
+				onConfirm={handleDuplicateConfirm}
+				title="Sao chép bộ sưu tập"
+				message={collectionToDuplicate ? t('collections.duplicateConfirm', { name: collectionToDuplicate.name }) : ''}
+				confirmText="Sao chép"
+				cancelText="Hủy"
+				variant="info"
+			/>
+
+			{/* Save as Template Modal */}
+			<ModerationNotesModal
+				isOpen={showTemplateModal}
+				onClose={() => {
+					setShowTemplateModal(false);
+					setCollectionForTemplate(null);
+					setTemplateName('');
+				}}
+				onConfirm={handleSaveAsTemplateConfirm}
+				title={t('collections.saveAsTemplate')}
+				placeholder={collectionForTemplate ? t('collections.enterTemplateName', { name: collectionForTemplate.name }) : ''}
+				isOptional={false}
+			/>
 		</>
 	);
 }

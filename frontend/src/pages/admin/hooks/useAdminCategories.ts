@@ -131,13 +131,8 @@ export function useAdminCategories(): UseAdminCategoriesReturn {
         return false;
       }
 
-      if (
-        !confirm(
-          `Bạn có muốn xoá danh mục "${categoryName}" không? Chỉ xoá được nếu không có ảnh nào thuộc loại danh mục này.`
-        )
-      ) {
-        return false;
-      }
+      // Note: Confirmation is now handled by the component using ConfirmModal
+      // This function just performs the deletion
 
       try {
         await categoryService.deleteCategory(categoryId);
