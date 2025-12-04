@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, memo, useMemo } from 'react';
 import { Info } from 'lucide-react';
 import { ImageModalChart } from './ImageModalChart';
 import type { Image } from '@/types/image';
+import { t } from '@/i18n';
 import './ImageModalInfo.css';
 
 interface ImageModalInfoProps {
@@ -69,9 +70,9 @@ export const ImageModalInfo = memo(({ image }: ImageModalInfoProps) => {
   const daysAgoText = useMemo(() => {
     const now = new Date().getTime();
     const daysAgo = Math.floor((now - new Date(image.createdAt).getTime()) / (1000 * 60 * 60 * 24));
-    if (daysAgo === 0) return 'hôm nay';
-    if (daysAgo === 1) return '1 ngày trước';
-    return `${daysAgo} ngày trước`;
+    if (daysAgo === 0) return t('notifications.justNow');
+    if (daysAgo === 1) return t('notifications.daysAgo', { count: 1 });
+    return t('notifications.daysAgo', { count: daysAgo });
   }, [image.createdAt]);
 
   // Close info modal when clicking outside
@@ -103,7 +104,7 @@ export const ImageModalInfo = memo(({ image }: ImageModalInfoProps) => {
         onClick={() => setShowInfoModal(!showInfoModal)}
       >
         <Info size={18} />
-        <span>Thông tin</span>
+        <span>{t('image.info')}</span>
       </button>
       {/* Info Modal */}
       {showInfoModal && (
@@ -113,7 +114,7 @@ export const ImageModalInfo = memo(({ image }: ImageModalInfoProps) => {
         >
           <div className="info-modal">
             <div className="info-modal-header">
-              <h2 className="info-modal-title">Thông tin</h2>
+              <h2 className="info-modal-title">{t('image.info')}</h2>
               <button
                 className="info-modal-close"
                 onClick={() => setShowInfoModal(false)}
@@ -124,7 +125,7 @@ export const ImageModalInfo = memo(({ image }: ImageModalInfoProps) => {
             </div>
             <div className="info-modal-content">
               <div className="info-published">
-                Đã đăng vào {daysAgoText}
+                {t('image.published')} {daysAgoText}
               </div>
 
               {/* Chart Container */}
@@ -136,13 +137,13 @@ export const ImageModalInfo = memo(({ image }: ImageModalInfoProps) => {
                   className={`info-tab ${activeTab === 'views' ? 'active' : ''}`}
                   onClick={() => setActiveTab('views')}
                 >
-                  Lượt xem
+                  {t('image.views')}
                 </button>
                 <button
                   className={`info-tab ${activeTab === 'downloads' ? 'active' : ''}`}
                   onClick={() => setActiveTab('downloads')}
                 >
-                  Lượt tải
+                  {t('image.downloads')}
                 </button>
               </div>
             </div>

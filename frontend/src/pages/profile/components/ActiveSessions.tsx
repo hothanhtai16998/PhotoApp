@@ -3,6 +3,7 @@ import { authService, type Session } from '@/services/authService';
 import { toast } from 'sonner';
 import { LogOut, Monitor, Globe, MapPin, Clock, CheckCircle2 } from 'lucide-react';
 import { ConfirmModal } from '@/pages/admin/components/modals';
+import { t } from '@/i18n';
 import './ActiveSessions.css';
 
 export function ActiveSessions() {
@@ -23,7 +24,7 @@ export function ActiveSessions() {
 			setSessions(response.sessions);
 		} catch (error: any) {
 			console.error('Failed to fetch sessions:', error);
-			toast.error(error?.response?.data?.message || 'Không thể tải danh sách phiên đăng nhập');
+			toast.error(error?.response?.data?.message || t('profile.loadSessionsFailed'));
 		} finally {
 			setLoading(false);
 		}
@@ -33,11 +34,11 @@ export function ActiveSessions() {
 		try {
 			setSigningOutAll(true);
 			const response = await authService.signOutAllDevices();
-			toast.success(response.message || `Đã đăng xuất ${response.deletedCount} thiết bị khác`);
+			toast.success(response.message || t('profile.signOutAllDevicesSuccess'));
 			await fetchSessions();
 		} catch (error: any) {
 			console.error('Failed to sign out all devices:', error);
-			toast.error(error?.response?.data?.message || 'Không thể đăng xuất tất cả thiết bị');
+			toast.error(error?.response?.data?.message || t('profile.signOutAllDevicesFailed'));
 		} finally {
 			setSigningOutAll(false);
 			setShowSignOutAllModal(false);
@@ -48,11 +49,11 @@ export function ActiveSessions() {
 		try {
 			setSigningOutSession(sessionId);
 			const response = await authService.signOutSession(sessionId);
-			toast.success(response.message || 'Đã đăng xuất thiết bị thành công');
+			toast.success(response.message || t('profile.signOutDeviceSuccess'));
 			await fetchSessions();
 		} catch (error: any) {
 			console.error('Failed to sign out session:', error);
-			toast.error(error?.response?.data?.message || 'Không thể đăng xuất thiết bị');
+			toast.error(error?.response?.data?.message || t('profile.signOutDeviceFailed'));
 		} finally {
 			setSigningOutSession(null);
 		}
@@ -67,13 +68,13 @@ export function ActiveSessions() {
 		const diffDays = Math.floor(diffMs / 86400000);
 
 		if (diffMins < 1) {
-			return 'Vừa xong';
+			return t('notifications.justNow');
 		} else if (diffMins < 60) {
-			return `${diffMins} phút trước`;
+			return t('notifications.minutesAgo', { count: diffMins });
 		} else if (diffHours < 24) {
-			return `${diffHours} giờ trước`;
+			return t('notifications.hoursAgo', { count: diffHours });
 		} else if (diffDays < 7) {
-			return `${diffDays} ngày trước`;
+			return t('notifications.daysAgo', { count: diffDays });
 		} else {
 			return date.toLocaleDateString('vi-VN', {
 				day: 'numeric',
@@ -86,8 +87,8 @@ export function ActiveSessions() {
 	if (loading) {
 		return (
 			<div className="active-sessions">
-				<h2 className="form-title">Phiên đăng nhập</h2>
-				<div className="sessions-loading">Đang tải...</div>
+				<h2 className="form-title">{t('profile.activeSessionsTitle')}</h2>
+				<div className="sessions-loading">{t('common.loading')}</div>
 			</div>
 		);
 	}
@@ -95,24 +96,24 @@ export function ActiveSessions() {
 	return (
 		<div className="active-sessions">
 			<div className="sessions-header">
-				<h2 className="form-title">Phiên đăng nhập</h2>
+				<h2 className="form-title">{t('profile.activeSessionsTitle')}</h2>
 				{sessions.length > 1 && (
 					<button
 						className="sign-out-all-button"
 						onClick={() => setShowSignOutAllModal(true)}
 						disabled={signingOutAll}
 					>
-						{signingOutAll ? 'Đang xử lý...' : 'Đăng xuất tất cả thiết bị khác'}
+						{signingOutAll ? t('profile.processing') : t('profile.signOutAllDevices')}
 					</button>
 				)}
 			</div>
 
 			<p className="sessions-description">
-				Quản lý các thiết bị đã đăng nhập vào tài khoản của bạn. Bạn có thể đăng xuất bất kỳ thiết bị nào bất cứ lúc nào.
+				{t('profile.activeSessionsDescription')}
 			</p>
 
 			{sessions.length === 0 ? (
-				<div className="sessions-empty">Không có phiên đăng nhập nào</div>
+				<div className="sessions-empty">{t('profile.noActiveSessions')}</div>
 			) : (
 				<div className="sessions-list">
 					{sessions.map((session) => (
@@ -127,26 +128,26 @@ export function ActiveSessions() {
 								<div className="session-header-info">
 									<div className="session-device">
 										{session.deviceName} • {session.browserName}
-										{session.isCurrentSession && (
-											<span className="current-badge">
-												<CheckCircle2 size={14} />
-												Thiết bị hiện tại
-											</span>
-										)}
+									{session.isCurrentSession && (
+										<span className="current-badge">
+											<CheckCircle2 size={14} />
+											{t('profile.currentSession')}
+										</span>
+									)}
 									</div>
 									{!session.isCurrentSession && (
 										<button
 											className="sign-out-session-button"
 											onClick={() => handleSignOutSession(session._id)}
 											disabled={signingOutSession === session._id}
-											title="Đăng xuất thiết bị này"
+											title={t('profile.signOutDevice')}
 										>
 											{signingOutSession === session._id ? (
-												'Đang xử lý...'
+												t('profile.processing')
 											) : (
 												<>
 													<LogOut size={14} />
-													Đăng xuất
+													{t('profile.signOutDevice')}
 												</>
 											)}
 										</button>
@@ -163,7 +164,7 @@ export function ActiveSessions() {
 									</div>
 									<div className="session-detail-item">
 										<Clock size={14} />
-										<span>Hoạt động lần cuối: {formatDate(session.lastActive)}</span>
+										<span>{t('profile.lastActive')}: {formatDate(session.lastActive)}</span>
 									</div>
 								</div>
 							</div>
@@ -176,10 +177,10 @@ export function ActiveSessions() {
 				isOpen={showSignOutAllModal}
 				onClose={() => setShowSignOutAllModal(false)}
 				onConfirm={handleSignOutAll}
-				title="Đăng xuất tất cả thiết bị khác"
-				message={`Bạn có chắc chắn muốn đăng xuất tất cả thiết bị khác không? Bạn sẽ vẫn đăng nhập trên thiết bị hiện tại.`}
-				confirmText="Đăng xuất tất cả"
-				cancelText="Hủy"
+				title={t('profile.signOutAllDevices')}
+				message={t('profile.signOutAllDevicesConfirm')}
+				confirmText={t('profile.signOutAllDevices')}
+				cancelText={t('common.cancel')}
 				variant="warning"
 			/>
 		</div>

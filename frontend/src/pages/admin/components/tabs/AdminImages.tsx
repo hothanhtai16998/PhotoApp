@@ -69,7 +69,7 @@ export function AdminImages({
                 (typeof imageCategory === 'object' && imageCategory._id)
             );
             if (!hasCategory) {
-                toast.error('Bạn cần chọn danh mục trước khi phê duyệt ảnh');
+                toast.error(t('admin.approveRequiresCategory'));
                 return;
             }
         }
@@ -171,7 +171,7 @@ export function AdminImages({
                                         cursor: updatingCategory === img._id ? 'not-allowed' : 'pointer',
                                     }}
                                 >
-                                    <option value="">Thêm danh mục</option>
+                                    <option value="">{t('admin.addCategory')}</option>
                                     {categories
                                         .filter(cat => cat.isActive !== false)
                                         .map(cat => (
@@ -310,10 +310,10 @@ export function AdminImages({
                         setImageToDelete(null);
                     }
                 }}
-                title="Xóa ảnh"
-                message={imageToDelete ? `Bạn có muốn xoá ảnh "${imageToDelete.title}" không?` : ''}
-                confirmText="Xóa"
-                cancelText="Hủy"
+                title={t('admin.deleteImage')}
+                message={imageToDelete ? t('admin.deleteImageConfirm', { title: imageToDelete.title || t('image.untitled') }) : ''}
+                confirmText={t('admin.delete')}
+                cancelText={t('common.cancel')}
                 variant="danger"
             />
 

@@ -2,6 +2,7 @@ import { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { Download, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Image } from '@/types/image';
+import { t } from '@/i18n';
 
 interface ImageGridItemProps {
   image: Image;
@@ -67,7 +68,7 @@ export const ImageGridItem = memo(({
       onClick={handleClick}
       role="button"
       tabIndex={0}
-      aria-label={`Xem ảnh: ${image.imageTitle || 'Không có tiêu đề'}`}
+      aria-label={`${t('image.viewPhoto')}: ${image.imageTitle || t('image.untitled')}`}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -118,8 +119,8 @@ export const ImageGridItem = memo(({
               <button
                 className="image-action-btn download-btn"
                 onClick={handleDownloadClick}
-                title="Tải xuống"
-                aria-label="Tải xuống ảnh"
+                title={t('image.download')}
+                aria-label={t('image.download')}
               >
                 <Download size={20} />
               </button>
@@ -132,8 +133,8 @@ export const ImageGridItem = memo(({
         <button
           className="mobile-action-btn download-btn"
           onClick={handleDownloadClick}
-          title="Tải xuống"
-          aria-label="Tải xuống ảnh"
+          title={t('image.download')}
+          aria-label={t('image.download')}
         >
           <Download size={20} />
         </button>

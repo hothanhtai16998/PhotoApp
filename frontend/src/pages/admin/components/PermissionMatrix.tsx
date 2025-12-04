@@ -1,6 +1,7 @@
 import { usePermissions } from '@/hooks/usePermissions';
 import { PermissionBadge, RoleBadge } from './PermissionBadge';
 import { useUserStore } from '@/stores/useUserStore';
+import { t } from '@/i18n';
 
 /**
  * Permission matrix view showing all permissions and user's access
@@ -12,90 +13,93 @@ export function PermissionMatrix() {
     // All available permissions grouped by category
     const permissionGroups = [
         {
-            label: 'Quản lý người dùng',
+            label: t('admin.manageUsers'),
             permissions: ['viewUsers', 'editUsers', 'deleteUsers', 'banUsers', 'unbanUsers'] as const,
         },
         {
-            label: 'Quản lý hình ảnh',
+            label: t('admin.manageImages'),
             permissions: ['viewImages', 'editImages', 'deleteImages', 'moderateImages'] as const,
         },
         {
-            label: 'Quản lý danh mục',
+            label: t('admin.manageCategories'),
             permissions: ['viewCategories', 'createCategories', 'editCategories', 'deleteCategories'] as const,
         },
         {
-            label: 'Quản lý Admin',
+            label: t('admin.manageAdmins'),
             permissions: ['viewAdmins', 'createAdmins', 'editAdmins', 'deleteAdmins'] as const,
         },
         {
-            label: 'Dashboard & Phân tích',
+            label: t('admin.dashboardAnalytics'),
             permissions: ['viewDashboard', 'viewAnalytics'] as const,
         },
         {
-            label: 'Bộ sưu tập',
+            label: t('admin.collections'),
             permissions: ['viewCollections', 'manageCollections'] as const,
         },
         {
-            label: 'Yêu thích',
+            label: t('admin.favorites'),
             permissions: ['manageFavorites'] as const,
         },
         {
-            label: 'Kiểm duyệt nội dung',
+            label: t('admin.moderation'),
             permissions: ['moderateContent'] as const,
         },
         {
-            label: 'Hệ thống & Nhật ký',
+            label: t('admin.systemLogs'),
             permissions: ['viewLogs', 'exportData', 'manageSettings'] as const,
         },
     ];
 
-    const permissionLabels: Record<string, string> = {
-        viewUsers: 'Xem người dùng',
-        editUsers: 'Chỉnh sửa người dùng',
-        deleteUsers: 'Xóa người dùng',
-        banUsers: 'Cấm người dùng',
-        unbanUsers: 'Bỏ cấm người dùng',
-        viewImages: 'Xem hình ảnh',
-        editImages: 'Chỉnh sửa hình ảnh',
-        deleteImages: 'Xóa hình ảnh',
-        moderateImages: 'Kiểm duyệt hình ảnh',
-        viewCategories: 'Xem danh mục',
-        createCategories: 'Tạo danh mục',
-        editCategories: 'Chỉnh sửa danh mục',
-        deleteCategories: 'Xóa danh mục',
-        viewAdmins: 'Xem admin',
-        createAdmins: 'Tạo admin',
-        editAdmins: 'Chỉnh sửa admin',
-        deleteAdmins: 'Xóa admin',
-        viewDashboard: 'Xem bảng điều khiển',
-        viewAnalytics: 'Xem phân tích',
-        viewCollections: 'Xem bộ sưu tập',
-        manageCollections: 'Quản lý bộ sưu tập',
-        manageFavorites: 'Quản lý yêu thích',
-        moderateContent: 'Kiểm duyệt nội dung',
-        viewLogs: 'Xem nhật ký',
-        exportData: 'Xuất dữ liệu',
-        manageSettings: 'Quản lý cài đặt',
+    const getPermissionLabel = (permission: string): string => {
+        const labels: Record<string, string> = {
+            viewUsers: t('admin.viewUsers'),
+            editUsers: t('admin.editUsers'),
+            deleteUsers: t('admin.deleteUsers'),
+            banUsers: t('admin.banUsers'),
+            unbanUsers: t('admin.unbanUsers'),
+            viewImages: t('admin.viewImages'),
+            editImages: t('admin.editImages'),
+            deleteImages: t('admin.deleteImages'),
+            moderateImages: t('admin.moderateImages'),
+            viewCategories: t('admin.viewCategories'),
+            createCategories: t('admin.createCategories'),
+            editCategories: t('admin.editCategories'),
+            deleteCategories: t('admin.deleteCategories'),
+            viewAdmins: t('admin.viewAdmins'),
+            createAdmins: t('admin.createAdmins'),
+            editAdmins: t('admin.editAdmins'),
+            deleteAdmins: t('admin.deleteAdmins'),
+            viewDashboard: t('admin.viewDashboard'),
+            viewAnalytics: t('admin.viewAnalytics'),
+            viewCollections: t('admin.viewCollections'),
+            manageCollections: t('admin.manageCollections'),
+            manageFavorites: t('admin.manageFavorites'),
+            moderateContent: t('admin.moderateContent'),
+            viewLogs: t('admin.viewLogs'),
+            exportData: t('admin.exportData'),
+            manageSettings: t('admin.manageSettings'),
+        };
+        return labels[permission] || permission;
     };
 
     return (
         <div className="permission-matrix">
             <div className="permission-matrix-header">
-                <h2>Ma trận quyền hạn</h2>
+                <h2>{t('admin.permissions')}</h2>
                 <div className="permission-matrix-user-info">
                     <p>
-                        <strong>Vai trò:</strong>{' '}
+                        <strong>{t('admin.role')}:</strong>{' '}
                         {user?.isSuperAdmin ? (
                             <RoleBadge role="super_admin" />
                         ) : user?.isAdmin ? (
                             <RoleBadge role="admin" />
                         ) : (
-                            <span>Người dùng thường</span>
+                            <span>{t('admin.regularUser')}</span>
                         )}
                     </p>
                     {isSuperAdmin() && (
                         <p className="super-admin-note">
-                            <strong>Lưu ý:</strong> Super Admin có tất cả quyền hạn
+                            <strong>{t('admin.note')}:</strong> {t('admin.superAdminAllPermissions')}
                         </p>
                     )}
                 </div>
@@ -115,7 +119,7 @@ export function PermissionMatrix() {
                                     >
                                         <PermissionBadge permission={permission} />
                                         <span className="permission-label">
-                                            {permissionLabels[permission] || permission}
+                                            {getPermissionLabel(permission)}
                                         </span>
                                     </div>
                                 );
@@ -128,11 +132,11 @@ export function PermissionMatrix() {
             <div className="permission-matrix-legend">
                 <div className="legend-item">
                     <span className="legend-badge has-permission"></span>
-                    <span>Có quyền</span>
+                    <span>{t('admin.hasPermission')}</span>
                 </div>
                 <div className="legend-item">
                     <span className="legend-badge no-permission"></span>
-                    <span>Không có quyền</span>
+                    <span>{t('admin.noPermission')}</span>
                 </div>
             </div>
         </div>

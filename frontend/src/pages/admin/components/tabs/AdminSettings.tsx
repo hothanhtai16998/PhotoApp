@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Save, Megaphone, X } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { useSiteSettings } from '@/hooks/useSiteSettings';
+import { t } from '@/i18n';
 
 export function AdminSettings() {
     const { hasPermission, isSuperAdmin } = usePermissions();
@@ -157,12 +158,12 @@ export function AdminSettings() {
     return (
         <div className="admin-settings">
             <div className="admin-header">
-                <h1 className="admin-title">Cài đặt hệ thống</h1>
+                <h1 className="admin-title">{t('admin.systemSettings')}</h1>
             </div>
 
             <div className="admin-form">
                 <div className="admin-form-group">
-                    <Label>Tên trang web</Label>
+                    <Label>{t('admin.siteName')}</Label>
                     <Input
                         value={settings.siteName}
                         onChange={(e) => setSettings({ ...settings, siteName: e.target.value })}
@@ -170,7 +171,7 @@ export function AdminSettings() {
                 </div>
 
                 <div className="admin-form-group">
-                    <Label>Mô tả trang web</Label>
+                    <Label>{t('admin.siteDescription')}</Label>
                     <Input
                         value={settings.siteDescription}
                         onChange={(e) => setSettings({ ...settings, siteDescription: e.target.value })}
@@ -178,7 +179,7 @@ export function AdminSettings() {
                 </div>
 
                 <div className="admin-form-group">
-                    <Label>Kích thước upload tối đa (MB)</Label>
+                    <Label>{t('admin.maxUploadSize')}</Label>
                     <Input
                         type="number"
                         value={settings.maxUploadSize}
@@ -187,7 +188,7 @@ export function AdminSettings() {
                 </div>
 
                 <div className="admin-form-group">
-                    <Label>Định dạng file cho phép</Label>
+                    <Label>{t('admin.allowedFileFormats')}</Label>
                     <div className="admin-file-types-selector">
                         {availableFileTypes.map((fileType) => {
                             const isSelected = selectedFileTypes.includes(fileType.value);
@@ -208,7 +209,7 @@ export function AdminSettings() {
                     </div>
                     {selectedFileTypes.length === 0 && (
                         <p style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.5rem' }}>
-                            Vui lòng chọn ít nhất một định dạng file
+                            {t('admin.selectAtLeastOneFormat')}
                         </p>
                     )}
                 </div>
@@ -220,14 +221,14 @@ export function AdminSettings() {
                             checked={settings.maintenanceMode}
                             onChange={(e) => setSettings({ ...settings, maintenanceMode: e.target.checked })}
                         />
-                        Chế độ bảo trì
+                        {t('admin.maintenanceMode')}
                     </Label>
                 </div>
 
                 <div className="admin-modal-actions">
                     <Button onClick={handleSave} disabled={saving} className="admin-add-category-btn">
                         <Save size={16} />
-                        {saving ? 'Đang lưu...' : 'Lưu cài đặt'}
+                        {saving ? t('admin.saving') : t('admin.saveSettings')}
                     </Button>
                 </div>
             </div>
@@ -235,9 +236,9 @@ export function AdminSettings() {
             {/* System Announcement Section */}
             <div className="admin-settings-section" style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid #e5e7eb' }}>
                 <div className="admin-header" style={{ marginBottom: '1rem' }}>
-                    <h2 className="admin-title" style={{ fontSize: '1.25rem' }}>Thông báo hệ thống</h2>
+                    <h2 className="admin-title" style={{ fontSize: '1.25rem' }}>{t('admin.systemNotifications')}</h2>
                     <p style={{ color: '#6b7280', fontSize: '0.875rem', marginTop: '0.5rem' }}>
-                        Gửi thông báo đến tất cả người dùng hoặc người dùng cụ thể
+                        {t('admin.systemNotificationsDescription')}
                     </p>
                 </div>
 
@@ -248,7 +249,7 @@ export function AdminSettings() {
                         className="admin-add-category-btn"
                     >
                         <Megaphone size={16} style={{ marginRight: '0.5rem' }} />
-                        Tạo thông báo mới
+                        {t('admin.createNotification')}
                     </Button>
                 ) : (
                     <div className="admin-form" style={{ backgroundColor: '#f9fafb', padding: '1.5rem', borderRadius: '0.5rem' }}>

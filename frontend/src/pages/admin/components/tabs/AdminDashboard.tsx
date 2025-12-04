@@ -85,7 +85,7 @@ export function AdminDashboard({ stats, loading }: AdminDashboardProps) {
                     <span>📊</span>
                     Dashboard
                 </h1>
-                <p className="admin-dashboard-subtitle">Tổng quan về nền tảng của bạn</p>
+                <p className="admin-dashboard-subtitle">{t('admin.dashboardTitle')}</p>
                 {(isSuperAdmin() || hasPermission('exportData')) && (
                     <Button
                         onClick={handleExportData}
@@ -253,7 +253,7 @@ export function AdminDashboard({ stats, loading }: AdminDashboardProps) {
 
             {/* Recent Images */}
             <div className="admin-section">
-                <h2 className="admin-section-title">Ảnh được thêm gần đây</h2>
+                <h2 className="admin-section-title">{t('admin.recentImagesTitle')}</h2>
                 <div className="admin-table">
                     <table>
                         <thead>

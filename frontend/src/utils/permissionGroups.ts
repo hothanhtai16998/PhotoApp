@@ -2,77 +2,78 @@ import type { AdminRolePermissions } from '@/services/adminService';
 
 /**
  * Permission groups for better organization in UI
+ * Note: Labels are translated in components using t() function
  */
 export const PERMISSION_GROUPS = [
     {
-        label: 'Quản lý người dùng',
+        labelKey: 'manageUsers',
         permissions: [
-            { key: 'viewUsers', label: 'Xem người dùng' },
-            { key: 'editUsers', label: 'Chỉnh sửa người dùng' },
-            { key: 'deleteUsers', label: 'Xóa người dùng' },
-            { key: 'banUsers', label: 'Cấm người dùng' },
-            { key: 'unbanUsers', label: 'Bỏ cấm người dùng' },
+            { key: 'viewUsers' },
+            { key: 'editUsers' },
+            { key: 'deleteUsers' },
+            { key: 'banUsers' },
+            { key: 'unbanUsers' },
         ],
     },
     {
-        label: 'Quản lý ảnh',
+        labelKey: 'manageImages',
         permissions: [
-            { key: 'viewImages', label: 'Xem ảnh' },
-            { key: 'editImages', label: 'Chỉnh sửa ảnh' },
-            { key: 'deleteImages', label: 'Xóa ảnh' },
-            { key: 'moderateImages', label: 'Kiểm duyệt ảnh' },
+            { key: 'viewImages' },
+            { key: 'editImages' },
+            { key: 'deleteImages' },
+            { key: 'moderateImages' },
         ],
     },
     {
-        label: 'Quản lý danh mục',
+        labelKey: 'manageCategories',
         permissions: [
-            { key: 'viewCategories', label: 'Xem danh mục' },
-            { key: 'createCategories', label: 'Tạo danh mục' },
-            { key: 'editCategories', label: 'Chỉnh sửa danh mục' },
-            { key: 'deleteCategories', label: 'Xóa danh mục' },
+            { key: 'viewCategories' },
+            { key: 'createCategories' },
+            { key: 'editCategories' },
+            { key: 'deleteCategories' },
         ],
     },
     {
-        label: 'Quản lý admin',
+        labelKey: 'manageAdmins',
         permissions: [
-            { key: 'viewAdmins', label: 'Xem admin' },
-            { key: 'createAdmins', label: 'Tạo admin' },
-            { key: 'editAdmins', label: 'Chỉnh sửa admin' },
-            { key: 'deleteAdmins', label: 'Xóa admin' },
+            { key: 'viewAdmins' },
+            { key: 'createAdmins' },
+            { key: 'editAdmins' },
+            { key: 'deleteAdmins' },
         ],
     },
     {
-        label: 'Bảng điều khiển & Phân tích',
+        labelKey: 'dashboardAnalytics',
         permissions: [
-            { key: 'viewDashboard', label: 'Xem bảng điều khiển' },
-            { key: 'viewAnalytics', label: 'Xem phân tích' },
+            { key: 'viewDashboard' },
+            { key: 'viewAnalytics' },
         ],
     },
     {
-        label: 'Bộ sưu tập',
+        labelKey: 'collections',
         permissions: [
-            { key: 'viewCollections', label: 'Xem bộ sưu tập' },
-            { key: 'manageCollections', label: 'Quản lý bộ sưu tập' },
+            { key: 'viewCollections' },
+            { key: 'manageCollections' },
         ],
     },
     {
-        label: 'Yêu thích',
+        labelKey: 'favorites',
         permissions: [
-            { key: 'manageFavorites', label: 'Quản lý yêu thích' },
+            { key: 'manageFavorites' },
         ],
     },
     {
-        label: 'Kiểm duyệt nội dung',
+        labelKey: 'moderation',
         permissions: [
-            { key: 'moderateContent', label: 'Kiểm duyệt nội dung' },
+            { key: 'moderateContent' },
         ],
     },
     {
-        label: 'Hệ thống',
+        labelKey: 'systemLogs',
         permissions: [
-            { key: 'viewLogs', label: 'Xem nhật ký' },
-            { key: 'exportData', label: 'Xuất dữ liệu' },
-            { key: 'manageSettings', label: 'Quản lý cài đặt' },
+            { key: 'viewLogs' },
+            { key: 'exportData' },
+            { key: 'manageSettings' },
         ],
     },
 ] as const;

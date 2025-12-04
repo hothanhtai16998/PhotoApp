@@ -5,6 +5,7 @@ import { getErrorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, Trash2, FolderDot } from 'lucide-react';
+import { t } from '@/i18n';
 import { ConfirmModal } from '@/pages/admin/components/modals';
 import type { Pagination } from '@/types/common';
 
@@ -64,7 +65,7 @@ export function AdminCollections() {
 
         try {
             await adminService.deleteCollection(collectionToDelete.id);
-            toast.success('Xóa bộ sưu tập thành công');
+            toast.success(t('admin.deleteCollectionSuccess'));
             loadCollections(pagination.page);
             setShowDeleteModal(false);
             setCollectionToDelete(null);
@@ -78,7 +79,7 @@ export function AdminCollections() {
             await adminService.updateCollection(collection._id, {
                 isPublic: !collection.isPublic,
             });
-            toast.success(`Bộ sưu tập đã được ${!collection.isPublic ? 'công khai' : 'ẩn'}`);
+            toast.success(!collection.isPublic ? t('admin.collectionMadePublic') : t('admin.collectionMadePrivate'));
             loadCollections(pagination.page);
         } catch (error: unknown) {
             toast.error(getErrorMessage(error, 'Lỗi khi cập nhật bộ sưu tập'));
@@ -94,13 +95,13 @@ export function AdminCollections() {
             <div className="admin-header">
                 <h1 className="admin-title">
                     <FolderDot size={24} />
-                    Bộ sưu tập
+                    {t('admin.collections')}
                 </h1>
                 <div className="admin-search">
                     <Search size={18} />
                     <Input
                         type="text"
-                        placeholder="Tìm kiếm bộ sưu tập..."
+                        placeholder={t('admin.searchCollections')}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         onKeyDown={(e) => {
@@ -113,20 +114,20 @@ export function AdminCollections() {
             </div>
 
             {collections.length === 0 ? (
-                <div className="admin-empty">Không có bộ sưu tập nào</div>
+                <div className="admin-empty">{t('admin.noCollections')}</div>
             ) : (
                 <>
                     <div className="admin-table">
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Tên bộ sưu tập</th>
-                                    <th>Mô tả</th>
-                                    <th>Người tạo</th>
-                                    <th>Số ảnh</th>
-                                    <th>Lượt xem</th>
-                                    <th>Trạng thái</th>
-                                    <th>Ngày tạo</th>
+                                    <th>{t('admin.collectionName')}</th>
+                                    <th>{t('admin.description')}</th>
+                                    <th>{t('admin.creator')}</th>
+                                    <th>{t('admin.imageCount')}</th>
+                                    <th>{t('admin.views')}</th>
+                                    <th>{t('admin.status')}</th>
+                                    <th>{t('admin.createdDate')}</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -144,7 +145,7 @@ export function AdminCollections() {
                                             <span
                                                 className={`admin-status-badge ${collection.isPublic ? 'active' : 'banned'}`}
                                             >
-                                                {collection.isPublic ? 'Công khai' : 'Riêng tư'}
+                                                {collection.isPublic ? t('admin.public') : t('admin.private')}
                                             </span>
                                         </td>
                                         <td>{new Date(collection.createdAt).toLocaleDateString('vi-VN')}</td>
@@ -154,10 +155,10 @@ export function AdminCollections() {
                                                     variant="outline"
                                                     size="sm"
                                                     onClick={() => handleTogglePublic(collection)}
-                                                    title={collection.isPublic ? 'Ẩn bộ sưu tập' : 'Công khai bộ sưu tập'}
+                                                    title={collection.isPublic ? t('admin.hideCollection') : t('admin.showCollection')}
                                                     className="admin-action-edit"
                                                 >
-                                                    {collection.isPublic ? 'Ẩn' : 'Hiện'}
+                                                    {collection.isPublic ? t('admin.hide') : t('admin.show')}
                                                 </Button>
                                                 <Button
                                                     variant="outline"
@@ -209,9 +210,9 @@ export function AdminCollections() {
                 }}
                 onConfirm={handleDeleteConfirm}
                 title="Xóa bộ sưu tập"
-                message={collectionToDelete ? `Bạn có chắc chắn muốn xóa bộ sưu tập "${collectionToDelete.name}"?` : ''}
-                confirmText="Xóa"
-                cancelText="Hủy"
+                message={collectionToDelete ? t('admin.deleteCollectionConfirm', { name: collectionToDelete.name }) : ''}
+                confirmText={t('admin.delete')}
+                cancelText={t('common.cancel')}
                 variant="danger"
             />
         </div>

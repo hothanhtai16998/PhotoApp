@@ -140,10 +140,10 @@ export function AdminCategories({
                     setCategoryToDelete(null);
                 }}
                 onConfirm={handleDeleteConfirm}
-                title="Xóa danh mục"
-                message={categoryToDelete ? `Bạn có muốn xoá danh mục "${categoryToDelete.name}" không? Chỉ xoá được nếu không có ảnh nào thuộc loại danh mục này.` : ''}
-                confirmText="Xóa"
-                cancelText="Hủy"
+                title={t('admin.deleteCategory')}
+                message={categoryToDelete ? t('admin.deleteCategoryConfirm', { name: categoryToDelete.name }) : ''}
+                confirmText={t('admin.delete')}
+                cancelText={t('common.cancel')}
                 variant="danger"
             />
         </div>

@@ -6,6 +6,7 @@ import { useProfileEdit } from "./profile/hooks/useProfileEdit";
 import { ProfileForm } from "./profile/components/ProfileForm";
 import { PasswordForm } from "./profile/components/PasswordForm";
 import { ActiveSessions } from "./profile/components/ActiveSessions";
+import { t } from "@/i18n";
 import "./EditProfilePage.css";
 
 // Profile settings section IDs
@@ -92,10 +93,10 @@ function EditProfilePage() {
 
     // Define all available menu items
     const allMenuItems = [
-        { id: SECTION_IDS.EDIT_PROFILE, label: 'Chỉnh sửa thông tin' },
-        { id: SECTION_IDS.ACTIVE_SESSIONS, label: 'Phiên đăng nhập' },
-        { id: SECTION_IDS.DOWNLOAD_HISTORY, label: 'Lịch sử tải' },
-        { id: SECTION_IDS.CHANGE_PASSWORD, label: 'Đổi mật khẩu' },
+        { id: SECTION_IDS.EDIT_PROFILE, label: t('profile.editInfo') },
+        { id: SECTION_IDS.ACTIVE_SESSIONS, label: t('profile.activeSessions') },
+        { id: SECTION_IDS.DOWNLOAD_HISTORY, label: t('profile.downloadHistory') },
+        { id: SECTION_IDS.CHANGE_PASSWORD, label: t('profile.changePassword') },
     ];
 
     // Filter menu items based on user type (hide password change for OAuth users)

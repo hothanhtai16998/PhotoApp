@@ -5,6 +5,7 @@ import CategoryNavigation from '@/components/CategoryNavigation';
 import { useInfiniteScroll } from '@/components/image/hooks/useInfiniteScroll';
 import { Skeleton } from '@/components/ui/skeleton';
 import { downloadImage, type DownloadSize } from '@/utils/downloadService';
+import { t } from '@/i18n';
 import {
     useImageGridState,
     useImageGridModal,
@@ -94,7 +95,7 @@ const ImageGrid = () => {
                     />
                 )}
                 <div ref={loadMoreRef} />
-                {isLoadingMore && <p className="text-center py-4">Đang tải...</p>}
+                {isLoadingMore && <p className="text-center py-4">{t('common.loading')}</p>}
             </div>
             <Suspense fallback={null}>
                 {selectedImage && (

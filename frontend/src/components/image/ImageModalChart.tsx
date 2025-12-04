@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useImageChart } from './hooks/useImageChart';
 import type { Image } from '@/types/image';
+import { t } from '@/i18n';
 
 interface ImageModalChartProps {
   image: Image;
@@ -140,9 +141,9 @@ export const ImageModalChart = ({ image, activeTab }: ImageModalChartProps) => {
         >
           <div>{hoveredBar.date}</div>
           {activeTab === 'views' ? (
-            <div>Đã xem {hoveredBar.views.toLocaleString()} lần</div>
+            <div>{t('image.viewedTimes', { value: hoveredBar.views.toLocaleString() })}</div>
           ) : (
-            <div>Đã tải {hoveredBar.downloads.toLocaleString()} lần</div>
+            <div>{t('image.downloadedTimes', { value: hoveredBar.downloads.toLocaleString() })}</div>
           )}
         </div>,
         document.body

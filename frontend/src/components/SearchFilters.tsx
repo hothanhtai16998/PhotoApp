@@ -136,7 +136,7 @@ export default function SearchFiltersComponent({
               <div className="filter-group">
                 <label className="filter-label">
                   <ImageIcon size={16} />
-                  Hướng ảnh
+                  {t('search.imageOrientation')}
                 </label>
                 <div className="filter-options">
                   {(['all', 'portrait', 'landscape', 'square'] as Orientation[]).map((orientation) => (
@@ -145,9 +145,9 @@ export default function SearchFiltersComponent({
                       className={`filter-option ${localFilters.orientation === orientation ? 'active' : ''}`}
                       onClick={() => handleFilterChange('orientation', orientation)}
                     >
-                      {orientation === 'all' ? 'Tất cả' : 
-                       orientation === 'portrait' ? 'Dọc' :
-                       orientation === 'landscape' ? 'Ngang' : 'Vuông'}
+                      {orientation === 'all' ? t('common.all') : 
+                       orientation === 'portrait' ? t('search.portrait') :
+                       orientation === 'landscape' ? t('search.landscape') : t('search.square')}
                     </button>
                   ))}
                 </div>
@@ -157,22 +157,22 @@ export default function SearchFiltersComponent({
               <div className="filter-group">
                 <label className="filter-label">
                   <Palette size={16} />
-                  Màu sắc
+                  {t('search.color')}
                 </label>
                 <div className="filter-color-options">
                   {([
-                    { value: 'all', label: 'Tất cả', color: 'transparent' },
-                    { value: 'red', label: 'Đỏ', color: '#ef4444' },
-                    { value: 'orange', label: 'Cam', color: '#f97316' },
-                    { value: 'yellow', label: 'Vàng', color: '#eab308' },
-                    { value: 'green', label: 'Xanh lá', color: '#22c55e' },
-                    { value: 'blue', label: 'Xanh dương', color: '#3b82f6' },
-                    { value: 'purple', label: 'Tím', color: '#a855f7' },
-                    { value: 'pink', label: 'Hồng', color: '#ec4899' },
-                    { value: 'brown', label: 'Nâu', color: '#a16207' },
-                    { value: 'black', label: 'Đen', color: '#000000' },
-                    { value: 'white', label: 'Trắng', color: '#ffffff' },
-                    { value: 'gray', label: 'Xám', color: '#6b7280' },
+                    { value: 'all', label: t('common.all'), color: 'transparent' },
+                    { value: 'red', label: t('search.red'), color: '#ef4444' },
+                    { value: 'orange', label: t('search.orange'), color: '#f97316' },
+                    { value: 'yellow', label: t('search.yellow'), color: '#eab308' },
+                    { value: 'green', label: t('search.green'), color: '#22c55e' },
+                    { value: 'blue', label: t('search.blue'), color: '#3b82f6' },
+                    { value: 'purple', label: t('search.purple'), color: '#a855f7' },
+                    { value: 'pink', label: t('search.pink'), color: '#ec4899' },
+                    { value: 'brown', label: t('search.brown'), color: '#a16207' },
+                    { value: 'black', label: t('search.black'), color: '#000000' },
+                    { value: 'white', label: t('search.white'), color: '#ffffff' },
+                    { value: 'gray', label: t('search.gray'), color: '#6b7280' },
                   ] as { value: ColorFilter; label: string; color: string }[]).map((colorOption) => (
                     <button
                       key={colorOption.value}
@@ -197,11 +197,11 @@ export default function SearchFiltersComponent({
               <div className="filter-group">
                 <label className="filter-label">
                   <Calendar size={16} />
-                  Khoảng thời gian
+                  {t('search.dateRange')}
                 </label>
                 <div className="filter-date-inputs">
                   <div className="filter-date-input-group">
-                    <label>Từ ngày</label>
+                    <label>{t('search.fromDate')}</label>
                     <input
                       type="date"
                       value={localFilters.dateFrom}
@@ -210,7 +210,7 @@ export default function SearchFiltersComponent({
                     />
                   </div>
                   <div className="filter-date-input-group">
-                    <label>Đến ngày</label>
+                    <label>{t('search.toDate')}</label>
                     <input
                       type="date"
                       value={localFilters.dateTo}
@@ -229,13 +229,13 @@ export default function SearchFiltersComponent({
                 onClick={handleReset}
                 disabled={!hasActiveFilters}
               >
-                Đặt lại
+                {t('search.reset')}
               </button>
               <button
                 className="filter-apply-btn"
                 onClick={() => setIsOpen(false)}
               >
-                Áp dụng
+                {t('search.apply')}
               </button>
             </div>
           </div>

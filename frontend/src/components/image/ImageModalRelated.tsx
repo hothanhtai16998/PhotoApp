@@ -1,6 +1,7 @@
 import { ImageOff } from 'lucide-react';
 import type { Image } from '@/types/image';
 import ProgressiveImage from '../ProgressiveImage';
+import { t } from '@/i18n';
 
 interface ImageModalRelatedProps {
   relatedImages: Image[];
@@ -37,7 +38,7 @@ export const ImageModalRelated = ({
 
   return (
     <div className="modal-related-images">
-      <h3 className="related-images-title">Các ảnh cùng chủ đề</h3>
+      <h3 className="related-images-title">{t('image.relatedImages')}</h3>
       {relatedImages.length > 0 ? (
         <>
           <div className="related-images-grid">
@@ -75,7 +76,7 @@ export const ImageModalRelated = ({
           {isLoadingRelatedImages && (
             <div className="related-images-loading">
               <div className="loading-spinner" />
-              <p>Đang tải ảnh...</p>
+              <p>{t('common.loading')}</p>
             </div>
           )}
         </>
@@ -84,7 +85,7 @@ export const ImageModalRelated = ({
           <div className="related-images-empty-icon">
             <ImageOff size={48} />
           </div>
-          <p className="related-images-empty-text">Không có ảnh liên quan</p>
+          <p className="related-images-empty-text">{t('image.noRelatedImages')}</p>
         </div>
       )}
     </div>

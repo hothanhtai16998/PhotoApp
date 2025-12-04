@@ -180,7 +180,7 @@ export function CreateRoleModal({ users, onClose, onSave }: CreateRoleModalProps
                                 <div className="admin-permissions-container">
                                     {PERMISSION_GROUPS.map((group, groupIndex) => (
                                         <div key={groupIndex} className="admin-permission-group">
-                                            <h4 className="admin-permission-group-title">{group.label}</h4>
+                                            <h4 className="admin-permission-group-title">{t(`admin.${group.labelKey}`)}</h4>
                                             <div className="admin-permissions-checkboxes">
                                                 {group.permissions.map((perm) => {
                                                     const permissionKey = perm.key as keyof AdminRolePermissions;
@@ -206,7 +206,7 @@ export function CreateRoleModal({ users, onClose, onSave }: CreateRoleModalProps
                                                                 disabled={perm.key === 'viewDashboard' || isInherited}
                                                             />
                                                             <span>
-                                                                {perm.label}
+                                                                {t(`admin.${perm.key}`)}
                                                                 {isInherited && (
                                                                     <span className="inherited-badge" title={t('admin.inheritedFrom', { role: inheritedFromLabel })}>
                                                                         {t('admin.inherited')}

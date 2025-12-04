@@ -3,6 +3,7 @@ import { adminService } from '@/services/adminService';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/utils';
 import { BarChart2, Calendar, ArrowUp, ArrowDown, MoreVertical } from 'lucide-react';
+import { t } from '@/i18n';
 import { AreaChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart } from 'recharts';
 import {
     ChartContainer,
@@ -208,13 +209,13 @@ export function AdminAnalytics() {
     // Chart configuration
     const chartConfig = {
         value: {
-            label: activeTab === 'users' ? 'Người dùng' : activeTab === 'images' ? 'Ảnh' : activeTab === 'pending' ? 'Chờ duyệt' : 'Đã phê duyệt',
+            label: activeTab === 'users' ? t('admin.users') : activeTab === 'images' ? t('admin.images') : activeTab === 'pending' ? t('admin.pending') : t('admin.approved'),
             color: '#667eea',
         },
     };
 
     if (loading) {
-        return <div className="admin-loading">Đang tải dữ liệu phân tích...</div>;
+        return <div className="admin-loading">{t('common.loading')}</div>;
     }
 
     if (!analytics) {
@@ -229,7 +230,7 @@ export function AdminAnalytics() {
                     className={`falcon-metric-tab ${activeTab === 'users' ? 'active' : ''}`}
                     onClick={() => setActiveTab('users')}
                 >
-                    <div className="falcon-metric-label">Người dùng</div>
+                    <div className="falcon-metric-label">{t('admin.users')}</div>
                     <div className="falcon-metric-value">{analytics.users.total.toLocaleString()}</div>
                     <div className={`falcon-metric-change ${userPercentage >= 0 ? 'positive' : 'negative'}`}>
                         {userPercentage >= 0 ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
@@ -240,7 +241,7 @@ export function AdminAnalytics() {
                     className={`falcon-metric-tab ${activeTab === 'images' ? 'active' : ''}`}
                     onClick={() => setActiveTab('images')}
                 >
-                    <div className="falcon-metric-label">Ảnh</div>
+                    <div className="falcon-metric-label">{t('admin.images')}</div>
                     <div className="falcon-metric-value">{analytics.images.total.toLocaleString()}</div>
                     <div className={`falcon-metric-change ${imagePercentage >= 0 ? 'positive' : 'negative'}`}>
                         {imagePercentage >= 0 ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
@@ -251,7 +252,7 @@ export function AdminAnalytics() {
                     className={`falcon-metric-tab ${activeTab === 'pending' ? 'active' : ''}`}
                     onClick={() => setActiveTab('pending')}
                 >
-                    <div className="falcon-metric-label">Chờ duyệt</div>
+                    <div className="falcon-metric-label">{t('admin.pending')}</div>
                     <div className="falcon-metric-value">{analytics.images.pendingModeration.toLocaleString()}</div>
                     <div className={`falcon-metric-change ${pendingPercentage >= 0 ? 'positive' : 'negative'}`}>
                         {pendingPercentage >= 0 ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
@@ -262,7 +263,7 @@ export function AdminAnalytics() {
                     className={`falcon-metric-tab ${activeTab === 'approved' ? 'active' : ''}`}
                     onClick={() => setActiveTab('approved')}
                 >
-                    <div className="falcon-metric-label">Đã phê duyệt</div>
+                    <div className="falcon-metric-label">{t('admin.approved')}</div>
                     <div className="falcon-metric-value">{analytics.images.approved.toLocaleString()}</div>
                     <div className={`falcon-metric-change ${approvedPercentage >= 0 ? 'positive' : 'negative'}`}>
                         {approvedPercentage >= 0 ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
@@ -282,10 +283,10 @@ export function AdminAnalytics() {
                                 onChange={(e) => setDays(Number(e.target.value))}
                                 className="falcon-select-small"
                             >
-                            <option value={7}>7 ngày qua</option>
-                            <option value={30}>Tháng trước</option>
-                            <option value={90}>90 ngày qua</option>
-                            <option value={365}>Năm trước</option>
+                            <option value={7}>{t('admin.last7Days')}</option>
+                            <option value={30}>{t('admin.lastMonth')}</option>
+                            <option value={90}>{t('admin.last90Days')}</option>
+                            <option value={365}>{t('admin.lastYear')}</option>
                             </select>
                         </div>
                     </div>
@@ -335,13 +336,13 @@ export function AdminAnalytics() {
                 {realtimeData && (
                     <div className="falcon-card falcon-realtime-widget">
                     <div className="falcon-card-header">
-                        <h3 className="falcon-card-title">Người dùng đang trực tuyến</h3>
+                        <h3 className="falcon-card-title">{t('admin.usersOnline')}</h3>
                     </div>
                     <div className="falcon-card-body">
                         <div className="falcon-users-online-value">{realtimeData.usersOnline}</div>
                         
                         <div className="falcon-views-per-second">
-                            <div className="falcon-views-label">Lượt xem trang / giây</div>
+                            <div className="falcon-views-label">{t('admin.pageViewsPerSecond')}</div>
                             <div className="falcon-views-chart">
                                 {realtimeData.viewsPerSecond.map((item, index) => {
                                     const maxCount = Math.max(...realtimeData.viewsPerSecond.map(v => v.count), 1);
@@ -370,7 +371,7 @@ export function AdminAnalytics() {
 
                         <div className="falcon-realtime-link">
                             <a href="#" onClick={(e) => { e.preventDefault(); loadRealtimeData(); }}>
-                                Dữ liệu thời gian thực →
+                                {t('admin.realtimeData')} →
                             </a>
                         </div>
                     </div>
@@ -385,7 +386,7 @@ export function AdminAnalytics() {
                     {/* Users Overview Card */}
                     <div className="falcon-card">
                         <div className="falcon-card-header">
-                            <h3 className="falcon-card-title">Tổng quan người dùng</h3>
+                            <h3 className="falcon-card-title">{t('admin.userOverview')}</h3>
                             <button className="falcon-card-action">
                                 <MoreVertical size={16} />
                             </button>
@@ -393,15 +394,15 @@ export function AdminAnalytics() {
                         <div className="falcon-card-body">
                             <div className="falcon-stats-row">
                                 <div className="falcon-stat-item">
-                                    <div className="falcon-stat-label">Tổng người dùng</div>
+                                    <div className="falcon-stat-label">{t('admin.totalUsers')}</div>
                                     <div className="falcon-stat-value">{analytics.users.total.toLocaleString()}</div>
                                 </div>
                                 <div className="falcon-stat-item">
-                                    <div className="falcon-stat-label">Người dùng mới ({days} ngày)</div>
+                                    <div className="falcon-stat-label">{t('admin.newUsers', { days })}</div>
                                     <div className="falcon-stat-value">{analytics.users.new.toLocaleString()}</div>
                                 </div>
                                 <div className="falcon-stat-item">
-                                    <div className="falcon-stat-label">Người dùng bị cấm</div>
+                                    <div className="falcon-stat-label">{t('admin.bannedUsers')}</div>
                                     <div className="falcon-stat-value">{analytics.users.banned.toLocaleString()}</div>
                                 </div>
                             </div>
@@ -423,7 +424,7 @@ export function AdminAnalytics() {
                                     <div className="falcon-stat-value">{analytics.images.total.toLocaleString()}</div>
                                 </div>
                                 <div className="falcon-stat-item">
-                                    <div className="falcon-stat-label">Ảnh mới ({days} ngày)</div>
+                                    <div className="falcon-stat-label">{t('admin.newImages', { days })}</div>
                                     <div className="falcon-stat-value">{analytics.images.new.toLocaleString()}</div>
                                 </div>
                                 <div className="falcon-stat-item">
@@ -441,11 +442,11 @@ export function AdminAnalytics() {
                     {/* Daily Uploads Chart */}
                     <div className="falcon-card">
                         <div className="falcon-card-header">
-                            <h3 className="falcon-card-title">Lượt tải lên hàng ngày</h3>
+                            <h3 className="falcon-card-title">{t('admin.dailyUploads')}</h3>
                             <select className="falcon-select-small">
-                                <option>7 ngày qua</option>
-                                <option>Tháng trước</option>
-                                <option>Năm trước</option>
+                                <option>{t('admin.last7Days')}</option>
+                                <option>{t('admin.lastMonth')}</option>
+                                <option>{t('admin.lastYear')}</option>
                             </select>
                         </div>
                         <div className="falcon-card-body">
@@ -472,7 +473,7 @@ export function AdminAnalytics() {
                     {/* Category Distribution - Line Chart */}
                     <div className="falcon-card">
                         <div className="falcon-card-header">
-                            <h3 className="falcon-card-title">Phân bố theo danh mục</h3>
+                            <h3 className="falcon-card-title">{t('admin.categoryDistribution')}</h3>
                             <button className="falcon-card-action">
                                 <MoreVertical size={16} />
                             </button>
@@ -576,7 +577,7 @@ export function AdminAnalytics() {
             <div className="admin-section">
                 <h2 className="admin-section-title">
                     <Calendar size={20} />
-                    Lượt tải lên hàng ngày ({days} ngày gần nhất)
+                    {t('admin.dailyUploads')} ({t('admin.lastNDays', { count: days })})
                 </h2>
                 <div className="admin-daily-uploads-chart">
                     {(() => {

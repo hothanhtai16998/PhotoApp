@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { Image } from '@/types/image';
+import { t } from '@/i18n';
 
 export type DownloadSize = 'small' | 'medium' | 'large' | 'original';
 
@@ -118,9 +119,9 @@ export const DownloadSizeSelector = memo(({ onDownload }: DownloadSizeSelectorPr
         className={`modal-download-btn ${showMenu ? 'active' : ''}`}
         onClick={handleButtonClick}
         onDoubleClick={handleQuickDownload}
-        title="Tải xuống (Ctrl/Cmd + D)"
+        title={`${t('image.download')} (Ctrl/Cmd + D)`}
       >
-        <span>Tải xuống</span>
+        <span>{t('image.download')}</span>
         <ChevronDown size={16} />
         <kbd className="keyboard-hint">⌘D</kbd>
       </button>

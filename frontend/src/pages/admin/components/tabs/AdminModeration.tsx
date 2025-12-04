@@ -5,6 +5,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, XCircle, Search } from 'lucide-react';
 import { ModerationNotesModal } from '../modals/ModerationNotesModal';
+import { t } from '@/i18n';
 
 export function AdminModeration() {
     const { hasPermission, isSuperAdmin } = usePermissions();
@@ -24,7 +25,7 @@ export function AdminModeration() {
 
     useEffect(() => {
         if (!isSuperAdmin() && !hasPermission('moderateContent')) {
-            toast.error('Bạn không có quyền kiểm duyệt nội dung');
+            toast.error(t('admin.noPermission'));
             return;
         }
         loadPendingContent();
@@ -38,7 +39,7 @@ export function AdminModeration() {
             setPendingContent((data.content as PendingContentItem[]) || []);
         } catch (error: unknown) {
             const axiosError = error as { response?: { data?: { message?: string } } };
-            toast.error(axiosError.response?.data?.message || 'Lỗi khi tải nội dung chờ duyệt');
+            toast.error(axiosError.response?.data?.message || t('admin.loadFailed'));
         } finally {
             setLoading(false);
         }
@@ -47,11 +48,11 @@ export function AdminModeration() {
     const handleApprove = async (contentId: string) => {
         try {
             await adminService.approveContent(contentId);
-            toast.success('Đã duyệt nội dung thành công');
+            toast.success(t('admin.approveSuccess'));
             loadPendingContent();
         } catch (error: unknown) {
             const axiosError = error as { response?: { data?: { message?: string } } };
-            toast.error(axiosError.response?.data?.message || 'Lỗi khi duyệt nội dung');
+            toast.error(axiosError.response?.data?.message || t('admin.moderationFailed'));
         }
     };
 
@@ -65,24 +66,24 @@ export function AdminModeration() {
 
         try {
             await adminService.rejectContent(contentToReject, reason || undefined);
-            toast.success('Đã từ chối nội dung');
+            toast.success(t('admin.rejectSuccess'));
             loadPendingContent();
             setShowRejectModal(false);
             setContentToReject(null);
         } catch (error: unknown) {
             const axiosError = error as { response?: { data?: { message?: string } } };
-            toast.error(axiosError.response?.data?.message || 'Lỗi khi từ chối nội dung');
+            toast.error(axiosError.response?.data?.message || t('admin.moderationFailed'));
         }
     };
 
     if (loading) {
-        return <div className="admin-loading">Đang tải...</div>;
+        return <div className="admin-loading">{t('common.loading')}</div>;
     }
 
     return (
         <div className="admin-moderation">
             <div className="admin-header">
-                <h1 className="admin-title">Kiểm duyệt nội dung</h1>
+                <h1 className="admin-title">{t('admin.moderation')}</h1>
             </div>
 
             <div className="admin-search">
@@ -90,7 +91,7 @@ export function AdminModeration() {
                     <Search size={20} />
                     <input
                         type="text"
-                        placeholder="Tìm kiếm nội dung..."
+                        placeholder={t('admin.searchContent')}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         className="admin-search-input"
@@ -102,10 +103,10 @@ export function AdminModeration() {
                 <table>
                     <thead>
                         <tr>
-                            <th>Nội dung</th>
-                            <th>Người đăng</th>
-                            <th>Trạng thái</th>
-                            <th>Ngày đăng</th>
+                            <th>{t('admin.content')}</th>
+                            <th>{t('admin.uploader')}</th>
+                            <th>{t('admin.status')}</th>
+                            <th>{t('admin.uploadDate')}</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -113,7 +114,7 @@ export function AdminModeration() {
                         {pendingContent.length === 0 ? (
                             <tr>
                                 <td colSpan={5} style={{ textAlign: 'center', padding: '40px' }}>
-                                    Không có nội dung chờ duyệt
+                                    {t('admin.noPendingContent')}
                                 </td>
                             </tr>
                         ) : (
@@ -123,7 +124,7 @@ export function AdminModeration() {
                                     <td>{item.uploadedBy?.displayName || item.uploadedBy?.username}</td>
                                     <td>
                                         <span className={`admin-status-badge ${item.status || 'pending'}`}>
-                                            {item.status || 'Chờ duyệt'}
+                                            {item.status || t('admin.pending')}
                                         </span>
                                     </td>
                                     <td>{new Date(item.createdAt).toLocaleDateString('vi-VN')}</td>
@@ -159,8 +160,8 @@ export function AdminModeration() {
                     setContentToReject(null);
                 }}
                 onConfirm={handleRejectConfirm}
-                title="Từ chối nội dung"
-                placeholder="Lý do từ chối (tùy chọn)..."
+                title={t('admin.rejectImage')}
+                placeholder={t('admin.moderationNotesPlaceholder')}
                 isOptional={true}
             />
         </div>

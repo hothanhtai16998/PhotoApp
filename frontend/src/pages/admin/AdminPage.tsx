@@ -20,6 +20,7 @@ import {
     Settings
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { t } from '@/i18n';
 import {
     useAdminUsers,
     useAdminImages,
@@ -70,17 +71,17 @@ function AdminPage() {
     // Get the display name for the active tab
     const getActiveTabName = (): string => {
         const tabNames: Record<TabType, string> = {
-            'analytics': 'Phân tích',
-            'users': 'Người dùng',
-            'images': 'Ảnh',
-            'categories': 'Danh mục ảnh',
-            'collections': 'Bộ sưu tập',
-            'roles': 'Quyền quản trị',
-            'permissions': 'Ma trận quyền hạn',
-            'favorites': 'Quản lý yêu thích',
-            'moderation': 'Kiểm duyệt nội dung',
-            'logs': 'Nhật ký hệ thống',
-            'settings': 'Cài đặt',
+            'analytics': t('admin.analytics'),
+            'users': t('admin.users'),
+            'images': t('admin.images'),
+            'categories': t('admin.categories'),
+            'collections': t('admin.collections'),
+            'roles': t('admin.roles'),
+            'permissions': t('admin.permissions'),
+            'favorites': t('admin.favorites'),
+            'moderation': t('admin.moderation'),
+            'logs': t('admin.logs'),
+            'settings': t('admin.settings'),
         };
         return tabNames[activeTab] || 'Menu';
     };
@@ -217,7 +218,7 @@ function AdminPage() {
                         <div className="admin-sidebar-header">
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
                                 {!sidebarCollapsed && <Shield size={24} />}
-                                {!sidebarCollapsed && <h2>Trang quản lý</h2>}
+                                {!sidebarCollapsed && <h2>{t('admin.title')}</h2>}
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 {!isMobile && (
@@ -269,10 +270,10 @@ function AdminPage() {
                                         setActiveTab('analytics');
                                         if (isMobile) setMobileMenuOpen(false);
                                     }}
-                                    title="Phân tích"
+                                    title={t('admin.analytics')}
                                 >
                                     <BarChart2 size={20} className="admin-nav-icon" />
-                                    {!sidebarCollapsed && <span>Phân tích</span>}
+                                    {!sidebarCollapsed && <span>{t('admin.analytics')}</span>}
                                 </button>
                             )}
                             {(isSuperAdmin() || hasPermission('viewUsers')) && (
@@ -282,10 +283,10 @@ function AdminPage() {
                                         setActiveTab('users');
                                         if (isMobile) setMobileMenuOpen(false);
                                     }}
-                                    title="Người dùng"
+                                    title={t('admin.users')}
                                 >
                                     <Users size={20} className="admin-nav-icon" />
-                                    {!sidebarCollapsed && <span>Người dùng</span>}
+                                    {!sidebarCollapsed && <span>{t('admin.users')}</span>}
                                 </button>
                             )}
                             {(isSuperAdmin() || hasPermission('viewImages')) && (
@@ -295,10 +296,10 @@ function AdminPage() {
                                         setActiveTab('images');
                                         if (isMobile) setMobileMenuOpen(false);
                                     }}
-                                    title="Ảnh"
+                                    title={t('admin.images')}
                                 >
                                     <Images size={20} className="admin-nav-icon" />
-                                    {!sidebarCollapsed && <span>Ảnh</span>}
+                                    {!sidebarCollapsed && <span>{t('admin.images')}</span>}
                                 </button>
                             )}
                             {(isSuperAdmin() || hasPermission('viewCategories')) && (
@@ -308,10 +309,10 @@ function AdminPage() {
                                         setActiveTab('categories');
                                         if (isMobile) setMobileMenuOpen(false);
                                     }}
-                                    title="Danh mục ảnh"
+                                    title={t('admin.categories')}
                                 >
                                     <Tag size={20} className="admin-nav-icon" />
-                                    {!sidebarCollapsed && <span>Danh mục ảnh</span>}
+                                    {!sidebarCollapsed && <span>{t('admin.categories')}</span>}
                                 </button>
                             )}
                             {(isSuperAdmin() || hasPermission('viewCollections')) && (
@@ -321,10 +322,10 @@ function AdminPage() {
                                         setActiveTab('collections');
                                         if (isMobile) setMobileMenuOpen(false);
                                     }}
-                                    title="Bộ sưu tập"
+                                    title={t('admin.collections')}
                                 >
                                     <FolderDot size={20} className="admin-nav-icon" />
-                                    {!sidebarCollapsed && <span>Bộ sưu tập</span>}
+                                    {!sidebarCollapsed && <span>{t('admin.collections')}</span>}
                                 </button>
                             )}
                             {isSuperAdmin() && (
@@ -334,10 +335,10 @@ function AdminPage() {
                                         setActiveTab('roles');
                                         if (isMobile) setMobileMenuOpen(false);
                                     }}
-                                    title="Quyền quản trị"
+                                    title={t('admin.roles')}
                                 >
                                     <UserCog size={20} className="admin-nav-icon" />
-                                    {!sidebarCollapsed && <span>Quyền quản trị</span>}
+                                    {!sidebarCollapsed && <span>{t('admin.roles')}</span>}
                                 </button>
                             )}
                             {(isSuperAdmin() || hasPermission('viewAdmins')) && (
@@ -347,10 +348,10 @@ function AdminPage() {
                                         setActiveTab('permissions');
                                         if (isMobile) setMobileMenuOpen(false);
                                     }}
-                                    title="Ma trận quyền hạn"
+                                    title={t('admin.permissions')}
                                 >
                                     <ShieldCheck size={20} className="admin-nav-icon" />
-                                    {!sidebarCollapsed && <span>Ma trận quyền hạn</span>}
+                                    {!sidebarCollapsed && <span>{t('admin.permissions')}</span>}
                                 </button>
                             )}
                             {(isSuperAdmin() || hasPermission('manageFavorites')) && (
@@ -360,10 +361,10 @@ function AdminPage() {
                                         setActiveTab('favorites');
                                         if (isMobile) setMobileMenuOpen(false);
                                     }}
-                                    title="Quản lý yêu thích"
+                                    title={t('admin.favorites')}
                                 >
                                     <Heart size={20} className="admin-nav-icon" />
-                                    {!sidebarCollapsed && <span>Quản lý yêu thích</span>}
+                                    {!sidebarCollapsed && <span>{t('admin.favorites')}</span>}
                                 </button>
                             )}
                             {(isSuperAdmin() || hasPermission('moderateContent')) && (
@@ -373,10 +374,10 @@ function AdminPage() {
                                         setActiveTab('moderation');
                                         if (isMobile) setMobileMenuOpen(false);
                                     }}
-                                    title="Kiểm duyệt nội dung"
+                                    title={t('admin.moderation')}
                                 >
                                     <ShieldCheck size={20} className="admin-nav-icon" />
-                                    {!sidebarCollapsed && <span>Kiểm duyệt nội dung</span>}
+                                    {!sidebarCollapsed && <span>{t('admin.moderation')}</span>}
                                 </button>
                             )}
                             {(isSuperAdmin() || hasPermission('viewLogs')) && (
@@ -386,10 +387,10 @@ function AdminPage() {
                                         setActiveTab('logs');
                                         if (isMobile) setMobileMenuOpen(false);
                                     }}
-                                    title="Nhật ký hệ thống"
+                                    title={t('admin.logs')}
                                 >
                                     <FileText size={20} className="admin-nav-icon" />
-                                    {!sidebarCollapsed && <span>Nhật ký hệ thống</span>}
+                                    {!sidebarCollapsed && <span>{t('admin.logs')}</span>}
                                 </button>
                             )}
                             {(isSuperAdmin() || hasPermission('manageSettings')) && (

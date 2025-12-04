@@ -3,6 +3,7 @@ import { X, MapPin } from 'lucide-react';
 import type { ImageData } from './hooks/useImageUpload';
 import { reverseGeocode, delay } from '@/utils/geocoding';
 import { timingConfig } from '@/config/timingConfig';
+import { t } from '@/i18n';
 import './UploadPreview.css';
 
 interface UploadPreviewProps {
@@ -279,7 +280,7 @@ export const UploadPreview = ({ imageData, index, onRemove, onLocationUpdate, on
             className="upload-location-button"
           >
             <MapPin size={16} />
-            <span>Add location</span>
+            <span>{t('image.locationPlaceholder')}</span>
           </button>
         )}
 
@@ -307,7 +308,7 @@ export const UploadPreview = ({ imageData, index, onRemove, onLocationUpdate, on
                     setShowLocationInput(false);
                   }
                 }}
-                placeholder="Add a place or a city"
+                placeholder={t('image.locationPlaceholder')}
                 className="upload-location-input"
               />
               <button
