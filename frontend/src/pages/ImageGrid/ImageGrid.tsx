@@ -102,7 +102,7 @@ const ImageGrid = () => {
                         images={filteredImages}
                         onClose={handleCloseModal}
                         onImageSelect={handleModalImageSelect}
-                        lockBodyScroll={false}
+                        lockBodyScroll={true}
                         renderAsPage={false}
                         onDownload={() => { /* Download handled by ImageModal internally */ }}
                         imageTypes={imageTypes as Map<string, 'portrait' | 'landscape'>}

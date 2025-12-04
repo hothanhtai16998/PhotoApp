@@ -11,6 +11,7 @@
   z-index: 2000; /* Above header (1500) and category nav (1499) */
   cursor: pointer;
   opacity: 1;
+  animation: fadeIn 120ms ease-out;
   -webkit-tap-highlight-color: transparent;
   touch-action: none;
   overflow: hidden;
@@ -53,6 +54,7 @@
   will-change: opacity, transform;
   backface-visibility: hidden;
   contain: layout style paint;
+  animation: modalFadeIn 180ms ease-out;
 }
 
 /* Page mode - no overlay, full page */
@@ -120,4 +122,3 @@
     ) !important; /* Header (56px) + Search bar (55px) */
   }
 }
-
