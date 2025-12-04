@@ -98,38 +98,78 @@ export default function UnsplashModalTest() {
     setPlaceholderLoaded(false);
 
     const modalImageUrl = image.regularUrl || image.imageUrl || image.smallUrl;
-    // Use grid image (imageUrl) as placeholder - it's already loaded in browser cache!
-    const placeholderUrl = image.imageUrl || image.smallUrl || image.regularUrl;
+    // Use smallUrl or thumbnailUrl as placeholder (smaller, faster to load)
+    const placeholderUrl = image.smallUrl || image.thumbnailUrl || image.imageUrl;
 
-    // Show modal immediately
-    setIsModalOpen(true);
-    setPlaceholderLoaded(true);
-
-    // Check if modal image is the same as grid image (already loaded)
-    if (modalImageUrl === image.imageUrl) {
-      // Same image - show immediately
-      setImageLoaded(true);
-      return;
-    }
-
-    // Check if image is already preloaded
-    if (modalImageUrl && preloadCache.current.has(modalImageUrl)) {
-      const cachedImg = preloadCache.current.get(modalImageUrl);
-      if (cachedImg && cachedImg.complete) {
-        // Show immediately - already loaded
-        setImageLoaded(true);
-        return;
+    // Check if placeholder is cached synchronously (like ProgressiveImage does)
+    let placeholderCached = false;
+    if (placeholderUrl && typeof window !== 'undefined') {
+      try {
+        const testImg = new Image();
+        testImg.src = placeholderUrl;
+        // If complete immediately, it's cached
+        if (testImg.complete && testImg.naturalWidth > 0) {
+          placeholderCached = true;
+        }
+      } catch {
+        // Ignore errors
       }
     }
 
-    // Load full image (different from grid image)
-    if (modalImageUrl) {
-      const fullImg = new Image();
-      fullImg.onload = () => {
-        setImageLoaded(true);
-        preloadCache.current.set(modalImageUrl, fullImg);
+    // If placeholder is cached, show modal immediately
+    // Otherwise, wait for placeholder to load first
+    if (placeholderCached) {
+      setIsModalOpen(true);
+      setPlaceholderLoaded(true);
+    } else {
+      // Load placeholder first, then show modal
+      const placeholderImg = new Image();
+      placeholderImg.onload = () => {
+        setIsModalOpen(true);
+        setPlaceholderLoaded(true);
+        // Now load the main image
+        loadMainImage(modalImageUrl, image.imageUrl);
       };
-      fullImg.src = modalImageUrl;
+      placeholderImg.onerror = () => {
+        // Even if placeholder fails, show modal
+        setIsModalOpen(true);
+        setPlaceholderLoaded(true);
+        loadMainImage(modalImageUrl, image.imageUrl);
+      };
+      placeholderImg.src = placeholderUrl;
+      return;
+    }
+
+    // Load main image
+    loadMainImage(modalImageUrl, image.imageUrl);
+    
+    function loadMainImage(modalUrl: string | undefined, gridUrl: string | undefined) {
+      // Check if modal image is the same as grid image
+      if (modalUrl === gridUrl) {
+        setImageLoaded(true);
+        return;
+      }
+
+      // Check if already preloaded
+      if (modalUrl && preloadCache.current.has(modalUrl)) {
+        const cachedImg = preloadCache.current.get(modalUrl);
+        if (cachedImg && cachedImg.complete && cachedImg.naturalWidth > 0) {
+          setImageLoaded(true);
+          return;
+        }
+      }
+
+      // Load full image
+      if (modalUrl) {
+        const fullImg = new Image();
+        fullImg.onload = () => {
+          if (fullImg.complete && fullImg.naturalWidth > 0) {
+            setImageLoaded(true);
+            preloadCache.current.set(modalUrl, fullImg);
+          }
+        };
+        fullImg.src = modalUrl;
+      }
     }
   }, []);
 
@@ -143,6 +183,24 @@ export default function UnsplashModalTest() {
       }
     }
   }, [selectedImage, filteredImages]);
+
+  // Use useLayoutEffect to ensure placeholder is ready before paint (like ProgressiveImage)
+  useLayoutEffect(() => {
+    if (isModalOpen && selectedImage && !placeholderLoaded) {
+      const placeholderUrl = selectedImage.smallUrl || selectedImage.thumbnailUrl || selectedImage.imageUrl;
+      
+      if (placeholderUrl) {
+        // Synchronously check if placeholder is cached
+        const testImg = new Image();
+        testImg.src = placeholderUrl;
+        
+        // If cached, mark as loaded before paint
+        if (testImg.complete && testImg.naturalWidth > 0) {
+          setPlaceholderLoaded(true);
+        }
+      }
+    }
+  }, [isModalOpen, selectedImage, placeholderLoaded]);
 
   // Keyboard navigation
   useEffect(() => {
