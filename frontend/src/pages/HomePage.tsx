@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { triggerSearchFocus } from "@/utils/searchFocusEvent";
 import ImageGrid from "./ImageGrid";
 import { ActualLocationContext } from "@/contexts/ActualLocationContext";
+import CategoryNavigation from "@/components/CategoryNavigation";
 
 // Lazy load Slider - conditionally rendered
 const Slider = lazy(() => import("@/components/Slider"));
@@ -45,6 +46,7 @@ function HomePage() {
                         <Slider />
                     </Suspense>
                 )}
+                <CategoryNavigation />
                 <ImageGrid />
             </main>
         </>

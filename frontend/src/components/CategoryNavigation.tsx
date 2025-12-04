@@ -134,9 +134,11 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
     const nav = categoryNavRef.current
     let lastStickyState = isSticky // Initialize with current state
 
-    // Store initial nav position once
-    const storeInitialPosition = () => {
-      if (initialNavTopRef.current === null) {
+    // Store or update initial nav position
+    // This recalculates when layout changes (e.g., Slider appears/disappears)
+    const storeInitialPosition = (force = false) => {
+      // Only store if not set, or force recalculation
+      if (initialNavTopRef.current === null || force) {
         const rect = nav.getBoundingClientRect()
         const scrollY = window.scrollY || window.pageYOffset
         initialNavTopRef.current = rect.top + scrollY
@@ -157,12 +159,14 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
         if (initialNavTopRef.current === null) return
       }
 
-      // If at top, don't stick
+      // If at top, don't stick and reset initial position for recalculation
       if (scrollY === 0) {
         if (lastStickyState !== false) {
           setIsSticky(false)
           lastStickyState = false
         }
+        // Reset initial position when at top to allow recalculation after layout changes
+        initialNavTopRef.current = null
         return
       }
 
@@ -191,6 +195,35 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
 
     window.addEventListener('scroll', throttledScroll, { passive: true })
 
+    // Watch for layout changes that might affect nav position (e.g., Slider appearing/disappearing)
+    const layoutObserver = new ResizeObserver(() => {
+      // Only reset if we're at the top or not sticky (to avoid flickering)
+      const scrollY = window.scrollY || window.pageYOffset
+      if (scrollY === 0 || !isSticky) {
+        // Check if position actually changed significantly
+        const rect = nav.getBoundingClientRect()
+        const currentPosition = rect.top + scrollY
+        
+        // Only reset if position changed significantly (more than 10px) to avoid unnecessary recalculations
+        if (initialNavTopRef.current === null || Math.abs(currentPosition - (initialNavTopRef.current || 0)) > 10) {
+          initialNavTopRef.current = null
+          // Recalculate position after a short delay to allow layout to settle
+          setTimeout(() => {
+            storeInitialPosition(true)
+            handleScroll()
+          }, 50)
+        }
+      }
+    })
+
+    // Observe the nav element and its parent for layout changes
+    if (nav) {
+      layoutObserver.observe(nav)
+      if (nav.parentElement) {
+        layoutObserver.observe(nav.parentElement)
+      }
+    }
+
     // Initial setup
     const initCheck = () => {
       storeInitialPosition()
@@ -201,6 +234,7 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
 
     return () => {
       window.removeEventListener('scroll', throttledScroll)
+      layoutObserver.disconnect()
       if (rafId) {
         cancelAnimationFrame(rafId)
       }

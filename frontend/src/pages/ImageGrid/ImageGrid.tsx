@@ -1,7 +1,6 @@
 import { lazy, Suspense } from 'react';
 import type { Image } from '@/types/image';
 import MasonryGrid from '@/components/MasonryGrid';
-import CategoryNavigation from '@/components/CategoryNavigation';
 import { useInfiniteScroll } from '@/components/image/hooks/useInfiniteScroll';
 import { Skeleton } from '@/components/ui/skeleton';
 import { downloadImage, type DownloadSize } from '@/utils/downloadService';
@@ -77,7 +76,6 @@ const ImageGrid = () => {
     return (
         <>
             <div className="container mx-auto">
-                <CategoryNavigation />
                 {loading && filteredImages.length === 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
                         {Array.from({ length: 12 }).map((_, i) => (
