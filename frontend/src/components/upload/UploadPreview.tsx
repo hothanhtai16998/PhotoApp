@@ -8,12 +8,12 @@ import './UploadPreview.css';
 interface UploadPreviewProps {
   imageData: ImageData;
   index: number;
-  totalImages: number;
   onRemove: () => void;
   onLocationUpdate?: (location: string) => void;
+  onOrientationChange?: (isPortrait: boolean) => void;
 }
 
-export const UploadPreview = ({ imageData, index, totalImages, onRemove, onLocationUpdate }: UploadPreviewProps) => {
+export const UploadPreview = ({ imageData, index, onRemove, onLocationUpdate, onOrientationChange }: UploadPreviewProps) => {
   const isUploading = imageData.isUploading === true;
   const uploadError = imageData.uploadError;
   const hasPreUploadData = !!imageData.preUploadData;
@@ -90,8 +90,12 @@ export const UploadPreview = ({ imageData, index, totalImages, onRemove, onLocat
       if (portrait) {
         setImageWidth(Math.min(img.naturalWidth, 440));
       }
+      // Notify parent of orientation change
+      if (onOrientationChange) {
+        onOrientationChange(portrait);
+      }
     }
-  }, []);
+  }, [onOrientationChange]);
 
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
@@ -101,11 +105,15 @@ export const UploadPreview = ({ imageData, index, totalImages, onRemove, onLocat
     if (portrait) {
       setImageWidth(Math.min(img.naturalWidth, 440));
     }
+    // Notify parent of orientation change
+    if (onOrientationChange) {
+      onOrientationChange(portrait);
+    }
   };
 
   // Unsplash-style: use image's natural width for portrait (capped at 440px), constrained width for landscape
   const portraitWidth = isPortrait && imageWidth ? `${imageWidth}px` : (isPortrait ? '440px' : '100%');
-  
+
   // Outer container - this will be the shared width for both image and form
   // In Unsplash, this container has the exact width (440px), and both image and form are siblings with 100% width
   // For landscape images, cap at 440px to match portrait width
@@ -138,7 +146,7 @@ export const UploadPreview = ({ imageData, index, totalImages, onRemove, onLocat
   };
 
   return (
-    <div 
+    <div
       style={containerStyle}
       className={isPortrait ? 'upload-preview-container-portrait' : 'upload-preview-container-landscape'}
     >
@@ -153,7 +161,7 @@ export const UploadPreview = ({ imageData, index, totalImages, onRemove, onLocat
         {/* Simple Overlay - shows during upload */}
         {showOverlay && (
           <>
-            <div 
+            <div
               className="image-upload-overlay"
               style={{
                 position: 'absolute',
@@ -170,7 +178,7 @@ export const UploadPreview = ({ imageData, index, totalImages, onRemove, onLocat
               }}
             />
             {/* Scrolling Loader - above overlay */}
-            <div 
+            <div
               className="upload-loader-container"
               style={{
                 position: 'absolute',

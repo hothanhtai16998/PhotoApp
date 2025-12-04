@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useUserStore } from '@/stores/useUserStore';
@@ -25,6 +25,9 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
     const isAdmin = user?.isAdmin === true || user?.isSuperAdmin === true;
     const navigate = useNavigate();
     const { settings } = useSiteSettings();
+    
+    // Track image orientations for masonry layout
+    const [imageOrientations, setImageOrientations] = useState<Map<number, boolean>>(new Map());
 
     const {
         categories,
@@ -74,7 +77,9 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
     // Auto-select first category for admin users when categories are loaded and images are selected
     useEffect(() => {
         if (isAdmin && categories.length > 0 && imagesData.length > 0) {
-            const firstCategoryId = categories[0]._id;
+            const firstCategory = categories[0];
+            if (!firstCategory) return;
+            const firstCategoryId = firstCategory._id;
             setImagesData(prev => {
                 const needsUpdate = prev.some(img => !img.category || img.category.trim() === '');
                 if (!needsUpdate) return prev; // No changes needed
@@ -465,10 +470,18 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
 
                     {/* Grid of images with individual forms */}
                     <div className="upload-images-grid">
-                        {imagesData.map((imgData, index) => (
+                        {imagesData.map((imgData, index) => {
+                            const isPortrait = imageOrientations.get(index) ?? null;
+                            // For masonry layout: portrait images take 1 column, landscape take 2 columns
+                            const gridColumnSpan = isPortrait === false ? 'span 2' : 'span 1';
+                            
+                            return (
                             <div 
                                 key={index} 
                                 className="upload-image-card"
+                                style={{
+                                    gridColumn: gridColumnSpan,
+                                }}
                                 draggable={false}
                                 onDragEnter={(e) => e.stopPropagation()}
                                 onDragOver={(e) => e.stopPropagation()}
@@ -478,7 +491,13 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                 <UploadPreview
                                     imageData={imgData}
                                     index={index}
-                                    totalImages={imagesData.length}
+                                    onOrientationChange={(isPortrait) => {
+                                        setImageOrientations((prev: Map<number, boolean>) => {
+                                            const newMap = new Map(prev);
+                                            newMap.set(index, isPortrait);
+                                            return newMap;
+                                        });
+                                    }}
                                     onRemove={async () => {
                                         // If image was pre-uploaded, delete it from S3/R2
                                         if (imgData.preUploadData?.uploadKey) {
@@ -508,7 +527,8 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                     onUpdateCoordinates={updateImageCoordinates}
                                 />
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
 

@@ -73,7 +73,7 @@ export function useAdminImages(): UseAdminImagesReturn {
   );
 
   const deleteImage = useCallback(
-    async (imageId: string, imageTitle: string): Promise<boolean> => {
+    async (imageId: string, _imageTitle: string): Promise<boolean> => {
       // Check permission before action
       if (!isSuperAdmin() && !hasPermission('deleteImages')) {
         toast.error('Bạn không có quyền xóa ảnh');

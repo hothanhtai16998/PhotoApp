@@ -24,7 +24,6 @@ interface ProfileHeaderProps {
 export function ProfileHeader({
     displayUser,
     isOwnProfile,
-    userStats,
 
     onEditProfile,
     onEditPins,

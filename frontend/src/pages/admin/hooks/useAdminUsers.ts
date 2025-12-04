@@ -71,7 +71,7 @@ export function useAdminUsers(): UseAdminUsersReturn {
   );
 
   const deleteUser = useCallback(
-    async (userId: string, username: string): Promise<boolean> => {
+    async (userId: string, _username: string): Promise<boolean> => {
       // Check permission before action
       if (!isSuperAdmin() && !hasPermission('deleteUsers')) {
         toast.error('Bạn không có quyền xóa người dùng');

@@ -124,7 +124,7 @@ export function useAdminCategories(): UseAdminCategoriesReturn {
   );
 
   const deleteCategory = useCallback(
-    async (categoryId: string, categoryName: string): Promise<boolean> => {
+    async (categoryId: string, _categoryName: string): Promise<boolean> => {
       // Check permission before action
       if (!isSuperAdmin() && !hasPermission('deleteCategories')) {
         toast.error('Bạn không có quyền xóa danh mục');

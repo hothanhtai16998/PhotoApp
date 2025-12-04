@@ -144,7 +144,7 @@ export function useAdminRoles(): UseAdminRolesReturn {
   const deleteRole = useCallback(
     async (
       userId: string,
-      username: string,
+      _username: string,
       loadUsersCallback?: (page: number) => Promise<void>,
       usersPage?: number
     ): Promise<boolean> => {

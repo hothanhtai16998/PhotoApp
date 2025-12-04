@@ -41,11 +41,9 @@ export function AdminCategories({
 
     const handleDeleteConfirm = async () => {
         if (!categoryToDelete) return;
-        const success = await onDelete(categoryToDelete.id, categoryToDelete.name);
-        if (success) {
-            setShowDeleteModal(false);
-            setCategoryToDelete(null);
-        }
+        await onDelete(categoryToDelete.id, categoryToDelete.name);
+        setShowDeleteModal(false);
+        setCategoryToDelete(null);
     };
 
     return (

@@ -62,7 +62,7 @@ export default function CollectionsPage() {
 	const [collectionToDuplicate, setCollectionToDuplicate] = useState<Collection | null>(null);
 	const [showTemplateModal, setShowTemplateModal] = useState(false);
 	const [collectionForTemplate, setCollectionForTemplate] = useState<Collection | null>(null);
-	const [templateName, setTemplateName] = useState('');
+	const [_templateName, setTemplateName] = useState('');
 
 	useEffect(() => {
 		if (!accessToken) {
