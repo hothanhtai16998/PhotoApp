@@ -175,11 +175,32 @@ const ProgressiveImage = memo(({
     }
   }, [isLoaded, skipTransition, isActuallyCached, currentSrc]);
 
+  // Detect if this is a GIF (or other animated format) that should not be processed
+  // For GIFs, all URLs (thumbnailUrl, smallUrl, regularUrl) are the same (the original GIF)
+  // Check if the src or any URL ends with .gif, or if all URLs are the same and end with .gif
+  const isGif = src?.toLowerCase().endsWith('.gif') || 
+                effectiveSmall?.toLowerCase().endsWith('.gif') ||
+                effectiveThumbnail?.toLowerCase().endsWith('.gif') ||
+                effectiveRegular?.toLowerCase().endsWith('.gif') ||
+                (effectiveSmall === effectiveThumbnail && effectiveSmall === effectiveRegular && effectiveSmall?.toLowerCase().endsWith('.gif'));
+
   // Reset state when src changes - but preserve loaded state if already loaded
   useEffect(() => {
     const currentSrcValue = effectiveThumbnail;
     // Only reset if src actually changed
     if (currentSrc !== currentSrcValue) {
+      // For GIFs, skip progressive loading - use the final URL immediately
+      if (isGif) {
+        const gifUrl = effectiveSmall || effectiveThumbnail || src;
+        setCurrentSrc(gifUrl);
+        setIsLoaded(false); // Will be set to true when image loads
+        setSkipTransition(false);
+        setIsError(false);
+        setShouldLoadEagerly(eager); // Respect eager prop
+        preloadedRef.current = false;
+        return;
+      }
+
       // Check multiple sources for cached state
       const isInGlobalCache = globalLoadedImages.has(effectiveSmall) || globalLoadedImages.has(effectiveThumbnail);
       const isInLocalCache = loadedSrcs.current.has(effectiveSmall) || loadedSrcs.current.has(effectiveThumbnail);
@@ -212,7 +233,7 @@ const ProgressiveImage = memo(({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [src, effectiveThumbnail, effectiveSmall]);
+  }, [src, effectiveThumbnail, effectiveSmall, isGif, eager]);
 
   // Use useLayoutEffect to check cache synchronously before paint
   // This prevents any flash by ensuring cached images are marked as loaded before render
@@ -286,6 +307,39 @@ const ProgressiveImage = memo(({
       }
     };
 
+    // For GIFs, skip progressive loading - load the final URL immediately
+    if (isGif && !preloadedRef.current) {
+      preloadedRef.current = true;
+      setShouldLoadEagerly(true);
+      // For GIFs, all URLs are the same, so just set the final URL
+      const gifUrl = effectiveSmall || effectiveThumbnail || src;
+      if (!loadedSrcs.current.has(gifUrl) && !globalLoadedImages.has(gifUrl)) {
+        const gifImg = new Image();
+        gifImg.crossOrigin = 'anonymous';
+        gifImg.onload = () => {
+          loadedSrcs.current.add(gifUrl);
+          globalLoadedImages.add(gifUrl);
+          setCurrentSrc(gifUrl);
+          setIsLoaded(true);
+          setSkipTransition(false);
+          if (onLoad && imgRef.current) {
+            onLoad(imgRef.current);
+          }
+        };
+        gifImg.onerror = () => {
+          setIsLoaded(true);
+          if (onLoad && imgRef.current) {
+            onLoad(imgRef.current);
+          }
+        };
+        gifImg.src = gifUrl;
+      } else if (globalLoadedImages.has(gifUrl)) {
+        setCurrentSrc(gifUrl);
+        setIsLoaded(true);
+      }
+      return;
+    }
+
     // If eager loading is requested, load immediately
     if (eager && !preloadedRef.current) {
       preloadedRef.current = true;
@@ -304,7 +358,36 @@ const ProgressiveImage = memo(({
       // Use requestAnimationFrame for better performance
       requestAnimationFrame(() => {
         setShouldLoadEagerly(true);
-        loadSmallImage();
+        // For GIFs, load the final URL directly
+        if (isGif) {
+          const gifUrl = effectiveSmall || effectiveThumbnail || src;
+          if (!loadedSrcs.current.has(gifUrl) && !globalLoadedImages.has(gifUrl)) {
+            const gifImg = new Image();
+            gifImg.crossOrigin = 'anonymous';
+            gifImg.onload = () => {
+              loadedSrcs.current.add(gifUrl);
+              globalLoadedImages.add(gifUrl);
+              setCurrentSrc(gifUrl);
+              setIsLoaded(true);
+              setSkipTransition(false);
+              if (onLoad && imgRef.current) {
+                onLoad(imgRef.current);
+              }
+            };
+            gifImg.onerror = () => {
+              setIsLoaded(true);
+              if (onLoad && imgRef.current) {
+                onLoad(imgRef.current);
+              }
+            };
+            gifImg.src = gifUrl;
+          } else if (globalLoadedImages.has(gifUrl)) {
+            setCurrentSrc(gifUrl);
+            setIsLoaded(true);
+          }
+        } else {
+          loadSmallImage();
+        }
       });
       return;
     }
@@ -330,7 +413,36 @@ const ProgressiveImage = memo(({
             // Use requestAnimationFrame for better performance
             requestAnimationFrame(() => {
               setShouldLoadEagerly(true);
-              loadSmallImage();
+              // For GIFs, load the final URL directly
+              if (isGif) {
+                const gifUrl = effectiveSmall || effectiveThumbnail || src;
+                if (!loadedSrcs.current.has(gifUrl) && !globalLoadedImages.has(gifUrl)) {
+                  const gifImg = new Image();
+                  gifImg.crossOrigin = 'anonymous';
+                  gifImg.onload = () => {
+                    loadedSrcs.current.add(gifUrl);
+                    globalLoadedImages.add(gifUrl);
+                    setCurrentSrc(gifUrl);
+                    setIsLoaded(true);
+                    setSkipTransition(false);
+                    if (onLoad && imgRef.current) {
+                      onLoad(imgRef.current);
+                    }
+                  };
+                  gifImg.onerror = () => {
+                    setIsLoaded(true);
+                    if (onLoad && imgRef.current) {
+                      onLoad(imgRef.current);
+                    }
+                  };
+                  gifImg.src = gifUrl;
+                } else if (globalLoadedImages.has(gifUrl)) {
+                  setCurrentSrc(gifUrl);
+                  setIsLoaded(true);
+                }
+              } else {
+                loadSmallImage();
+              }
             });
             observer.disconnect();
           }
@@ -347,7 +459,7 @@ const ProgressiveImage = memo(({
       observer.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveThumbnail, effectiveSmall, onLoad]);
+  }, [effectiveThumbnail, effectiveSmall, onLoad, isGif]);
 
   const handleLoad = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     const img = e.currentTarget;
@@ -485,7 +597,34 @@ const ProgressiveImage = memo(({
 
   return (
     <div ref={containerRef} className={`progressive-image-wrapper ${className}`}>
-      {hasAvif ? (
+      {isGif ? (
+        // For GIFs, use the original URL directly without picture element to preserve animation
+        <img
+          ref={setImgRef}
+          src={currentSrc || effectiveSmall || effectiveThumbnail || src}
+          alt={alt}
+          className={finalClassName}
+          onLoad={handleLoad}
+          onError={handleError}
+          loading={eager || shouldLoadEagerly || isActuallyCached ? 'eager' : 'lazy'}
+          decoding="async"
+          fetchPriority={eager ? (fetchPriority === 'auto' ? 'high' : fetchPriority) : (fetchPriority === 'auto' ? 'low' : fetchPriority)}
+          style={
+            skipTransition || isActuallyCached
+              ? {
+                  opacity: 1,
+                  transition: 'none',
+                  visibility: 'visible',
+                  transform: 'translateZ(0)',
+                  willChange: 'auto'
+                }
+              : isLoaded
+                ? { opacity: 1 }
+                : undefined
+          }
+          data-cached={(skipTransition || isActuallyCached) ? 'true' : undefined}
+        />
+      ) : hasAvif ? (
         // Use <picture> element for AVIF support with WebP fallback and responsive images
         <picture>
           {/* AVIF source with responsive srcset (modern browsers) */}

@@ -7,9 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Save, Megaphone, X } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
+import { useSiteSettings } from '@/hooks/useSiteSettings';
 
 export function AdminSettings() {
     const { hasPermission, isSuperAdmin } = usePermissions();
+    const { refreshSettings } = useSiteSettings();
     const [settings, setSettings] = useState({
         siteName: 'PhotoApp',
         siteDescription: '',
@@ -17,6 +19,31 @@ export function AdminSettings() {
         allowedFileTypes: 'jpg,jpeg,png,webp',
         maintenanceMode: false,
     });
+    
+    // Available file types for selection
+    const availableFileTypes = [
+        { value: 'jpg', label: 'JPG' },
+        { value: 'jpeg', label: 'JPEG' },
+        { value: 'png', label: 'PNG' },
+        { value: 'webp', label: 'WebP' },
+        { value: 'gif', label: 'GIF' },
+        { value: 'svg', label: 'SVG' },
+        { value: 'bmp', label: 'BMP' },
+        { value: 'ico', label: 'ICO' },
+        { value: 'mp4', label: 'MP4' },
+        { value: 'webm', label: 'WebM' },
+    ];
+    
+    // Convert comma-separated string to array for checkbox handling
+    const selectedFileTypes = settings.allowedFileTypes.split(',').map(t => t.trim()).filter(t => t);
+    
+    const handleFileTypeToggle = (fileType: string) => {
+        const currentTypes = selectedFileTypes;
+        const newTypes = currentTypes.includes(fileType)
+            ? currentTypes.filter(t => t !== fileType)
+            : [...currentTypes, fileType];
+        setSettings({ ...settings, allowedFileTypes: newTypes.join(',') });
+    };
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     
@@ -82,6 +109,10 @@ export function AdminSettings() {
             };
             await adminService.updateSettings(updateData);
             toast.success('Đã lưu cài đặt thành công');
+            // Reload settings to reflect the saved changes
+            await loadSettings();
+            // Refresh site settings globally (updates document title)
+            await refreshSettings();
         } catch (error: unknown) {
             const axiosError = error as { response?: { data?: { message?: string } } };
             toast.error(axiosError.response?.data?.message || 'Lỗi khi lưu cài đặt');
@@ -157,11 +188,29 @@ export function AdminSettings() {
 
                 <div className="admin-form-group">
                     <Label>Định dạng file cho phép</Label>
-                    <Input
-                        value={settings.allowedFileTypes}
-                        onChange={(e) => setSettings({ ...settings, allowedFileTypes: e.target.value })}
-                        placeholder="jpg,jpeg,png,webp"
-                    />
+                    <div className="admin-file-types-selector">
+                        {availableFileTypes.map((fileType) => {
+                            const isSelected = selectedFileTypes.includes(fileType.value);
+                            return (
+                                <label
+                                    key={fileType.value}
+                                    className={`admin-file-type-checkbox ${isSelected ? 'selected' : ''}`}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={() => handleFileTypeToggle(fileType.value)}
+                                    />
+                                    <span>{fileType.label}</span>
+                                </label>
+                            );
+                        })}
+                    </div>
+                    {selectedFileTypes.length === 0 && (
+                        <p style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.5rem' }}>
+                            Vui lòng chọn ít nhất một định dạng file
+                        </p>
+                    )}
                 </div>
 
                 <div className="admin-form-group">
@@ -176,7 +225,7 @@ export function AdminSettings() {
                 </div>
 
                 <div className="admin-modal-actions">
-                    <Button onClick={handleSave} disabled={saving}>
+                    <Button onClick={handleSave} disabled={saving} className="admin-add-category-btn">
                         <Save size={16} />
                         {saving ? 'Đang lưu...' : 'Lưu cài đặt'}
                     </Button>
@@ -196,6 +245,7 @@ export function AdminSettings() {
                     <Button 
                         onClick={() => setShowAnnouncementForm(true)}
                         style={{ marginBottom: '1rem' }}
+                        className="admin-add-category-btn"
                     >
                         <Megaphone size={16} style={{ marginRight: '0.5rem' }} />
                         Tạo thông báo mới

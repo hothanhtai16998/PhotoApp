@@ -3,6 +3,7 @@ import { useMasonry } from '../hooks/useMasonry';
 import type { Image } from '../types/image';
 import './MasonryGrid.css';
 import ProgressiveImage from './ProgressiveImage';
+import { VideoPlayer } from './VideoPlayer';
 import { Heart, Download, Plus, Bookmark, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { appConfig } from '@/config/appConfig';
@@ -76,19 +77,31 @@ const MasonryGrid: React.FC<MasonryGridProps> = ({
                                     className="masonry-item"
                                     onClick={() => onImageClick(image)}
                                 >
-                                    <ProgressiveImage
-                                        src={image.imageUrl}
-                                        smallUrl={image.smallUrl}
-                                        thumbnailUrl={image.thumbnailUrl}
-                                        regularUrl={image.regularUrl}
-                                        imageAvifUrl={image.imageAvifUrl}
-                                        smallAvifUrl={image.smallAvifUrl}
-                                        thumbnailAvifUrl={image.thumbnailAvifUrl}
-                                        regularAvifUrl={image.regularAvifUrl}
-                                        alt={image.imageTitle || 'image'}
-                                        eager={false}
-                                        className="progressive-image"
-                                    />
+                                    {image.isVideo && image.videoUrl ? (
+                                        <VideoPlayer
+                                            src={image.videoUrl}
+                                            thumbnail={image.videoThumbnail || image.thumbnailUrl}
+                                            alt={image.imageTitle || 'video'}
+                                            className="progressive-image"
+                                            autoplay={true}
+                                            loop={true}
+                                            muted={true}
+                                        />
+                                    ) : (
+                                        <ProgressiveImage
+                                            src={image.imageUrl}
+                                            smallUrl={image.smallUrl}
+                                            thumbnailUrl={image.thumbnailUrl}
+                                            regularUrl={image.regularUrl}
+                                            imageAvifUrl={image.imageAvifUrl}
+                                            smallAvifUrl={image.smallAvifUrl}
+                                            thumbnailAvifUrl={image.thumbnailAvifUrl}
+                                            regularAvifUrl={image.regularAvifUrl}
+                                            alt={image.imageTitle || 'image'}
+                                            eager={false}
+                                            className="progressive-image"
+                                        />
+                                    )}
                                     <div className="image-card-overlay" onClick={handleOverlayClick}>
                                         <div className="overlay-top">
                                             <div /> {/* For spacing */}
@@ -277,19 +290,31 @@ const MobileImageCard: React.FC<MobileImageCardProps> = ({
                     onImageClick(image);
                 }}
             >
-                <ProgressiveImage
-                    src={image.imageUrl}
-                    smallUrl={image.smallUrl}
-                    thumbnailUrl={image.thumbnailUrl}
-                    regularUrl={image.regularUrl}
-                    imageAvifUrl={image.imageAvifUrl}
-                    smallAvifUrl={image.smallAvifUrl}
-                    thumbnailAvifUrl={image.thumbnailAvifUrl}
-                    regularAvifUrl={image.regularAvifUrl}
-                    alt={image.imageTitle || 'image'}
-                    eager={false}
-                    className="card-image-mobile"
-                />
+                {image.isVideo && image.videoUrl ? (
+                    <VideoPlayer
+                        src={image.videoUrl}
+                        thumbnail={image.videoThumbnail || image.thumbnailUrl}
+                        alt={image.imageTitle || 'video'}
+                        className="card-image-mobile"
+                        autoplay={true}
+                        loop={true}
+                        muted={true}
+                    />
+                ) : (
+                    <ProgressiveImage
+                        src={image.imageUrl}
+                        smallUrl={image.smallUrl}
+                        thumbnailUrl={image.thumbnailUrl}
+                        regularUrl={image.regularUrl}
+                        imageAvifUrl={image.imageAvifUrl}
+                        smallAvifUrl={image.smallAvifUrl}
+                        thumbnailAvifUrl={image.thumbnailAvifUrl}
+                        regularAvifUrl={image.regularAvifUrl}
+                        alt={image.imageTitle || 'image'}
+                        eager={false}
+                        className="card-image-mobile"
+                    />
+                )}
             </div>
 
             {/* C. Action Bar (Bottom) - Always Visible */}

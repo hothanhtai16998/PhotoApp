@@ -147,6 +147,7 @@ export function AdminCollections() {
                                                     size="sm"
                                                     onClick={() => handleTogglePublic(collection)}
                                                     title={collection.isPublic ? 'Ẩn bộ sưu tập' : 'Công khai bộ sưu tập'}
+                                                    className="admin-action-edit"
                                                 >
                                                     {collection.isPublic ? 'Ẩn' : 'Hiện'}
                                                 </Button>
@@ -155,6 +156,7 @@ export function AdminCollections() {
                                                     size="sm"
                                                     onClick={() => handleDelete(collection._id, collection.name)}
                                                     title="Xóa bộ sưu tập"
+                                                    className="admin-action-delete"
                                                 >
                                                     <Trash2 size={16} />
                                                 </Button>

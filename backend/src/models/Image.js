@@ -48,6 +48,24 @@ const imageSchema = new mongoose.Schema(
             type: String,
             // Optional - AVIF version of original
         },
+        // Video support (for converted GIFs and direct video uploads)
+        isVideo: {
+            type: Boolean,
+            default: false,
+            index: true,
+        },
+        videoUrl: {
+            type: String,
+            // Optional - URL to video file (MP4/WebM)
+        },
+        videoThumbnail: {
+            type: String,
+            // Optional - Thumbnail image for video preview
+        },
+        videoDuration: {
+            type: Number,
+            // Optional - Video duration in seconds
+        },
         imageCategory: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Category',

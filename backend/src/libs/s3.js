@@ -4,6 +4,7 @@ import { env } from './env.js';
 import { Upload } from '@aws-sdk/lib-storage';
 import sharp from 'sharp';
 import { logger } from '../utils/logger.js';
+
 // Initialize S3 client
 const s3Client = new S3Client({
 	region: env.AWS_REGION,
@@ -14,106 +15,13 @@ const s3Client = new S3Client({
 });
 
 /**
- * Upload image to S3 with multiple sizes
- * @param {Buffer} imageBuffer - Original image buffer
- * @param {string} folder - Folder path in S3 (e.g., 'photo-app-images')
- * @param {string} filename - Base filename (without extension)
- * @returns {Promise<Object>} Object with URLs for different sizes
- */
-// export const uploadImageWithSizes = async (imageBuffer, folder = 'photo-app-images', filename) => {
-// 	try {
-// 		// Generate unique filename with timestamp
-// 		const timestamp = Date.now();
-// 		const baseFilename = filename || `image-${timestamp}`;
-
-// 		// Process images with Sharp to create multiple sizes in both WebP and AVIF formats
-// 		// Use auto-rotate to respect EXIF orientation data (fixes portrait images)
-// 		// Sharp's rotate() without parameters auto-rotates based on EXIF orientation tag
-
-// 		// Prepare base pipelines once per size, then clone for each format to avoid redundant resizing work.
-// 		const thumbnailBase = sharp(imageBuffer, { failOnError: false })
-// 			.rotate()
-// 			.resize(200, null, { withoutEnlargement: true });
-
-// 		const smallBase = sharp(imageBuffer, { failOnError: false })
-// 			.rotate()
-// 			.resize(800, null, { withoutEnlargement: true });
-
-// 		const regularBase = sharp(imageBuffer, { failOnError: false })
-// 			.rotate()
-// 			.resize(1080, null, { withoutEnlargement: true });
-
-// 		const originalBase = sharp(imageBuffer, { failOnError: false })
-// 			.rotate();
-
-// 		// Kick off all Sharp transforms in parallel to reduce total processing time.
-// 		// Each transform works on its own Sharp pipeline, so running them concurrently
-// 		// maximizes CPU usage and avoids the previous sequential bottleneck.
-// 		const [
-// 			thumbnailWebp,
-// 			thumbnailAvif,
-// 			smallWebp,
-// 			smallAvif,
-// 			regularWebp,
-// 			regularAvif,
-// 			originalWebp,
-// 			originalAvif,
-// 		] = await Promise.all([
-// 			thumbnailBase.clone().webp({ quality: 60 }).toBuffer(),
-// 			thumbnailBase.clone().avif({ quality: 60 }).toBuffer(),
-// 			smallBase.clone().webp({ quality: 80 }).toBuffer(),
-// 			smallBase.clone().avif({ quality: 80 }).toBuffer(),
-// 			regularBase.clone().webp({ quality: 85 }).toBuffer(),
-// 			regularBase.clone().avif({ quality: 85 }).toBuffer(),
-// 			originalBase.clone().webp({ quality: 85 }).toBuffer(),
-// 			originalBase.clone().avif({ quality: 85 }).toBuffer(),
-// 		]);
-
-// 		// Upload all sizes and formats to S3
-// 		const uploadPromises = [
-// 			// WebP versions (fallback for older browsers)
-// 			uploadToS3(thumbnailWebp, `${folder}/${baseFilename}-thumbnail.webp`, 'image/webp'),
-// 			uploadToS3(smallWebp, `${folder}/${baseFilename}-small.webp`, 'image/webp'),
-// 			uploadToS3(regularWebp, `${folder}/${baseFilename}-regular.webp`, 'image/webp'),
-// 			uploadToS3(originalWebp, `${folder}/${baseFilename}-original.webp`, 'image/webp'),
-// 			// AVIF versions (better compression for modern browsers)
-// 			uploadToS3(thumbnailAvif, `${folder}/${baseFilename}-thumbnail.avif`, 'image/avif'),
-// 			uploadToS3(smallAvif, `${folder}/${baseFilename}-small.avif`, 'image/avif'),
-// 			uploadToS3(regularAvif, `${folder}/${baseFilename}-regular.avif`, 'image/avif'),
-// 			uploadToS3(originalAvif, `${folder}/${baseFilename}-original.avif`, 'image/avif'),
-// 		];
-
-// 		const [
-// 			thumbnailUrl, smallUrl, regularUrl, originalUrl,
-// 			thumbnailAvifUrl, smallAvifUrl, regularAvifUrl, originalAvifUrl
-// 		] = await Promise.all(uploadPromises);
-
-// 		return {
-// 			publicId: baseFilename, // Store only filename, not full path
-// 			// WebP URLs (for backward compatibility and fallback)
-// 			imageUrl: originalUrl,
-// 			thumbnailUrl,
-// 			smallUrl,
-// 			regularUrl,
-// 			// AVIF URLs (for modern browsers)
-// 			imageAvifUrl: originalAvifUrl,
-// 			thumbnailAvifUrl,
-// 			smallAvifUrl,
-// 			regularAvifUrl,
-// 		};
-// 	} catch (error) {
-// 		throw new Error(`Failed to process and upload image: ${error.message}`);
-// 	}
-// };
-
-/**
  * Upload a single file to S3
  * @param {Buffer} buffer - File buffer
  * @param {string} key - S3 object key (path)
  * @param {string} contentType - MIME type
  * @returns {Promise<string>} Public URL of uploaded file
  */
-const uploadToS3 = async (buffer, key, contentType) => {
+export const uploadToS3 = async (buffer, key, contentType) => {
 	try {
 		const command = new PutObjectCommand({
 			Bucket: env.AWS_S3_BUCKET_NAME,
@@ -148,10 +56,129 @@ const uploadToS3 = async (buffer, key, contentType) => {
 
 /**
  * Upload image with multiple sizes using parallel multipart (lib-storage)
+ * For GIFs and other formats that shouldn't be processed, upload directly
  */
-export async function uploadImageWithSizes(buffer, bucket, filename) {
+export async function uploadImageWithSizes(buffer, bucket, filename, mimetype = null) {
 	try {
-		// Process sizes in parallel using sharp
+		// Detect image format from buffer or use provided mimetype
+		let imageFormat = null;
+		let contentType = 'image/webp';
+		
+		if (mimetype) {
+			// Extract format from MIME type
+			const mimeToFormat = {
+				'image/gif': 'gif',
+				'image/svg+xml': 'svg',
+				'image/webp': 'webp',
+				'image/jpeg': 'jpeg',
+				'image/jpg': 'jpeg',
+				'image/png': 'png',
+				'image/bmp': 'bmp',
+				'image/x-icon': 'ico',
+				'image/vnd.microsoft.icon': 'ico',
+			};
+			imageFormat = mimeToFormat[mimetype.toLowerCase()];
+			contentType = mimetype;
+		}
+		
+		// If not detected from mimetype, try to detect from buffer
+		if (!imageFormat) {
+			try {
+				const metadata = await sharp(buffer).metadata();
+				imageFormat = metadata.format;
+			} catch (err) {
+				// If Sharp can't read it, it might be a format we need to handle specially
+				logger.warn('Could not detect image format from buffer:', err?.message);
+			}
+		}
+		
+		// For GIFs: Check if large, convert to video; otherwise upload as-is
+		if (imageFormat === 'gif') {
+			const gifSizeMB = buffer.length / (1024 * 1024);
+			logger.info(`[GIF] Detected GIF file: ${gifSizeMB.toFixed(2)}MB`);
+			
+			// Convert large GIFs (>2MB) to video for better performance
+			if (gifSizeMB > 2) {
+				logger.info(`[GIF] GIF is ${gifSizeMB.toFixed(2)}MB, attempting conversion to video...`);
+				try {
+					const { convertGifToVideo } = await import('../utils/videoConverter.js');
+					logger.info(`[GIF] Starting conversion for ${filename}...`);
+					const videoResult = await convertGifToVideo(buffer, filename, bucket);
+					
+					if (videoResult) {
+						logger.info(`[GIF] Successfully converted to video: ${videoResult.videoUrl}`);
+						// Successfully converted to video
+						return {
+							publicId: filename,
+							videoUrl: videoResult.videoUrl,
+							thumbnailUrl: videoResult.thumbnailUrl,
+							videoDuration: videoResult.duration,
+							imageUrl: videoResult.videoUrl, // For backward compatibility
+							smallUrl: videoResult.videoUrl,
+							regularUrl: videoResult.videoUrl,
+							imageAvifUrl: videoResult.videoUrl,
+							thumbnailAvifUrl: videoResult.thumbnailUrl,
+							smallAvifUrl: videoResult.videoUrl,
+							regularAvifUrl: videoResult.videoUrl,
+							isVideo: true, // Mark as video
+						};
+					} else {
+						logger.warn(`[GIF] Conversion returned null, uploading as GIF`);
+					}
+					// If conversion fails, fall through to upload as GIF
+				} catch (error) {
+					logger.error(`[GIF] GIF to video conversion failed, uploading as GIF:`, error);
+					// Fall through to upload as GIF
+				}
+			} else {
+				logger.info(`[GIF] GIF is ${gifSizeMB.toFixed(2)}MB, keeping as GIF (no conversion needed)`);
+			}
+			
+			// Upload GIF directly (small GIFs or if conversion failed)
+			const originalUrl = await uploadToS3(
+				buffer,
+				`${bucket}/${filename}.gif`,
+				contentType || 'image/gif'
+			);
+
+			return {
+				publicId: filename,
+				thumbnailUrl: originalUrl,
+				smallUrl: originalUrl,
+				regularUrl: originalUrl,
+				imageUrl: originalUrl,
+				imageAvifUrl: originalUrl,
+				thumbnailAvifUrl: originalUrl,
+				smallAvifUrl: originalUrl,
+				regularAvifUrl: originalUrl,
+			};
+		}
+		
+		// For SVGs, BMPs, and ICOs, upload directly without processing
+		// SVGs are vector graphics, BMP/ICO are legacy formats
+		if (imageFormat === 'svg' || imageFormat === 'bmp' || imageFormat === 'ico') {
+			// Upload original file directly without processing
+			const originalUrl = await uploadToS3(
+				buffer,
+				`${bucket}/${filename}.${imageFormat}`,
+				contentType || `image/${imageFormat}`
+			);
+
+			// For these formats, use the same URL for all sizes (they handle their own scaling)
+			return {
+				publicId: filename,
+				thumbnailUrl: originalUrl,
+				smallUrl: originalUrl,
+				regularUrl: originalUrl,
+				imageUrl: originalUrl,
+				imageAvifUrl: originalUrl,
+				thumbnailAvifUrl: originalUrl,
+				smallAvifUrl: originalUrl,
+				regularAvifUrl: originalUrl,
+			};
+		}
+
+		// For other formats (JPEG, PNG, etc.), process with Sharp
 		const [thumbnailBuffer, smallBuffer, regularBuffer, avifBuffer] = await Promise.all([
 			sharp(buffer).resize(200, 200, { fit: 'cover' }).webp().toBuffer(),
 			sharp(buffer).resize(500, 500, { fit: 'cover' }).webp().toBuffer(),
@@ -180,6 +207,63 @@ export async function uploadImageWithSizes(buffer, bucket, filename) {
 		};
 	} catch (err) {
 		console.error('uploadImageWithSizes failed:', err?.message);
+		throw err;
+	}
+}
+
+/**
+ * Upload video to S3 with thumbnail generation
+ * @param {Buffer} videoBuffer - Video file buffer
+ * @param {string} bucket - S3 bucket name
+ * @param {string} filename - Base filename (without extension)
+ * @param {string} mimetype - MIME type (e.g., 'video/mp4', 'video/webm')
+ * @returns {Promise<Object>} Object with video URL and thumbnail URL
+ */
+export async function uploadVideo(videoBuffer, bucket, filename, mimetype) {
+	try {
+		// Extract format from MIME type
+		const mimeToExtension = {
+			'video/mp4': 'mp4',
+			'video/webm': 'webm',
+			'video/quicktime': 'mov',
+		};
+		
+		const extension = mimeToExtension[mimetype.toLowerCase()] || 'mp4';
+		const contentType = mimetype || 'video/mp4';
+		
+		// Import video utilities
+		const { generateVideoThumbnail, getVideoDuration } = await import('../utils/videoConverter.js');
+		
+		// Upload video directly to S3
+		const videoUrl = await uploadToS3(
+			videoBuffer,
+			`${bucket}/${filename}.${extension}`,
+			contentType
+		);
+		
+		// Generate thumbnail and get duration in parallel
+		const [thumbnailUrl, duration] = await Promise.all([
+			generateVideoThumbnail(videoBuffer, filename, bucket).catch(err => {
+				logger.warn('Failed to generate video thumbnail:', err.message);
+				return videoUrl; // Fallback to video URL
+			}),
+			getVideoDuration(videoBuffer).catch(err => {
+				logger.warn('Failed to get video duration:', err.message);
+				return null;
+			}),
+		]);
+		
+		return {
+			publicId: filename,
+			videoUrl,
+			thumbnailUrl: thumbnailUrl || videoUrl,
+			videoDuration: duration,
+			imageUrl: videoUrl, // For backward compatibility
+			smallUrl: videoUrl,
+			regularUrl: videoUrl,
+		};
+	} catch (err) {
+		console.error('uploadVideo failed:', err?.message);
 		throw err;
 	}
 }
@@ -329,8 +413,6 @@ export const generatePresignedUploadUrl = async (key, contentType, expiresIn = 3
 	return getSignedUrl(s3Client, command, { expiresIn });
 };
 
-
-
 /**
  * Get object from S3 and return the stream/body
  */
@@ -354,4 +436,3 @@ export async function deleteObjectByKey(key) {
 	const command = new DeleteObjectCommand(params);
 	return await s3Client.send(command);
 }
-

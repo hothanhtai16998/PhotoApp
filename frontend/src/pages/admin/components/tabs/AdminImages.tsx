@@ -156,6 +156,7 @@ export function AdminImages({
                                     variant="outline"
                                     size="sm"
                                     onClick={() => onDelete(img._id, img.imageTitle)}
+                                    className="admin-action-delete"
                                 >
                                     <Trash2 size={16} /> {t('admin.deleteImage')}
                                 </PermissionButton>

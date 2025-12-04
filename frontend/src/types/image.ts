@@ -18,6 +18,11 @@ export interface Image {
   smallAvifUrl?: string; // Small size - AVIF
   regularAvifUrl?: string; // Regular size - AVIF
   imageAvifUrl?: string; // Original - AVIF
+  // Video support (for converted GIFs and direct video uploads)
+  isVideo?: boolean; // True if this is a video file
+  videoUrl?: string; // URL to video file (MP4/WebM)
+  videoThumbnail?: string; // Thumbnail image for video preview
+  videoDuration?: number; // Video duration in seconds
   // imageCategory can be a string (legacy) or populated Category object
   imageCategory: string | Category;
   uploadedBy: User & { avatarUrl?: string };

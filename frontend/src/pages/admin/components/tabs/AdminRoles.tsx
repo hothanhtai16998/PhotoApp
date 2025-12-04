@@ -51,7 +51,7 @@ export function AdminRoles({
         <div className="admin-roles">
             <div className="admin-header">
                 <h1 className="admin-title">{t('admin.manageRoles')}</h1>
-                <Button onClick={onCreateClick}>
+                <Button onClick={onCreateClick} className="admin-add-category-btn">
                     {t('admin.addRole')}
                 </Button>
             </div>
@@ -161,6 +161,7 @@ export function AdminRoles({
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => onEdit(role)}
+                                                className="admin-action-edit"
                                             >
                                                 <Edit2 size={16} />
                                             </Button>
@@ -169,6 +170,7 @@ export function AdminRoles({
                                                 size="sm"
                                                 onClick={() => onDelete(userId || '', username)}
                                                 disabled={userId === currentUser?._id}
+                                                className="admin-action-delete"
                                             >
                                                 <Trash2 size={16} />
                                             </Button>

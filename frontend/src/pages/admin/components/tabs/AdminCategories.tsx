@@ -73,6 +73,7 @@ export function AdminCategories({
                                             variant="outline"
                                             size="sm"
                                             onClick={() => onEdit(cat)}
+                                            className="admin-action-edit"
                                         >
                                             <Edit2 size={16} />
                                         </PermissionButton>
@@ -82,6 +83,7 @@ export function AdminCategories({
                                             variant="outline"
                                             size="sm"
                                             onClick={() => onDelete(cat._id, cat.name)}
+                                            className="admin-action-delete"
                                         >
                                             <Trash2 size={16} />
                                         </PermissionButton>

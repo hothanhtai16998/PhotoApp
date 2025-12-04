@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
+import { useSiteSettings } from '@/hooks/useSiteSettings';
 import type { ImageData } from './useImageUpload';
 
 interface UseUploadModalStateProps {
@@ -7,12 +8,44 @@ interface UseUploadModalStateProps {
 }
 
 export const useUploadModalState = ({ preUploadAllImages }: UseUploadModalStateProps) => {
+  const { settings } = useSiteSettings();
   const [dragActive, setDragActive] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imagesData, setImagesData] = useState<ImageData[]>([]);
   const [showTooltip, setShowTooltip] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadInProgressRef = useRef(false);
+
+  // Validate file based on settings
+  const validateFile = useCallback((file: File): { valid: boolean; error?: string } => {
+    // Check file size
+    const maxSizeBytes = settings.maxUploadSize * 1024 * 1024; // Convert MB to bytes
+    if (file.size > maxSizeBytes) {
+      return {
+        valid: false,
+        error: `File size exceeds maximum allowed size of ${settings.maxUploadSize} MB`,
+      };
+    }
+
+    // Check file type
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    if (!fileExtension || !settings.allowedFileTypes.includes(fileExtension)) {
+      return {
+        valid: false,
+        error: `File type not allowed. Allowed types: ${settings.allowedFileTypes.join(', ')}`,
+      };
+    }
+
+    // Check MIME type - allow images and videos
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+      return {
+        valid: false,
+        error: 'File must be an image or video',
+      };
+    }
+
+    return { valid: true };
+  }, [settings]);
 
   // Initialize imagesData when files are selected
   useEffect(() => {
@@ -154,16 +187,58 @@ export const useUploadModalState = ({ preUploadAllImages }: UseUploadModalStateP
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const files = Array.from(e.dataTransfer.files);
-      setSelectedFiles(files);
+      const validFiles: File[] = [];
+      const invalidFiles: string[] = [];
+
+      files.forEach(file => {
+        const validation = validateFile(file);
+        if (validation.valid) {
+          validFiles.push(file);
+        } else {
+          invalidFiles.push(`${file.name}: ${validation.error}`);
+        }
+      });
+
+      if (invalidFiles.length > 0) {
+        toast.error(`Some files were rejected:\n${invalidFiles.join('\n')}`);
+      }
+
+      if (validFiles.length > 0) {
+        setSelectedFiles(validFiles);
+        if (validFiles.length < files.length) {
+          toast.warning(`${validFiles.length} of ${files.length} files were accepted`);
+        }
+      }
     }
-  }, []);
+  }, [validateFile]);
 
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const files = Array.from(e.target.files);
-      setSelectedFiles(files);
+      const validFiles: File[] = [];
+      const invalidFiles: string[] = [];
+
+      files.forEach(file => {
+        const validation = validateFile(file);
+        if (validation.valid) {
+          validFiles.push(file);
+        } else {
+          invalidFiles.push(`${file.name}: ${validation.error}`);
+        }
+      });
+
+      if (invalidFiles.length > 0) {
+        toast.error(`Some files were rejected:\n${invalidFiles.join('\n')}`);
+      }
+
+      if (validFiles.length > 0) {
+        setSelectedFiles(validFiles);
+        if (validFiles.length < files.length) {
+          toast.warning(`${validFiles.length} of ${files.length} files were accepted`);
+        }
+      }
     }
-  }, []);
+  }, [validateFile]);
 
   // Update image data when form fields change
   const updateImageData = useCallback((index: number, field: 'title' | 'category' | 'location' | 'cameraModel' | 'tags', value: string | string[]) => {

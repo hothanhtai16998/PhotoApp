@@ -7,9 +7,11 @@ import { findCategory } from '../../utils/imageHelpers.js';
 import Image from '../../models/Image.js';
 import Category from '../../models/Category.js';
 import Notification from '../../models/Notification.js';
+import Settings from '../../models/Settings.js';
 
 import {
     uploadImageWithSizes,
+    uploadVideo,
     deleteImageFromS3,
     generatePresignedUploadUrl,
     deleteObjectByKey
@@ -190,7 +192,7 @@ const extractMetadata = async (imageBuffer) => {
  */
 const createImageDocument = async (uploadResult, userId, categoryDoc, metadata, input) => {
     const { dominantColors, exifData } = metadata;
-    const { imageTitle, location, coordinates, cameraModel, tags } = input;
+    const { imageTitle, location, coordinates, cameraModel, tags, isVideo = false } = input;
 
     const parsedTags = parseTags(tags);
     const parsedCoordinates = validateCoordinates(coordinates);
@@ -225,6 +227,13 @@ const createImageDocument = async (uploadResult, userId, categoryDoc, metadata, 
         tags: parsedTags.length > 0 ? parsedTags : undefined,
         moderationStatus,
         isModerated: isAdmin,
+        // Video fields
+        isVideo: isVideo || uploadResult.isVideo || false,
+        ...((isVideo || uploadResult.isVideo) && uploadResult.videoUrl ? {
+            videoUrl: uploadResult.videoUrl,
+            videoThumbnail: uploadResult.thumbnailUrl || uploadResult.videoUrl,
+            videoDuration: uploadResult.videoDuration || undefined,
+        } : {}),
         ...(isAdmin ? {
             moderatedAt: new Date(),
             moderatedBy: userId,
@@ -252,9 +261,45 @@ export const uploadImage = asyncHandler(async (req, res) => {
         });
     }
 
-    if (!req.file.mimetype.startsWith('image/')) {
+    const isImage = req.file.mimetype.startsWith('image/');
+    let isVideo = req.file.mimetype.startsWith('video/');
+    
+    if (!isImage && !isVideo) {
         return res.status(400).json({
-            message: 'Tệp được chọn không phải là ảnh',
+            message: 'Tệp được chọn phải là ảnh hoặc video',
+        });
+    }
+
+    // Get settings for file type validation
+    const systemSettings = await Settings.findOne({ key: 'system' });
+    const allowedFileTypes = systemSettings?.value?.allowedFileTypes || ['jpg', 'jpeg', 'png', 'webp'];
+    
+    // Map MIME types to file extensions
+    const mimeToExtension = {
+        'image/jpeg': ['jpg', 'jpeg'],
+        'image/jpg': ['jpg', 'jpeg'],
+        'image/png': ['png'],
+        'image/webp': ['webp'],
+        'image/gif': ['gif'],
+        'image/svg+xml': ['svg'],
+        'image/bmp': ['bmp'],
+        'image/x-icon': ['ico'],
+        'image/vnd.microsoft.icon': ['ico'],
+        'video/mp4': ['mp4'],
+        'video/webm': ['webm'],
+    };
+
+    // Check if the MIME type is allowed based on settings
+    const allowedExtensions = Array.isArray(allowedFileTypes) 
+        ? allowedFileTypes.map(t => t.toLowerCase())
+        : allowedFileTypes.split(',').map(t => t.trim().toLowerCase());
+    
+    const mimeTypeExtensions = mimeToExtension[req.file.mimetype.toLowerCase()] || [];
+    const isAllowed = mimeTypeExtensions.some(ext => allowedExtensions.includes(ext));
+    
+    if (!isAllowed) {
+        return res.status(400).json({
+            message: `Định dạng file không được phép. Các định dạng được phép: ${allowedExtensions.join(', ')}`,
         });
     }
 
@@ -270,15 +315,32 @@ export const uploadImage = asyncHandler(async (req, res) => {
         // Generate secure filename
         const filename = `image-${Date.now()}-${crypto.randomBytes(8).toString('hex')}`;
 
-        // Upload image to S3 with multiple sizes
-        uploadResult = await uploadImageWithSizes(
-            req.file.buffer,
-            'photo-app-images',
-            filename
-        );
+        // Upload video or image to S3
+        // Note: Large GIFs (>2MB) will be automatically converted to video by uploadImageWithSizes
+        if (isVideo) {
+            uploadResult = await uploadVideo(
+                req.file.buffer,
+                'photo-app-images',
+                filename,
+                req.file.mimetype
+            );
+        } else {
+            uploadResult = await uploadImageWithSizes(
+                req.file.buffer,
+                'photo-app-images',
+                filename,
+                req.file.mimetype
+            );
+        }
 
-        // Extract metadata in parallel
-        const metadata = await extractMetadata(req.file.buffer);
+        // Check if GIF was converted to video
+        const wasConvertedToVideo = uploadResult.isVideo || false;
+        const finalIsVideo = isVideo || wasConvertedToVideo;
+
+        // Extract metadata in parallel (skip for videos and converted GIFs)
+        const metadata = finalIsVideo 
+            ? { dominantColors: [], exifData: {} } 
+            : await extractMetadata(req.file.buffer);
 
         // Create image document
         const newImage = await createImageDocument(
@@ -293,6 +355,7 @@ export const uploadImage = asyncHandler(async (req, res) => {
                 cameraModel,
                 tags,
                 isAdmin,
+                isVideo: finalIsVideo,
             }
         );
 
@@ -350,16 +413,58 @@ export const preUploadImage = asyncHandler(async (req, res) => {
         return res.status(400).json({ message: 'Tên tệp quá dài' });
     }
 
-    if (!fileType.startsWith('image/')) {
+    const isImage = fileType.startsWith('image/');
+    const isVideo = fileType.startsWith('video/');
+    
+    if (!isImage && !isVideo) {
         return res.status(400).json({
-            message: 'Tệp phải có định dạng là ảnh',
+            message: 'Tệp phải có định dạng là ảnh hoặc video',
         });
     }
 
+    // Get settings for file size and type validation
+    const systemSettings = await Settings.findOne({ key: 'system' });
+    const maxUploadSizeMB = systemSettings?.value?.maxUploadSize || 10;
+    const allowedFileTypes = systemSettings?.value?.allowedFileTypes || ['jpg', 'jpeg', 'png', 'webp'];
+    const maxFileSizeBytes = maxUploadSizeMB * 1024 * 1024;
+
+    // Validate file size against settings
     const numericFileSize = Number(fileSize);
-    if (Number.isNaN(numericFileSize) || numericFileSize <= 0 || numericFileSize > MAX_FILE_SIZE_BYTES) {
+    if (Number.isNaN(numericFileSize) || numericFileSize <= 0 || numericFileSize > maxFileSizeBytes) {
         return res.status(413).json({
-            message: `Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn ${(MAX_FILE_SIZE_BYTES / (1024 * 1024)).toFixed(0)}MB`,
+            message: `Tệp quá lớn. Vui lòng chọn tệp nhỏ hơn ${maxUploadSizeMB}MB`,
+        });
+    }
+
+    // Map MIME types to file extensions
+    const mimeToExtension = {
+        'image/jpeg': ['jpg', 'jpeg'],
+        'image/jpg': ['jpg', 'jpeg'],
+        'image/png': ['png'],
+        'image/webp': ['webp'],
+        'image/gif': ['gif'],
+        'image/svg+xml': ['svg'],
+        'image/bmp': ['bmp'],
+        'image/x-icon': ['ico'],
+        'image/vnd.microsoft.icon': ['ico'],
+        'video/mp4': ['mp4'],
+        'video/webm': ['webm'],
+    };
+
+    // Validate file type against settings
+    const fileExtension = fileName.split('.').pop()?.toLowerCase();
+    const allowedExtensions = Array.isArray(allowedFileTypes) 
+        ? allowedFileTypes.map(t => t.toLowerCase())
+        : allowedFileTypes.split(',').map(t => t.trim().toLowerCase());
+    
+    // Check both file extension and MIME type
+    const mimeTypeExtensions = mimeToExtension[fileType.toLowerCase()] || [];
+    const isValidExtension = fileExtension && allowedExtensions.includes(fileExtension);
+    const isValidMimeType = mimeTypeExtensions.some(ext => allowedExtensions.includes(ext));
+    
+    if (!isValidExtension && !isValidMimeType) {
+        return res.status(400).json({
+            message: `Định dạng file không được phép. Các định dạng được phép: ${allowedExtensions.join(', ')}`,
         });
     }
 
@@ -375,7 +480,7 @@ export const preUploadImage = asyncHandler(async (req, res) => {
             uploadKey,
             uploadUrl,
             expiresIn: 300,
-            maxFileSize: MAX_FILE_SIZE_BYTES,
+            maxFileSize: maxFileSizeBytes,
         });
     } catch (error) {
         logger.error('Failed to generate upload URL:', error.message);

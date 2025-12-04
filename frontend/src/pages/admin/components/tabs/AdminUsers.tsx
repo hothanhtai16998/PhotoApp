@@ -142,6 +142,7 @@ export function AdminUsers({
                                             size="sm"
                                             onClick={() => onEdit(u)}
                                             disabled={u.isSuperAdmin && !currentUser?.isSuperAdmin}
+                                            className="admin-action-edit"
                                         >
                                             <Edit2 size={16} />
                                         </PermissionButton>
@@ -153,6 +154,7 @@ export function AdminUsers({
                                                 size="sm"
                                                 onClick={() => handleUnban(u)}
                                                 disabled={u._id === currentUser?._id || (u.isSuperAdmin && !currentUser?.isSuperAdmin)}
+                                                className="admin-action-unban"
                                             >
                                                 <Unlock size={16} />
                                             </PermissionButton>
@@ -164,6 +166,7 @@ export function AdminUsers({
                                                 size="sm"
                                                 onClick={() => handleBan(u)}
                                                 disabled={u._id === currentUser?._id || (u.isSuperAdmin && !currentUser?.isSuperAdmin)}
+                                                className="admin-action-ban"
                                             >
                                                 <Ban size={16} />
                                             </PermissionButton>
@@ -175,6 +178,7 @@ export function AdminUsers({
                                             size="sm"
                                             onClick={() => onDelete(u._id, u.username)}
                                             disabled={u._id === currentUser?._id || (u.isSuperAdmin && !currentUser?.isSuperAdmin)}
+                                            className="admin-action-delete"
                                         >
                                             <Trash2 size={16} />
                                         </PermissionButton>

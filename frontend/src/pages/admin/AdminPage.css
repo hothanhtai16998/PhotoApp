@@ -565,17 +565,76 @@
   letter-spacing: -0.02em;
 }
 
-/* Add Category Button - Light blue style like expiration badge */
+/* File Types Selector */
+.admin-file-types-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.admin-file-type-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.admin-file-type-checkbox:hover {
+  border-color: #1e40af;
+  background: #f0f7ff;
+}
+
+.admin-file-type-checkbox.selected {
+  border-color: #1e40af;
+  background: #dbeafe;
+  color: #1e40af;
+  font-weight: 600;
+}
+
+.admin-file-type-checkbox input[type='checkbox'] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.admin-file-type-checkbox span {
+  font-size: 0.9375rem;
+  color: #374151;
+}
+
+.admin-file-type-checkbox.selected span {
+  color: #1e40af;
+  font-weight: 600;
+}
+
+/* Add/Create Buttons - Light blue style like expiration badge */
 .admin-add-category-btn {
   background: #dbeafe !important;
   color: #1e40af !important;
-  border-color: #1e40af !important;
+  border: 1px solid #1e40af !important;
+  transition: all 0.2s ease !important;
 }
 
-.admin-add-category-btn:hover {
+.admin-add-category-btn:hover:not(:disabled) {
   background: #bfdbfe !important;
   color: #1e3a8a !important;
-  border-color: #1e3a8a !important;
+  border: 1px solid #1e3a8a !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.2);
+}
+
+.admin-add-category-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .admin-search {
@@ -641,6 +700,36 @@
 .admin-actions button:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Edit button hover - Blue (edit/update action) */
+.admin-actions .admin-action-edit:hover,
+.admin-image-actions .admin-action-edit:hover {
+  background: #dbeafe !important;
+  color: #1e40af !important;
+  border: 1px solid #1e40af !important;
+}
+
+/* Delete button hover - Red (destructive action) */
+.admin-actions .admin-action-delete:hover,
+.admin-image-actions .admin-action-delete:hover {
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+  border: 1px solid #991b1b !important;
+}
+
+/* Ban button hover - Orange (warning/caution action) */
+.admin-actions .admin-action-ban:hover {
+  background: #fed7aa !important;
+  color: #c2410c !important;
+  border: 1px solid #c2410c !important;
+}
+
+/* Unban button hover - Green (restore action) */
+.admin-actions .admin-action-unban:hover {
+  background: #d1fae5 !important;
+  color: #065f46 !important;
+  border: 1px solid #065f46 !important;
 }
 
 /* Admin Status Display */

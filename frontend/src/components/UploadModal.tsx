@@ -9,6 +9,7 @@ import { UploadProgress } from './upload/UploadProgress';
 import { UploadPreview } from './upload/UploadPreview';
 import { UploadForm } from './upload/UploadForm';
 import { t } from '@/i18n';
+import { useSiteSettings } from '@/hooks/useSiteSettings';
 import './UploadModal.css';
 
 interface UploadModalProps {
@@ -19,6 +20,7 @@ interface UploadModalProps {
 function UploadModal({ isOpen, onClose }: UploadModalProps) {
     const { accessToken } = useAuthStore();
     const navigate = useNavigate();
+    const { settings } = useSiteSettings();
 
     const {
         categories,
@@ -259,10 +261,27 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                     fileInputRef.current?.click();
                                 }}>{t('upload.browse')}</button> {t('upload.browseHint')}
                             </p>
-                            <p className="upload-max-size">{t('upload.maxSize')}</p>
+                            <p className="upload-max-size">
+                                {t('upload.maxSize')}: {settings.maxUploadSize} MB
+                            </p>
                             <input
                                 type="file"
-                                accept="image/*"
+                                accept={settings.allowedFileTypes.map(type => {
+                                    // Map file extensions to MIME types
+                                    const mimeMap: Record<string, string> = {
+                                        'jpg': 'image/jpeg',
+                                        'jpeg': 'image/jpeg',
+                                        'png': 'image/png',
+                                        'webp': 'image/webp',
+                                        'gif': 'image/gif',
+                                        'svg': 'image/svg+xml',
+                                        'bmp': 'image/bmp',
+                                        'ico': 'image/x-icon',
+                                        'mp4': 'video/mp4',
+                                        'webm': 'video/webm',
+                                    };
+                                    return mimeMap[type] || `image/${type}`;
+                                }).join(',')}
                                 capture="environment"
                                 className="upload-file-input"
                                 multiple={true}

@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import crypto from 'crypto';
 import { asyncHandler } from '../../middlewares/asyncHandler.js';
 import Image from '../../models/Image.js';
+import Settings from '../../models/Settings.js';
 import { uploadImageWithSizes, deleteImageFromS3 } from '../../libs/s3.js';
 import { extractDominantColors } from '../../utils/colorExtractor.js';
 import { clearCache } from '../../middlewares/cacheMiddleware.js';
@@ -10,7 +11,20 @@ import { logger } from '../../utils/logger.js';
 const MAX_FILE_BYTES = 25 * 1024 * 1024; // 25MB
 const CONCURRENCY = 5; // batch concurrency
 
-async function replaceSingleImage({ imageId, fileBuffer, mimetype, fileSize, userId, isAdmin, index }) {
+// Map MIME types to file extensions
+const mimeToExtension = {
+    'image/jpeg': ['jpg', 'jpeg'],
+    'image/jpg': ['jpg', 'jpeg'],
+    'image/png': ['png'],
+    'image/webp': ['webp'],
+    'image/gif': ['gif'],
+    'image/svg+xml': ['svg'],
+    'image/bmp': ['bmp'],
+    'image/x-icon': ['ico'],
+    'image/vnd.microsoft.icon': ['ico'],
+};
+
+async function replaceSingleImage({ imageId, fileBuffer, mimetype, fileSize, userId, isAdmin, index, allowedFileTypes }) {
     if (!mongoose.Types.ObjectId.isValid(imageId)) {
         return { ok: false, imageId, error: 'Invalid imageId' };
     }
@@ -21,6 +35,20 @@ async function replaceSingleImage({ imageId, fileBuffer, mimetype, fileSize, use
 
     if (!mimetype || !mimetype.startsWith('image/')) {
         return { ok: false, imageId, error: 'Invalid file type' };
+    }
+
+    // Validate file type against settings (if provided)
+    if (allowedFileTypes) {
+        const allowedExtensions = Array.isArray(allowedFileTypes) 
+            ? allowedFileTypes.map(t => t.toLowerCase())
+            : allowedFileTypes.split(',').map(t => t.trim().toLowerCase());
+        
+        const mimeTypeExtensions = mimeToExtension[mimetype.toLowerCase()] || [];
+        const isAllowed = mimeTypeExtensions.some(ext => allowedExtensions.includes(ext));
+        
+        if (!isAllowed) {
+            return { ok: false, imageId, error: `File type not allowed. Allowed types: ${allowedExtensions.join(', ')}` };
+        }
     }
 
     if (typeof fileSize === 'number' && fileSize > MAX_FILE_BYTES) {
@@ -46,7 +74,7 @@ async function replaceSingleImage({ imageId, fileBuffer, mimetype, fileSize, use
 
         // Upload and extract colors in parallel
         const [uploadRes, colors] = await Promise.all([
-            uploadImageWithSizes(fileBuffer, 'photo-app-images', filename),
+            uploadImageWithSizes(fileBuffer, 'photo-app-images', filename, mimetype),
             extractDominantColors(fileBuffer, 3).catch(err => {
                 logger.warn('Color extraction failed (non-fatal):', err.message);
                 return [];
@@ -114,6 +142,10 @@ export const replaceImage = asyncHandler(async (req, res) => {
         return res.status(400).json({ success: false, message: 'Invalid imageId' });
     }
 
+    // Get settings for file type validation
+    const systemSettings = await Settings.findOne({ key: 'system' });
+    const allowedFileTypes = systemSettings?.value?.allowedFileTypes || ['jpg', 'jpeg', 'png', 'webp'];
+
     const result = await replaceSingleImage({
         imageId,
         fileBuffer: file.buffer,
@@ -121,7 +153,8 @@ export const replaceImage = asyncHandler(async (req, res) => {
         fileSize: file.size,
         userId,
         isAdmin,
-        index: 0
+        index: 0,
+        allowedFileTypes
     });
 
     if (!result.ok) {
@@ -161,6 +194,10 @@ export const batchReplaceImages = asyncHandler(async (req, res) => {
         return res.status(400).json({ success: false, message: 'Number of files must match number of imageIds' });
     }
 
+    // Get settings for file type validation (once for all files)
+    const systemSettings = await Settings.findOne({ key: 'system' });
+    const allowedFileTypes = systemSettings?.value?.allowedFileTypes || ['jpg', 'jpeg', 'png', 'webp'];
+
     const tasks = [];
     for (let i = 0; i < files.length; i++) {
         tasks.push({
@@ -182,7 +219,8 @@ export const batchReplaceImages = asyncHandler(async (req, res) => {
                 fileSize: t.file.size,
                 userId,
                 isAdmin,
-                index: t.index
+                index: t.index,
+                allowedFileTypes
             })
         );
         // wait for chunk
