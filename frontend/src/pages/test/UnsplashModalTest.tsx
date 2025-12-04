@@ -5,11 +5,28 @@ import { useImageGridState, useImageGridCategory, useImageGridColumns } from '@/
 import { useInfiniteScroll } from '@/components/image/hooks/useInfiniteScroll';
 import { downloadImage } from '@/utils/downloadService';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Heart, Download, Share2, Plus, ChevronLeft, ChevronRight, X, Eye } from 'lucide-react';
+import { Download, Share2, Plus, ChevronLeft, ChevronRight, X, Eye } from 'lucide-react';
 import { CategoryNavigation } from '@/components/CategoryNavigation';
+import BlurhashPlaceholder from '@/components/image/BlurhashPlaceholder';
 import './UnsplashModalTest.css';
 
-// Preload modal images for visible images in viewport
+// Service Worker Registration (Unsplash Technique: Aggressive Preloading)
+const useServiceWorker = () => {
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/sw.js')
+        .then(() => {
+          // Service Worker registered successfully
+        })
+        .catch((error) => {
+          console.error('[SW] Service Worker registration failed:', error);
+        });
+    }
+  }, []);
+};
+
+// Preload modal images for visible images in viewport (Improved Intersection Observer)
 const useImagePreloader = (images: Image[], preloadCache: React.MutableRefObject<Map<string, HTMLImageElement>>) => {
   useEffect(() => {
     // Don't run if no images
@@ -24,18 +41,43 @@ const useImagePreloader = (images: Image[], preloadCache: React.MutableRefObject
             const image = images.find(img => img._id === imageId);
             if (image) {
               const modalImageUrl = image.regularUrl || image.imageUrl || image.smallUrl;
-              if (modalImageUrl && !preloadCache.current.has(modalImageUrl)) {
-                const img = new Image();
-                img.onload = () => {
-                  preloadCache.current.set(modalImageUrl, img);
-                };
-                img.src = modalImageUrl;
-              }
+              const placeholderUrl = image.smallUrl || image.thumbnailUrl || image.imageUrl;
+
+              // Preload both placeholder and main image
+              [placeholderUrl, modalImageUrl].forEach((url) => {
+                if (url && !preloadCache.current.has(url)) {
+                  // Use Service Worker for preloading if available
+                  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                    const channel = new MessageChannel();
+                    channel.port1.onmessage = (event) => {
+                      if (event.data.type === 'PRELOAD_COMPLETE') {
+                        // Image preloaded by service worker, add to cache
+                        const img = new Image();
+                        img.src = url;
+                        img.onload = () => {
+                          preloadCache.current.set(url, img);
+                        };
+                      }
+                    };
+                    navigator.serviceWorker.controller.postMessage(
+                      { type: 'PRELOAD_IMAGE', url },
+                      [channel.port2]
+                    );
+                  } else {
+                    // Fallback: preload directly
+                    const img = new Image();
+                    img.onload = () => {
+                      preloadCache.current.set(url, img);
+                    };
+                    img.src = url;
+                  }
+                }
+              });
             }
           }
         });
       },
-      { rootMargin: '300px' } // Start preloading 300px before image enters viewport
+      { rootMargin: '500px' } // Start preloading 500px before image enters viewport (Unsplash technique)
     );
 
     // Use setTimeout to ensure DOM is ready
@@ -73,13 +115,12 @@ export default function UnsplashModalTest() {
     isLoadingMore,
     hasMore,
     filteredImages,
-    imageTypes,
-    processedImages,
-    currentImageIds,
     handleLoadMore,
-    handleImageLoad,
   } = useImageGridState({ category });
-  
+
+  // Register Service Worker for aggressive preloading (Unsplash technique)
+  useServiceWorker();
+
   // Preload modal images for visible images (after filteredImages is defined)
   useImagePreloader(filteredImages || [], preloadCache);
 
@@ -143,7 +184,7 @@ export default function UnsplashModalTest() {
 
     // Load main image
     loadMainImage(modalImageUrl, image.imageUrl);
-    
+
     function loadMainImage(modalUrl: string | undefined, gridUrl: string | undefined) {
       // Check if modal image is the same as grid image
       if (modalUrl === gridUrl) {
@@ -189,12 +230,12 @@ export default function UnsplashModalTest() {
   useLayoutEffect(() => {
     if (isModalOpen && selectedImage && !placeholderLoaded) {
       const placeholderUrl = selectedImage.smallUrl || selectedImage.thumbnailUrl || selectedImage.imageUrl;
-      
+
       if (placeholderUrl) {
         // Synchronously check if placeholder is cached
         const testImg = new Image();
         testImg.src = placeholderUrl;
-        
+
         // If cached, mark as loaded before paint
         if (testImg.complete && testImg.naturalWidth > 0) {
           setPlaceholderLoaded(true);
@@ -202,6 +243,12 @@ export default function UnsplashModalTest() {
       }
     }
   }, [isModalOpen, selectedImage, placeholderLoaded]);
+
+  const handleCloseModal = useCallback(() => {
+    setIsModalOpen(false);
+    setSelectedImage(null);
+    setImageLoaded(false);
+  }, []);
 
   // Keyboard navigation
   useEffect(() => {
@@ -212,16 +259,22 @@ export default function UnsplashModalTest() {
         handleCloseModal();
       } else if (e.key === 'ArrowLeft' && currentImageIndex > 0) {
         e.preventDefault();
-        handleImageClick(filteredImages[currentImageIndex - 1]);
+        const prevImage = filteredImages[currentImageIndex - 1];
+        if (prevImage) {
+          handleImageClick(prevImage);
+        }
       } else if (e.key === 'ArrowRight' && currentImageIndex < filteredImages.length - 1) {
         e.preventDefault();
-        handleImageClick(filteredImages[currentImageIndex + 1]);
+        const nextImage = filteredImages[currentImageIndex + 1];
+        if (nextImage) {
+          handleImageClick(nextImage);
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isModalOpen, currentImageIndex, filteredImages, handleImageClick]);
+  }, [isModalOpen, currentImageIndex, filteredImages, handleImageClick, handleCloseModal]);
 
   // Scroll lock when modal is open
   useEffect(() => {
@@ -241,21 +294,21 @@ export default function UnsplashModalTest() {
     };
   }, [isModalOpen]);
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedImage(null);
-    setImageLoaded(false);
-  };
-
   const handlePreviousImage = () => {
     if (currentImageIndex > 0) {
-      handleImageClick(filteredImages[currentImageIndex - 1]);
+      const prevImage = filteredImages[currentImageIndex - 1];
+      if (prevImage) {
+        handleImageClick(prevImage);
+      }
     }
   };
 
   const handleNextImage = () => {
     if (currentImageIndex < filteredImages.length - 1) {
-      handleImageClick(filteredImages[currentImageIndex + 1]);
+      const nextImage = filteredImages[currentImageIndex + 1];
+      if (nextImage) {
+        handleImageClick(nextImage);
+      }
     }
   };
 
@@ -277,6 +330,15 @@ export default function UnsplashModalTest() {
   // Download handler
   const handleDownload = async (image: Image, e: React.MouseEvent) => {
     e.stopPropagation();
+    try {
+      await downloadImage(image);
+    } catch (error) {
+      console.error('Failed to download image:', error);
+    }
+  };
+
+  // Download with size handler
+  const handleDownloadWithSize = async (image: Image, _size: 'small' | 'medium' | 'large' | 'original') => {
     try {
       await downloadImage(image);
     } catch (error) {
@@ -308,8 +370,8 @@ export default function UnsplashModalTest() {
               onImageClick={handleImageClick}
               columnCount={columnCount}
               onDownload={handleDownload}
-              onDownloadWithSize={handleDownload}
-              onAddToCollection={() => {}}
+              onDownloadWithSize={handleDownloadWithSize}
+              onAddToCollection={() => { }}
             />
           )}
           <div ref={loadMoreRef} />
@@ -346,8 +408,8 @@ export default function UnsplashModalTest() {
             onImageClick={handleImageClick}
             columnCount={columnCount}
             onDownload={handleDownload}
-            onDownloadWithSize={handleDownload}
-            onAddToCollection={() => {}}
+            onDownloadWithSize={handleDownloadWithSize}
+            onAddToCollection={() => { }}
           />
         )}
         <div ref={loadMoreRef} />
@@ -385,7 +447,7 @@ export default function UnsplashModalTest() {
                 <button className="unsplash-modal-action-btn" title="Share" onClick={handleShare}>
                   <Share2 size={20} />
                 </button>
-                <button 
+                <button
                   className="unsplash-modal-close"
                   onClick={handleCloseModal}
                   aria-label="Close modal"
@@ -397,15 +459,27 @@ export default function UnsplashModalTest() {
 
             {/* Image Container */}
             <div className="unsplash-modal-image-container">
-            {/* Placeholder - always visible immediately, fades out when image loads */}
-            <div 
-              className={`unsplash-modal-placeholder ${imageLoaded ? 'fade-out' : ''}`}
-              style={{
-                backgroundImage: placeholderUrl ? `url(${placeholderUrl})` : undefined,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-              }}
-            />
+              {/* BlurHash Placeholder - instant, no loading needed (Unsplash technique) */}
+              {('blurhash' in selectedImage || 'blurHash' in selectedImage) && !imageLoaded && (
+                <BlurhashPlaceholder
+                  hash={(selectedImage as Image & { blurhash?: string; blurHash?: string }).blurhash ||
+                    (selectedImage as Image & { blurhash?: string; blurHash?: string }).blurHash || ''}
+                  isLoaded={imageLoaded}
+                  className="unsplash-modal-blurhash"
+                />
+              )}
+
+              {/* Low-quality image placeholder - shows if no blurhash or as fallback */}
+              {placeholderUrl && !('blurhash' in selectedImage) && !('blurHash' in selectedImage) && (
+                <div
+                  className={`unsplash-modal-placeholder ${imageLoaded ? 'fade-out' : ''}`}
+                  style={{
+                    backgroundImage: `url(${placeholderUrl})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                  }}
+                />
+              )}
 
               {/* Navigation Arrows */}
               {currentImageIndex > 0 && (
@@ -447,19 +521,26 @@ export default function UnsplashModalTest() {
                     height: 'auto',
                     maxWidth: '100%',
                     maxHeight: 'calc(100vh - 240px)',
-                    aspectRatio: selectedImage.width && selectedImage.height 
-                      ? `${selectedImage.width} / ${selectedImage.height}` 
+                    aspectRatio: selectedImage.width && selectedImage.height
+                      ? `${selectedImage.width} / ${selectedImage.height}`
                       : undefined,
                     objectFit: 'contain',
-                    loading: 'eager',
-                    fetchPriority: 'high',
                   }}
-                  onLoad={(e) => {
+                  fetchPriority="high"
+                  onLoad={async (e) => {
                     const img = e.currentTarget;
-                    // Ensure image is fully loaded and decoded before showing
+                    // Ensure image is fully loaded and decoded before showing (Unsplash technique)
                     if (img.complete && img.naturalWidth > 0) {
-                      // Use useLayoutEffect timing - but since we're in onLoad, use RAF
-                      // This ensures smooth transition after image is ready
+                      try {
+                        // Use Image Decoding API to ensure image is fully decoded
+                        // This prevents flashing by ensuring image is ready to render
+                        if (img.decode) {
+                          await img.decode();
+                        }
+                      } catch {
+                        // If decode fails, still proceed (image is loaded)
+                      }
+                      // Use requestAnimationFrame for smooth transition
                       requestAnimationFrame(() => {
                         setImageLoaded(true);
                         if (modalImageUrl && imgRef.current) {
