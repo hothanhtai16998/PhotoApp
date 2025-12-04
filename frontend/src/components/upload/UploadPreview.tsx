@@ -303,6 +303,11 @@ export const UploadPreview = ({ imageData, index, totalImages, onRemove, onLocat
               />
               <button
                 type="button"
+                onMouseDown={(e) => {
+                  // Prevent input blur when clicking button
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleDetectLocation();

@@ -448,18 +448,29 @@ export const finalizeImageUpload = asyncHandler(async (req, res) => {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
-    const trimmedTitle = String(imageTitle || '').trim();
-    if (!trimmedTitle) {
-        return res.status(400).json({ success: false, message: 'imageTitle required' });
-    }
+    // Title is optional - can be empty for normal users (admin will add later)
+    const trimmedTitle = imageTitle ? String(imageTitle).trim() : '';
+    const finalTitle = trimmedTitle || undefined; // Send undefined if empty
 
-    // Validate category exists (accept either a valid ObjectId or a non-empty string name)
-    if (typeof imageCategory === 'string') {
-        if (imageCategory.trim() === '') {
+    // Category validation: required for admin users, optional for normal users
+    if (isAdmin) {
+        // Admin users must provide a category
+        if (typeof imageCategory === 'string') {
+            if (imageCategory.trim() === '') {
+                return res.status(400).json({ success: false, message: 'imageCategory required for admin users' });
+            }
+        } else if (!imageCategory || !mongoose.Types.ObjectId.isValid(imageCategory)) {
             return res.status(400).json({ success: false, message: 'imageCategory invalid' });
         }
-    } else if (!mongoose.Types.ObjectId.isValid(imageCategory)) {
-        return res.status(400).json({ success: false, message: 'imageCategory invalid' });
+    } else {
+        // Normal users can upload without category (will be pending, admin adds category later)
+        // Allow empty string or undefined for category
+        if (imageCategory && typeof imageCategory === 'string' && imageCategory.trim() === '') {
+            // Empty string is allowed for normal users
+            imageCategory = undefined;
+        } else if (imageCategory && !mongoose.Types.ObjectId.isValid(imageCategory)) {
+            return res.status(400).json({ success: false, message: 'imageCategory invalid' });
+        }
     }
 
     // Enqueue background job — server does NOT download/process here
@@ -468,7 +479,7 @@ export const finalizeImageUpload = asyncHandler(async (req, res) => {
         uploadId,
         userId: userId.toString(),
         isAdmin: !!isAdmin,
-        imageTitle: trimmedTitle,
+        imageTitle: finalTitle,
         imageCategory,
         location,
         cameraModel,

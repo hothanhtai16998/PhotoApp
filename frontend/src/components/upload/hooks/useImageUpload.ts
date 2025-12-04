@@ -195,8 +195,8 @@ export const useImageUpload = ({ onSuccess }: UseImageUploadProps = {}) => {
             const finalizeData: FinalizeImageData = {
               uploadId: imgData.preUploadData.uploadId,
               uploadKey: imgData.preUploadData.uploadKey,
-              imageTitle: imgData.title.trim(),
-              imageCategory: imgData.category.trim(),
+              imageTitle: imgData.title.trim() || undefined, // Title is optional
+              imageCategory: imgData.category.trim() || undefined, // Category is optional for normal users
               location: imgData.location.trim() || undefined,
               coordinates: imgData.coordinates,
               cameraModel: imgData.cameraModel.trim() || undefined,

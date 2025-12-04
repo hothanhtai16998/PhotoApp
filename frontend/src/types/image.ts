@@ -85,8 +85,8 @@ export interface PreUploadResponse {
 export interface FinalizeImageData {
   uploadId: string;
   uploadKey: string;
-  imageTitle: string;
-  imageCategory: string;
+  imageTitle?: string; // Optional - normal users can upload without title
+  imageCategory?: string; // Optional - normal users can upload without category (admin adds later)
   location?: string;
   coordinates?: Coordinates;
   cameraModel?: string;

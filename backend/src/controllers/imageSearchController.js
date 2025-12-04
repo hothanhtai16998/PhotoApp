@@ -53,8 +53,8 @@ export const getAllImages = asyncHandler(async (req, res) => {
             });
         }
     } else {
-        // When no category filter, ensure imageCategory exists and is not null
-        // This prevents images with invalid/null categories from appearing
+        // When no category filter, only show images with a category (approved images)
+        // Pending images without category won't appear on homepage until admin adds category
         query.imageCategory = { $exists: true, $ne: null };
     }
     if (location) {

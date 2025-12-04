@@ -10,7 +10,7 @@ const imageSchema = new mongoose.Schema(
         },
         imageTitle: {
             type: String,
-            required: true,
+            required: false, // Optional - normal users can upload without title (admin adds later)
             trim: true,
             index: true,
         },
@@ -69,7 +69,7 @@ const imageSchema = new mongoose.Schema(
         imageCategory: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Category',
-            required: true,
+            required: false, // Optional - normal users can upload without category (admin adds later)
             index: true,
         },
         uploadedBy: {
