@@ -6,6 +6,7 @@ import { useInfiniteScroll } from '@/components/image/hooks/useInfiniteScroll';
 import { downloadImage } from '@/utils/downloadService';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Heart, Download, Share2, Plus, ChevronLeft, ChevronRight, X, Eye } from 'lucide-react';
+import { CategoryNavigation } from '@/components/CategoryNavigation';
 import './UnsplashModalTest.css';
 
 // Preload modal images for visible images in viewport
@@ -288,8 +289,11 @@ export default function UnsplashModalTest() {
       <div className="unsplash-test-page">
         <div className="test-header">
           <h1>Unsplash Modal Test - Image Grid</h1>
-          <p className="test-description">Click any image to open modal with Unsplash-style loading</p>
+          <p className="test-description">Click any image to open modal with Unsplash-style loading. Change category to test if images flash.</p>
         </div>
+
+        {/* Category Navigation */}
+        <CategoryNavigation />
 
         <div className="test-grid-container">
           {loading && filteredImages.length === 0 ? (
@@ -323,8 +327,11 @@ export default function UnsplashModalTest() {
     <div className="unsplash-test-page">
       <div className="test-header">
         <h1>Unsplash Modal Test - Image Grid</h1>
-        <p className="test-description">Click any image to open modal with Unsplash-style loading</p>
+        <p className="test-description">Click any image to open modal with Unsplash-style loading. Change category to test if images flash.</p>
       </div>
+
+      {/* Category Navigation */}
+      <CategoryNavigation />
 
       <div className="test-grid-container">
         {loading && filteredImages.length === 0 ? (
