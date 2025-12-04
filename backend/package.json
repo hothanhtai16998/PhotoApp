@@ -10,6 +10,7 @@
 		"make:superadmin": "node src/utils/makeSuperAdmin.js",
 		"migrate:permissions": "node src/migrations/migrateLegacyPermissions.js",
 		"verify:permissions": "node src/migrations/verifyPermissions.js",
+		"verify:r2": "node src/utils/verifyR2Config.js",
 		"update:r2-cors": "node src/utils/updateR2CORS.js",
 		"kill:3000": "node kill-port-3000.js",
 		"test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",

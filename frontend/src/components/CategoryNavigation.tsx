@@ -127,6 +127,24 @@ export const CategoryNavigation = memo(function CategoryNavigation() {
     return () => observer.disconnect()
   }, [])
 
+  // Toggle header border when category nav is sticky
+  useEffect(() => {
+    const header = document.querySelector('.unsplash-header') as HTMLElement
+    if (header) {
+      if (isSticky) {
+        header.classList.add('category-nav-sticky')
+      } else {
+        header.classList.remove('category-nav-sticky')
+      }
+    }
+    return () => {
+      // Cleanup: remove class on unmount
+      if (header) {
+        header.classList.remove('category-nav-sticky')
+      }
+    }
+  }, [isSticky])
+
   // Handle scroll to make category nav stick to header
   useEffect(() => {
     if (!categoryNavRef.current || headerHeight === 0) return
