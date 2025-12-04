@@ -63,7 +63,6 @@ export const BlurImage = ({
           alt={`${alt} (blurred)`}
           className="blur-image-placeholder"
           aria-hidden="true"
-          crossOrigin="anonymous"
         />
       )}
 

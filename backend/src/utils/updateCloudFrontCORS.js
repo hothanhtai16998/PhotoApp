@@ -24,16 +24,23 @@ async function updateS3CORS() {
 		logger.info(`📦 Bucket: ${env.AWS_S3_BUCKET_NAME}`);
 		logger.info(`🌍 Region: ${env.AWS_REGION}`);
 
+		// Collect all allowed origins
+		const allowedOrigins = [
+			'http://localhost:3000',
+			'http://localhost:5173',
+			env.CLIENT_URL,
+			'https://uploadanh.cloud', // Production domain
+		].filter(Boolean);
+
+		// Remove duplicates
+		const uniqueOrigins = [...new Set(allowedOrigins)];
+
 		const corsConfiguration = {
 			CORSRules: [
 				{
 					AllowedHeaders: ['*'],
 					AllowedMethods: ['GET', 'HEAD'],
-					AllowedOrigins: [
-						'http://localhost:3000',
-						'http://localhost:5173',
-						env.CLIENT_URL,
-					].filter(Boolean),
+					AllowedOrigins: uniqueOrigins,
 					ExposeHeaders: ['ETag', 'Content-Length', 'Content-Type'],
 					MaxAgeSeconds: 3600,
 				},

@@ -49,7 +49,8 @@ const globalLoadedImages = new Set<string>();
 const isImageCached = (url: string): Promise<boolean> => {
   return new Promise((resolve) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    // Removed crossOrigin to avoid CORS issues
+    // img.crossOrigin = 'anonymous';
     let resolved = false;
 
     const resolveOnce = (value: boolean) => {
@@ -336,7 +337,6 @@ const ProgressiveImage = memo(({
           loading={eager ? 'eager' : 'lazy'}
           fetchPriority={fetchPriority}
           decoding="async"
-          crossOrigin="anonymous"
         />
       </picture>
 

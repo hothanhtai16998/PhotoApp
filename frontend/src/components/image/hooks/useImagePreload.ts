@@ -22,7 +22,8 @@ const isImageCached = (url: string): Promise<boolean> => {
     }
 
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    // Removed crossOrigin to avoid CORS issues
+    // img.crossOrigin = 'anonymous';
     let resolved = false;
 
     const resolveOnce = (value: boolean) => {

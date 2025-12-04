@@ -40,7 +40,8 @@ const globalLoadedImages = new LRUSet(500);
 const isImageCached = (url: string): Promise<boolean> => {
   return new Promise((resolve) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    // Removed crossOrigin to avoid CORS issues with CloudFront
+    // img.crossOrigin = 'anonymous';
     let resolved = false;
 
     const resolveOnce = (value: boolean) => {
@@ -656,7 +657,6 @@ const ProgressiveImage = memo(({
             loading={eager || shouldLoadEagerly || isActuallyCached ? 'eager' : 'lazy'}
             decoding="async"
             fetchPriority={eager ? (fetchPriority === 'auto' ? 'high' : fetchPriority) : (fetchPriority === 'auto' ? 'low' : fetchPriority)}
-            crossOrigin="anonymous"
             style={
               skipTransition || isActuallyCached
                 ? {
@@ -688,7 +688,6 @@ const ProgressiveImage = memo(({
           loading={eager || shouldLoadEagerly || isActuallyCached ? 'eager' : 'lazy'}
           decoding="async"
           fetchPriority={eager ? (fetchPriority === 'auto' ? 'high' : fetchPriority) : (fetchPriority === 'auto' ? 'low' : fetchPriority)}
-          crossOrigin="anonymous"
           style={
             skipTransition || isActuallyCached
               ? {

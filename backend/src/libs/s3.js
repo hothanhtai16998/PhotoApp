@@ -5,14 +5,39 @@ import { Upload } from '@aws-sdk/lib-storage';
 import sharp from 'sharp';
 import { logger } from '../utils/logger.js';
 
-// Initialize S3 client
-const s3Client = new S3Client({
-	region: env.AWS_REGION,
-	credentials: {
-		accessKeyId: env.AWS_ACCESS_KEY_ID,
-		secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
-	},
-});
+// Initialize storage client (R2 or S3)
+// R2 is S3-compatible, so we can use the same SDK
+const s3Client = env.USE_R2
+	? new S3Client({
+		region: 'auto', // R2 uses 'auto' as region
+		endpoint: `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+		credentials: {
+			accessKeyId: env.R2_ACCESS_KEY_ID,
+			secretAccessKey: env.R2_SECRET_ACCESS_KEY,
+		},
+		forcePathStyle: true, // Required for R2
+	})
+	: new S3Client({
+		region: env.AWS_REGION,
+		credentials: {
+			accessKeyId: env.AWS_ACCESS_KEY_ID,
+			secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
+		},
+	});
+
+// Get bucket name
+const getBucketName = () => env.USE_R2 ? env.R2_BUCKET_NAME : env.AWS_S3_BUCKET_NAME;
+
+// Get public URL base
+const getPublicUrlBase = () => {
+	if (env.USE_R2) {
+		// R2: Use custom domain or R2.dev subdomain
+		return env.R2_PUBLIC_URL || `https://pub-${env.R2_ACCOUNT_ID}.r2.dev`;
+	} else {
+		// AWS: Use CloudFront or S3 URL
+		return env.AWS_CLOUDFRONT_URL || `https://${env.AWS_S3_BUCKET_NAME}.s3.${env.AWS_REGION}.amazonaws.com`;
+	}
+};
 
 /**
  * Upload a single file to S3
@@ -24,7 +49,7 @@ const s3Client = new S3Client({
 export const uploadToS3 = async (buffer, key, contentType) => {
 	try {
 		const command = new PutObjectCommand({
-			Bucket: env.AWS_S3_BUCKET_NAME,
+			Bucket: getBucketName(),
 			Key: key,
 			Body: buffer,
 			ContentType: contentType,
@@ -34,11 +59,7 @@ export const uploadToS3 = async (buffer, key, contentType) => {
 		await s3Client.send(command);
 
 		// Return public URL
-		// If using CloudFront, use CloudFront URL, otherwise use S3 URL
-		if (env.AWS_CLOUDFRONT_URL) {
-			return `${env.AWS_CLOUDFRONT_URL}/${key}`;
-		}
-		return `https://${env.AWS_S3_BUCKET_NAME}.s3.${env.AWS_REGION}.amazonaws.com/${key}`;
+		return `${getPublicUrlBase()}/${key}`;
 	} catch (error) {
 		// Provide more detailed error information
 		const errorMessage = error.message || 'Unknown error';
@@ -46,7 +67,7 @@ export const uploadToS3 = async (buffer, key, contentType) => {
 		console.error('S3 Upload Error:', {
 			code: errorCode,
 			message: errorMessage,
-			bucket: env.AWS_S3_BUCKET_NAME,
+			bucket: getBucketName(),
 			key: key,
 			region: env.AWS_REGION,
 		});
@@ -333,7 +354,7 @@ export const deleteImageFromS3 = async (publicId, folder = 'photo-app-images') =
 			formats.map((format) => {
 				const key = `${folder}/${publicId}-${size}.${format}`;
 				const command = new DeleteObjectCommand({
-					Bucket: env.AWS_S3_BUCKET_NAME,
+					Bucket: getBucketName(),
 					Key: key,
 				});
 				return s3Client.send(command);
@@ -356,7 +377,7 @@ export const deleteAvatarFromS3 = async (publicId) => {
 		const extension = 'webp';
 		const key = `${publicId}.${extension}`;
 		const command = new DeleteObjectCommand({
-			Bucket: env.AWS_S3_BUCKET_NAME,
+			Bucket: getBucketName(),
 			Key: key,
 		});
 		await s3Client.send(command);
@@ -386,7 +407,7 @@ export const getImageFromS3 = async (imageUrl) => {
 		}
 
 		const command = new GetObjectCommand({
-			Bucket: env.AWS_S3_BUCKET_NAME,
+			Bucket: getBucketName(),
 			Key: key,
 		});
 
@@ -416,7 +437,7 @@ export default s3Client;
  */
 export const generatePresignedUploadUrl = async (key, contentType, expiresIn = 300) => {
 	const command = new PutObjectCommand({
-		Bucket: env.AWS_S3_BUCKET_NAME,
+		Bucket: getBucketName(),
 		Key: key,
 		ContentType: contentType || 'application/octet-stream',
 	});
@@ -429,7 +450,7 @@ export const generatePresignedUploadUrl = async (key, contentType, expiresIn = 3
  */
 export async function getObjectFromS3(key) {
 	const params = {
-		Bucket: env.AWS_S3_BUCKET_NAME, // Use env, not process.env
+		Bucket: getBucketName(),
 		Key: key,
 	};
 	const command = new GetObjectCommand(params);
@@ -441,7 +462,7 @@ export async function getObjectFromS3(key) {
  */
 export async function deleteObjectByKey(key) {
 	const params = {
-		Bucket: env.AWS_S3_BUCKET_NAME, // Use env, not process.env
+		Bucket: getBucketName(),
 		Key: key,
 	};
 	const command = new DeleteObjectCommand(params);

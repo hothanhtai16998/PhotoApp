@@ -105,7 +105,6 @@ export const ImageModalContent = ({
               loading="eager"
               decoding="async"
               fetchPriority="high"
-              crossOrigin="anonymous"
               onDoubleClick={handleDoubleClick}
               draggable={false}
               onLoad={(e) => {

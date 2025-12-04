@@ -11,6 +11,7 @@ import {
     batchReplaceImages,
     createBulkUploadNotification,
 } from '../controllers/imageController.js';
+import { proxyImage } from '../controllers/image/imageProxyController.js';
 import {
     incrementView,
     incrementDownload,
@@ -45,6 +46,9 @@ router.get('/locations', getLocations);
 // Public routes - increment stats (with optional auth to track user activity)
 router.patch('/:imageId/view', optionalAuth, incrementView);
 router.patch('/:imageId/download', optionalAuth, incrementDownload);
+
+// Public route - proxy image with CORS headers (for displaying images)
+router.get('/:imageId/proxy', proxyImage);
 
 // Public route - download image (proxy from S3 to avoid CORS)
 // Use optionalAuth to populate req.user if user is logged in (for notifications)

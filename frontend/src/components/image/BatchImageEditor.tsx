@@ -72,7 +72,8 @@ export const BatchImageEditor = ({ images, onSave, onCancel }: BatchImageEditorP
 
       for (const image of images) {
         const img = new Image();
-        img.crossOrigin = 'anonymous';
+        // Removed crossOrigin to avoid CORS issues
+        // img.crossOrigin = 'anonymous';
         
         await new Promise<void>((resolve, reject) => {
           img.onload = () => {

@@ -202,7 +202,8 @@ export const ImageEditor = ({ imageUrl, imageTitle, onSave, onCancel }: ImageEdi
   // Load original image
   useEffect(() => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    // Removed crossOrigin to avoid CORS issues
+    // img.crossOrigin = 'anonymous';
     img.onload = () => {
       imageRef.current = img;
       setImageDimensions({ width: img.width, height: img.height });
