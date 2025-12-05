@@ -42,7 +42,10 @@ export const ImageModalContent = ({
   const deriveFull = (img: Image) =>
     img.regularUrl || img.imageUrl || img.smallUrl || '';
 
-  const [displayedSrc, setDisplayedSrc] = useState(() => deriveFull(image));
+  const [displayedSrc, setDisplayedSrc] = useState(() => {
+    const placeholder = derivePlaceholder(image);
+    return placeholder || deriveFull(image);
+  });
   const [displayedPlaceholder, setDisplayedPlaceholder] = useState(() => derivePlaceholder(image));
   const [frontImage, setFrontImage] = useState<{
     id: string;
@@ -107,6 +110,8 @@ export const ImageModalContent = ({
       setIsModalImageLoaded(false);
       const nextSrc = deriveFull(image);
       const nextPlaceholder = derivePlaceholder(image);
+      setDisplayedSrc(nextPlaceholder || nextSrc);
+      setDisplayedPlaceholder(nextPlaceholder);
       if (nextSrc && nextSrc !== displayedSrc) {
         setFrontLoaded(false);
         setFrontImage({
