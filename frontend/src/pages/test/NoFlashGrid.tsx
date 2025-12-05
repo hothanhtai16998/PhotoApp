@@ -793,8 +793,8 @@ function calculateImageLayout(
             } else {
                 targetHeight = displayHeight; // Within range, use natural calculated height
             }
-        } else if (aspectRatio >= 0.5 && aspectRatio <= 0.75) {
-            // Standard portrait (0.5–0.75, e.g., 3:4, 2:3)
+        } else if (aspectRatio >= 0.6 && aspectRatio <= 0.75) {
+            // Standard portrait (0.6–0.75, e.g., 3:4, 2:3)
             // Should be 400–600px tall - AUTO-CALCULATES within this range
             categoryMin = 400;
             categoryMax = 600;
@@ -805,8 +805,8 @@ function calculateImageLayout(
             } else {
                 targetHeight = displayHeight; // Within range, use natural calculated height
             }
-        } else if (aspectRatio < 0.5) {
-            // Very tall portrait (< 0.5, e.g., 9:16)
+        } else if (aspectRatio < 0.6) {
+            // Very tall portrait (< 0.6, e.g., 9:16, 1:2)
             // Should be 600–800px tall - AUTO-CALCULATES within this range
             categoryMin = 600;
             const absoluteMaxHeight = GRID_CONFIG.maxRowSpan * baseRowHeight;
@@ -819,15 +819,21 @@ function calculateImageLayout(
                 targetHeight = displayHeight; // Within range, use natural calculated height
             }
         } else {
-            // Fallback for edge cases (between 0.75-0.9 or 1.1-1.3)
+            // Fallback for edge cases (between 0.75-0.9 or 1.1-1.3, or 0.5-0.6)
             // Use standard portrait or landscape logic as fallback
             if (aspectRatio > 1) {
                 // Closer to landscape
                 categoryMin = 230;
                 categoryMax = 275;
                 targetHeight = Math.max(categoryMin, Math.min(categoryMax, displayHeight));
+            } else if (aspectRatio >= 0.5 && aspectRatio < 0.6) {
+                // Between 0.5-0.6: treat as Very Tall Portrait
+                categoryMin = 600;
+                const absoluteMaxHeight = GRID_CONFIG.maxRowSpan * baseRowHeight;
+                categoryMax = Math.min(800, absoluteMaxHeight);
+                targetHeight = Math.max(categoryMin, Math.min(categoryMax, displayHeight));
             } else {
-                // Closer to portrait
+                // Closer to standard portrait (0.6-0.75)
                 categoryMin = 400;
                 categoryMax = 600;
                 targetHeight = Math.max(categoryMin, Math.min(categoryMax, displayHeight));
@@ -1214,7 +1220,7 @@ export default function NoFlashGridPage() {
                 } else if (aspectRatio >= 0.9) {
                     category = 'square';
                     _categoryRange = '240-260px';
-                } else if (aspectRatio >= 0.5) {
+                } else if (aspectRatio >= 0.6) {
                     category = 'standard-portrait';
                     _categoryRange = '400-600px';
                 } else if (aspectRatio > 0) {
