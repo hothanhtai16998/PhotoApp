@@ -49,6 +49,7 @@
   width: 100%;
   /* Base row height - will be overridden by inline style */
   grid-auto-rows: 25px;
+  /* Don't use grid-auto-flow: dense - we use explicit row positioning */
 }
 
 /* Grid Item (Wrapper) */
