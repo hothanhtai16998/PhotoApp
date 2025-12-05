@@ -22,6 +22,8 @@ export const ImageModalContent = ({
   setIsModalImageLoaded,
   zoomProps,
 }: ImageModalContentProps) => {
+  // Use modalImageSrc if available, otherwise fallback to image URLs
+  const imageSrc = modalImageSrc || image.regularUrl || image.imageUrl || image.smallUrl || '';
   const {
     zoom,
     pan,
@@ -41,25 +43,18 @@ export const ImageModalContent = ({
     handleTouchEnd,
   } = zoomProps;
 
-  // Track previous image to detect changes
+  // Track previous image to detect changes and reset loaded state
   const prevImageIdRef = useRef<string | null>(null);
 
-  // Update image src manually without re-rendering to prevent flash
+  // Reset loaded state when image changes to prevent showing old image
   useEffect(() => {
-    const img = zoomImageRef.current;
-    if (!img) return;
-
     const imageChanged = prevImageIdRef.current !== image._id;
-    if (!imageChanged) return;
-
-    prevImageIdRef.current = image._id;
-
-    // Update src without causing React re-render
-    const newSrc = modalImageSrc ?? image.regularUrl ?? image.smallUrl ?? image.imageUrl;
-    if (img.src !== newSrc) {
-      img.src = newSrc;
+    if (imageChanged) {
+      prevImageIdRef.current = image._id;
+      // Reset loaded state for new image
+      setIsModalImageLoaded(false);
     }
-  }, [image._id, modalImageSrc, image.regularUrl, image.smallUrl, image.imageUrl, zoomImageRef]);
+  }, [image._id, setIsModalImageLoaded]);
 
   return (
     <div
@@ -112,6 +107,8 @@ export const ImageModalContent = ({
             {/* Fallback img element with blur-up technique */}
             <img
               ref={zoomImageRef}
+              src={imageSrc}
+              key={image._id}
               alt={image.imageTitle ?? 'Photo'}
               style={{
                 backgroundImage: modalPlaceholderSrc
@@ -148,12 +145,8 @@ export const ImageModalContent = ({
         ) : (
           <img
             ref={zoomImageRef}
-            srcSet={
-              image.thumbnailUrl && image.smallUrl && image.regularUrl && image.imageUrl
-                ? `${image.thumbnailUrl} 200w, ${image.smallUrl} 800w, ${image.regularUrl} 1080w, ${image.imageUrl} 1920w`
-                : undefined
-            }
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 98vw, 1920px"
+            src={imageSrc}
+            key={image._id}
             alt={image.imageTitle || 'Photo'}
             style={{
               backgroundImage: modalPlaceholderSrc

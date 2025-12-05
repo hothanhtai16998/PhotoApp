@@ -34,27 +34,29 @@
   height: auto;
   object-fit: contain;
   border-radius: 4px;
-  /* Placeholder background is always visible */
+  /* Placeholder background for blur-up effect */
   background-color: #f0f0f0;
+  background-size: cover;
+  background-position: center;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   /* Prevent layout shift - maintain aspect ratio from start */
   contain: layout;
-  /* Keep image visible - let browser handle image swap naturally */
-  opacity: 1 !important;
-  /* NO transition */
-  transition: none;
+  /* Smooth fade-in transition */
+  transition: opacity 0.25s ease-out;
 }
 
 .modal-image.loading {
-  /* Even in loading state, keep visible to prevent flash */
-  opacity: 1 !important;
+  /* Show background placeholder but hide actual image content until loaded */
+  opacity: 0;
   background-color: #f0f0f0;
 }
 
 .modal-image.loaded {
-  /* Always visible */
-  opacity: 1 !important;
+  /* Fully visible when loaded */
+  opacity: 1;
+  /* Remove background once image is loaded to save memory */
+  background-image: none !important;
   background-color: transparent;
 }
 
