@@ -840,35 +840,17 @@ function calculateImageLayout(
     const absoluteMax = GRID_CONFIG.maxRowSpan * baseRowHeight; // 32 * 25 = 800px
     targetHeight = Math.min(targetHeight, absoluteMax);
 
-    // Calculate row span - with baseRowHeight = 25px, we get much finer control
-    // Very wide: 200px = 8 rows = 200px ✓
-    // Standard landscape: 230px = 9.2 rows → 10 rows = 250px (round up to meet minimum)
-    // Square: 250px = 10 rows = 250px ✓
-    // Standard portrait: 400px = 16 rows = 400px ✓, 600px = 24 rows = 600px ✓
-    // Very tall portrait: 800px = 32 rows = 800px ✓
-    const exactRowSpan = targetHeight / baseRowHeight;
-
-    // Calculate row span, ensuring we don't go below targetHeight OR above categoryMax
-    let rowSpan = Math.max(1, Math.round(exactRowSpan));
-
-    // If rounding down would result in height less than targetHeight, round up instead
-    // BUT ensure we don't exceed the category maximum
-    const roundedDownHeight = rowSpan * baseRowHeight;
-    if (roundedDownHeight < targetHeight) {
-        const roundedUpRowSpan = Math.ceil(exactRowSpan);
-        const roundedUpHeight = roundedUpRowSpan * baseRowHeight;
-        // Only round up if it doesn't exceed the category maximum
-        if (roundedUpHeight <= categoryMax) {
-            rowSpan = roundedUpRowSpan;
-        }
-        // Otherwise, keep the rounded down value (it's closer to targetHeight than going over max)
-    }
+    // Compute row span in full row units (row height + row gap) so the grid area
+    // height (rows*baseRowHeight + (rows-1)*gap) matches the target height closely.
+    const rowUnit = baseRowHeight + GRID_CONFIG.gap;
+    const exactRowsByUnit = (targetHeight + GRID_CONFIG.gap) / rowUnit;
+    const rowSpan = Math.max(1, Math.ceil(exactRowsByUnit));
 
     const finalRowSpan = Math.max(
         GRID_CONFIG.minRowSpan,
         Math.min(GRID_CONFIG.maxRowSpan, rowSpan)
     );
-    const actualRenderedHeight = finalRowSpan * baseRowHeight;
+    const actualRenderedHeight = finalRowSpan * baseRowHeight + (finalRowSpan - 1) * GRID_CONFIG.gap;
 
     // Always log for debugging - we'll remove this later
     // eslint-disable-next-line no-console
@@ -877,7 +859,7 @@ function calculateImageLayout(
         columnWidth: columnWidth.toFixed(0) + 'px',
         displayHeight: displayHeight.toFixed(0) + 'px',
         targetHeight: targetHeight.toFixed(0) + 'px',
-        exactRowSpan: exactRowSpan.toFixed(2),
+        exactRowSpan: exactRowsByUnit.toFixed(2),
         rowSpan,
         finalRowSpan,
         actualRenderedHeight: actualRenderedHeight.toFixed(0) + 'px',
@@ -1089,10 +1071,9 @@ export default function NoFlashGridPage() {
         const gapTotal = GRID_CONFIG.gap * (columnCount - 1);
         const columnWidth = (containerWidth - gapTotal) / columnCount;
 
-        // Track the current pixel position in each column
-        // We track pixels because CSS Grid gaps add space between rows
-        // Then convert pixel positions to grid row numbers when placing items
-        const columnPixelPositions = new Array(columnCount).fill(0); // Start at pixel 0 for each column
+        // Track pixel heights in each column for shortest-column algorithm
+        // This is more accurate than row-based tracking
+        const columnHeights = new Array(columnCount).fill(0); // Start at 0px for each column
 
         return filteredImages.map((image, index) => {
             // Get dimensions (from state or image properties)
@@ -1106,41 +1087,48 @@ export default function NoFlashGridPage() {
                 dimensions
             );
 
-            // Find the shortest column (by pixel position)
+            // Calculate actual image height
+            const imageHeight = layout.rowSpan * GRID_CONFIG.baseRowHeight;
+
+            // Find the shortest column (by pixel height)
             let shortestColumnIndex = 0;
-            let shortestPixelPosition = columnPixelPositions[0];
+            let shortestHeight = columnHeights[0];
             for (let i = 1; i < columnCount; i++) {
-                if (columnPixelPositions[i] < shortestPixelPosition) {
-                    shortestPixelPosition = columnPixelPositions[i];
+                if (columnHeights[i] < shortestHeight) {
+                    shortestHeight = columnHeights[i];
                     shortestColumnIndex = i;
                 }
             }
 
-            // Calculate the actual height of this image
-            const imageHeight = layout.rowSpan * GRID_CONFIG.baseRowHeight;
-
-            // Convert pixel position to grid row number
-            // Formula: pixelPosition / (baseRowHeight + gap) + 1
-            // But we need to account for gaps between rows
-            // Each row is baseRowHeight tall, and there's a gap after each row (except the last)
-            // So row N starts at: (N-1) × (baseRowHeight + gap)
-            // To convert pixel to row: row = Math.floor(pixel / (baseRowHeight + gap)) + 1
-            const rowStart = Math.floor(columnPixelPositions[shortestColumnIndex] / (GRID_CONFIG.baseRowHeight + GRID_CONFIG.gap)) + 1;
-            const rowEnd = rowStart + layout.rowSpan;
-
             // Place image in the shortest column
             const column = shortestColumnIndex + 1; // CSS Grid columns are 1-indexed
 
-            // Debug log BEFORE update to see current state
-            // eslint-disable-next-line no-console
-            console.log(`[Placement] Image ${index}: Shortest column=${shortestColumnIndex + 1}, Pixel=${columnPixelPositions[shortestColumnIndex].toFixed(0)}px, Height=${imageHeight}px, RowSpan=${layout.rowSpan}, Before: [${[...columnPixelPositions].map(p => p.toFixed(0)).join(', ')}]px → Placing at Column ${column}, Rows ${rowStart}-${rowEnd}`);
+            // Convert pixel position to grid row using full row unit (height + gap)
+            const rowUnit = GRID_CONFIG.baseRowHeight + GRID_CONFIG.gap;
+            const rowStart = Math.max(1, Math.floor(shortestHeight / rowUnit) + 1);
+            // Use rowStart only, let grid-row-end: span X handle the rest
+            // This ensures CSS Grid handles gaps correctly
 
-            // Update the column's pixel position for the next item
-            // Add the image height plus one gap (gap is only between items, not after the last)
-            columnPixelPositions[shortestColumnIndex] = columnPixelPositions[shortestColumnIndex] + imageHeight + GRID_CONFIG.gap;
-
+            // Debug log BEFORE update (rowGap=0; vertical spacing via margin)
             // eslint-disable-next-line no-console
-            console.log(`[Placement] Image ${index}: After update: [${columnPixelPositions.map(p => p.toFixed(0)).join(', ')}]px`);
+            console.log(
+                `[Placement] idx=${index} col=${shortestColumnIndex + 1} startH=${shortestHeight.toFixed(0)}px ` +
+                `rowUnit=${(GRID_CONFIG.baseRowHeight).toFixed(0)}px rowStart=${rowStart} span=${layout.rowSpan} ` +
+                `imgH=${imageHeight}px addGap=${GRID_CONFIG.gap}px → place col=${column}`
+            );
+
+            // Update the column's height for the next item
+            // Move by an exact number of full row units to the next top line
+            columnHeights[shortestColumnIndex] =
+                shortestHeight + layout.rowSpan * rowUnit;
+
+            if (index < 20) {
+                // eslint-disable-next-line no-console
+                console.log(
+                    `[Placement] idx=${index} after: [${columnHeights.map(h => h.toFixed(0)).join(', ')}]px\n` +
+                    `→ newColH=${columnHeights[shortestColumnIndex].toFixed(0)}px (+img ${imageHeight}px +gap ${GRID_CONFIG.gap}px)`
+                );
+            }
 
             // Debug: Log first few images to see what's happening
             if (index < 10) {
@@ -1152,41 +1140,31 @@ export default function NoFlashGridPage() {
 
                 // Determine category for logging
                 let category = 'unknown';
-                let categoryRange = '';
+                let _categoryRange = '';
                 if (aspectRatio > 2.0) {
                     category = 'very-wide-landscape';
-                    categoryRange = '200-230px';
+                    _categoryRange = '200-230px';
                 } else if (aspectRatio >= 1.3) {
                     category = 'standard-landscape';
-                    categoryRange = '230-275px';
+                    _categoryRange = '230-275px';
                 } else if (aspectRatio >= 0.9) {
                     category = 'square';
-                    categoryRange = '240-260px';
+                    _categoryRange = '240-260px';
                 } else if (aspectRatio >= 0.5) {
                     category = 'standard-portrait';
-                    categoryRange = '400-600px';
+                    _categoryRange = '400-600px';
                 } else if (aspectRatio > 0) {
                     category = 'very-tall-portrait';
-                    categoryRange = '600-800px';
+                    _categoryRange = '600-800px';
                 }
 
-                // More visible logging
+                // More visible logging (rowGap=0 mode)
                 // eslint-disable-next-line no-console
                 console.log(
-                    `[Grid Layout] Image ${index} | ${category} | Aspect: ${aspectRatio ? aspectRatio.toFixed(2) : 'N/A'} | Natural: ${calculatedHeight ? calculatedHeight.toFixed(0) + 'px' : 'N/A'} | Actual: ${actualHeight.toFixed(0)}px (${layout.rowSpan} rows) | Range: ${categoryRange}`,
-                    {
-                        id: image._id?.substring(0, 8),
-                        width: finalWidth,
-                        height: finalHeight,
-                        aspectRatio: aspectRatio ? aspectRatio.toFixed(2) : 'N/A',
-                        category: `${category} (${categoryRange})`,
-                        columnWidth: columnWidth.toFixed(0) + 'px',
-                        naturalHeight: calculatedHeight ? calculatedHeight.toFixed(0) + 'px' : 'N/A',
-                        rowSpan: layout.rowSpan,
-                        actualHeight: actualHeight.toFixed(0) + 'px',
-                        column,
-                        source: dimensions ? 'loaded' : image.width ? 'fromImage' : 'fallback',
-                    }
+                    `[Grid Layout] #${index} | ${category} | AR:${aspectRatio ? aspectRatio.toFixed(2) : 'N/A'} ` +
+                    `natH:${calculatedHeight ? calculatedHeight.toFixed(0) + 'px' : 'N/A'} ` +
+                    `actH:${actualHeight.toFixed(0)}px rows:${layout.rowSpan} rowStart:${rowStart} col:${column} ` +
+                    `(rowUnit ${GRID_CONFIG.baseRowHeight}px, gap ${GRID_CONFIG.gap}px, range ${_categoryRange})`
                 );
             }
 
@@ -1195,7 +1173,6 @@ export default function NoFlashGridPage() {
                 column,
                 rowSpan: layout.rowSpan,
                 rowStart,
-                rowEnd,
                 columnWidth,
             };
         });
@@ -1290,13 +1267,14 @@ export default function NoFlashGridPage() {
                     style={{
                         // Unsplash-style: Fixed columns with dynamic row spans
                         gridTemplateColumns: `repeat(${columnCount}, 1fr)`,
-                        gap: `${GRID_CONFIG.gap}px`, // Ensure gap is also a string with units
+                        gap: `${GRID_CONFIG.gap}px`,
                         // Base row height for row span calculations - MUST be a string with units
                         gridAutoRows: `${GRID_CONFIG.baseRowHeight}px`,
+                        // Don't use grid-auto-flow: dense - we use explicit row positioning
                     }}
                 >
                     {gridLayout.map((layout, idx) => {
-                        const { image, column, rowSpan, rowStart, rowEnd } = layout;
+                        const { image, column, rowSpan, rowStart } = layout;
                         // Priority loading for first 12 images (above the fold)
                         const isPriority = idx < 12;
 
@@ -1309,18 +1287,17 @@ export default function NoFlashGridPage() {
 
                         return (
                             <div
-                                key={`${image._id || idx}-${column}-${rowStart}-${rowEnd}`}
+                                key={`${image._id || idx}-${column}-${rowStart}`}
                                 className="grid-item-wrapper"
                                 style={{
-                                    // Explicit column and row placement (like Unsplash)
+                                    // Explicit column and row start, use span for row end
+                                    // This lets CSS Grid handle gaps automatically
                                     gridColumn: column,
-                                    // Use explicit row start and end for positioning
                                     gridRowStart: rowStart,
-                                    gridRowEnd: rowEnd,
-                                    // Explicit height to maintain aspect ratio
-                                    // We use rowSpan * baseRowHeight to get the exact height we want
-                                    // CSS Grid gaps will create visual spacing between items
-                                    height: `${rowSpan * GRID_CONFIG.baseRowHeight}px`,
+                                    gridRowEnd: `span ${rowSpan}`,
+                                    // Let the grid area determine height (includes internal row gaps)
+                                    // to avoid mismatch and sticking
+                                    height: 'auto',
                                 }}
                             >
                                 <BlurUpImage
@@ -1358,7 +1335,7 @@ export default function NoFlashGridPage() {
                                     zIndex: 10,
                                     pointerEvents: 'none',
                                 }}>
-                                    C: {column} | AR: {aspectRatio} | H: {actualHeight}px | R: {rowSpan} | RS: {rowStart}-{rowEnd}
+                                    C: {column} | AR: {aspectRatio} | H: {actualHeight}px | R: {rowSpan} | RS: {rowStart}
                                 </div>
                             </div>
                         );
