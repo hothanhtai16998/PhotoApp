@@ -15,6 +15,13 @@ import { useUserStore } from '@/stores/useUserStore';
 import { appConfig } from '@/config/appConfig';
 import './ImageModal.css';
 
+// Scroll detection thresholds
+const HEADER_HIDE_THRESHOLD_PX = 20;
+const MIN_SCROLL_BEFORE_HIDE_PX = 50;
+const RELATED_IMAGES_CHECK_DELAY_MS = 300;
+const RELATED_IMAGES_RETRY_DELAY_MS = 100;
+const RESIZE_DEBOUNCE_MS = 150;
+
 interface ImageModalProps {
   image: Image;
   images: Image[];
@@ -52,11 +59,18 @@ const ImageModal = ({
   });
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
     const handleResize = () => {
-      setIsMobile(window.innerWidth <= appConfig.mobileBreakpoint);
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setIsMobile(window.innerWidth <= appConfig.mobileBreakpoint);
+      }, RESIZE_DEBOUNCE_MS);
     };
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   // Image zoom functionality
@@ -70,6 +84,7 @@ const ImageModal = ({
   // Reset zoom when image changes
   useEffect(() => {
     zoomProps.resetZoom();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [image._id]);
 
   // Actions hook
@@ -131,6 +146,7 @@ const ImageModal = ({
 
     const scrollContainer = modalContentRef.current;
     let relatedImagesElement: HTMLDivElement | null = null;
+    let isMounted = true;
 
     const handleScroll = () => {
       if (!scrollContainer) return;
@@ -146,19 +162,19 @@ const ImageModal = ({
       const relatedRect = relatedImagesElement.getBoundingClientRect();
 
       // Calculate position of related images relative to the top of the scroll container viewport
-      // The banner is sticky at top: 0, so we check when related images reaches that position
       const relatedTopRelativeToContainer = relatedRect.top - containerRect.top;
 
-      // Only hide when related images section reaches or passes the top of the container
-      // (where the sticky banner is positioned at top: 0)
-      // Use a small threshold (20px) to trigger slightly before exact hit for smoother UX
-      const shouldHide = relatedTopRelativeToContainer <= 20 && scrollContainer.scrollTop > 50;
+      // Hide when related images section reaches the sticky header position
+      const shouldHide = relatedTopRelativeToContainer <= HEADER_HIDE_THRESHOLD_PX &&
+        scrollContainer.scrollTop > MIN_SCROLL_BEFORE_HIDE_PX;
 
       setIsHeaderHidden(shouldHide);
     };
 
-    // Wait for related images to be rendered
+    // Wait for related images to be rendered with cleanup
     const checkAndSetup = () => {
+      if (!isMounted) return;
+
       relatedImagesElement = relatedImagesRef.current;
       if (relatedImagesElement) {
         // Set up scroll listener
@@ -167,22 +183,40 @@ const ImageModal = ({
         setIsHeaderHidden(false);
         handleScroll();
       } else {
-        // Retry after a short delay
-        setTimeout(checkAndSetup, 100);
+        // Retry after a short delay if still mounted
+        setTimeout(checkAndSetup, RELATED_IMAGES_RETRY_DELAY_MS);
       }
     };
 
-    const timeoutId = setTimeout(checkAndSetup, 300);
+    const timeoutId = setTimeout(checkAndSetup, RELATED_IMAGES_CHECK_DELAY_MS);
 
     return () => {
+      isMounted = false;
       clearTimeout(timeoutId);
       scrollContainer.removeEventListener('scroll', handleScroll);
     };
   }, [renderAsPage, relatedImages.length]);
 
+  // Handle wheel events to redirect scroll to content
+  const handleModalWheel = (e: React.WheelEvent) => {
+    // Prevent scroll events from bubbling to body
+    if (renderAsPage) return;
+
+    e.stopPropagation();
+    // If scrolling on modal (not content), redirect to content
+    const target = e.target as HTMLElement;
+    if (!target.closest('.image-modal-content')) {
+      e.preventDefault();
+      const modalContent = modalContentRef.current;
+      if (modalContent) {
+        modalContent.scrollTop += e.deltaY;
+      }
+    }
+  };
+
   // Add zoom keyboard shortcuts
+  const { zoom, isZoomed, zoomIn, zoomOut, resetZoom } = zoomProps;
   useEffect(() => {
-    const { zoom, isZoomed, zoomIn, zoomOut, resetZoom } = zoomProps;
     if (!isZoomed && zoom === 1) return;
 
     const handleKeyboard = (e: KeyboardEvent) => {
@@ -205,7 +239,7 @@ const ImageModal = ({
 
     document.addEventListener('keydown', handleKeyboard);
     return () => document.removeEventListener('keydown', handleKeyboard);
-  }, [zoomProps]);
+  }, [zoom, isZoomed, zoomIn, zoomOut, resetZoom]);
 
   // Lock body scroll when modal is open (only when rendered as modal, not page and when enabled)
   useScrollLock(lockBodyScroll && !renderAsPage, '.image-modal-content');
@@ -225,21 +259,7 @@ const ImageModal = ({
         className={`image-modal ${renderAsPage ? 'image-modal-page' : ''}`}
         aria-hidden={!isVisualReady && !renderAsPage ? true : undefined}
         onClick={(e) => !renderAsPage && e.stopPropagation()}
-        onWheel={(e) => {
-          // Prevent scroll events from bubbling to body
-          if (!renderAsPage) {
-            e.stopPropagation();
-            // If scrolling on modal (not content), redirect to content
-            const target = e.target as HTMLElement;
-            if (!target.closest('.image-modal-content')) {
-              e.preventDefault();
-              const modalContent = modalContentRef.current;
-              if (modalContent) {
-                modalContent.scrollTop += e.deltaY;
-              }
-            }
-          }
-        }}
+        onWheel={handleModalWheel}
       >
         {/* Modal Header */}
         <ImageModalHeader

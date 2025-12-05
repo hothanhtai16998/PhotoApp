@@ -3,8 +3,9 @@ import type { Image } from '@/types/image';
 import type { User } from '@/types/user';
 import { Avatar } from '../Avatar';
 import { DownloadSizeSelector, type DownloadSize } from './DownloadSizeSelector';
-import { FollowButton } from '../FollowButton';
 import { useUserProfileCard } from './hooks/useUserProfileCard';
+import { UserProfileCard } from './UserProfileCard';
+import { getDisplayName, AVATAR_SIZE, ICON_SIZE } from './imageModalUtils';
 import { t } from '@/i18n';
 
 interface ImageModalHeaderProps {
@@ -54,6 +55,8 @@ export const ImageModalHeader = ({
     onImageSelect,
   });
 
+  const displayName = getDisplayName(image.uploadedBy);
+
   // Desktop Header
   if (!isMobile && !renderAsPage) {
     return (
@@ -65,91 +68,36 @@ export const ImageModalHeader = ({
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           onClick={handleViewProfile}
-          style={{ position: 'relative', cursor: 'pointer', willChange: 'opacity' }}
           title={t('image.viewProfile')}
         >
           <Avatar
             user={image.uploadedBy}
-            size={40}
+            size={AVATAR_SIZE.MEDIUM}
             className="modal-user-avatar"
             fallbackClassName="modal-user-avatar-placeholder"
           />
           <div className="modal-user-info">
-            <div
-              className="modal-user-name hoverable"
-              style={{ cursor: 'pointer' }}
-            >
-              {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}
-              <CheckCircle2 className="verified-badge" size={16} />
+            <div className="modal-user-name hoverable">
+              {displayName}
+              <CheckCircle2 className="verified-badge" size={ICON_SIZE.SMALL} />
             </div>
             <div className="modal-user-status">{t('image.availableForHire')}</div>
           </div>
 
           {/* User Profile Card */}
-          {showUserProfileCard && (
-            <div
-              ref={userProfileCardRef}
-              className={`user-profile-card ${isClosingProfileCard ? 'closing' : ''}`}
-              onMouseEnter={handleMouseEnter}
-              onMouseLeave={handleMouseLeave}
-            >
-              <div className="user-profile-card-header">
-                <div className="user-profile-card-avatar-section">
-                  <Avatar
-                    user={image.uploadedBy}
-                    size={48}
-                    className="user-profile-card-avatar"
-                    fallbackClassName="user-profile-card-avatar-placeholder"
-                  />
-                  <div className="user-profile-card-name-section">
-                    <div className="user-profile-card-name">
-                      {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}
-                    </div>
-                    <div className="user-profile-card-username">{image.uploadedBy.username}</div>
-                  </div>
-                </div>
-                {user && user._id !== image.uploadedBy._id && (
-                  <div className="user-profile-card-follow">
-                    <FollowButton
-                      userId={image.uploadedBy._id}
-                      userDisplayName={image.uploadedBy.displayName ?? image.uploadedBy.username}
-                      variant="default"
-                      size="sm"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {isLoadingUserImages && userImages.length === 0 ? (
-                <div className="user-profile-card-loading">
-                  <div className="loading-spinner-small" />
-                </div>
-              ) : userImages.length > 0 ? (
-                <div className="user-profile-card-images">
-                  {userImages.map((userImage) => (
-                    <div
-                      key={userImage._id}
-                      className="user-profile-card-image-item"
-                      onClick={() => handleUserImageClick(userImage)}
-                    >
-                      <img
-                        src={userImage.thumbnailUrl ?? userImage.smallUrl ?? userImage.imageUrl}
-                        alt={userImage.imageTitle ?? 'Photo'}
-                        loading="lazy"
-                      />
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-
-              <button
-                className="user-profile-card-view-btn"
-                onClick={handleViewProfile}
-              >
-                {t('image.viewProfile')}
-              </button>
-            </div>
-          )}
+          <UserProfileCard
+            image={image}
+            user={user}
+            showUserProfileCard={showUserProfileCard}
+            isClosingProfileCard={isClosingProfileCard}
+            userImages={userImages}
+            isLoadingUserImages={isLoadingUserImages}
+            userProfileCardRef={userProfileCardRef}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            onViewProfile={handleViewProfile}
+            onUserImageClick={handleUserImageClick}
+          />
         </div>
 
         {/* Right: Download Button and Close Button */}
@@ -164,7 +112,7 @@ export const ImageModalHeader = ({
             title={t('image.close')}
             aria-label={t('common.close')}
           >
-            <X size={20} />
+            <X size={ICON_SIZE.MEDIUM} />
           </button>
         </div>
       </div>
@@ -181,91 +129,36 @@ export const ImageModalHeader = ({
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           onClick={handleViewProfile}
-          style={{ position: 'relative', cursor: 'pointer', willChange: 'opacity' }}
           title={t('image.viewProfile')}
         >
           <Avatar
             user={image.uploadedBy}
-            size={40}
+            size={AVATAR_SIZE.MEDIUM}
             className="modal-user-avatar"
             fallbackClassName="modal-user-avatar-placeholder"
           />
           <div className="modal-user-info">
-            <div
-              className="modal-user-name hoverable"
-              style={{ cursor: 'pointer' }}
-            >
-              {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}
-              <CheckCircle2 className="verified-badge" size={16} />
+            <div className="modal-user-name hoverable">
+              {displayName}
+              <CheckCircle2 className="verified-badge" size={ICON_SIZE.SMALL} />
             </div>
             <div className="modal-user-status">{t('image.availableForHire')}</div>
           </div>
 
           {/* User Profile Card */}
-          {showUserProfileCard && (
-            <div
-              ref={userProfileCardRef}
-              className={`user-profile-card ${isClosingProfileCard ? 'closing' : ''}`}
-              onMouseEnter={handleMouseEnter}
-              onMouseLeave={handleMouseLeave}
-            >
-              <div className="user-profile-card-header">
-                <div className="user-profile-card-avatar-section">
-                  <Avatar
-                    user={image.uploadedBy}
-                    size={48}
-                    className="user-profile-card-avatar"
-                    fallbackClassName="user-profile-card-avatar-placeholder"
-                  />
-                  <div className="user-profile-card-name-section">
-                    <div className="user-profile-card-name">
-                      {image.uploadedBy.displayName?.trim() || image.uploadedBy.username}
-                    </div>
-                    <div className="user-profile-card-username">{image.uploadedBy.username}</div>
-                  </div>
-                </div>
-                {user && user._id !== image.uploadedBy._id && (
-                  <div className="user-profile-card-follow">
-                    <FollowButton
-                      userId={image.uploadedBy._id}
-                      userDisplayName={image.uploadedBy.displayName ?? image.uploadedBy.username}
-                      variant="default"
-                      size="sm"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {isLoadingUserImages && userImages.length === 0 ? (
-                <div className="user-profile-card-loading">
-                  <div className="loading-spinner-small" />
-                </div>
-              ) : userImages.length > 0 ? (
-                <div className="user-profile-card-images">
-                  {userImages.map((userImage) => (
-                    <div
-                      key={userImage._id}
-                      className="user-profile-card-image-item"
-                      onClick={() => handleUserImageClick(userImage)}
-                    >
-                      <img
-                        src={userImage.thumbnailUrl ?? userImage.smallUrl ?? userImage.imageUrl}
-                        alt={userImage.imageTitle ?? 'Photo'}
-                        loading="lazy"
-                      />
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-
-              <button
-                className="user-profile-card-view-btn"
-                onClick={handleViewProfile}
-              >
-                {t('image.viewProfile')}
-              </button>
-            </div>
-          )}
+          <UserProfileCard
+            image={image}
+            user={user}
+            showUserProfileCard={showUserProfileCard}
+            isClosingProfileCard={isClosingProfileCard}
+            userImages={userImages}
+            isLoadingUserImages={isLoadingUserImages}
+            userProfileCardRef={userProfileCardRef}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            onViewProfile={handleViewProfile}
+            onUserImageClick={handleUserImageClick}
+          />
         </div>
 
         <div className="modal-author-banner-right">
@@ -276,7 +169,7 @@ export const ImageModalHeader = ({
             aria-label={isFavorited ? t('image.unfavorite') : t('image.favorite')}
           >
             <Heart
-              size={20}
+              size={ICON_SIZE.MEDIUM}
               fill={isFavorited ? 'currentColor' : 'none'}
               className={isFavorited ? 'favorite-icon-filled' : ''}
             />
@@ -287,7 +180,7 @@ export const ImageModalHeader = ({
             title={t('image.addToCollection')}
             aria-label={t('image.addToCollection')}
           >
-            <FolderPlus size={20} />
+            <FolderPlus size={ICON_SIZE.MEDIUM} />
           </button>
           <DownloadSizeSelector
             image={image}

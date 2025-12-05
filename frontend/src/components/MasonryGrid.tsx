@@ -4,7 +4,7 @@ import type { Image } from '../types/image';
 import './MasonryGrid.css';
 import ProgressiveImage from './ProgressiveImage';
 import { VideoPlayer } from './VideoPlayer';
-import { Heart, Download, Plus, Bookmark, ChevronDown } from 'lucide-react';
+import { Download, Plus, Bookmark, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { appConfig } from '@/config/appConfig';
 import { useBatchedFavoriteCheck, updateFavoriteCache } from '@/hooks/useBatchedFavoriteCheck';
@@ -29,7 +29,7 @@ const MasonryGrid: React.FC<MasonryGridProps> = ({
     images,
     columnCount = 3,
     gap = 24,
-    onImageClick = () => { },
+    onImageClick,
     onDownload,
     onDownloadWithSize,
     onAddToCollection,
@@ -41,11 +41,18 @@ const MasonryGrid: React.FC<MasonryGridProps> = ({
     });
 
     useEffect(() => {
+        let timeoutId: NodeJS.Timeout;
         const checkMobile = () => {
-            setIsMobile(window.innerWidth <= appConfig.mobileBreakpoint);
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                setIsMobile(window.innerWidth <= appConfig.mobileBreakpoint);
+            }, 150);
         };
         window.addEventListener('resize', checkMobile);
-        return () => window.removeEventListener('resize', checkMobile);
+        return () => {
+            clearTimeout(timeoutId);
+            window.removeEventListener('resize', checkMobile);
+        };
     }, []);
 
     const handleOverlayClick = (e: React.MouseEvent) => {
@@ -75,7 +82,7 @@ const MasonryGrid: React.FC<MasonryGridProps> = ({
                                 <div
                                     key={image._id}
                                     className="masonry-item"
-                                    onClick={() => onImageClick(image)}
+                                    onClick={() => onImageClick?.(image)}
                                 >
                                     {image.isVideo && image.videoUrl ? (
                                         <VideoPlayer
@@ -106,12 +113,22 @@ const MasonryGrid: React.FC<MasonryGridProps> = ({
                                         <div className="overlay-top">
                                             <div /> {/* For spacing */}
                                             <div className="overlay-actions">
-                                                <button aria-label="Add to collection">
-                                                    <Plus size={16} className="text-gray-700" />
-                                                </button>
-                                                <button aria-label="Download image">
-                                                    <Download size={16} className="text-gray-700" />
-                                                </button>
+                                                {onAddToCollection && (
+                                                    <button
+                                                        aria-label="Add to collection"
+                                                        onClick={(e) => onAddToCollection(image, e)}
+                                                    >
+                                                        <Plus size={16} className="text-gray-700" />
+                                                    </button>
+                                                )}
+                                                {onDownload && (
+                                                    <button
+                                                        aria-label="Download image"
+                                                        onClick={(e) => onDownload(image, e)}
+                                                    >
+                                                        <Download size={16} className="text-gray-700" />
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="overlay-bottom">
@@ -124,11 +141,6 @@ const MasonryGrid: React.FC<MasonryGridProps> = ({
                                                     <span>{image.uploadedBy.username}</span>
                                                 </Link>
                                             )}
-                                            <div className="overlay-actions">
-                                                <button aria-label="Like image">
-                                                    <Heart size={16} className="text-gray-700" />
-                                                </button>
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -144,7 +156,7 @@ const MasonryGrid: React.FC<MasonryGridProps> = ({
 // Mobile-only 3-section card component
 interface MobileImageCardProps {
     image: Image;
-    onImageClick: (image: Image) => void;
+    onImageClick?: (image: Image) => void;
     onDownload?: (image: Image, e: React.MouseEvent) => void;
     onDownloadWithSize?: (image: Image, size: DownloadSize) => void;
     onAddToCollection?: (image: Image, e: React.MouseEvent) => void;
@@ -163,10 +175,6 @@ const MobileImageCard: React.FC<MobileImageCardProps> = ({
     const [showDownloadMenu, setShowDownloadMenu] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const dropdownRef = useRef<HTMLButtonElement>(null);
-
-    // Removed handleActionClick - now handled inline
-
-    // Removed handleAuthorClick - now handled inline
 
     const handleBookmarkClick = useCallback(async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -228,6 +236,10 @@ const MobileImageCard: React.FC<MobileImageCardProps> = ({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [showDownloadMenu]);
 
+    useEffect(() => {
+        setShowDownloadMenu(false);
+    }, [image._id]);
+
     const handleDropdownClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         setShowDownloadMenu(!showDownloadMenu);
@@ -251,26 +263,12 @@ const MobileImageCard: React.FC<MobileImageCardProps> = ({
     return (
         <figure className="masonry-card-mobile">
             {/* A. Author Section (Top) - Always Visible */}
-            <div 
-                className="card-author-section-mobile" 
-                onClick={(e) => {
-                    e.stopPropagation();
-                    // Only allow navigation if clicking directly on the Link, not empty space
-                    if (e.target === e.currentTarget) {
-                        e.preventDefault();
-                        // Do nothing when clicking empty space
-                        return;
-                    }
-                }}
-            >
+            <div className="card-author-section-mobile">
                 {image.uploadedBy && (
                     <Link
                         to={`/profile/${image.uploadedBy.username}`}
                         className="author-info-mobile"
-                        onClick={(e) => {
-                            // Allow navigation only when clicking the Link itself
-                            e.stopPropagation();
-                        }}
+                        onClick={(e) => e.stopPropagation()}
                     >
                         <img
                             src={image.uploadedBy.avatarUrl || '/default-avatar.png'}
@@ -285,10 +283,7 @@ const MobileImageCard: React.FC<MobileImageCardProps> = ({
             {/* B. Image Section (Middle) - Always Visible */}
             <div
                 className="card-image-section-mobile"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onImageClick(image);
-                }}
+                onClick={() => onImageClick?.(image)}
             >
                 {image.isVideo && image.videoUrl ? (
                     <VideoPlayer
@@ -318,18 +313,7 @@ const MobileImageCard: React.FC<MobileImageCardProps> = ({
             </div>
 
             {/* C. Action Bar (Bottom) - Always Visible */}
-            <div 
-                className="card-action-bar-mobile" 
-                onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    // Only handle if clicking directly on the container (empty space)
-                    if (e.target === e.currentTarget) {
-                        // Do nothing - just prevent propagation
-                        return;
-                    }
-                }}
-            >
+            <div className="card-action-bar-mobile">
                 <div className="action-buttons-left-mobile">
                     <button
                         className={`action-btn-mobile bookmark-btn-mobile ${isFavorited ? 'active' : ''}`}

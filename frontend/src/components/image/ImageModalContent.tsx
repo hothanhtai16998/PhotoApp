@@ -1,7 +1,14 @@
 import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import type { Image } from '@/types/image';
 import type { UseImageZoomReturn } from './hooks/useImageZoom';
+import {
+  getImageClassName,
+  generateModalSrcSet,
+  getModalImageStyles,
+  MODAL_IMAGE
+} from './imageModalUtils';
+import { t } from '@/i18n';
 
 interface ImageModalContentProps {
   image: Image;
@@ -24,6 +31,33 @@ export const ImageModalContent = ({
 }: ImageModalContentProps) => {
   // Use modalImageSrc if available, otherwise fallback to image URLs
   const imageSrc = modalImageSrc || image.regularUrl || image.imageUrl || image.smallUrl || '';
+
+  // Compute values once
+  const imageType = (imageTypes.get(image._id) ?? 'landscape') as 'portrait' | 'landscape';
+  const imageStyles = useMemo(() => getModalImageStyles(modalPlaceholderSrc), [modalPlaceholderSrc]);
+  const imageClassName = getImageClassName(isModalImageLoaded, imageType);
+
+  // Generate srcSets
+  const avifSrcSet = useMemo(
+    () => generateModalSrcSet(
+      image.thumbnailAvifUrl,
+      image.smallAvifUrl,
+      image.regularAvifUrl,
+      image.imageAvifUrl
+    ),
+    [image.thumbnailAvifUrl, image.smallAvifUrl, image.regularAvifUrl, image.imageAvifUrl]
+  );
+
+  const webpSrcSet = useMemo(
+    () => generateModalSrcSet(
+      image.thumbnailUrl,
+      image.smallUrl,
+      image.regularUrl,
+      image.imageUrl
+    ),
+    [image.thumbnailUrl, image.smallUrl, image.regularUrl, image.imageUrl]
+  );
+
   const {
     zoom,
     pan,
@@ -53,8 +87,21 @@ export const ImageModalContent = ({
       prevImageIdRef.current = image._id;
       // Reset loaded state for new image
       setIsModalImageLoaded(false);
-    }
+    };
   }, [image._id, setIsModalImageLoaded]);
+
+  // Shared image load handler
+  const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    setIsModalImageLoaded(true);
+    // Update class if orientation was misdetected
+    const img = e.currentTarget;
+    const isPortraitImg = img.naturalHeight > img.naturalWidth;
+    const shouldBePortrait = isPortraitImg;
+    if (shouldBePortrait !== (imageType === 'portrait')) {
+      img.classList.toggle('landscape', !shouldBePortrait);
+      img.classList.toggle('portrait', shouldBePortrait);
+    }
+  };
 
   return (
     <div
@@ -82,64 +129,36 @@ export const ImageModalContent = ({
           transition: 'none',
         }}
       >
-        {image.imageAvifUrl || image.regularAvifUrl || image.smallAvifUrl || image.thumbnailAvifUrl ? (
+        {avifSrcSet || webpSrcSet ? (
           <picture>
-            {/* AVIF sources with responsive sizes */}
-            <source
-              srcSet={
-                image.thumbnailAvifUrl && image.smallAvifUrl && image.regularAvifUrl && image.imageAvifUrl
-                  ? `${image.thumbnailAvifUrl} 200w, ${image.smallAvifUrl} 800w, ${image.regularAvifUrl} 1080w, ${image.imageAvifUrl} 1920w`
-                  : image.regularAvifUrl ?? image.imageAvifUrl ?? ''
-              }
-              type="image/avif"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 98vw, 1920px"
-            />
-            {/* WebP sources with responsive sizes (fallback) */}
-            <source
-              srcSet={
-                image.thumbnailUrl && image.smallUrl && image.regularUrl && image.imageUrl
-                  ? `${image.thumbnailUrl} 200w, ${image.smallUrl} 800w, ${image.regularUrl} 1080w, ${image.imageUrl} 1920w`
-                  : undefined
-              }
-              type="image/webp"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 98vw, 1920px"
-            />
-            {/* Fallback img element with blur-up technique */}
+            {avifSrcSet && (
+              <source
+                srcSet={avifSrcSet}
+                type="image/avif"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 98vw, 1920px"
+              />
+            )}
+            {webpSrcSet && (
+              <source
+                srcSet={webpSrcSet}
+                type="image/webp"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 98vw, 1920px"
+              />
+            )}
             <img
               ref={zoomImageRef}
               src={imageSrc}
               key={image._id}
               alt={image.imageTitle ?? 'Photo'}
-              style={{
-                backgroundImage: modalPlaceholderSrc
-                  ? `url("${modalPlaceholderSrc}")`
-                  : undefined,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundColor: '#f0f0f0',
-                maxWidth: '100%',
-                maxHeight: 'calc(100vh - 240px)',
-                width: 'auto',
-                height: 'auto',
-              }}
-              className={`modal-image ${isModalImageLoaded ? 'loaded' : 'loading'} ${(imageTypes.get(image._id) ?? 'landscape') === 'landscape' ? 'landscape' : 'portrait'}`}
+              style={imageStyles}
+              className={imageClassName}
               loading="eager"
               decoding="async"
               fetchPriority="high"
+              crossOrigin="anonymous"
               onDoubleClick={handleDoubleClick}
               draggable={false}
-              onLoad={(e) => {
-                setIsModalImageLoaded(true);
-                // Update class if orientation was misdetected
-                const img = e.currentTarget;
-                const isPortraitImg = img.naturalHeight > img.naturalWidth;
-                const currentType = imageTypes.get(image._id) ?? 'landscape';
-                const shouldBePortrait = isPortraitImg;
-                if (shouldBePortrait !== (currentType === 'portrait')) {
-                  img.classList.toggle('landscape', !shouldBePortrait);
-                  img.classList.toggle('portrait', shouldBePortrait);
-                }
-              }}
+              onLoad={handleImageLoad}
             />
           </picture>
         ) : (
@@ -147,38 +166,16 @@ export const ImageModalContent = ({
             ref={zoomImageRef}
             src={imageSrc}
             key={image._id}
-            alt={image.imageTitle || 'Photo'}
-            style={{
-              backgroundImage: modalPlaceholderSrc
-                ? `url("${modalPlaceholderSrc}")`
-                : undefined,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundColor: '#f0f0f0',
-              maxWidth: '100%',
-              maxHeight: 'calc(100vh - 240px)',
-              width: 'auto',
-              height: 'auto',
-            }}
-            className={`modal-image ${isModalImageLoaded ? 'loaded' : 'loading'} ${(imageTypes.get(image._id) ?? 'landscape') === 'landscape' ? 'landscape' : 'portrait'}`}
+            alt={image.imageTitle ?? 'Photo'}
+            style={imageStyles}
+            className={imageClassName}
             loading="eager"
             decoding="async"
             fetchPriority="high"
             crossOrigin="anonymous"
             onDoubleClick={handleDoubleClick}
             draggable={false}
-            onLoad={(e) => {
-              setIsModalImageLoaded(true);
-              // Update class if orientation was misdetected
-              const img = e.currentTarget;
-              const isPortraitImg = img.naturalHeight > img.naturalWidth;
-              const currentType = imageTypes.get(image._id) || 'landscape';
-              const shouldBePortrait = isPortraitImg;
-              if (shouldBePortrait !== (currentType === 'portrait')) {
-                img.classList.toggle('landscape', !shouldBePortrait);
-                img.classList.toggle('portrait', shouldBePortrait);
-              }
-            }}
+            onLoad={handleImageLoad}
           />
         )}
       </div>
@@ -189,28 +186,30 @@ export const ImageModalContent = ({
           <button
             className="modal-zoom-btn"
             onClick={zoomOut}
-            title="Thu nhỏ"
-            aria-label="Thu nhỏ"
+            title={t('zoom.out')}
+            aria-label={t('zoom.out')}
           >
-            <ZoomOut size={18} />
+            <ZoomOut size={MODAL_IMAGE.ZOOM_ICON_SIZE} />
           </button>
-          <span className="modal-zoom-level">{Math.round(zoom * 100)}%</span>
+          <span className="modal-zoom-level">
+            {Math.round(zoom * MODAL_IMAGE.ZOOM_PERCENTAGE_MULTIPLIER)}%
+          </span>
           <button
             className="modal-zoom-btn"
             onClick={zoomIn}
-            disabled={zoom >= 5}
-            title="Phóng to"
-            aria-label="Phóng to"
+            disabled={zoom >= MODAL_IMAGE.MAX_ZOOM}
+            title={t('zoom.in')}
+            aria-label={t('zoom.in')}
           >
-            <ZoomIn size={18} />
+            <ZoomIn size={MODAL_IMAGE.ZOOM_ICON_SIZE} />
           </button>
           <button
             className="modal-zoom-btn"
             onClick={resetZoom}
-            title="Đặt lại (Esc)"
-            aria-label="Đặt lại zoom"
+            title={t('zoom.reset')}
+            aria-label={t('zoom.reset')}
           >
-            <RotateCcw size={18} />
+            <RotateCcw size={MODAL_IMAGE.ZOOM_ICON_SIZE} />
           </button>
         </div>
       )}
