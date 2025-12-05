@@ -962,32 +962,53 @@ export default function NoFlashGridPage() {
         return [];
     };
 
-    useEffect(() => {
-        const load = async () => {
-            try {
-                const [imgsRes, catsRes] = await Promise.all([
-                    api.get('/images'),
-                    api.get('/categories'),
-                ]);
-                const loadedImages = toImageArray(imgsRes.data);
-                setImages(loadedImages);
-                setCategories(toCategoryArray(catsRes.data));
+    // Store image dimensions as they load
+    const [imageDimensions, setImageDimensions] = useState<Map<string, { width: number; height: number }>>(new Map());
+    const loadingDimensionsRef = useRef<Set<string>>(new Set()); // Track which images we're currently loading
 
-                // Preload thumbnails for first batch of images
-                const thumbnails = loadedImages.slice(0, 20)
-                    .map(img => img.thumbnailUrl || img.smallUrl)
-                    .filter((src): src is string => Boolean(src));
-                preloadImages(thumbnails, true);
-            } catch (e) {
-                console.error('Failed to load data', e);
-                setImages([]);
-                setCategories([]);
-            } finally {
-                setLoading(false);
-            }
-        };
-        load();
+    // Load images and categories
+    const loadData = useCallback(async () => {
+        try {
+            setLoading(true);
+            const [imgsRes, catsRes] = await Promise.all([
+                api.get('/images'),
+                api.get('/categories'),
+            ]);
+            const loadedImages = toImageArray(imgsRes.data);
+            setImages(loadedImages);
+            setCategories(toCategoryArray(catsRes.data));
+
+            // Clear image dimensions cache when refreshing (in case images were updated)
+            setImageDimensions(new Map());
+            loadingDimensionsRef.current.clear();
+
+            // Preload thumbnails for first batch of images
+            const thumbnails = loadedImages.slice(0, 20)
+                .map(img => img.thumbnailUrl || img.smallUrl)
+                .filter((src): src is string => Boolean(src));
+            preloadImages(thumbnails, true);
+        } catch (e) {
+            console.error('Failed to load data', e);
+            setImages([]);
+            setCategories([]);
+        } finally {
+            setLoading(false);
+        }
     }, []);
+
+    // Load data on mount
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
+
+    // Refresh data when window gains focus (in case data was updated in another tab)
+    useEffect(() => {
+        const handleFocus = () => {
+            loadData();
+        };
+        window.addEventListener('focus', handleFocus);
+        return () => window.removeEventListener('focus', handleFocus);
+    }, [loadData]);
 
     const filteredImages = useMemo<ExtendedImage[]>(() => {
         if (!activeCategory) return images;
@@ -1002,10 +1023,6 @@ export default function NoFlashGridPage() {
             return catName === activeCategory;
         });
     }, [images, activeCategory]);
-
-    // Store image dimensions as they load
-    const [imageDimensions, setImageDimensions] = useState<Map<string, { width: number; height: number }>>(new Map());
-    const loadingDimensionsRef = useRef<Set<string>>(new Set()); // Track which images we're currently loading
 
     // Load dimensions for images that don't have them
     useEffect(() => {
@@ -1303,6 +1320,14 @@ export default function NoFlashGridPage() {
                         {cat.name}
                     </button>
                 ))}
+                <button
+                    onClick={loadData}
+                    className="category-filter-button"
+                    title="Refresh images and categories"
+                    style={{ marginLeft: 'auto' }}
+                >
+                    🔄 Refresh
+                </button>
             </div>
 
             {loading ? (
