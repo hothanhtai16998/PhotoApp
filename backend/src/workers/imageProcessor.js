@@ -58,8 +58,8 @@ export async function processUploadJob(job) {
         // Skip metadata extraction for videos and large GIFs (will be converted to video)
         const isVideoFile = mimetype?.startsWith('video/');
         const isLargeGif = mimetype === 'image/gif' && (buffer.length / (1024 * 1024)) > 2;
-        const { dominantColors, exifData } = (isVideoFile || isLargeGif) 
-            ? { dominantColors: [], exifData: {} }
+        const { dominantColors, exifData, dimensions } = (isVideoFile || isLargeGif) 
+            ? { dominantColors: [], exifData: {}, dimensions: { width: null, height: null } }
             : await extractMetadata(buffer);
         const metadataMs = Date.now() - metadataStart;
         log(`✅ Metadata extracted in ${metadataMs}ms`);
@@ -108,6 +108,9 @@ export async function processUploadJob(job) {
             uploadedBy: userIdObjectId,
             location: location?.trim() || undefined,
             coordinates: parsedCoords,
+            // Image dimensions (extracted from Sharp metadata)
+            width: dimensions?.width || undefined,
+            height: dimensions?.height || undefined,
             cameraMake: exifData.cameraMake || undefined,
             cameraModel: exifData.cameraModel || cameraModel?.trim() || undefined,
             focalLength: exifData.focalLength || undefined,

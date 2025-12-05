@@ -48,6 +48,17 @@ const imageSchema = new mongoose.Schema(
             type: String,
             // Optional - AVIF version of original
         },
+        // Image dimensions (extracted during upload)
+        width: {
+            type: Number,
+            min: 0,
+            // Optional - image width in pixels
+        },
+        height: {
+            type: Number,
+            min: 0,
+            // Optional - image height in pixels
+        },
         // Video support (for converted GIFs and direct video uploads)
         isVideo: {
             type: Boolean,

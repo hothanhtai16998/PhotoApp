@@ -105,7 +105,7 @@ export const streamToBuffer = async (stream) => {
  */
 export const extractMetadata = async (imageBuffer) => {
     try {
-        const [dominantColors, exifData] = await Promise.all([
+        const [dominantColors, exifData, dimensions] = await Promise.all([
             extractDominantColors(imageBuffer, 3).catch(err => {
                 logger.warn('Failed to extract colors:', err.message);
                 return [];
@@ -114,11 +114,19 @@ export const extractMetadata = async (imageBuffer) => {
                 logger.warn('Failed to extract EXIF:', err.message);
                 return {};
             }),
+            // Extract image dimensions using Sharp
+            sharp(imageBuffer).metadata().then(metadata => ({
+                width: metadata.width || null,
+                height: metadata.height || null,
+            })).catch(err => {
+                logger.warn('Failed to extract dimensions:', err.message);
+                return { width: null, height: null };
+            }),
         ]);
 
-        return { dominantColors, exifData };
+        return { dominantColors, exifData, dimensions };
     } catch (error) {
         logger.warn('Failed to extract metadata:', error.message);
-        return { dominantColors: [], exifData: {} };
+        return { dominantColors: [], exifData: {}, dimensions: { width: null, height: null } };
     }
 };
