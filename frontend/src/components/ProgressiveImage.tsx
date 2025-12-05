@@ -134,14 +134,26 @@ const ProgressiveImage = memo(({
   useEffect(() => {
     if (isGif) {
       const gifUrl = effectiveSmall;
-      if (!checkImageCache(gifUrl)) dispatch({ type: 'LOAD_START', src: gifUrl });
+      // Check if this exact GIF is already loaded/cached
+      if (!checkImageCache(gifUrl) && !loadedSrcsRef.current.has(gifUrl)) {
+        dispatch({ type: 'LOAD_START', src: gifUrl });
+      } else {
+        // GIF is cached, show it immediately without transition
+        dispatch({ type: 'LOAD_SUCCESS', src: gifUrl, skipTransition: true });
+      }
       return;
     }
-    const isCached = checkImageCache(effectiveSmall);
+    const isCached = checkImageCache(effectiveSmall) || loadedSrcsRef.current.has(effectiveSmall);
     if (isCached) {
       dispatch({ type: 'LOAD_SUCCESS', src: effectiveSmall, skipTransition: true });
     } else {
-      dispatch({ type: 'LOAD_START', src: effectiveThumbnail });
+      // Check if thumbnail is at least cached to prevent flash
+      const thumbnailCached = checkImageCache(effectiveThumbnail) || loadedSrcsRef.current.has(effectiveThumbnail);
+      if (thumbnailCached) {
+        dispatch({ type: 'LOAD_SUCCESS', src: effectiveThumbnail, skipTransition: true });
+      } else {
+        dispatch({ type: 'LOAD_START', src: effectiveThumbnail });
+      }
     }
   }, [src, effectiveThumbnail, effectiveSmall, isGif]);
 
@@ -196,7 +208,9 @@ const ProgressiveImage = memo(({
           () => { dispatch({ type: 'LOAD_SUCCESS', src: effectiveThumbnail, skipTransition: false }); }
         );
       } else {
+        // Small version is cached, upgrade immediately without transition
         dispatch({ type: 'LOAD_SUCCESS', src: effectiveSmall, skipTransition: true });
+        if (onLoad && imgRef.current) onLoad(imgRef.current);
       }
     } else {
       dispatch({ type: 'LOAD_SUCCESS', src: loadedSrc, skipTransition: false });

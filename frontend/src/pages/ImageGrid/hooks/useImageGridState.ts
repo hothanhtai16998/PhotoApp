@@ -112,7 +112,9 @@ export function useImageGridState({ category }: UseImageGridStateProps) {
 
   useEffect(() => {
     if (!category) return; // Wait until category is resolved
-    // Keep current images visible to avoid flashing while new category loads
+    // Don't clear images here to prevent flashing
+    // Instead, only update page and hasMore, then fetch new images
+    // The setImages in fetchImages will replace them after loading
     setPage(1);
     setHasMore(true);
     fetchImages(1, category, filters.color, true); // Force refresh when category changes
@@ -194,16 +196,20 @@ export function useImageGridState({ category }: UseImageGridStateProps) {
 
       // Preload modal image URL (regularUrl) when grid image loads
       // This helps prevent flashing when opening the modal
-      const image = images.find(img => img._id === imageId);
+      const image = images.find((img) => img._id === imageId);
       if (image) {
-        const modalImageUrl = image.regularUrl || image.imageUrl || image.smallUrl;
+        const modalImageUrl =
+          image.regularUrl || image.imageUrl || image.smallUrl;
         if (modalImageUrl) {
           // Preload the modal image in the background
           const preloadImg = new Image();
           preloadImg.src = modalImageUrl;
           preloadImg.onload = () => {
             // Add to modal cache to prevent flashing
-            if (typeof window !== 'undefined' && (window as any).modalImageCache) {
+            if (
+              typeof window !== 'undefined' &&
+              (window as any).modalImageCache
+            ) {
               (window as any).modalImageCache.add(modalImageUrl);
             }
           };
