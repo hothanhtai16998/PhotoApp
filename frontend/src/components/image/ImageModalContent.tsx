@@ -1,5 +1,5 @@
 import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import type { Image } from '@/types/image';
 import type { UseImageZoomReturn } from './hooks/useImageZoom';
 import {
@@ -33,6 +33,23 @@ export const ImageModalContent = ({
 }: ImageModalContentProps) => {
   // Use modalImageSrc if available, otherwise fallback to image URLs
   const imageSrc = modalImageSrc || image.regularUrl || image.imageUrl || image.smallUrl || '';
+  const derivePlaceholder = (img: Image) =>
+    img.thumbnailUrl ||
+    img.smallUrl ||
+    img.regularUrl ||
+    img.imageUrl ||
+    '';
+  const deriveFull = (img: Image) =>
+    img.regularUrl || img.imageUrl || img.smallUrl || '';
+
+  const [displayedSrc, setDisplayedSrc] = useState(() => deriveFull(image));
+  const [displayedPlaceholder, setDisplayedPlaceholder] = useState(() => derivePlaceholder(image));
+  const [frontImage, setFrontImage] = useState<{
+    id: string;
+    src: string;
+    placeholder: string;
+  } | null>(null);
+  const [frontLoaded, setFrontLoaded] = useState(false);
 
   // Compute values once
   const imageType = (imageTypes.get(image._id) ?? 'landscape') as 'portrait' | 'landscape';
@@ -87,15 +104,26 @@ export const ImageModalContent = ({
     const imageChanged = prevImageIdRef.current !== image._id;
     if (imageChanged) {
       prevImageIdRef.current = image._id;
-      // Only force loading state if we don't already have the image cached.
-      if (!wasCachedInitially) {
-        setIsModalImageLoaded(false);
+      setIsModalImageLoaded(false);
+      const nextSrc = deriveFull(image);
+      const nextPlaceholder = derivePlaceholder(image);
+      if (nextSrc && nextSrc !== displayedSrc) {
+        setFrontLoaded(false);
+        setFrontImage({
+          id: image._id,
+          src: nextSrc,
+          placeholder: nextPlaceholder,
+        });
+      } else {
+        // If same src, just keep as loaded.
+        setIsModalImageLoaded(true);
       }
     };
-  }, [image._id, setIsModalImageLoaded, wasCachedInitially]);
+  }, [image, displayedSrc, setIsModalImageLoaded]);
 
   // Shared image load handler
-  const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+  const handleFrontImageLoad = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    setFrontLoaded(true);
     setIsModalImageLoaded(true);
     // Update class if orientation was misdetected
     const img = e.currentTarget;
@@ -106,6 +134,16 @@ export const ImageModalContent = ({
       img.classList.toggle('portrait', shouldBePortrait);
     }
   };
+
+  // When a front image finishes loading, promote it to displayed
+  useEffect(() => {
+    if (frontImage && frontLoaded) {
+      setDisplayedSrc(frontImage.src);
+      setDisplayedPlaceholder(frontImage.placeholder);
+      setFrontImage(null);
+      setFrontLoaded(false);
+    }
+  }, [frontImage, frontLoaded]);
 
   return (
     <div
@@ -126,60 +164,48 @@ export const ImageModalContent = ({
       }}
     >
       <div
-        className="modal-image-wrapper"
+        className="modal-image-wrapper modal-image-stack"
         style={{
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
           transformOrigin: 'center center',
           transition: 'none',
         }}
       >
-        {avifSrcSet || webpSrcSet ? (
-          <picture>
-            {avifSrcSet && (
-              <source
-                srcSet={avifSrcSet}
-                type="image/avif"
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 98vw, 1920px"
-              />
-            )}
-            {webpSrcSet && (
-              <source
-                srcSet={webpSrcSet}
-                type="image/webp"
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 98vw, 1920px"
-              />
-            )}
-            <img
-              ref={zoomImageRef}
-              src={imageSrc}
-              key={image._id}
-              alt={image.imageTitle ?? 'Photo'}
-              style={imageStyles}
-              className={imageClassName}
-              loading="eager"
-              decoding="async"
-              fetchPriority="high"
-              crossOrigin="anonymous"
-              onDoubleClick={handleDoubleClick}
-              draggable={false}
-              onLoad={handleImageLoad}
-            />
-          </picture>
-        ) : (
+        {/* Back layer: last displayed image */}
+        <img
+          ref={zoomImageRef}
+          src={displayedSrc}
+          alt={image.imageTitle ?? 'Photo'}
+          style={getModalImageStyles(displayedPlaceholder)}
+          className={`${getImageClassName(true, imageType)} modal-image-back`}
+          loading="eager"
+          decoding="async"
+          fetchPriority="high"
+          crossOrigin="anonymous"
+          onDoubleClick={handleDoubleClick}
+          draggable={false}
+          onLoad={() => setIsModalImageLoaded(true)}
+        />
+
+        {/* Front layer: new image being loaded */}
+        {frontImage && (
           <img
-            ref={zoomImageRef}
-            src={imageSrc}
-            key={image._id}
+            key={frontImage.id}
+            src={frontImage.src}
             alt={image.imageTitle ?? 'Photo'}
-            style={imageStyles}
-            className={imageClassName}
+            style={{
+              ...getModalImageStyles(frontImage.placeholder),
+              opacity: frontLoaded ? 1 : 0,
+              transition: 'opacity 0.18s ease-out',
+            }}
+            className={`${getImageClassName(frontLoaded, imageType)} modal-image-front`}
             loading="eager"
             decoding="async"
             fetchPriority="high"
             crossOrigin="anonymous"
             onDoubleClick={handleDoubleClick}
             draggable={false}
-            onLoad={handleImageLoad}
+            onLoad={handleFrontImageLoad}
           />
         )}
       </div>

@@ -27,6 +27,22 @@
   width: 100%;
 }
 
+.modal-image-stack {
+  position: relative;
+}
+
+.modal-image-back,
+.modal-image-front {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: calc(100vh - 240px);
+}
+
 .modal-image {
   max-width: 100%;
   max-height: calc(100vh - 240px);
@@ -42,19 +58,22 @@
   -webkit-backface-visibility: hidden;
   /* Prevent layout shift - maintain aspect ratio from start */
   contain: layout;
-  /* Smooth fade-in transition */
-  transition: opacity 0.25s ease-out;
+  /* Keep visible at all times; we rely on blur instead of opacity changes */
+  opacity: 1 !important;
+  transition: none;
 }
 
 .modal-image.loading {
-  /* Show background placeholder but hide actual image content until loaded */
-  opacity: 0;
+  /* Keep the element visible to avoid a blank flash; blur while loading */
+  opacity: 1 !important;
+  filter: blur(12px) saturate(1.05) brightness(0.98);
   background-color: #f0f0f0;
 }
 
 .modal-image.loaded {
   /* Fully visible when loaded */
-  opacity: 1;
+  opacity: 1 !important;
+  filter: none;
   /* Remove background once image is loaded to save memory */
   background-image: none !important;
   background-color: transparent;

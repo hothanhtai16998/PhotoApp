@@ -90,8 +90,19 @@ const checkImageCacheSync = (url: string): boolean => {
  * This prevents flashing by always showing the placeholder until full image loads
  */
 export const useImagePreload = (image: Image): UseImagePreloadReturn => {
+  const derivePlaceholder = () =>
+    image.thumbnailUrl ||
+    image.smallUrl ||
+    image.regularUrl ||
+    image.imageUrl ||
+    '';
+
+  const deriveFull = () =>
+    image.regularUrl || image.imageUrl || image.smallUrl || '';
+
   // Calculate image URLs once for initial state
-  const fullImage = image.regularUrl || image.imageUrl || image.smallUrl || '';
+  const fullImage = deriveFull();
+  const initialPlaceholder = derivePlaceholder();
 
   // Track whether this image was already cached on first render.
   const initialIsCachedRef = useRef<boolean>(false);
@@ -106,8 +117,8 @@ export const useImagePreload = (image: Image): UseImagePreloadReturn => {
     return cached;
   });
 
-  const [placeholderSrc, setPlaceholderSrc] = useState<string>('');
-  const [imageSrc, setImageSrc] = useState<string>('');
+  const [placeholderSrc, setPlaceholderSrc] = useState<string>(initialPlaceholder);
+  const [imageSrc, setImageSrc] = useState<string>(fullImage);
   const currentImageIdRef = useRef<string | null>(null);
   const previousImageIdRef = useRef<string | null>(null);
   const imageObjectsRef = useRef<HTMLImageElement[]>([]);
@@ -120,17 +131,8 @@ export const useImagePreload = (image: Image): UseImagePreloadReturn => {
     previousImageIdRef.current = imageId;
     currentImageIdRef.current = imageId;
 
-    // Placeholder: Use smallest available (thumbnailUrl > smallUrl > regularUrl)
-    const placeholder =
-      image.thumbnailUrl ||
-      image.smallUrl ||
-      image.regularUrl ||
-      image.imageUrl ||
-      '';
-
-    // Full image: Use regularUrl (1080px) or imageUrl (full size)
-    const fullImage =
-      image.regularUrl || image.imageUrl || image.smallUrl || '';
+    const placeholder = derivePlaceholder();
+    const fullImage = deriveFull();
 
     // Set immediately (synchronous) to prevent flashing
     // Note: Linter warns about setState in useLayoutEffect, but this is intentional
