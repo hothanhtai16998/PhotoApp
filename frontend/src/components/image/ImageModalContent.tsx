@@ -18,6 +18,7 @@ interface ImageModalContentProps {
   isModalImageLoaded: boolean;
   setIsModalImageLoaded: (loaded: boolean) => void;
   zoomProps: UseImageZoomReturn;
+  wasCachedInitially: boolean;
 }
 
 export const ImageModalContent = ({
@@ -28,6 +29,7 @@ export const ImageModalContent = ({
   isModalImageLoaded,
   setIsModalImageLoaded,
   zoomProps,
+  wasCachedInitially,
 }: ImageModalContentProps) => {
   // Use modalImageSrc if available, otherwise fallback to image URLs
   const imageSrc = modalImageSrc || image.regularUrl || image.imageUrl || image.smallUrl || '';
@@ -85,10 +87,12 @@ export const ImageModalContent = ({
     const imageChanged = prevImageIdRef.current !== image._id;
     if (imageChanged) {
       prevImageIdRef.current = image._id;
-      // Reset loaded state for new image
-      setIsModalImageLoaded(false);
+      // Only force loading state if we don't already have the image cached.
+      if (!wasCachedInitially) {
+        setIsModalImageLoaded(false);
+      }
     };
-  }, [image._id, setIsModalImageLoaded]);
+  }, [image._id, setIsModalImageLoaded, wasCachedInitially]);
 
   // Shared image load handler
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {

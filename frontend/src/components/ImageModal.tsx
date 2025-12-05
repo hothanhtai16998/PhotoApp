@@ -114,6 +114,7 @@ const ImageModal = ({
     modalImageSrc,
     isModalImageLoaded,
     setIsModalImageLoaded,
+    wasCachedInitial,
     handleToggleFavorite,
   } = useImageModal({
     image,
@@ -291,6 +292,7 @@ const ImageModal = ({
             modalPlaceholderSrc={modalPlaceholderSrc}
             isModalImageLoaded={isModalImageLoaded}
             setIsModalImageLoaded={setIsModalImageLoaded}
+            wasCachedInitially={wasCachedInitial}
             zoomProps={zoomProps}
           />
 

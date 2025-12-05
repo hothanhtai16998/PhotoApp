@@ -6,6 +6,7 @@ interface UseImagePreloadReturn {
   imageSrc: string; // Full image URL for src
   isLoaded: boolean;
   setIsLoaded: (loaded: boolean) => void;
+  wasCachedInitial: boolean; // Whether the full image was already cached on first render
 }
 
 // Global cache to track loaded images across modal navigation
@@ -92,11 +93,17 @@ export const useImagePreload = (image: Image): UseImagePreloadReturn => {
   // Calculate image URLs once for initial state
   const fullImage = image.regularUrl || image.imageUrl || image.smallUrl || '';
 
-  // Initialize isLoaded based on synchronous cache check to prevent flashing
-  // This ensures cached images start with loaded=true from the first render
+  // Track whether this image was already cached on first render.
+  const initialIsCachedRef = useRef<boolean>(false);
+
+  // Initialize isLoaded based on synchronous cache check to prevent flashing.
+  // Also remember that initial cache state so other components can avoid
+  // forcing a "loading" transition for cached images.
   const [isLoaded, setIsLoaded] = useState(() => {
     if (!fullImage) return false;
-    return checkImageCacheSync(fullImage);
+    const cached = checkImageCacheSync(fullImage);
+    initialIsCachedRef.current = cached;
+    return cached;
   });
 
   const [placeholderSrc, setPlaceholderSrc] = useState<string>('');
@@ -266,5 +273,6 @@ export const useImagePreload = (image: Image): UseImagePreloadReturn => {
     imageSrc,
     isLoaded,
     setIsLoaded,
+    wasCachedInitial: initialIsCachedRef.current,
   };
 };

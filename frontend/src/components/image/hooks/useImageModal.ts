@@ -53,6 +53,7 @@ export const useImageModal = ({
     imageSrc: modalImageSrc,
     isLoaded: isModalImageLoaded,
     setIsLoaded: setIsModalImageLoaded,
+    wasCachedInitial,
   } = useImagePreload(image);
 
   // Use batched favorite check hook (reduces API calls, avoids duplicates)
@@ -156,6 +157,7 @@ export const useImageModal = ({
     modalImageSrc,
     isModalImageLoaded,
     setIsModalImageLoaded,
+    wasCachedInitial,
     handleToggleFavorite,
     handleDownload,
     currentImageIndex,
