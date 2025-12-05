@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useCallback } from 'react';
 import api from '@/lib/axios';
 import type { Image } from '@/types/image';
+import './NoFlashGrid.css';
 
 type Category = { name: string; _id: string };
 
@@ -157,15 +158,7 @@ function BlurUpImage({
     return (
         <div
             ref={containerRef}
-            style={{
-                position: 'relative',
-                width: '100%',
-                paddingBottom: '66%',
-                overflow: 'hidden',
-                borderRadius: 8,
-                background: '#f2f2f2',
-                cursor: 'pointer',
-            }}
+            className="blur-up-image-container"
             onClick={onClick}
             onMouseEnter={handleMouseEnter}
         >
@@ -173,16 +166,7 @@ function BlurUpImage({
                 <img
                     src={backSrc}
                     alt={image.imageTitle || 'photo'}
-                    style={{
-                        position: 'absolute',
-                        inset: 0,
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        filter: loaded ? 'none' : 'blur(12px) saturate(1.05)',
-                        transform: loaded ? 'none' : 'scale(1.02)',
-                        transition: 'filter 0.25s ease, transform 0.25s ease',
-                    }}
+                    className={`blur-up-image ${loaded ? 'loaded' : 'loading'}`}
                     ref={frontRef}
                     loading="lazy"
                 />
@@ -207,18 +191,24 @@ function ImageModal({
 }) {
     const img = images[index];
 
-    // Initialize with placeholder immediately to prevent flash - calculate once
-    const getInitialSources = () => {
-        if (!img) return { placeholder: '', full: '', backSrc: '' };
-        const place = img.thumbnailUrl || img.smallUrl || img.imageUrl || '';
-        const full = img.regularUrl || img.imageUrl || img.smallUrl || place;
-        const backSrc = place || full || '';
-        return { placeholder: place, full, backSrc };
+    // Calculate initial state based on current image
+    const calculateInitialState = () => {
+        if (!img) return { src: null, isFullQuality: false };
+        const thumbnail = img.thumbnailUrl || img.smallUrl || img.imageUrl || '';
+        const full = img.regularUrl || img.imageUrl || '';
+        const displayThumbnail = thumbnail || full;
+
+        // If full is already cached, use it immediately
+        if (full && full !== thumbnail && loadedImages.has(full)) {
+            return { src: full, isFullQuality: true };
+        }
+        // Otherwise use thumbnail
+        return { src: displayThumbnail, isFullQuality: full === thumbnail || !full };
     };
 
-    const initial = getInitialSources();
-    const [backSrc, setBackSrc] = useState<string | null>(initial.backSrc || null);
-    const [placeholder, setPlaceholder] = useState<string | null>(initial.placeholder || initial.full || null);
+    const [imageState, setImageState] = useState(calculateInitialState);
+    const backSrc = imageState.src;
+    const isFullQuality = imageState.isFullQuality;
 
     // Calculate image box helper function
     const calculateImageBoxValue = (modalWidth: number, modalHeight: number, targetAspect: number) => {
@@ -249,6 +239,7 @@ function ImageModal({
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const scrollPosRef = useRef(0);
     const previousImgRef = useRef<ExtendedImage | null>(img);
+    const imgElementRef = useRef<HTMLImageElement | null>(null);
     const authorName =
         (img as any)?.uploadedBy?.username ||
         (img as any)?.author ||
@@ -303,10 +294,10 @@ function ImageModal({
         }
     }, [index, images]);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (!img) return;
 
-        // Check if this is actually a new image
+        // Track current image to prevent race conditions
         previousImgRef.current = img;
 
         // reset scroll to top when image changes so top bar/author stay visible
@@ -315,32 +306,36 @@ function ImageModal({
             scrollRef.current.scrollTop = 0;
         }
 
-        const place = img.thumbnailUrl || img.smallUrl || img.imageUrl || '';
-        const full = img.regularUrl || img.imageUrl || img.smallUrl || place;
-        const nextPlaceholder = place || full;
+        // Unsplash technique: Use different image sizes
+        // Low-res thumbnail = thumbnailUrl or smallUrl (small file, pixelated when enlarged to full size)
+        // High-res = regularUrl or imageUrl (full quality, sharp at full size)
+        const thumbnail = img.thumbnailUrl || img.smallUrl || img.imageUrl || '';
+        const full = img.regularUrl || img.imageUrl || '';
 
-        // Unsplash technique: Set thumbnail IMMEDIATELY (synchronous, no delay)
-        // This ensures something is visible the moment modal opens
-        if (nextPlaceholder) {
-            // Use functional update to ensure we always set it
-            setPlaceholder(nextPlaceholder);
-            setBackSrc(nextPlaceholder);
+        // Calculate what the state should be
+        const currentState = calculateInitialState();
+
+        // Only update if state actually needs to change (prevents unnecessary renders)
+        if (imageState.src !== currentState.src || imageState.isFullQuality !== currentState.isFullQuality) {
+            // Update state once with both values - use requestAnimationFrame to batch with React
+            requestAnimationFrame(() => {
+                setImageState(currentState);
+            });
         }
 
-        // If full image is already cached, use it immediately
-        if (full && loadedImages.has(full)) {
-            // Image already loaded - show immediately without any delay
-            setBackSrc(full);
-        } else if (full && full !== nextPlaceholder) {
-            // Preload full image in background
-            // When ready, swap src - browser handles this smoothly
+        // If full image needs to be loaded, preload it
+        if (full && full !== thumbnail && !loadedImages.has(full)) {
+            // Preload high-res image - Unsplash technique: wait for it to be ready
             preloadImage(full)
                 .then((src) => {
-                    // Update to full quality - browser will swap smoothly
-                    setBackSrc(src);
+                    // Only update if still showing this image (prevent race conditions)
+                    if (previousImgRef.current?._id === img._id) {
+                        // Swap to full quality (single state update)
+                        setImageState({ src, isFullQuality: true });
+                    }
                 })
                 .catch(() => {
-                    // On error, keep placeholder visible (already set above)
+                    // On error, keep low-res thumbnail visible (already blurred)
                 });
         }
     }, [img]);
@@ -496,10 +491,10 @@ function ImageModal({
                                             background: '#0f0f0f',
                                         }}
                                     >
-                                        {/* Unsplash technique: Single image layer - no transitions, instant display */}
+                                        {/* Unsplash technique: Blurred thumbnail → instant sharp swap (no fade-in) */}
                                         {backSrc ? (
                                             <img
-                                                key={backSrc}
+                                                ref={imgElementRef}
                                                 src={backSrc}
                                                 alt={img.imageTitle || 'photo'}
                                                 style={{
@@ -508,15 +503,21 @@ function ImageModal({
                                                     width: '100%',
                                                     height: '100%',
                                                     objectFit: 'contain',
-                                                    // Apply blur only when showing placeholder
-                                                    filter: placeholder && backSrc === placeholder ? 'blur(12px) saturate(1.05)' : 'none',
-                                                    // No transitions - instant display to prevent flash
+                                                    // Unsplash technique: Blur when showing low-res, sharp when full-res
+                                                    // Blur masks pixelation and any visual artifacts during swap
+                                                    filter: isFullQuality ? 'none' : 'blur(12px) saturate(1.05)',
+                                                    // No opacity transition - instant display
                                                     opacity: 1,
+                                                    // No transitions - instant blur removal for smooth swap
                                                     transition: 'none',
                                                     background: '#0f0f0f',
                                                     // Prevent image from causing layout shifts
                                                     display: 'block',
+                                                    // Prevent image from being selectable (can cause visual glitches)
+                                                    userSelect: 'none',
+                                                    pointerEvents: 'none',
                                                 }}
+                                                draggable={false}
                                             />
                                         ) : (
                                             <div
@@ -677,6 +678,124 @@ function ImageModal({
     );
 }
 
+// Unsplash-style grid configuration
+const GRID_CONFIG = {
+    baseRowHeight: 115, // Base row height: 2 rows = 230px, 2.4 rows = 276px (perfect for 230-275px landscape range)
+    gap: 24, // Gap between grid items
+    columns: {
+        desktop: 3,
+        tablet: 2,
+        mobile: 1,
+    },
+    breakpoints: {
+        tablet: 768,
+        desktop: 1280,
+    },
+    minRowSpan: 1,
+    maxRowSpan: 6, // Maximum rows (matches Unsplash)
+} as const;
+
+// Load image dimensions if not available
+async function loadImageDimensions(src: string): Promise<{ width: number; height: number } | null> {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            resolve({ width: img.naturalWidth, height: img.naturalHeight });
+        };
+        img.onerror = () => {
+            resolve(null);
+        };
+        img.src = src;
+    });
+}
+
+// Calculate row span based on image aspect ratio
+// Uses consistent row spanning for all images to prevent gaps
+function calculateImageLayout(
+    image: ExtendedImage,
+    columnWidth: number,
+    baseRowHeight: number,
+    dimensions?: { width: number; height: number } | null
+): { rowSpan: number } {
+    // Use provided dimensions, or image properties, or fallback
+    let width: number;
+    let height: number;
+
+    if (dimensions) {
+        width = dimensions.width;
+        height = dimensions.height;
+    } else if (image.width && image.height) {
+        width = image.width;
+        height = image.height;
+    } else {
+        // Fallback: assume 4:3 aspect ratio (common for photos)
+        width = 1920;
+        height = 1440;
+    }
+
+    // Calculate aspect ratio (width / height)
+    const aspectRatio = width / height;
+    
+    // Determine if image is landscape (aspectRatio > 1) or portrait (aspectRatio < 1)
+    const isLandscape = aspectRatio > 1;
+
+    // Calculate display height when image is displayed at column width
+    let displayHeight = columnWidth / aspectRatio;
+
+    // Apply maxHeight constraints based on orientation
+    if (isLandscape) {
+        // For landscape images: cap at 275px max
+        const maxLandscapeHeight = 275;
+        if (displayHeight > maxLandscapeHeight) {
+            displayHeight = maxLandscapeHeight;
+        }
+    } else {
+        // For portrait images: cap at 600px max
+        const maxPortraitHeight = 600;
+        if (displayHeight > maxPortraitHeight) {
+            displayHeight = maxPortraitHeight;
+        }
+    }
+
+    // Also cap by absolute maximum (safety check)
+    const absoluteMaxHeight = GRID_CONFIG.maxRowSpan * baseRowHeight;
+    if (displayHeight > absoluteMaxHeight) {
+        displayHeight = absoluteMaxHeight;
+    }
+
+    // Calculate row span - use Math.floor() as default to prevent images being too tall
+    // This matches Unsplash's compact layout where images fit tightly
+    const exactRowSpan = displayHeight / baseRowHeight;
+    const remainder = exactRowSpan - Math.floor(exactRowSpan);
+    
+    let rowSpan: number;
+    if (remainder > 0.85) {
+        // Very close to next row - round up to prevent awkward cropping
+        rowSpan = Math.ceil(exactRowSpan);
+    } else {
+        // Round down for compact display (prevents images being too tall)
+        rowSpan = Math.max(1, Math.floor(exactRowSpan));
+    }
+
+    return {
+        rowSpan: Math.max(
+            GRID_CONFIG.minRowSpan,
+            Math.min(GRID_CONFIG.maxRowSpan, rowSpan)
+        ),
+    };
+}
+
+// Get column count based on viewport width
+function getColumnCount(width: number): number {
+    if (width < GRID_CONFIG.breakpoints.tablet) {
+        return GRID_CONFIG.columns.mobile;
+    }
+    if (width < GRID_CONFIG.breakpoints.desktop) {
+        return GRID_CONFIG.columns.tablet;
+    }
+    return GRID_CONFIG.columns.desktop;
+}
+
 export default function NoFlashGridPage() {
     const [images, setImages] = useState<ExtendedImage[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
@@ -684,6 +803,11 @@ export default function NoFlashGridPage() {
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
     const gridRef = useRef<HTMLDivElement | null>(null);
+    const [columnCount, setColumnCount] = useState(() => {
+        if (typeof window === 'undefined') return GRID_CONFIG.columns.desktop;
+        return getColumnCount(window.innerWidth);
+    });
+    const [containerWidth, setContainerWidth] = useState(1400); // Default, will be updated
 
     const toImageArray = (val: unknown): ExtendedImage[] => {
         const v = val as any;
@@ -734,10 +858,206 @@ export default function NoFlashGridPage() {
     const filteredImages = useMemo<ExtendedImage[]>(() => {
         if (!activeCategory) return images;
         return images.filter((img) => {
-            const catName = img.categoryName || img.category || '';
+            // Extract category name from imageCategory (can be string or Category object)
+            const imgCategoryName =
+                typeof img.imageCategory === 'string'
+                    ? img.imageCategory
+                    : img.imageCategory?.name;
+            // Also check legacy categoryName/category properties for backward compatibility
+            const catName = imgCategoryName || img.categoryName || img.category || '';
             return catName === activeCategory;
         });
     }, [images, activeCategory]);
+
+    // Store image dimensions as they load
+    const [imageDimensions, setImageDimensions] = useState<Map<string, { width: number; height: number }>>(new Map());
+    const loadingDimensionsRef = useRef<Set<string>>(new Set()); // Track which images we're currently loading
+
+    // Load dimensions for images that don't have them
+    useEffect(() => {
+        const loadDimensions = async () => {
+            if (filteredImages.length === 0) return;
+            
+            const dimensionsMap = new Map<string, { width: number; height: number }>();
+            const imagesToLoad: Array<{ image: ExtendedImage; url: string }> = [];
+            
+            // First pass: collect images that need dimensions loaded
+            filteredImages.forEach((image) => {
+                // Skip if already has dimensions in state
+                if (imageDimensions.has(image._id)) {
+                    dimensionsMap.set(image._id, imageDimensions.get(image._id)!);
+                    return;
+                }
+
+                // Skip if already has dimensions in image object
+                if (image.width && image.height) {
+                    dimensionsMap.set(image._id, { width: image.width, height: image.height });
+                    return;
+                }
+
+                // Skip if already loading
+                if (loadingDimensionsRef.current.has(image._id)) {
+                    return;
+                }
+
+                // Try to load dimensions from image URL
+                // Use regularUrl or imageUrl for accurate dimensions (aspect ratio is what matters)
+                const imageUrl = image.regularUrl || image.imageUrl || image.smallUrl || image.thumbnailUrl;
+                if (imageUrl) {
+                    imagesToLoad.push({ image, url: imageUrl });
+                    loadingDimensionsRef.current.add(image._id);
+                }
+            });
+
+            // If we have dimensions from state/image, update immediately
+            if (dimensionsMap.size > 0) {
+                setImageDimensions(prev => {
+                    const merged = new Map(prev);
+                    dimensionsMap.forEach((value, key) => {
+                        merged.set(key, value);
+                    });
+                    return merged;
+                });
+            }
+
+            // Load dimensions for images that need it (prioritize first 20 for faster initial render)
+            if (imagesToLoad.length > 0) {
+                // Split into priority (first 20) and non-priority
+                const priority = imagesToLoad.slice(0, 20);
+                const rest = imagesToLoad.slice(20);
+
+                const loadBatch = async (batch: typeof imagesToLoad) => {
+                    const promises = batch.map(async ({ image, url }) => {
+                        try {
+                            const dims = await loadImageDimensions(url);
+                            if (dims) {
+                                // eslint-disable-next-line no-console
+                                console.log(`[Dimensions Loaded] Image ${image._id?.substring(0, 8)}: ${dims.width}x${dims.height} (aspect: ${(dims.width / dims.height).toFixed(2)})`);
+                                return { id: image._id, dims };
+                            }
+                        } catch (error) {
+                            // Silently fail - will use fallback
+                        } finally {
+                            loadingDimensionsRef.current.delete(image._id);
+                        }
+                        return null;
+                    });
+
+                    const results = await Promise.all(promises);
+                    const validResults = results.filter((r): r is { id: string; dims: { width: number; height: number } } => r !== null);
+                    
+                    if (validResults.length > 0) {
+                        setImageDimensions(prev => {
+                            const merged = new Map(prev);
+                            validResults.forEach(result => {
+                                merged.set(result.id, result.dims);
+                            });
+                            return merged;
+                        });
+                    }
+                };
+
+                // Load priority batch first
+                await loadBatch(priority);
+                
+                // Load rest with slight delay to not block
+                if (rest.length > 0) {
+                    setTimeout(() => {
+                        loadBatch(rest);
+                    }, 100);
+                }
+            }
+        };
+
+        loadDimensions();
+    }, [filteredImages]); // Only depend on filteredImages, not imageDimensions
+
+    // Calculate grid layout for each image (row spans and columns)
+    const gridLayout = useMemo(() => {
+        if (filteredImages.length === 0 || containerWidth === 0) return [];
+
+        // Calculate column width
+        const gapTotal = GRID_CONFIG.gap * (columnCount - 1);
+        const columnWidth = (containerWidth - gapTotal) / columnCount;
+
+        return filteredImages.map((image, index) => {
+            // Sequential column placement (1→2→3→1→2→3...)
+            const column = (index % columnCount) + 1;
+
+            // Get dimensions (from state or image properties)
+            const dimensions = imageDimensions.get(image._id) || null;
+
+            // Calculate row span based on aspect ratio
+            const layout = calculateImageLayout(
+                image,
+                columnWidth,
+                GRID_CONFIG.baseRowHeight,
+                dimensions
+            );
+
+            // Debug: Log first few images to see what's happening
+            if (index < 5) {
+                const finalWidth = dimensions?.width || image.width;
+                const finalHeight = dimensions?.height || image.height;
+                const aspectRatio = finalWidth && finalHeight ? (finalWidth / finalHeight) : 0;
+                const isLandscape = aspectRatio > 1;
+                const calculatedHeight = aspectRatio ? (columnWidth / aspectRatio) : 0;
+                const actualHeight = layout.rowSpan * GRID_CONFIG.baseRowHeight;
+                // eslint-disable-next-line no-console
+                console.log(`[Grid Layout] Image ${index}:`, {
+                    id: image._id?.substring(0, 8),
+                    width: finalWidth,
+                    height: finalHeight,
+                    aspectRatio: aspectRatio ? aspectRatio.toFixed(2) : 'N/A',
+                    isLandscape,
+                    columnWidth: columnWidth.toFixed(0) + 'px',
+                    rowSpan: layout.rowSpan,
+                    actualHeight: actualHeight.toFixed(0) + 'px',
+                    calculatedHeight: calculatedHeight ? calculatedHeight.toFixed(0) + 'px' : 'N/A',
+                    column,
+                    source: dimensions ? 'loaded' : image.width ? 'fromImage' : 'fallback',
+                });
+            }
+
+            return {
+                image,
+                column,
+                rowSpan: layout.rowSpan,
+                columnWidth,
+            };
+        });
+    }, [filteredImages, columnCount, containerWidth, imageDimensions]);
+
+    // Update column count and container width on resize
+    useEffect(() => {
+        const updateLayout = () => {
+            if (!gridRef.current) return;
+            // Get actual container width (accounting for padding)
+            const container = gridRef.current.parentElement;
+            if (container) {
+                const width = container.offsetWidth - 32; // Subtract padding (16px * 2)
+                setContainerWidth(Math.max(300, width)); // Minimum 300px
+            }
+            const viewportWidth = window.innerWidth;
+            setColumnCount(getColumnCount(viewportWidth));
+        };
+
+        // Initial calculation
+        updateLayout();
+
+        // Update on resize with debounce
+        let timeoutId: NodeJS.Timeout;
+        const handleResize = () => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(updateLayout, 150);
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            clearTimeout(timeoutId);
+        };
+    }, []);
 
     // Preload images near the selected index when modal opens
     useEffect(() => {
@@ -766,21 +1086,14 @@ export default function NoFlashGridPage() {
     }, [selectedIndex, filteredImages]);
 
     return (
-        <div style={{ padding: '16px', maxWidth: 1400, margin: '0 auto' }}>
-            <h1 style={{ marginBottom: 12 }}>No-Flash Grid Test</h1>
-            <p style={{ marginBottom: 16 }}>Custom grid + modal (no shared components). Blur-up, double buffer, preload.</p>
+        <div className="no-flash-grid-page">
+            <h1 className="no-flash-grid-title">No-Flash Grid Test</h1>
+            <p className="no-flash-grid-description">Custom grid + modal (no shared components). Blur-up, double buffer, preload. Unsplash-style grid layout.</p>
 
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+            <div className="category-filter-container">
                 <button
                     onClick={() => setActiveCategory('')}
-                    style={{
-                        padding: '8px 12px',
-                        borderRadius: 6,
-                        border: '1px solid #ccc',
-                        background: activeCategory === '' ? '#111' : '#fff',
-                        color: activeCategory === '' ? '#fff' : '#111',
-                        cursor: 'pointer',
-                    }}
+                    className={`category-filter-button ${activeCategory === '' ? 'active' : ''}`}
                 >
                     All
                 </button>
@@ -788,14 +1101,7 @@ export default function NoFlashGridPage() {
                     <button
                         key={cat._id || cat.name}
                         onClick={() => setActiveCategory(cat.name)}
-                        style={{
-                            padding: '8px 12px',
-                            borderRadius: 6,
-                            border: '1px solid #ccc',
-                            background: activeCategory === cat.name ? '#111' : '#fff',
-                            color: activeCategory === cat.name ? '#fff' : '#111',
-                            cursor: 'pointer',
-                        }}
+                        className={`category-filter-button ${activeCategory === cat.name ? 'active' : ''}`}
                     >
                         {cat.name}
                     </button>
@@ -803,40 +1109,56 @@ export default function NoFlashGridPage() {
             </div>
 
             {loading ? (
-                <div>Loading...</div>
+                <div className="loading-state">Loading...</div>
             ) : (
                 <div
                     ref={gridRef}
+                    className="no-flash-grid"
                     style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-                        gap: 16,
+                        // Unsplash-style: Fixed columns with dynamic row spans
+                        gridTemplateColumns: `repeat(${columnCount}, 1fr)`,
+                        gap: GRID_CONFIG.gap,
+                        // Base row height for row span calculations
+                        gridAutoRows: GRID_CONFIG.baseRowHeight,
                     }}
                 >
-                    {filteredImages.map((img, idx) => {
+                    {gridLayout.map((layout, idx) => {
+                        const { image, column, rowSpan } = layout;
                         // Priority loading for first 12 images (above the fold)
                         const isPriority = idx < 12;
                         return (
-                            <BlurUpImage
-                                key={img._id || idx}
-                                image={img}
-                                onClick={async () => {
-                                    // Unsplash technique: Preload image BEFORE opening modal
-                                    const full = img.regularUrl || img.imageUrl || img.smallUrl || img.thumbnailUrl;
-                                    if (full) {
-                                        // Start preloading immediately
-                                        preloadImage(full).catch(() => { });
-                                        // Open modal after a tiny delay to let preload start
-                                        // This ensures image is ready or at least loading when modal opens
-                                        requestAnimationFrame(() => {
-                                            setSelectedIndex(idx);
-                                        });
-                                    } else {
-                                        setSelectedIndex(idx);
-                                    }
+                            <div
+                                key={image._id || idx}
+                                className="grid-item-wrapper"
+                                style={{
+                                    // Sequential column placement
+                                    gridColumn: column,
+                                    // Dynamic row span based on aspect ratio (consistent for all images)
+                                    gridRowEnd: `span ${rowSpan}`,
                                 }}
-                                priority={isPriority}
-                            />
+                            >
+                                <BlurUpImage
+                                    image={image}
+                                    onClick={async () => {
+                                        // Unsplash technique: Preload image COMPLETELY before opening modal
+                                        const full = image.regularUrl || image.imageUrl || image.smallUrl || image.thumbnailUrl;
+                                        if (full) {
+                                            try {
+                                                // Wait for image to be fully loaded before opening modal
+                                                await preloadImage(full);
+                                                // Image is ready - open modal smoothly
+                                                setSelectedIndex(idx);
+                                            } catch {
+                                                // On error, still open modal (will show placeholder)
+                                                setSelectedIndex(idx);
+                                            }
+                                        } else {
+                                            setSelectedIndex(idx);
+                                        }
+                                    }}
+                                    priority={isPriority}
+                                />
+                            </div>
                         );
                     })}
                 </div>
