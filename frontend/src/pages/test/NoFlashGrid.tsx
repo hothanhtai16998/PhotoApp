@@ -239,6 +239,7 @@ function ImageModal({
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const scrollPosRef = useRef(0);
     const [isScrolled, setIsScrolled] = useState(false);
+    const [shouldAnimate, setShouldAnimate] = useState(false);
     const previousImgRef = useRef<ExtendedImage | null>(img);
     const imgElementRef = useRef<HTMLImageElement | null>(null);
     const authorName =
@@ -309,6 +310,7 @@ function ImageModal({
         // Reset scroll state when image changes (use requestAnimationFrame to avoid cascading renders)
         requestAnimationFrame(() => {
             setIsScrolled(false);
+            setShouldAnimate(false);
         });
 
         // Unsplash technique: Use different image sizes
@@ -407,8 +409,8 @@ function ImageModal({
                         display: 'flex',
                         flexDirection: 'column',
                         marginTop: isScrolled ? 0 : 16, // Space initially, no space when scrolled
-                        // Smooth transition for margin change
-                        transition: 'margin-top 0.2s ease-out',
+                        // Smooth transition only when first crossing threshold (scrolling down), instant otherwise
+                        transition: shouldAnimate ? 'margin-top 0.2s ease-out' : 'none',
                     }}
                 >
                     {/* Scroll area inside modal */}
@@ -422,9 +424,24 @@ function ImageModal({
                         }}
                         onScroll={(e) => {
                             const top = (e.currentTarget as HTMLDivElement).scrollTop;
+                            const prevTop = scrollPosRef.current;
+                            const wasScrolled = prevTop > 0;
                             scrollPosRef.current = top;
+
                             // Check if scrolled past the initial spacer (16px)
-                            setIsScrolled(top > 0);
+                            const nowScrolled = top > 0;
+                            setIsScrolled(nowScrolled);
+
+                            // Only animate when transitioning from not-scrolled to scrolled (scrolling down past threshold)
+                            // Make it instant when scrolling up or already at top
+                            if (nowScrolled && !wasScrolled && top > prevTop) {
+                                setShouldAnimate(true);
+                                // Reset animation flag after transition completes
+                                setTimeout(() => setShouldAnimate(false), 200);
+                            } else if (!nowScrolled || top <= prevTop) {
+                                // Scrolling up or at top - make it instant
+                                setShouldAnimate(false);
+                            }
                         }}
                     >
                         {/* Spacer to create initial space above top bar */}
