@@ -38,6 +38,8 @@ const CollectionDetailPage = lazy(() => import("./pages/collection/CollectionDet
 const AboutPage = lazy(() => import("./pages/AboutPage"));
 const UnsplashGridTestPage = lazy(() => import("./pages/ImageGrid"));
 const UnsplashModalTestPage = lazy(() => import("./pages/test/UnsplashModalTest"));
+const NoFlashGridPage = lazy(() => import("./pages/test/NoFlashGrid"));
+const ImageGridTest = lazy(() => import("./pages/test/ImageGridTest"));
 
 
 // Loading fallback component
@@ -146,6 +148,8 @@ function App() {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/UnsplashGridTestPage" element={<UnsplashGridTestPage />} />
           <Route path="/test/unsplash-modal" element={<UnsplashModalTestPage />} />
+          <Route path="/test/no-flash-grid" element={<NoFlashGridPage />} />
+          <Route path="/test/image-grid" element={<ImageGridTest />} />
           {/* <Route path="/UnsplashGrid" element={<UnsplashGrid />} /> */}
 
 
