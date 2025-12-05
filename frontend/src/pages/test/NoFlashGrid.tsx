@@ -680,7 +680,7 @@ function ImageModal({
 
 // Unsplash-style grid configuration
 const GRID_CONFIG = {
-    baseRowHeight: 115, // Base row height: 2 rows = 230px, 2.4 rows = 276px (perfect for 230-275px landscape range)
+    baseRowHeight: 25, // Smaller base for more precise height control
     gap: 24, // Gap between grid items
     columns: {
         desktop: 3,
@@ -692,7 +692,7 @@ const GRID_CONFIG = {
         desktop: 1280,
     },
     minRowSpan: 1,
-    maxRowSpan: 6, // Maximum rows (matches Unsplash)
+    maxRowSpan: 32, // Maximum rows (25px * 32 = 800px max for very tall portraits)
 } as const;
 
 // Load image dimensions if not available
@@ -735,53 +735,158 @@ function calculateImageLayout(
 
     // Calculate aspect ratio (width / height)
     const aspectRatio = width / height;
-    
-    // Determine if image is landscape (aspectRatio > 1) or portrait (aspectRatio < 1)
-    const isLandscape = aspectRatio > 1;
 
     // Calculate display height when image is displayed at column width
-    let displayHeight = columnWidth / aspectRatio;
+    // This is the natural height the image would have at this column width
+    const displayHeight = columnWidth / aspectRatio;
 
-    // Apply maxHeight constraints based on orientation
-    if (isLandscape) {
-        // For landscape images: cap at 275px max
-        const maxLandscapeHeight = 275;
-        if (displayHeight > maxLandscapeHeight) {
-            displayHeight = maxLandscapeHeight;
-        }
+    // Apply aspect ratio-based height ranges
+    // Allow natural variation within ranges, only clamp if outside bounds
+    // YES, this is AUTO-CALCULATING: if displayHeight is within range, it uses that exact height
+    let targetHeight: number;
+    let categoryMin: number;
+    let categoryMax: number;
+
+    // Safety check: ensure we have valid values
+    if (!isFinite(displayHeight) || displayHeight <= 0) {
+        // Fallback to a reasonable default
+        targetHeight = 250;
+        categoryMin = 240;
+        categoryMax = 260;
+        // eslint-disable-next-line no-console
+        console.warn('[calculateImageLayout] Invalid displayHeight:', { columnWidth, aspectRatio, displayHeight });
     } else {
-        // For portrait images: cap at 600px max
-        const maxPortraitHeight = 600;
-        if (displayHeight > maxPortraitHeight) {
-            displayHeight = maxPortraitHeight;
+
+        if (aspectRatio > 2.0) {
+            // Very wide landscape (aspectRatio > 2.0, e.g., 21:9)
+            // Should be 200–230px tall - AUTO-CALCULATES within this range
+            categoryMin = 200;
+            categoryMax = 230;
+            if (displayHeight < categoryMin) {
+                targetHeight = categoryMin; // Too short, clamp to minimum
+            } else if (displayHeight > categoryMax) {
+                targetHeight = categoryMax; // Too tall, clamp to maximum
+            } else {
+                targetHeight = displayHeight; // Within range, use natural calculated height
+            }
+        } else if (aspectRatio >= 1.3 && aspectRatio <= 2.0) {
+            // Standard landscape (1.3–2.0, e.g., 16:9, 4:3)
+            // Should be 230–275px tall - AUTO-CALCULATES within this range
+            categoryMin = 230;
+            categoryMax = 275;
+            if (displayHeight < categoryMin) {
+                targetHeight = categoryMin; // Too short, clamp to minimum
+            } else if (displayHeight > categoryMax) {
+                targetHeight = categoryMax; // Too tall, clamp to maximum
+            } else {
+                targetHeight = displayHeight; // Within range, use natural calculated height
+            }
+        } else if (aspectRatio >= 0.9 && aspectRatio <= 1.1) {
+            // Square (0.9–1.1, e.g., 1:1)
+            // Should be 240–260px tall - AUTO-CALCULATES within this range
+            categoryMin = 240;
+            categoryMax = 260;
+            if (displayHeight < categoryMin) {
+                targetHeight = categoryMin; // Too short, clamp to minimum
+            } else if (displayHeight > categoryMax) {
+                targetHeight = categoryMax; // Too tall, clamp to maximum
+            } else {
+                targetHeight = displayHeight; // Within range, use natural calculated height
+            }
+        } else if (aspectRatio >= 0.5 && aspectRatio <= 0.75) {
+            // Standard portrait (0.5–0.75, e.g., 3:4, 2:3)
+            // Should be 400–600px tall - AUTO-CALCULATES within this range
+            categoryMin = 400;
+            categoryMax = 600;
+            if (displayHeight < categoryMin) {
+                targetHeight = categoryMin; // Too short, clamp to minimum
+            } else if (displayHeight > categoryMax) {
+                targetHeight = categoryMax; // Too tall, clamp to maximum
+            } else {
+                targetHeight = displayHeight; // Within range, use natural calculated height
+            }
+        } else if (aspectRatio < 0.5) {
+            // Very tall portrait (< 0.5, e.g., 9:16)
+            // Should be 600–800px tall - AUTO-CALCULATES within this range
+            categoryMin = 600;
+            const absoluteMaxHeight = GRID_CONFIG.maxRowSpan * baseRowHeight;
+            categoryMax = Math.min(800, absoluteMaxHeight);
+            if (displayHeight < categoryMin) {
+                targetHeight = categoryMin; // Too short, clamp to minimum
+            } else if (displayHeight > categoryMax) {
+                targetHeight = categoryMax; // Too tall, clamp to maximum
+            } else {
+                targetHeight = displayHeight; // Within range, use natural calculated height
+            }
+        } else {
+            // Fallback for edge cases (between 0.75-0.9 or 1.1-1.3)
+            // Use standard portrait or landscape logic as fallback
+            if (aspectRatio > 1) {
+                // Closer to landscape
+                categoryMin = 230;
+                categoryMax = 275;
+                targetHeight = Math.max(categoryMin, Math.min(categoryMax, displayHeight));
+            } else {
+                // Closer to portrait
+                categoryMin = 400;
+                categoryMax = 600;
+                targetHeight = Math.max(categoryMin, Math.min(categoryMax, displayHeight));
+            }
         }
+    } // End of safety check
+
+    // Final safety clamp: ensure targetHeight is never unreasonably large
+    // This prevents any calculation errors from creating huge images
+    const absoluteMax = GRID_CONFIG.maxRowSpan * baseRowHeight; // 32 * 25 = 800px
+    targetHeight = Math.min(targetHeight, absoluteMax);
+
+    // Calculate row span - with baseRowHeight = 25px, we get much finer control
+    // Very wide: 200px = 8 rows = 200px ✓
+    // Standard landscape: 230px = 9.2 rows → 10 rows = 250px (round up to meet minimum)
+    // Square: 250px = 10 rows = 250px ✓
+    // Standard portrait: 400px = 16 rows = 400px ✓, 600px = 24 rows = 600px ✓
+    // Very tall portrait: 800px = 32 rows = 800px ✓
+    const exactRowSpan = targetHeight / baseRowHeight;
+
+    // Calculate row span, ensuring we don't go below targetHeight OR above categoryMax
+    let rowSpan = Math.max(1, Math.round(exactRowSpan));
+
+    // If rounding down would result in height less than targetHeight, round up instead
+    // BUT ensure we don't exceed the category maximum
+    const roundedDownHeight = rowSpan * baseRowHeight;
+    if (roundedDownHeight < targetHeight) {
+        const roundedUpRowSpan = Math.ceil(exactRowSpan);
+        const roundedUpHeight = roundedUpRowSpan * baseRowHeight;
+        // Only round up if it doesn't exceed the category maximum
+        if (roundedUpHeight <= categoryMax) {
+            rowSpan = roundedUpRowSpan;
+        }
+        // Otherwise, keep the rounded down value (it's closer to targetHeight than going over max)
     }
 
-    // Also cap by absolute maximum (safety check)
-    const absoluteMaxHeight = GRID_CONFIG.maxRowSpan * baseRowHeight;
-    if (displayHeight > absoluteMaxHeight) {
-        displayHeight = absoluteMaxHeight;
-    }
+    const finalRowSpan = Math.max(
+        GRID_CONFIG.minRowSpan,
+        Math.min(GRID_CONFIG.maxRowSpan, rowSpan)
+    );
+    const actualRenderedHeight = finalRowSpan * baseRowHeight;
 
-    // Calculate row span - use Math.floor() as default to prevent images being too tall
-    // This matches Unsplash's compact layout where images fit tightly
-    const exactRowSpan = displayHeight / baseRowHeight;
-    const remainder = exactRowSpan - Math.floor(exactRowSpan);
-    
-    let rowSpan: number;
-    if (remainder > 0.85) {
-        // Very close to next row - round up to prevent awkward cropping
-        rowSpan = Math.ceil(exactRowSpan);
-    } else {
-        // Round down for compact display (prevents images being too tall)
-        rowSpan = Math.max(1, Math.floor(exactRowSpan));
-    }
+    // Always log for debugging - we'll remove this later
+    // eslint-disable-next-line no-console
+    console.log('[calculateImageLayout]', {
+        aspectRatio: aspectRatio.toFixed(2),
+        columnWidth: columnWidth.toFixed(0) + 'px',
+        displayHeight: displayHeight.toFixed(0) + 'px',
+        targetHeight: targetHeight.toFixed(0) + 'px',
+        exactRowSpan: exactRowSpan.toFixed(2),
+        rowSpan,
+        finalRowSpan,
+        actualRenderedHeight: actualRenderedHeight.toFixed(0) + 'px',
+        difference: (actualRenderedHeight - targetHeight).toFixed(0) + 'px',
+        baseRowHeight,
+    });
 
     return {
-        rowSpan: Math.max(
-            GRID_CONFIG.minRowSpan,
-            Math.min(GRID_CONFIG.maxRowSpan, rowSpan)
-        ),
+        rowSpan: finalRowSpan,
     };
 }
 
@@ -877,10 +982,10 @@ export default function NoFlashGridPage() {
     useEffect(() => {
         const loadDimensions = async () => {
             if (filteredImages.length === 0) return;
-            
+
             const dimensionsMap = new Map<string, { width: number; height: number }>();
             const imagesToLoad: Array<{ image: ExtendedImage; url: string }> = [];
-            
+
             // First pass: collect images that need dimensions loaded
             filteredImages.forEach((image) => {
                 // Skip if already has dimensions in state
@@ -935,7 +1040,7 @@ export default function NoFlashGridPage() {
                                 console.log(`[Dimensions Loaded] Image ${image._id?.substring(0, 8)}: ${dims.width}x${dims.height} (aspect: ${(dims.width / dims.height).toFixed(2)})`);
                                 return { id: image._id, dims };
                             }
-                        } catch (error) {
+                        } catch (_error) {
                             // Silently fail - will use fallback
                         } finally {
                             loadingDimensionsRef.current.delete(image._id);
@@ -945,7 +1050,7 @@ export default function NoFlashGridPage() {
 
                     const results = await Promise.all(promises);
                     const validResults = results.filter((r): r is { id: string; dims: { width: number; height: number } } => r !== null);
-                    
+
                     if (validResults.length > 0) {
                         setImageDimensions(prev => {
                             const merged = new Map(prev);
@@ -959,7 +1064,7 @@ export default function NoFlashGridPage() {
 
                 // Load priority batch first
                 await loadBatch(priority);
-                
+
                 // Load rest with slight delay to not block
                 if (rest.length > 0) {
                     setTimeout(() => {
@@ -996,27 +1101,51 @@ export default function NoFlashGridPage() {
             );
 
             // Debug: Log first few images to see what's happening
-            if (index < 5) {
+            if (index < 10) {
                 const finalWidth = dimensions?.width || image.width;
                 const finalHeight = dimensions?.height || image.height;
                 const aspectRatio = finalWidth && finalHeight ? (finalWidth / finalHeight) : 0;
-                const isLandscape = aspectRatio > 1;
                 const calculatedHeight = aspectRatio ? (columnWidth / aspectRatio) : 0;
                 const actualHeight = layout.rowSpan * GRID_CONFIG.baseRowHeight;
+
+                // Determine category for logging
+                let category = 'unknown';
+                let categoryRange = '';
+                if (aspectRatio > 2.0) {
+                    category = 'very-wide-landscape';
+                    categoryRange = '200-230px';
+                } else if (aspectRatio >= 1.3) {
+                    category = 'standard-landscape';
+                    categoryRange = '230-275px';
+                } else if (aspectRatio >= 0.9) {
+                    category = 'square';
+                    categoryRange = '240-260px';
+                } else if (aspectRatio >= 0.5) {
+                    category = 'standard-portrait';
+                    categoryRange = '400-600px';
+                } else if (aspectRatio > 0) {
+                    category = 'very-tall-portrait';
+                    categoryRange = '600-800px';
+                }
+
+                // More visible logging
                 // eslint-disable-next-line no-console
-                console.log(`[Grid Layout] Image ${index}:`, {
-                    id: image._id?.substring(0, 8),
-                    width: finalWidth,
-                    height: finalHeight,
-                    aspectRatio: aspectRatio ? aspectRatio.toFixed(2) : 'N/A',
-                    isLandscape,
-                    columnWidth: columnWidth.toFixed(0) + 'px',
-                    rowSpan: layout.rowSpan,
-                    actualHeight: actualHeight.toFixed(0) + 'px',
-                    calculatedHeight: calculatedHeight ? calculatedHeight.toFixed(0) + 'px' : 'N/A',
-                    column,
-                    source: dimensions ? 'loaded' : image.width ? 'fromImage' : 'fallback',
-                });
+                console.log(
+                    `[Grid Layout] Image ${index} | ${category} | Aspect: ${aspectRatio ? aspectRatio.toFixed(2) : 'N/A'} | Natural: ${calculatedHeight ? calculatedHeight.toFixed(0) + 'px' : 'N/A'} | Actual: ${actualHeight.toFixed(0)}px (${layout.rowSpan} rows) | Range: ${categoryRange}`,
+                    {
+                        id: image._id?.substring(0, 8),
+                        width: finalWidth,
+                        height: finalHeight,
+                        aspectRatio: aspectRatio ? aspectRatio.toFixed(2) : 'N/A',
+                        category: `${category} (${categoryRange})`,
+                        columnWidth: columnWidth.toFixed(0) + 'px',
+                        naturalHeight: calculatedHeight ? calculatedHeight.toFixed(0) + 'px' : 'N/A',
+                        rowSpan: layout.rowSpan,
+                        actualHeight: actualHeight.toFixed(0) + 'px',
+                        column,
+                        source: dimensions ? 'loaded' : image.width ? 'fromImage' : 'fallback',
+                    }
+                );
             }
 
             return {
@@ -1117,15 +1246,23 @@ export default function NoFlashGridPage() {
                     style={{
                         // Unsplash-style: Fixed columns with dynamic row spans
                         gridTemplateColumns: `repeat(${columnCount}, 1fr)`,
-                        gap: GRID_CONFIG.gap,
-                        // Base row height for row span calculations
-                        gridAutoRows: GRID_CONFIG.baseRowHeight,
+                        gap: `${GRID_CONFIG.gap}px`, // Ensure gap is also a string with units
+                        // Base row height for row span calculations - MUST be a string with units
+                        gridAutoRows: `${GRID_CONFIG.baseRowHeight}px`,
                     }}
                 >
                     {gridLayout.map((layout, idx) => {
                         const { image, column, rowSpan } = layout;
                         // Priority loading for first 12 images (above the fold)
                         const isPriority = idx < 12;
+
+                        // Calculate aspect ratio for debug display
+                        const dimensions = imageDimensions.get(image._id) || null;
+                        const finalWidth = dimensions?.width || image.width || 0;
+                        const finalHeight = dimensions?.height || image.height || 0;
+                        const aspectRatio = finalWidth && finalHeight ? (finalWidth / finalHeight).toFixed(2) : 'N/A';
+                        const actualHeight = rowSpan * GRID_CONFIG.baseRowHeight;
+
                         return (
                             <div
                                 key={image._id || idx}
@@ -1134,7 +1271,11 @@ export default function NoFlashGridPage() {
                                     // Sequential column placement
                                     gridColumn: column,
                                     // Dynamic row span based on aspect ratio (consistent for all images)
-                                    gridRowEnd: `span ${rowSpan}`,
+                                    // Use gridRow instead of gridRowEnd for better browser support
+                                    gridRow: `span ${rowSpan}`,
+                                    // Explicit height calculation: rowSpan * baseRowHeight
+                                    // This ensures the item is exactly the right height
+                                    height: `${rowSpan * GRID_CONFIG.baseRowHeight}px`,
                                 }}
                             >
                                 <BlurUpImage
@@ -1158,6 +1299,22 @@ export default function NoFlashGridPage() {
                                     }}
                                     priority={isPriority}
                                 />
+                                {/* Debug overlay - shows aspect ratio and height */}
+                                <div style={{
+                                    position: 'absolute',
+                                    top: 4,
+                                    left: 4,
+                                    background: 'rgba(0, 0, 0, 0.7)',
+                                    color: '#fff',
+                                    padding: '4px 8px',
+                                    borderRadius: 4,
+                                    fontSize: '11px',
+                                    fontFamily: 'monospace',
+                                    zIndex: 10,
+                                    pointerEvents: 'none',
+                                }}>
+                                    AR: {aspectRatio} | H: {actualHeight}px | R: {rowSpan}
+                                </div>
                             </div>
                         );
                     })}
