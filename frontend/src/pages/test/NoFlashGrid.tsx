@@ -680,7 +680,7 @@ function ImageModal({
 
 // Unsplash-style grid configuration
 const GRID_CONFIG = {
-    baseRowHeight: 25, // Smaller base for more precise height control
+    baseRowHeight: 5, // Very fine-grained control for precise height ranges (5px = 1 row)
     gap: 24, // Gap between grid items
     columns: {
         desktop: 3,
@@ -692,7 +692,7 @@ const GRID_CONFIG = {
         desktop: 1280,
     },
     minRowSpan: 1,
-    maxRowSpan: 32, // Maximum rows (25px * 32 = 800px max for very tall portraits)
+    maxRowSpan: 160, // Maximum rows (5px * 160 = 800px max for very tall portraits, plus gaps)
 } as const;
 
 // Load image dimensions if not available
@@ -837,14 +837,61 @@ function calculateImageLayout(
 
     // Final safety clamp: ensure targetHeight is never unreasonably large
     // This prevents any calculation errors from creating huge images
-    const absoluteMax = GRID_CONFIG.maxRowSpan * baseRowHeight; // 32 * 25 = 800px
+    const absoluteMax = GRID_CONFIG.maxRowSpan * baseRowHeight; // 160 * 5 = 800px (plus gaps)
     targetHeight = Math.min(targetHeight, absoluteMax);
 
     // Compute row span in full row units (row height + row gap) so the grid area
     // height (rows*baseRowHeight + (rows-1)*gap) matches the target height closely.
+    // Formula: targetHeight = rowSpan * baseRowHeight + (rowSpan - 1) * gap
+    // Solving: rowSpan = (targetHeight + gap) / (baseRowHeight + gap)
     const rowUnit = baseRowHeight + GRID_CONFIG.gap;
     const exactRowsByUnit = (targetHeight + GRID_CONFIG.gap) / rowUnit;
-    const rowSpan = Math.max(1, Math.ceil(exactRowsByUnit));
+
+    // Calculate all three rounding options
+    const roundedRowSpan = Math.max(1, Math.round(exactRowsByUnit));
+    const roundedHeight = roundedRowSpan * baseRowHeight + (roundedRowSpan - 1) * GRID_CONFIG.gap;
+
+    const roundedUpRowSpan = Math.ceil(exactRowsByUnit);
+    const roundedUpHeight = roundedUpRowSpan * baseRowHeight + (roundedUpRowSpan - 1) * GRID_CONFIG.gap;
+    const roundedDownRowSpan = Math.floor(exactRowsByUnit);
+    const roundedDownHeight = roundedDownRowSpan * baseRowHeight + (roundedDownRowSpan - 1) * GRID_CONFIG.gap;
+
+    // Choose the option that best fits within the category range
+    // Priority: within range > closest to range > within min/max bounds
+    let bestRowSpan = roundedRowSpan;
+    let bestScore = Infinity; // Lower is better
+
+    // Score function: distance from ideal range (0 = perfect, higher = worse)
+    const score = (height: number): number => {
+        if (height >= categoryMin && height <= categoryMax) {
+            // Within range - prefer closer to targetHeight
+            return Math.abs(height - targetHeight);
+        } else if (height < categoryMin) {
+            // Below range - penalize by distance below min
+            return (categoryMin - height) * 2; // Penalize more for being below
+        } else {
+            // Above range - penalize by distance above max
+            return (height - categoryMax) * 2; // Penalize more for being above
+        }
+    };
+
+    // Evaluate all three options
+    const options = [
+        { rowSpan: roundedRowSpan, height: roundedHeight },
+        { rowSpan: roundedUpRowSpan, height: roundedUpHeight },
+        { rowSpan: roundedDownRowSpan, height: roundedDownHeight },
+    ];
+
+    for (const option of options) {
+        if (option.rowSpan < 1) continue; // Skip invalid
+        const optionScore = score(option.height);
+        if (optionScore < bestScore) {
+            bestScore = optionScore;
+            bestRowSpan = option.rowSpan;
+        }
+    }
+
+    const rowSpan = bestRowSpan;
 
     const finalRowSpan = Math.max(
         GRID_CONFIG.minRowSpan,
@@ -1283,7 +1330,8 @@ export default function NoFlashGridPage() {
                         const finalWidth = dimensions?.width || image.width || 0;
                         const finalHeight = dimensions?.height || image.height || 0;
                         const aspectRatio = finalWidth && finalHeight ? (finalWidth / finalHeight).toFixed(2) : 'N/A';
-                        const actualHeight = rowSpan * GRID_CONFIG.baseRowHeight;
+                        // Actual height includes gaps: rowSpan rows + (rowSpan - 1) gaps
+                        const actualHeight = rowSpan * GRID_CONFIG.baseRowHeight + (rowSpan - 1) * GRID_CONFIG.gap;
 
                         return (
                             <div
