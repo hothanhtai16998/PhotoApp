@@ -73,19 +73,32 @@ function ImageModal({
     index,
     onClose,
     onNavigate,
+    onSelectIndex,
 }: {
     images: ExtendedImage[];
     index: number;
     onClose: () => void;
     onNavigate: (next: number) => void;
+    onSelectIndex?: (idx: number) => void;
 }) {
     const [frontSrc, setFrontSrc] = useState<string | null>(null);
     const [backSrc, setBackSrc] = useState<string | null>(null);
     const [placeholder, setPlaceholder] = useState<string | null>(null);
-    const [modalShift, setModalShift] = useState(0);
+    const [imageBox, setImageBox] = useState<{ widthPct: number; paddingBottom: string; gutter: number }>({
+        widthPct: 0.85,
+        paddingBottom: '60%',
+        gutter: 48,
+    });
     const modalRef = useRef<HTMLDivElement | null>(null);
     const scrollRef = useRef<HTMLDivElement | null>(null);
+    const scrollPosRef = useRef(0);
     const img = images[index];
+    const authorName =
+        (img as any)?.uploadedBy?.username ||
+        (img as any)?.author ||
+        (img as any)?.user ||
+        'Author';
+    const aspect = (img as any)?.width && (img as any)?.height ? (img as any).height / (img as any).width : 0.6;
 
     // lock body scroll
     useEffect(() => {
@@ -114,6 +127,11 @@ function ImageModal({
 
     useEffect(() => {
         if (!img) return;
+        // reset scroll to top when image changes so top bar/author stay visible
+        scrollPosRef.current = 0;
+        if (scrollRef.current) {
+            scrollRef.current.scrollTop = 0;
+        }
         const place = img.thumbnailUrl || img.smallUrl || img.imageUrl || '';
         const full = img.regularUrl || img.imageUrl || img.smallUrl || place;
         const nextPlaceholder = place || full;
@@ -130,6 +148,37 @@ function ImageModal({
             loader.onload = null;
         };
     }, [img]);
+
+    // Responsive image box sizing based on modal size and image aspect ratio
+    useEffect(() => {
+        const recalc = () => {
+            const modal = modalRef.current;
+            if (!modal) return;
+            const width = modal.clientWidth;
+            const height = modal.clientHeight;
+            // account for top (72) + paddings and some bottom space (approx 180 for bottom info header)
+            const availableHeight = Math.max(200, height - 72 - 180);
+            const targetAspect = aspect || 0.6;
+            // propose width as 92% of modal
+            let widthPct = 0.92;
+            // compute height from proposed width
+            let imgWidth = width * widthPct;
+            let imgHeight = imgWidth * targetAspect;
+            // if height exceeds available, reduce width
+            if (imgHeight > availableHeight) {
+                imgHeight = availableHeight;
+                imgWidth = imgHeight / targetAspect;
+                widthPct = Math.min(0.97, Math.max(0.82, imgWidth / width));
+            }
+            // gutters responsive: clamp 20px..48px
+            const gutter = Math.min(48, Math.max(20, width * 0.03));
+            const paddingBottom = `${Math.max(48, Math.min(88, (imgHeight / imgWidth) * 100))}%`;
+            setImageBox({ widthPct, paddingBottom, gutter });
+        };
+        recalc();
+        window.addEventListener('resize', recalc);
+        return () => window.removeEventListener('resize', recalc);
+    }, [aspect]);
 
     const handleOverlayClick = useCallback(
         (e: React.MouseEvent) => {
@@ -167,9 +216,6 @@ function ImageModal({
                         display: 'flex',
                         flexDirection: 'column',
                         marginTop: 16,
-                        transform: `translateY(${-modalShift}px)`,
-                        transition: 'transform 120ms ease',
-                        willChange: 'transform',
                     }}
                 >
                     {/* Scroll area inside modal */}
@@ -183,8 +229,7 @@ function ImageModal({
                         }}
                         onScroll={(e) => {
                             const top = (e.currentTarget as HTMLDivElement).scrollTop;
-                            const shift = Math.min(top, 16);
-                            if (shift !== modalShift) setModalShift(shift);
+                            scrollPosRef.current = top;
                         }}
                     >
                         {/* Top info */}
@@ -200,8 +245,29 @@ function ImageModal({
                                 justifyContent: 'space-between',
                             }}
                         >
-                            <div>{img.imageTitle || 'Top info'}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <div
+                                    style={{
+                                        width: 36,
+                                        height: 36,
+                                        borderRadius: '50%',
+                                        background: '#fff2',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: 12,
+                                        fontWeight: 600,
+                                    }}
+                                >
+                                    {authorName ? authorName[0]?.toUpperCase() : 'A'}
+                                </div>
+                                <div>
+                                    <div style={{ fontWeight: 700 }}>{authorName}</div>
+                                    <div style={{ fontSize: 12, opacity: 0.8 }}>{img.imageTitle || 'Top info'}</div>
+                                </div>
+                            </div>
                             <div style={{ display: 'flex', gap: 8 }}>
+                                <button>Download</button>
                                 <button onClick={() => onNavigate((index - 1 + images.length) % images.length)}>Prev</button>
                                 <button onClick={() => onNavigate((index + 1) % images.length)}>Next</button>
                                 <button onClick={onClose}>Close</button>
@@ -212,7 +278,7 @@ function ImageModal({
                         <div
                             style={{
                                 background: '#0f0f0f',
-                                padding: '24px 0',
+                                padding: '0px 0',
                             }}
                         >
                             <div
@@ -220,15 +286,17 @@ function ImageModal({
                                     display: 'flex',
                                     gap: 0,
                                     alignItems: 'center',
+                                    maxWidth: `${imageBox.widthPct * 100}%`,
+                                    margin: '0 auto',
                                 }}
                             >
-                                <div style={{ width: 72, flexShrink: 0, background: '#0b0' }} />
+                                <div style={{ width: imageBox.gutter, flexShrink: 0, background: '#0b0' }} />
                                 <div style={{ flex: 1, position: 'relative', background: '#111' }}>
                                     <div
                                         style={{
                                             position: 'relative',
                                             width: '100%',
-                                            paddingBottom: '62%',
+                                            paddingBottom: imageBox.paddingBottom,
                                             background: '#111',
                                         }}
                                     >
@@ -268,25 +336,145 @@ function ImageModal({
                                         )}
                                     </div>
                                 </div>
-                                <div style={{ width: 72, flexShrink: 0, background: '#0b0' }} />
+                                <div style={{ width: 48, flexShrink: 0, background: '#0b0' }} />
                             </div>
                         </div>
 
-                        {/* Bottom info (tall to demonstrate scrolling) */}
+                        {/* Bottom info */}
                         <div
                             style={{
                                 background: '#0a54e6',
                                 color: '#fff',
                                 padding: '24px 16px',
-                                minHeight: 800,
                             }}
                         >
-                            <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Bottom info</div>
-                            <p>
-                                Placeholder content. Add image details, EXIF, collections, related images, etc. This section is tall to
-                                allow scrolling inside the modal while keeping the layout stable.
-                            </p>
-                            <div style={{ height: 600 }} />
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    gap: 24,
+                                    flexWrap: 'wrap',
+                                    marginBottom: 24,
+                                }}
+                            >
+                                {/* Left: image info */}
+                                <div style={{ flex: '1 1 480px', minWidth: 320 }}>
+                                    <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>
+                                        {img.imageTitle || 'Untitled image'}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 12, marginBottom: 12, fontSize: 14 }}>
+                                        <span>Views: {(img as any)?.views ?? '—'}</span>
+                                        <span>Downloads: {(img as any)?.downloads ?? '—'}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                                        <span style={{ padding: '6px 10px', borderRadius: 16, background: '#fff2', fontSize: 13 }}>
+                                            Tag 1
+                                        </span>
+                                        <span style={{ padding: '6px 10px', borderRadius: 16, background: '#fff2', fontSize: 13 }}>
+                                            Tag 2
+                                        </span>
+                                        <span style={{ padding: '6px 10px', borderRadius: 16, background: '#fff2', fontSize: 13 }}>
+                                            Tag 3
+                                        </span>
+                                    </div>
+                                    <div style={{ fontSize: 14, lineHeight: 1.5 }}>
+                                        {(img as any)?.description || 'No description provided.'}
+                                    </div>
+                                </div>
+
+                                {/* Right: actions */}
+                                <div
+                                    style={{
+                                        flex: '1 1 240px',
+                                        minWidth: 200,
+                                        display: 'flex',
+                                        flexWrap: 'wrap',
+                                        gap: 8,
+                                        alignItems: 'center',
+                                        justifyContent: 'flex-start',
+                                    }}
+                                >
+                                    {['Save', 'Share', 'Report', 'Edit', 'Download'].map((label) => (
+                                        <button
+                                            key={label}
+                                            style={{
+                                                padding: '10px 12px',
+                                                borderRadius: 6,
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                minWidth: 100,
+                                            }}
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Related images */}
+                            <div>
+                                <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Related images</div>
+                                <div
+                                    style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                                        gap: 12,
+                                    }}
+                                >
+                                    {images
+                                        .filter((_, i) => i !== index)
+                                        .slice(0, 8)
+                                        .map((related, i) => {
+                                            const originalIdx = images.findIndex((imgItem) => imgItem === related);
+                                            return (
+                                                <div
+                                                    key={related._id || i}
+                                                    style={{
+                                                        width: '100%',
+                                                        paddingBottom: '70%',
+                                                        position: 'relative',
+                                                        borderRadius: 8,
+                                                        overflow: 'hidden',
+                                                        background: '#fff2',
+                                                        cursor: 'pointer',
+                                                    }}
+                                                    onClick={() => {
+                                                        if (onSelectIndex && originalIdx >= 0) {
+                                                            onSelectIndex(originalIdx);
+                                                        }
+                                                    }}
+                                                >
+                                                    {related.thumbnailUrl || related.smallUrl || related.imageUrl ? (
+                                                        <img
+                                                            src={related.thumbnailUrl || related.smallUrl || related.imageUrl}
+                                                            alt={related.imageTitle || 'related'}
+                                                            style={{
+                                                                position: 'absolute',
+                                                                inset: 0,
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                objectFit: 'cover',
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <div
+                                                            style={{
+                                                                position: 'absolute',
+                                                                inset: 0,
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                color: '#fff',
+                                                                opacity: 0.8,
+                                                            }}
+                                                        >
+                                                            No preview
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -411,6 +599,7 @@ export default function NoFlashGridPage() {
                     index={selectedIndex}
                     onClose={() => setSelectedIndex(null)}
                     onNavigate={(next) => setSelectedIndex(next)}
+                    onSelectIndex={(idx) => setSelectedIndex(idx)}
                 />
             )}
         </div>
