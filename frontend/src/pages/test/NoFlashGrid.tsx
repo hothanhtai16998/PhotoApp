@@ -238,6 +238,7 @@ function ImageModal({
     const modalRef = useRef<HTMLDivElement | null>(null);
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const scrollPosRef = useRef(0);
+    const [isScrolled, setIsScrolled] = useState(false);
     const previousImgRef = useRef<ExtendedImage | null>(img);
     const imgElementRef = useRef<HTMLImageElement | null>(null);
     const authorName =
@@ -305,6 +306,10 @@ function ImageModal({
         if (scrollRef.current) {
             scrollRef.current.scrollTop = 0;
         }
+        // Reset scroll state when image changes (use requestAnimationFrame to avoid cascading renders)
+        requestAnimationFrame(() => {
+            setIsScrolled(false);
+        });
 
         // Unsplash technique: Use different image sizes
         // Low-res thumbnail = thumbnailUrl or smallUrl (small file, pixelated when enlarged to full size)
@@ -401,9 +406,9 @@ function ImageModal({
                         overflow: 'hidden',
                         display: 'flex',
                         flexDirection: 'column',
-                        marginTop: 16,
-                        // No transition to prevent flash
-                        transition: 'none',
+                        marginTop: isScrolled ? 0 : 16, // Space initially, no space when scrolled
+                        // Smooth transition for margin change
+                        transition: 'margin-top 0.2s ease-out',
                     }}
                 >
                     {/* Scroll area inside modal */}
@@ -418,11 +423,18 @@ function ImageModal({
                         onScroll={(e) => {
                             const top = (e.currentTarget as HTMLDivElement).scrollTop;
                             scrollPosRef.current = top;
+                            // Check if scrolled past the initial spacer (16px)
+                            setIsScrolled(top > 0);
                         }}
                     >
-                        {/* Top info */}
+                        {/* Spacer to create initial space above top bar */}
+                        <div style={{ height: 16, flexShrink: 0 }} />
+
+                        {/* Top info - Sticky: starts with space, sticks to viewport top when scrolling */}
                         <div
                             style={{
+                                position: 'sticky',
+                                top: 0, // Sticks to top of scroll container (which becomes viewport top when modal margin is 0)
                                 height: 72,
                                 minHeight: 72,
                                 padding: '12px 16px',
@@ -431,6 +443,7 @@ function ImageModal({
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
+                                zIndex: 10, // Ensure it stays on top when scrolling
                             }}
                         >
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
