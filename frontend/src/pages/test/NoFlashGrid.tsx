@@ -1667,10 +1667,10 @@ function calculateImageLayout(
             }
         } else if (aspectRatio < 0.6) {
             // Very tall portrait (< 0.6, e.g., 9:16, 1:2)
-            // Should be 600–800px tall - AUTO-CALCULATES within this range
+            // Should be 600–750px tall - AUTO-CALCULATES within this range
             categoryMin = 600;
             const absoluteMaxHeight = GRID_CONFIG.maxRowSpan * baseRowHeight;
-            categoryMax = Math.min(800, absoluteMaxHeight);
+            categoryMax = Math.min(750, absoluteMaxHeight); // Reduced from 800px to 750px
             if (displayHeight < categoryMin) {
                 targetHeight = categoryMin; // Too short, clamp to minimum
             } else if (displayHeight > categoryMax) {
@@ -1690,7 +1690,7 @@ function calculateImageLayout(
                 // Between 0.5-0.6: treat as Very Tall Portrait
                 categoryMin = 600;
                 const absoluteMaxHeight = GRID_CONFIG.maxRowSpan * baseRowHeight;
-                categoryMax = Math.min(800, absoluteMaxHeight);
+                categoryMax = Math.min(750, absoluteMaxHeight); // Reduced from 800px to 750px
                 targetHeight = Math.max(categoryMin, Math.min(categoryMax, displayHeight));
             } else {
                 // Closer to standard portrait (0.6-0.75)
