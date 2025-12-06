@@ -192,7 +192,7 @@ export const en = {
     browse: 'Browse',
     browseHint:
       'photos from your computer or phone (multiple selection allowed)',
-    maxSize: 'Max 10 MB',
+    maxSize: 'Max',
     selected: '{count} photos selected',
     uploading: 'Uploading...',
     uploadingProgress: 'Uploading... {progress}%',
@@ -608,6 +608,12 @@ export const en = {
     shutterSpeedTooltip: 'Shutter speed (e.g., 1/125, 1/500)',
     iso: 'ISO',
     isoTooltip: 'ISO sensitivity (e.g., 100, 400, 1600)',
+    default: 'Default',
+    fullSize: 'Full size',
+    photographer: 'Photographer',
+    noLocation: 'No location',
+    topInfo: 'Top info',
+    noImage: 'No image',
   },
 
   // Profile

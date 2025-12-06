@@ -1,6 +1,20 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useCallback } from 'react';
 import api from '@/lib/axios';
 import type { Image } from '@/types/image';
+import { Heart, Share2, ChevronDown } from 'lucide-react';
+import { favoriteService } from '@/services/favoriteService';
+import { useBatchedFavoriteCheck, updateFavoriteCache } from '@/hooks/useBatchedFavoriteCheck';
+import type { DownloadSize } from '@/components/image/DownloadSizeSelector';
+import { shareService } from '@/utils/shareService';
+import { generateImageSlug } from '@/lib/utils';
+import { toast } from 'sonner';
+import { useUserStore } from '@/stores/useUserStore';
+import { imageFetchService } from '@/services/imageFetchService';
+import { useNavigate } from 'react-router-dom';
+import { t } from '@/i18n';
+import leftArrowIcon from '@/assets/left-arrow.svg';
+import rightArrowIcon from '@/assets/right-arrow.svg';
+import closeIcon from '@/assets/close.svg';
 import './NoFlashGrid.css';
 
 type Category = { name: string; _id: string };
@@ -242,6 +256,19 @@ function ImageModal({
     const [shouldAnimate, setShouldAnimate] = useState(false);
     const previousImgRef = useRef<ExtendedImage | null>(img);
     const imgElementRef = useRef<HTMLImageElement | null>(null);
+    const { user } = useUserStore();
+    const isFavorited = useBatchedFavoriteCheck(img?._id);
+    const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
+    const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+    const [showShareMenu, setShowShareMenu] = useState(false);
+    const [showAuthorTooltip, setShowAuthorTooltip] = useState(false);
+    const [tooltipAnimating, setTooltipAnimating] = useState(false);
+    const authorTooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const authorAreaRef = useRef<HTMLDivElement | null>(null);
+    const [authorImages, setAuthorImages] = useState<ExtendedImage[]>([]);
+    const [loadingAuthorImages, setLoadingAuthorImages] = useState(false);
+    const [, setLocaleUpdate] = useState(0);
+    const navigate = useNavigate();
     const authorName =
         (img as any)?.uploadedBy?.username ||
         (img as any)?.author ||
@@ -312,6 +339,16 @@ function ImageModal({
             setIsScrolled(false);
             setShouldAnimate(false);
         });
+        
+        // Close menus when image changes
+        setShowDownloadMenu(false);
+        setShowShareMenu(false);
+        setShowAuthorTooltip(false);
+        // Clear author tooltip timeout
+        if (authorTooltipTimeoutRef.current) {
+            clearTimeout(authorTooltipTimeoutRef.current);
+            authorTooltipTimeoutRef.current = null;
+        }
 
         // Unsplash technique: Use different image sizes
         // Low-res thumbnail = thumbnailUrl or smallUrl (small file, pixelated when enlarged to full size)
@@ -370,6 +407,51 @@ function ImageModal({
         window.addEventListener('resize', recalc);
         return () => window.removeEventListener('resize', recalc);
     }, [aspect]);
+    
+    // Cleanup author tooltip timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (authorTooltipTimeoutRef.current) {
+                clearTimeout(authorTooltipTimeoutRef.current);
+            }
+        };
+    }, []);
+    
+    // Trigger animation when tooltip appears
+    useEffect(() => {
+        if (showAuthorTooltip) {
+            // Small delay to ensure DOM is ready, then trigger animation
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    setTooltipAnimating(true);
+                });
+            });
+        } else {
+            setTooltipAnimating(false);
+        }
+    }, [showAuthorTooltip]);
+    
+    // Listen for locale changes to re-render translations
+    useEffect(() => {
+        const handleLocaleChange = () => {
+            setLocaleUpdate(prev => prev + 1);
+        };
+        window.addEventListener('localeChange', handleLocaleChange);
+        return () => window.removeEventListener('localeChange', handleLocaleChange);
+    }, []);
+
+    // Close download menu when clicking outside
+    useEffect(() => {
+        if (!showDownloadMenu) return;
+        const handleClickOutside = (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            if (!target.closest('[data-download-menu]')) {
+                setShowDownloadMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showDownloadMenu]);
 
     const handleOverlayClick = useCallback(
         (e: React.MouseEvent) => {
@@ -380,6 +462,87 @@ function ImageModal({
         [onClose]
     );
 
+    // Handle download
+    const handleDownload = useCallback(async (size: DownloadSize) => {
+        if (!img?._id) return;
+        try {
+            const response = await api.get(`/images/${img._id}/download?size=${size}`, {
+                responseType: 'blob',
+                withCredentials: true,
+            });
+            const blob = new Blob([response.data], { type: response.headers['content-type'] || 'image/webp' });
+            const blobUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            const contentDisposition = response.headers['content-disposition'];
+            let fileName = 'photo.webp';
+            if (contentDisposition) {
+                const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
+                if (fileNameMatch) {
+                    fileName = fileNameMatch[1];
+                }
+            } else {
+                const sanitizedTitle = (img.imageTitle || 'photo').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                const urlExtension = img.imageUrl?.match(/\.([a-z]+)(?:\?|$)/i)?.[1] || 'webp';
+                fileName = `${sanitizedTitle}.${urlExtension}`;
+            }
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+            toast.success(t('image.downloadSuccess'));
+            setShowDownloadMenu(false);
+        } catch (error) {
+            console.error('Download failed:', error);
+            toast.error(t('image.downloadFailed'));
+        }
+    }, [img]);
+
+    // Handle toggle favorite
+    const handleToggleFavorite = useCallback(async () => {
+        if (!user || !img?._id || isTogglingFavorite) return;
+        setIsTogglingFavorite(true);
+        try {
+            const imageId = String(img._id);
+            const response = await favoriteService.toggleFavorite(imageId);
+            updateFavoriteCache(imageId, response.isFavorited);
+            if (response.isFavorited) {
+                toast.success(t('favorites.added'));
+            } else {
+                toast.success(t('favorites.removed'));
+            }
+        } catch (error) {
+            console.error('Failed to toggle favorite:', error);
+            toast.error(t('favorites.updateFailed'));
+        } finally {
+            setIsTogglingFavorite(false);
+        }
+    }, [user, img, isTogglingFavorite]);
+
+    // Handle share
+    const handleShare = useCallback(() => {
+        if (!img?._id) return;
+        const slug = generateImageSlug(img.imageTitle || 'Untitled', img._id);
+        const shareUrl = `${window.location.origin}/photos/${slug}`;
+        if (navigator.share) {
+            navigator.share({
+                title: img.imageTitle || 'Photo',
+                text: `Check out this photo: ${img.imageTitle || 'Untitled'}`,
+                url: shareUrl,
+            }).catch(() => {});
+        } else {
+            shareService.copyToClipboard(shareUrl).then((success) => {
+                if (success) {
+                    toast.success(t('share.linkCopied'));
+                } else {
+                    toast.error(t('share.linkCopyFailed'));
+                }
+            });
+        }
+        setShowShareMenu(false);
+    }, [img]);
+
     return (
         !img ? null :
             <div
@@ -387,7 +550,7 @@ function ImageModal({
                 style={{
                     position: 'fixed',
                     inset: 0,
-                    background: 'rgba(0,0,0,0.95)',
+                    background: 'rgba(0,0,0,0.4)',
                     zIndex: 9999,
                     display: 'flex',
                     alignItems: 'flex-start',
@@ -403,7 +566,7 @@ function ImageModal({
                         position: 'relative',
                         width: 'clamp(1400px, 90vw, 1600px)',
                         height: '100vh',
-                        background: '#0f0f0f',
+                        background: '#ffffff',
                         borderRadius: 0,
                         overflow: 'hidden',
                         display: 'flex',
@@ -444,9 +607,6 @@ function ImageModal({
                             }
                         }}
                     >
-                        {/* Spacer to create initial space above top bar */}
-                        <div style={{ height: 16, flexShrink: 0 }} />
-
                         {/* Top info - Sticky: starts with space, sticks to viewport top when scrolling */}
                         <div
                             style={{
@@ -455,47 +615,462 @@ function ImageModal({
                                 height: 72,
                                 minHeight: 72,
                                 padding: '12px 16px',
-                                background: '#5a16c5',
-                                color: '#fff',
+                                background: 'transparent',
+                                color: '#333',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
                                 zIndex: 10, // Ensure it stays on top when scrolling
                             }}
                         >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div 
+                                ref={authorAreaRef}
+                                style={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: 8,
+                                    position: 'relative',
+                                }}
+                                onMouseEnter={() => {
+                                    // Clear any hide timeout
+                                    if ((authorAreaRef.current as any)?.hideTimeout) {
+                                        clearTimeout((authorAreaRef.current as any).hideTimeout);
+                                        (authorAreaRef.current as any).hideTimeout = null;
+                                    }
+                                    // Clear any existing timeout
+                                    if (authorTooltipTimeoutRef.current) {
+                                        clearTimeout(authorTooltipTimeoutRef.current);
+                                    }
+                                    // Set timeout to show tooltip after 1 second
+                                    authorTooltipTimeoutRef.current = setTimeout(async () => {
+                                        setShowAuthorTooltip(true);
+                                        // Fetch author's images when tooltip shows
+                                        const userId = (img as any)?.uploadedBy?._id || (img as any)?.uploadedBy;
+                                        if (userId && !loadingAuthorImages) {
+                                            setLoadingAuthorImages(true);
+                                            try {
+                                                const response = await imageFetchService.fetchUserImages(userId, { page: 1, limit: 3 });
+                                                setAuthorImages(response.images || []);
+                                            } catch (error) {
+                                                console.error('Failed to fetch author images:', error);
+                                                setAuthorImages([]);
+                                            } finally {
+                                                setLoadingAuthorImages(false);
+                                            }
+                                        }
+                                    }, 1000);
+                                }}
+                                onMouseLeave={(e) => {
+                                    // Use a delay to allow mouse to move to tooltip
+                                    const hideTimeout = setTimeout(() => {
+                                        const tooltipElement = document.querySelector('[data-author-tooltip]') as HTMLElement;
+                                        if (!tooltipElement) {
+                                            setShowAuthorTooltip(false);
+                                            return;
+                                        }
+                                        // Check if mouse is actually over tooltip using getBoundingClientRect
+                                        const tooltipRect = tooltipElement.getBoundingClientRect();
+                                        const mouseX = (e as any).clientX || 0;
+                                        const mouseY = (e as any).clientY || 0;
+                                        
+                                        // Check if mouse is within tooltip bounds (with some padding for the gap)
+                                        const isOverTooltip = (
+                                            mouseX >= tooltipRect.left - 10 &&
+                                            mouseX <= tooltipRect.right + 10 &&
+                                            mouseY >= tooltipRect.top - 10 &&
+                                            mouseY <= tooltipRect.bottom + 10
+                                        );
+                                        
+                                        if (!isOverTooltip) {
+                                            // Start hide animation
+                                            setTooltipAnimating(false);
+                                            // Remove from DOM after animation
+                                            setTimeout(() => {
+                                                setShowAuthorTooltip(false);
+                                            }, 200);
+                                        }
+                                        // Clear timeout if mouse leaves before delay
+                                        if (authorTooltipTimeoutRef.current) {
+                                            clearTimeout(authorTooltipTimeoutRef.current);
+                                            authorTooltipTimeoutRef.current = null;
+                                        }
+                                    }, 150);
+                                    
+                                    // Store timeout to clear if mouse enters tooltip
+                                    (authorAreaRef.current as any).hideTimeout = hideTimeout;
+                                }}
+                            >
                                 <div
                                     style={{
                                         width: 36,
                                         height: 36,
                                         borderRadius: '50%',
-                                        background: '#fff2',
+                                        background: 'rgba(0, 0, 0, 0.1)',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         fontSize: 12,
                                         fontWeight: 600,
+                                        color: '#333',
                                     }}
                                 >
                                     {authorName ? authorName[0]?.toUpperCase() : 'A'}
                                 </div>
                                 <div>
                                     <div style={{ fontWeight: 700 }}>{authorName}</div>
-                                    <div style={{ fontSize: 12, opacity: 0.8 }}>{img.imageTitle || 'Top info'}</div>
+                                    <div style={{ fontSize: 12, opacity: 0.8 }}>{img.imageTitle || t('image.topInfo')}</div>
                                 </div>
+                                
+                                {/* Author tooltip/popup */}
+                                {showAuthorTooltip && authorAreaRef.current && (() => {
+                                    const rect = authorAreaRef.current!.getBoundingClientRect();
+                                    return (
+                                        <div
+                                            data-author-tooltip
+                                            style={{
+                                                position: 'fixed',
+                                                top: `${rect.bottom + 4}px`,
+                                                left: `${rect.left}px`,
+                                                background: '#fff',
+                                                borderRadius: '8px',
+                                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                                padding: '12px',
+                                                minWidth: 360,
+                                                width: 360,
+                                                zIndex: 10000,
+                                                pointerEvents: 'auto',
+                                                opacity: tooltipAnimating ? 1 : 0,
+                                                transform: tooltipAnimating ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(-4px)',
+                                                transition: 'opacity 0.2s ease-out, transform 0.2s ease-out',
+                                            }}
+                                            onMouseEnter={() => {
+                                                // Clear any hide timeout from author area
+                                                if (authorAreaRef.current && (authorAreaRef.current as any).hideTimeout) {
+                                                    clearTimeout((authorAreaRef.current as any).hideTimeout);
+                                                    (authorAreaRef.current as any).hideTimeout = null;
+                                                }
+                                                // Keep tooltip visible when hovering over it
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                // Use a delay to allow mouse to move back to author area
+                                                const hideTimeout = setTimeout(() => {
+                                                    if (!authorAreaRef.current?.matches(':hover')) {
+                                                        // Start hide animation
+                                                        setTooltipAnimating(false);
+                                                        // Remove from DOM after animation
+                                                        setTimeout(() => {
+                                                            setShowAuthorTooltip(false);
+                                                        }, 200);
+                                                    }
+                                                }, 150);
+                                                
+                                                // Store timeout to clear if mouse enters author area
+                                                (e.currentTarget as any).hideTimeout = hideTimeout;
+                                            }}
+                                        >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                                            <div
+                                                style={{
+                                                    width: 48,
+                                                    height: 48,
+                                                    borderRadius: '50%',
+                                                    background: 'rgba(0, 0, 0, 0.1)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontSize: 18,
+                                                    fontWeight: 600,
+                                                    color: '#333',
+                                                }}
+                                            >
+                                                {authorName ? authorName[0]?.toUpperCase() : 'A'}
+                                            </div>
+                                            <div>
+                                                <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 2 }}>
+                                                    {authorName}
+                                                </div>
+                                                <div style={{ fontSize: 13, color: '#666' }}>
+                                                    {(img as any)?.uploadedBy?.bio || t('image.photographer')}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div style={{ fontSize: 13, color: '#333', lineHeight: 1.4, marginBottom: 10 }}>
+                                            {(img as any)?.uploadedBy?.location || t('image.noLocation')}
+                                        </div>
+                                        
+                                        {/* Uploaded images section */}
+                                        {authorImages.length > 0 && (
+                                            <div style={{ marginBottom: 10 }}>
+                                                <div style={{ 
+                                                    display: 'grid', 
+                                                    gridTemplateColumns: 'repeat(3, 1fr)', 
+                                                    gap: 6,
+                                                    marginBottom: 0 
+                                                }}>
+                                                    {authorImages.slice(0, 3).map((authorImg, idx) => (
+                                                        <div
+                                                            key={authorImg._id || idx}
+                                                            style={{
+                                                                width: '100%',
+                                                                paddingBottom: '70%',
+                                                                position: 'relative',
+                                                                borderRadius: '4px',
+                                                                overflow: 'hidden',
+                                                                background: '#f0f0f0',
+                                                                cursor: 'pointer',
+                                                            }}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const imageIndex = images.findIndex(i => i._id === authorImg._id);
+                                                                if (imageIndex >= 0 && onSelectIndex) {
+                                                                    onSelectIndex(imageIndex);
+                                                                }
+                                                            }}
+                                                        >
+                                                            {authorImg.thumbnailUrl || authorImg.smallUrl || authorImg.imageUrl ? (
+                                                                <img
+                                                                    src={authorImg.thumbnailUrl || authorImg.smallUrl || authorImg.imageUrl}
+                                                                    alt={authorImg.imageTitle || 'Photo'}
+                                                                    style={{
+                                                                        position: 'absolute',
+                                                                        inset: 0,
+                                                                        width: '100%',
+                                                                        height: '100%',
+                                                                        objectFit: 'cover',
+                                                                    }}
+                                                                />
+                                                            ) : (
+                                                                <div style={{
+                                                                    position: 'absolute',
+                                                                    inset: 0,
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    color: '#999',
+                                                                    fontSize: 12,
+                                                                }}>
+                                                                    {t('image.noImage')}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                        
+                                        {/* View profile button */}
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const userId = (img as any)?.uploadedBy?._id || (img as any)?.uploadedBy;
+                                                const username = (img as any)?.uploadedBy?.username;
+                                                if (username) {
+                                                    navigate(`/profile/${username}`);
+                                                    onClose();
+                                                } else if (userId) {
+                                                    navigate(`/profile/user/${userId}`);
+                                                    onClose();
+                                                }
+                                                setShowAuthorTooltip(false);
+                                            }}
+                                            style={{
+                                                width: '100%',
+                                                padding: '8px 16px',
+                                                background: '#f5f5f5',
+                                                border: 'none',
+                                                borderRadius: '6px',
+                                                color: '#333',
+                                                fontSize: 14,
+                                                fontWeight: 500,
+                                                cursor: 'pointer',
+                                                transition: 'background 0.2s',
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.background = '#e8e8e8';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.background = '#f5f5f5';
+                                            }}
+                                        >
+                                            {t('image.viewProfile')}
+                                        </button>
+                                        </div>
+                                    );
+                                })()}
                             </div>
-                            <div style={{ display: 'flex', gap: 8 }}>
-                                <button>Download</button>
-                                <button onClick={() => onNavigate((index - 1 + images.length) % images.length)}>Prev</button>
-                                <button onClick={() => onNavigate((index + 1) % images.length)}>Next</button>
-                                <button onClick={onClose}>Close</button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                {/* Download button with dropdown */}
+                                <div style={{ position: 'relative' }} data-download-menu>
+                                    <button
+                                        onClick={() => setShowDownloadMenu(!showDownloadMenu)}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 6,
+                                            padding: '8px 16px',
+                                            background: 'rgba(0, 0, 0, 0.05)',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            color: '#333',
+                                            cursor: 'pointer',
+                                            fontSize: 14,
+                                            fontWeight: 500,
+                                            transition: 'background 0.2s',
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.1)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.05)';
+                                        }}
+                                    >
+                                        <span>{t('image.download')}</span>
+                                        <ChevronDown size={16} />
+                                    </button>
+                                    {showDownloadMenu && (
+                                        <div
+                                            style={{
+                                                position: 'absolute',
+                                                top: '100%',
+                                                right: 0,
+                                                marginTop: 8,
+                                                background: '#fff',
+                                                borderRadius: '8px',
+                                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                                padding: '8px 0',
+                                                minWidth: 200,
+                                                zIndex: 1000,
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            {[
+                                                { value: 'small' as DownloadSize, label: t('image.small'), dimension: '640px' },
+                                                { value: 'medium' as DownloadSize, label: t('image.medium'), dimension: '1920px' },
+                                                { value: 'large' as DownloadSize, label: t('image.large'), dimension: '2400px' },
+                                                { value: 'original' as DownloadSize, label: t('image.original'), dimension: t('image.fullSize') },
+                                            ].map((option) => (
+                                                <button
+                                                    key={option.value}
+                                                    onClick={() => {
+                                                        handleDownload(option.value);
+                                                        setShowDownloadMenu(false);
+                                                    }}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '12px 16px',
+                                                        border: 'none',
+                                                        background: 'transparent',
+                                                        textAlign: 'left',
+                                                        cursor: 'pointer',
+                                                        fontSize: 14,
+                                                        color: '#333',
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                        transition: 'background 0.2s',
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.background = 'rgba(0,0,0,0.05)';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.background = 'transparent';
+                                                    }}
+                                                >
+                                                    <div>
+                                                        <div style={{ fontWeight: 500 }}>{option.label}</div>
+                                                        <div style={{ fontSize: 12, color: '#666', marginTop: 2 }}>{option.dimension}</div>
+                                                    </div>
+                                                    {option.value === 'medium' && (
+                                                        <span style={{ fontSize: 11, color: '#999' }}>{t('image.default')}</span>
+                                                    )}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Save/Favorite button */}
+                                {user && (
+                                    <button
+                                        onClick={handleToggleFavorite}
+                                        disabled={isTogglingFavorite}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 6,
+                                            padding: '8px 16px',
+                                            background: 'rgba(0, 0, 0, 0.05)',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            color: '#333',
+                                            cursor: isTogglingFavorite ? 'not-allowed' : 'pointer',
+                                            fontSize: 14,
+                                            fontWeight: 500,
+                                            transition: 'background 0.2s',
+                                            opacity: isTogglingFavorite ? 0.6 : 1,
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!isTogglingFavorite) {
+                                                e.currentTarget.style.background = 'rgba(0, 0, 0, 0.1)';
+                                            }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.05)';
+                                        }}
+                                    >
+                                        <Heart size={16} fill={isFavorited ? 'currentColor' : 'none'} />
+                                        <span>{t('image.save')}</span>
+                                        <kbd style={{
+                                            padding: '2px 6px',
+                                            background: 'rgba(0,0,0,0.1)',
+                                            borderRadius: '4px',
+                                            fontSize: 11,
+                                            fontWeight: 500,
+                                        }}>F</kbd>
+                                    </button>
+                                )}
+
+                                {/* Share button */}
+                                <button
+                                    onClick={handleShare}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 6,
+                                        padding: '8px 16px',
+                                        background: 'rgba(0, 0, 0, 0.05)',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        color: '#333',
+                                        cursor: 'pointer',
+                                        fontSize: 14,
+                                        fontWeight: 500,
+                                        transition: 'background 0.2s',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.background = 'rgba(0, 0, 0, 0.1)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.background = 'rgba(0, 0, 0, 0.05)';
+                                    }}
+                                >
+                                    <Share2 size={16} />
+                                    <span>{t('share.share')}</span>
+                                    <kbd style={{
+                                        padding: '2px 6px',
+                                        background: 'rgba(0,0,0,0.1)',
+                                        borderRadius: '4px',
+                                        fontSize: 11,
+                                        fontWeight: 500,
+                                    }}>⌘S</kbd>
+                                </button>
                             </div>
                         </div>
 
                         {/* Middle image with gutters */}
                         <div
                             style={{
-                                background: '#0f0f0f',
+                                background: '#ffffff',
                                 padding: '0px 0',
                                 minHeight: '100%',
                                 // No transition to prevent flash
@@ -505,20 +1080,20 @@ function ImageModal({
                             <div
                                 style={{
                                     display: 'flex',
-                                    gap: 0,
                                     alignItems: 'center',
+                                    justifyContent: 'center',
                                     maxWidth: `${imageBox.widthPct * 100}%`,
                                     margin: '0 auto',
+                                    padding: `0 ${imageBox.gutter}px`,
                                 }}
                             >
-                                <div style={{ width: imageBox.gutter, flexShrink: 0, background: '#0f0f0f' }} />
-                                <div style={{ flex: 1, position: 'relative', background: '#0f0f0f' }}>
+                                <div style={{ width: '100%', position: 'relative', background: '#ffffff' }}>
                                     <div
                                         style={{
                                             position: 'relative',
                                             width: '100%',
                                             paddingBottom: imageBox.paddingBottom,
-                                            background: '#0f0f0f',
+                                            background: '#ffffff',
                                         }}
                                     >
                                         {/* Unsplash technique: Blurred thumbnail → instant sharp swap (no fade-in) */}
@@ -540,7 +1115,7 @@ function ImageModal({
                                                     opacity: 1,
                                                     // No transitions - instant blur removal for smooth swap
                                                     transition: 'none',
-                                                    background: '#0f0f0f',
+                                                    background: '#ffffff',
                                                     // Prevent image from causing layout shifts
                                                     display: 'block',
                                                     // Prevent image from being selectable (can cause visual glitches)
@@ -556,13 +1131,12 @@ function ImageModal({
                                                     inset: 0,
                                                     width: '100%',
                                                     height: '100%',
-                                                    background: '#0f0f0f',
+                                                    background: '#ffffff',
                                                 }}
                                             />
                                         )}
                                     </div>
                                 </div>
-                                <div style={{ width: imageBox.gutter, flexShrink: 0, background: '#0f0f0f' }} />
                             </div>
                         </div>
 
@@ -704,6 +1278,151 @@ function ImageModal({
                         </div>
                     </div>
                 </div>
+                
+                {/* Close button - top left of overlay */}
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onClose();
+                    }}
+                    style={{
+                        position: 'fixed',
+                        left: 24,
+                        top: 24,
+                        width: 32,
+                        height: 32,
+                        background: 'transparent',
+                        border: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        transition: 'opacity 0.2s',
+                        zIndex: 10001,
+                        padding: 0,
+                    }}
+                    onMouseEnter={(e) => {
+                        const img = e.currentTarget.querySelector('img');
+                        if (img) img.style.opacity = '1';
+                    }}
+                    onMouseLeave={(e) => {
+                        const img = e.currentTarget.querySelector('img');
+                        if (img) img.style.opacity = '0.7';
+                    }}
+                >
+                    <img
+                        src={closeIcon}
+                        alt="Close"
+                        style={{
+                            width: 32,
+                            height: 32,
+                            opacity: 0.7,
+                            transition: 'opacity 0.2s',
+                        }}
+                    />
+                </button>
+                
+                {/* Left navigation button - outside modal */}
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (index > 0) {
+                            onNavigate(index - 1);
+                        }
+                    }}
+                    disabled={index === 0}
+                    style={{
+                        position: 'fixed',
+                        left: 24,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        width: 'auto',
+                        height: 'auto',
+                        background: 'transparent',
+                        border: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: index === 0 ? 'not-allowed' : 'pointer',
+                        transition: 'opacity 0.2s',
+                        zIndex: 10000,
+                        padding: 0,
+                    }}
+                    onMouseEnter={(e) => {
+                        if (index > 0) {
+                            const img = e.currentTarget.querySelector('img');
+                            if (img) img.style.opacity = '1';
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        if (index > 0) {
+                            const img = e.currentTarget.querySelector('img');
+                            if (img) img.style.opacity = '0.7';
+                        }
+                    }}
+                >
+                    <img
+                        src={leftArrowIcon}
+                        alt={t('common.previous')}
+                        style={{
+                            width: 48,
+                            height: 48,
+                            opacity: index === 0 ? 0.3 : 0.7,
+                            transition: 'opacity 0.2s',
+                        }}
+                    />
+                </button>
+
+                {/* Right navigation button - outside modal */}
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (index < images.length - 1) {
+                            onNavigate(index + 1);
+                        }
+                    }}
+                    disabled={index === images.length - 1}
+                    style={{
+                        position: 'fixed',
+                        right: 24,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        width: 'auto',
+                        height: 'auto',
+                        background: 'transparent',
+                        border: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: index === images.length - 1 ? 'not-allowed' : 'pointer',
+                        transition: 'opacity 0.2s',
+                        zIndex: 10000,
+                        padding: 0,
+                    }}
+                    onMouseEnter={(e) => {
+                        if (index < images.length - 1) {
+                            const img = e.currentTarget.querySelector('img');
+                            if (img) img.style.opacity = '1';
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        if (index < images.length - 1) {
+                            const img = e.currentTarget.querySelector('img');
+                            if (img) img.style.opacity = '0.7';
+                        }
+                    }}
+                >
+                    <img
+                        src={rightArrowIcon}
+                        alt={t('common.next')}
+                        style={{
+                            width: 48,
+                            height: 48,
+                            opacity: index === images.length - 1 ? 0.3 : 0.7,
+                            transition: 'opacity 0.2s',
+                        }}
+                    />
+                </button>
             </div>
     );
 }

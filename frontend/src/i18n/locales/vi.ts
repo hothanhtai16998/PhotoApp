@@ -190,7 +190,7 @@ export const vi = {
     dragDrop: 'Kéo thả hoặc',
     browse: 'Chọn',
     browseHint: 'ảnh từ máy tính, điện thoại (có thể chọn nhiều ảnh)',
-    maxSize: 'Tối đa 10 MB',
+    maxSize: 'Tối đa',
     selected: 'Đã chọn {count} ảnh',
     uploading: 'Đang tải...',
     uploadingProgress: 'Đang tải lên... {progress}%',
@@ -601,6 +601,12 @@ export const vi = {
     shutterSpeedTooltip: 'Tốc độ màn trập (ví dụ: 1/125, 1/500)',
     iso: 'ISO',
     isoTooltip: 'Độ nhạy sáng ISO (ví dụ: 100, 400, 1600)',
+    default: 'Mặc định',
+    fullSize: 'Kích thước đầy đủ',
+    photographer: 'Nhiếp ảnh gia',
+    noLocation: 'Không có địa điểm',
+    topInfo: 'Thông tin trên',
+    noImage: 'Không có ảnh',
   },
 
   // Profile
