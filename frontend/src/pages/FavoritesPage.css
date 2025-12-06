@@ -1,6 +1,6 @@
 .favorites-page {
   min-height: 100vh;
-  background: #fafafa;
+  background: hsl(var(--background));
   padding-top: calc(var(--header-height, 65px) + 40px);
   margin-top: 0;
 }
@@ -37,13 +37,13 @@
 .favorites-title {
   font-size: 2rem;
   font-weight: 700;
-  color: #111;
+  color: hsl(var(--foreground));
   margin: 0 0 8px 0;
 }
 
 .favorites-subtitle {
   font-size: 1rem;
-  color: #767676;
+  color: hsl(var(--muted-foreground));
   margin: 0;
 }
 
@@ -55,7 +55,7 @@
   gap: 12px; /* Same as masonry grid */
   width: 100%;
   padding: 0;
-  background: #fff;
+  background: hsl(var(--card));
   margin-bottom: 40px;
 }
 
@@ -63,7 +63,7 @@
   position: relative;
   overflow: hidden;
   cursor: pointer;
-  background: #f0f0f0;
+  background: hsl(var(--muted));
   transition: opacity 0.2s ease;
   display: flex;
   flex-direction: column;
@@ -128,7 +128,7 @@
 }
 
 .favorites-info {
-  color: #fff;
+  color: hsl(var(--background));
 }
 
 .favorites-image-title {
@@ -152,27 +152,27 @@
 }
 
 .empty-icon {
-  color: #d1d5db;
+  color: hsl(var(--muted-foreground));
   margin: 0 auto 24px;
 }
 
 .favorites-empty h2 {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #111;
+  color: hsl(var(--foreground));
   margin: 0 0 12px 0;
 }
 
 .favorites-empty p {
   font-size: 1rem;
-  color: #767676;
+  color: hsl(var(--muted-foreground));
   margin: 0 0 32px 0;
 }
 
 .browse-button {
   padding: 12px 24px;
-  background: #111;
-  color: #fff;
+  background: hsl(var(--foreground));
+  color: hsl(var(--background));
   border: none;
   border-radius: 8px;
   font-size: 0.9375rem;
@@ -182,7 +182,7 @@
 }
 
 .browse-button:hover {
-  background: #333;
+  background: hsl(var(--foreground) / 0.8);
   transform: translateY(-2px);
 }
 
@@ -196,9 +196,9 @@
 
 .pagination-btn {
   padding: 10px 20px;
-  background: #fff;
-  color: #111;
-  border: 1px solid #e5e5e5;
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
   border-radius: 8px;
   font-size: 0.9375rem;
   font-weight: 500;
@@ -218,7 +218,7 @@
 
 .pagination-info {
   font-size: 0.9375rem;
-  color: #767676;
+  color: hsl(var(--muted-foreground));
 }
 
 @media (max-width: 1024px) {

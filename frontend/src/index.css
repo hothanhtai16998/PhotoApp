@@ -1,5 +1,7 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import './styles/visualPolish.css';
+@import './styles/responsive.css';
 
 @custom-variant dark (&:is(.dark *));
 @config "../tailwind.config.ts";

@@ -6,8 +6,8 @@
 .image-page-sidebar {
   width: 56px;
   padding: 16px 0;
-  border-right: 1px solid #e5e5e5;
-  background: #fff;
+  border-right: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
   display: none; /* Hidden by default on mobile */
   flex-direction: column;
   justify-content: space-between;
@@ -57,7 +57,7 @@
 /* Page mode - when refreshed or direct access */
 .image-page-container.page-mode {
   position: relative;
-  background: #fff;
+  background: hsl(var(--background));
   min-height: 100vh;
   /* Account for fixed header (56px) + fixed search bar (55px) on mobile */
   /* padding-top: calc(var(--header-height, 56px) + 55px); */
@@ -86,8 +86,8 @@
 .image-page-loading .loading-spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #111;
+  border: 4px solid hsl(var(--muted));
+  border-top: 4px solid hsl(var(--foreground));
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 20px;
@@ -104,14 +104,14 @@
 
 .image-page-error p {
   font-size: 1.125rem;
-  color: #767676;
+  color: hsl(var(--muted-foreground));
   margin-bottom: 20px;
 }
 
 .image-page-error button {
   padding: 12px 24px;
-  background: #111;
-  color: #fff;
+  background: hsl(var(--foreground));
+  color: hsl(var(--background));
   border: none;
   border-radius: 6px;
   font-size: 0.9375rem;
@@ -120,5 +120,5 @@
 }
 
 .image-page-error button:hover {
-  background: #333;
+  background: hsl(var(--foreground) / 0.9);
 }

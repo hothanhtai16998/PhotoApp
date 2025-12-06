@@ -1,6 +1,6 @@
 .collections-page {
   min-height: 100vh;
-  background: #fafafa;
+  background: hsl(var(--background));
   padding: 24px 0;
   padding-top: calc(var(--header-height, 65px) + 24px);
   margin-top: 0;
@@ -12,7 +12,7 @@
   align-items: center;
   justify-content: center;
   padding: 80px 20px;
-  color: #767676;
+  color: hsl(var(--muted-foreground));
 }
 
 .collections-loading .loading-spinner {
@@ -66,7 +66,7 @@
   left: 16px;
   top: 50%;
   transform: translateY(-50%);
-  color: #767676;
+  color: hsl(var(--muted-foreground));
   pointer-events: none;
   z-index: 1;
 }
@@ -74,17 +74,17 @@
 .collections-search-input {
   width: 100%;
   padding: 12px 16px 12px 48px;
-  border: 2px solid #e8e8e8;
+  border: 2px solid hsl(var(--border));
   border-radius: 12px;
   font-size: 0.9375rem;
-  background: #fff;
+  background: hsl(var(--card));
   transition: all 0.2s ease;
   font-family: inherit;
 }
 
 .collections-search-input:focus {
   outline: none;
-  border-color: #111;
+  border-color: hsl(var(--foreground));
   box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
 }
 
@@ -93,7 +93,7 @@
   right: 12px;
   top: 50%;
   transform: translateY(-50%);
-  background: #f5f5f5;
+  background: hsl(var(--muted));
   border: none;
   border-radius: 50%;
   width: 24px;
@@ -102,13 +102,13 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #767676;
+  color: hsl(var(--muted-foreground));
   transition: all 0.2s ease;
 }
 
 .collections-search-clear:hover {
-  background: #e8e8e8;
-  color: #111;
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
 }
 
 .collections-tags-filter {
@@ -120,12 +120,12 @@
 
 .collections-tag-filter-btn {
   padding: 8px 16px;
-  background: #fff;
-  border: 2px solid #e8e8e8;
+  background: hsl(var(--card));
+  border: 2px solid hsl(var(--border));
   border-radius: 20px;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #767676;
+  color: hsl(var(--muted-foreground));
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
@@ -133,14 +133,14 @@
 
 .collections-tag-filter-btn:hover {
   border-color: #d0d0d0;
-  background: #fafafa;
-  color: #111;
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
 }
 
 .collections-tag-filter-btn.active {
-  background: #111;
-  border-color: #111;
-  color: #fff;
+  background: hsl(var(--foreground));
+  border-color: hsl(var(--foreground));
+  color: hsl(var(--background));
 }
 
 .collections-filter-controls {
@@ -154,34 +154,34 @@
   align-items: center;
   gap: 6px;
   padding: 10px 16px;
-  background: #f5f5f5;
+  background: hsl(var(--muted));
   border: 2px solid transparent;
   border-radius: 10px;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #111;
+  color: hsl(var(--foreground));
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .collections-filter-btn:hover {
-  background: #e8e8e8;
+  background: hsl(var(--muted));
 }
 
 .collections-filter-btn.active {
-  background: #111;
-  color: #fff;
-  border-color: #111;
+  background: hsl(var(--foreground));
+  color: hsl(var(--background));
+  border-color: hsl(var(--foreground));
 }
 
 .collections-sort-select {
   padding: 10px 16px;
-  border: 2px solid #e8e8e8;
+  border: 2px solid hsl(var(--border));
   border-radius: 10px;
   font-size: 0.875rem;
   font-weight: 500;
-  background: #fff;
-  color: #111;
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
   cursor: pointer;
   transition: all 0.2s ease;
   font-family: inherit;
@@ -189,7 +189,7 @@
 
 .collections-sort-select:focus {
   outline: none;
-  border-color: #111;
+  border-color: hsl(var(--foreground));
   box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
 }
 
@@ -198,7 +198,7 @@
   margin: 0 auto;
   padding: 0 24px 16px;
   font-size: 0.875rem;
-  color: #767676;
+  color: hsl(var(--muted-foreground));
   font-weight: 500;
 }
 
@@ -206,7 +206,7 @@
   margin: 0;
   font-size: 2rem;
   font-weight: 600;
-  color: #111;
+  color: hsl(var(--foreground));
 }
 
 .collections-create-btn {
@@ -214,8 +214,8 @@
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  background: #111;
-  color: #fff;
+  background: hsl(var(--foreground));
+  color: hsl(var(--background));
   border: none;
   border-radius: 8px;
   font-size: 0.9375rem;
@@ -225,7 +225,7 @@
 }
 
 .collections-create-btn:hover {
-  background: #333;
+  background: hsl(var(--foreground) / 0.8);
 }
 
 .collections-empty {
@@ -236,7 +236,7 @@
 }
 
 .collections-empty svg {
-  color: #999;
+  color: hsl(var(--muted-foreground));
   margin-bottom: 24px;
 }
 
@@ -244,19 +244,19 @@
   margin: 0 0 12px 0;
   font-size: 1.5rem;
   font-weight: 600;
-  color: #111;
+  color: hsl(var(--foreground));
 }
 
 .collections-empty p {
   margin: 0 0 32px 0;
-  color: #767676;
+  color: hsl(var(--muted-foreground));
   font-size: 0.9375rem;
 }
 
 .collections-empty-btn {
   padding: 12px 24px;
-  background: #111;
-  color: #fff;
+  background: hsl(var(--foreground));
+  color: hsl(var(--background));
   border: none;
   border-radius: 8px;
   font-size: 0.9375rem;
@@ -266,7 +266,7 @@
 }
 
 .collections-empty-btn:hover {
-  background: #333;
+  background: hsl(var(--foreground) / 0.8);
 }
 
 .collections-grid {
@@ -279,7 +279,7 @@
 }
 
 .collection-card {
-  background: #fff;
+  background: hsl(var(--card));
   border-radius: 12px;
   overflow: visible;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -298,7 +298,7 @@
   width: 100%;
   aspect-ratio: 4 / 3;
   overflow: visible;
-  background: #f0f0f0;
+  background: hsl(var(--muted));
 }
 
 .collection-card-cover img,
@@ -314,8 +314,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #999;
-  background: linear-gradient(135deg, #f5f5f5 0%, #e5e5e5 100%);
+  color: hsl(var(--muted-foreground));
+  background: linear-gradient(135deg, hsl(var(--muted)) 0%, hsl(var(--muted) / 0.8) 100%);
 }
 
 .collection-card-overlay {
@@ -373,7 +373,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #111;
+  color: hsl(var(--foreground));
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   backdrop-filter: blur(12px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -400,7 +400,7 @@
 }
 
 .collection-card-action-btn:hover:not(:disabled) {
-  background: #fff;
+  background: hsl(var(--card));
   transform: translateY(-4px) scale(1.05);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
   border-color: rgba(255, 255, 255, 0.5);
@@ -412,7 +412,7 @@
 
 .collection-card-action-btn.action-primary {
   background: linear-gradient(135deg, #111 0%, #333 100%);
-  color: #fff;
+  color: hsl(var(--background));
   border-color: transparent;
 }
 
@@ -423,7 +423,7 @@
 
 .collection-card-action-btn.action-danger {
   background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  color: #fff;
+  color: hsl(var(--background));
   border-color: transparent;
 }
 
@@ -455,7 +455,7 @@
   margin: 0 0 8px 0;
   font-size: 1.125rem;
   font-weight: 600;
-  color: #111;
+  color: hsl(var(--foreground));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -464,7 +464,7 @@
 .collection-card-description {
   margin: 0 0 12px 0;
   font-size: 0.875rem;
-  color: #767676;
+  color: hsl(var(--muted-foreground));
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -481,7 +481,7 @@
 .collection-card-tag {
   display: inline-block;
   padding: 4px 10px;
-  background: #f0f0f0;
+  background: hsl(var(--muted));
   border: 1px solid #e0e0e0;
   border-radius: 12px;
   font-size: 0.75rem;
@@ -492,11 +492,11 @@
 .collection-card-tag-more {
   display: inline-block;
   padding: 4px 10px;
-  background: #e8e8e8;
+  background: hsl(var(--muted));
   border: 1px solid #d0d0d0;
   border-radius: 12px;
   font-size: 0.75rem;
-  color: #999;
+  color: hsl(var(--muted-foreground));
   font-weight: 500;
 }
 
@@ -505,7 +505,7 @@
   align-items: center;
   gap: 16px;
   font-size: 0.8125rem;
-  color: #999;
+  color: hsl(var(--muted-foreground));
 }
 
 .collection-card-count {

@@ -7,13 +7,15 @@ import './ThemeToggle.css';
 // Initialize theme on module load - default to light
 (function initializeTheme() {
     const saved = localStorage.getItem('theme');
-    // Only use dark if explicitly saved as 'dark', otherwise default to light
-    const shouldBeDark = saved === 'dark';
+    // Check system preference if no saved theme
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    // Only use dark if explicitly saved as 'dark', otherwise check system preference
+    const shouldBeDark = saved === 'dark' || (saved === null && prefersDark);
     
     if (shouldBeDark) {
-        document.documentElement.classList.add('dark-theme');
+        document.documentElement.classList.add('dark');
     } else {
-        document.documentElement.classList.remove('dark-theme');
+        document.documentElement.classList.remove('dark');
     }
 })();
 
@@ -27,10 +29,10 @@ export function ThemeToggle({ asMenuItem = false }: { asMenuItem?: boolean }) {
     useEffect(() => {
         const root = document.documentElement;
         if (isDark) {
-            root.classList.add('dark-theme');
+            root.classList.add('dark');
             localStorage.setItem('theme', 'dark');
         } else {
-            root.classList.remove('dark-theme');
+            root.classList.remove('dark');
             localStorage.setItem('theme', 'light');
         }
     }, [isDark]);

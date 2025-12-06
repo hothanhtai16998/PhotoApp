@@ -18,20 +18,22 @@ export function AdminEmptyState({
     onAction 
 }: AdminEmptyStateProps) {
     return (
-        <div className="admin-empty-state">
+        <div className="admin-empty-state empty-state-enhanced">
             {Icon && (
-                <div className="admin-empty-state-icon">
-                    <Icon size={64} />
+                <div className="admin-empty-state-icon empty-state-icon">
+                    <Icon size={120} />
                 </div>
             )}
-            <h3 className="admin-empty-state-title">{title}</h3>
+            <h3 className="admin-empty-state-title empty-state-title">{title}</h3>
             {description && (
-                <p className="admin-empty-state-description">{description}</p>
+                <p className="admin-empty-state-description empty-state-message">{description}</p>
             )}
             {actionLabel && onAction && (
-                <Button onClick={onAction} variant="outline" className="admin-empty-state-action">
-                    {actionLabel}
-                </Button>
+                <div className="empty-state-action">
+                    <Button onClick={onAction} variant="outline" className="admin-empty-state-action">
+                        {actionLabel}
+                    </Button>
+                </div>
             )}
         </div>
     );

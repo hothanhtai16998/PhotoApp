@@ -581,6 +581,29 @@ function Slider() {
           <ChevronRight size={20} />
         </button>
       </div>
+
+      {/* Swipe Indicators */}
+      {images.length > 1 && (
+        <div className="swipe-indicator">
+          {images.map((_, index) => (
+            <button
+              key={index}
+              className={`swipe-indicator-dot ${index === currentSlide ? 'active' : ''}`}
+              onClick={() => goToSlide(index)}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Swipe Hint (mobile only) */}
+      {images.length > 1 && (
+        <div className="swipe-hint">
+          <ChevronLeft size={16} className="swipe-hint-icon" />
+          <span>Swipe to navigate</span>
+          <ChevronRight size={16} className="swipe-hint-icon" />
+        </div>
+      )}
     </div>
   );
 }
