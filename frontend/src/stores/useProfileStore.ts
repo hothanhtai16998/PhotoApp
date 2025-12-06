@@ -110,29 +110,32 @@ export const useProfileStore = create(
 			}
 		},
 
-		fetchCollections: async (_userId: string, signal?: AbortSignal) => {
-			set((state) => {
-				state.collectionsLoading = true;
-			});
+	fetchCollections: async (_userId: string, signal?: AbortSignal) => {
+		set((state) => {
+			state.collectionsLoading = true;
+		});
 
-			try {
-				const data = await collectionService.getUserCollections(signal);
-				set((state) => {
-					state.collections = data;
-					state.collectionsCount = data.length;
-					state.collectionsLoading = false;
-				});
-			} catch (error) {
-				// Ignore cancelled requests
-				if (axios.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
-					return;
-				}
-				console.error('Failed to fetch collections:', error);
-				set((state) => {
-					state.collectionsLoading = false;
-				});
+		try {
+			// TODO: Add endpoint to fetch other users' collections
+			// For now, only fetch own collections (getUserCollections doesn't accept userId)
+			// This is a known limitation - collections are only visible for own profile
+			const data = await collectionService.getUserCollections(signal);
+			set((state) => {
+				state.collections = data;
+				state.collectionsCount = data.length;
+				state.collectionsLoading = false;
+			});
+		} catch (error) {
+			// Ignore cancelled requests
+			if (axios.isCancel(error) || (error as { code?: string })?.code === 'ERR_CANCELED') {
+				return;
 			}
-		},
+			console.error('Failed to fetch collections:', error);
+			set((state) => {
+				state.collectionsLoading = false;
+			});
+		}
+	},
 
 		clearProfile: () => {
 			set((state) => {

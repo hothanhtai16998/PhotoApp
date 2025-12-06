@@ -283,16 +283,33 @@
   border: 2px solid transparent;
   line-height: 0;
   position: relative;
+  /* Prevent layout shifts when clicking - use transform that doesn't affect layout */
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 .user-menu-trigger:hover {
   border-color: #d1d1d1;
   background-color: #fafafa;
-  transform: scale(1.05);
+  transform: translateZ(0) scale(1.05);
 }
 
 .user-menu-trigger:active {
-  transform: scale(0.98);
+  transform: translateZ(0) scale(0.98);
+}
+
+/* When modal is open, prevent transforms from causing layout shifts */
+body.scroll-locked .user-menu-trigger {
+  /* Use more stable transforms that don't affect modal positioning */
+  transform: translateZ(0);
+}
+
+body.scroll-locked .user-menu-trigger:hover {
+  transform: translateZ(0) scale(1.02);
+}
+
+body.scroll-locked .user-menu-trigger:active {
+  transform: translateZ(0) scale(0.99);
 }
 
 .user-menu-trigger:focus {
@@ -368,6 +385,32 @@
   transform-origin: top right !important;
   z-index: var(--z-modal-content, 2002) !important; /* Higher than header z-index */
   /* Ensure dropdown doesn't cause horizontal overflow on desktop */
+  /* Prevent layout shifts when modal is open */
+  will-change: opacity, transform;
+  contain: layout style paint;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  /* Dropdown is already fixed via Radix UI Portal - don't override */
+}
+
+/* Prevent dropdown from causing layout shifts when modal is open */
+body.scroll-locked .user-menu-content {
+  /* Ensure dropdown respects modal's scroll lock state */
+  /* Don't interfere with body's padding-right compensation */
+  isolation: isolate !important;
+  /* Prevent any layout recalculation from affecting the modal */
+  transform: translateZ(0) !important;
+  /* Lock dropdown position to prevent recalculation */
+  contain: strict !important;
+  /* Ensure dropdown doesn't trigger layout recalculations */
+  position: fixed !important;
+  /* Prevent scrollbar changes from affecting dropdown */
+  overflow: visible !important;
+  /* Lock dimensions to prevent recalculation */
+  min-width: 200px !important;
+  max-width: min(200px, calc(100vw - 24px)) !important;
+  /* Prevent any positioning recalculation */
+  will-change: auto !important;
 }
 
 @media (min-width: 769px) {
@@ -430,16 +473,55 @@
   border-radius: 8px !important;
   padding: 10px 12px !important;
   margin: 2px 0 !important;
-  transition: all 0.15s ease !important;
+  transition: background-color 0.15s ease, color 0.15s ease !important;
   cursor: pointer;
   font-size: 0.9375rem !important;
   font-weight: 400;
   color: #111 !important;
+  /* Prevent layout shifts on hover - use GPU-accelerated properties only */
+  will-change: background-color;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  /* Ensure item doesn't cause layout reflow */
+  contain: layout style;
+  /* Lock dimensions to prevent recalculation */
+  min-height: auto;
+  height: auto;
+  box-sizing: border-box;
 }
 
 .user-menu-content [data-slot='dropdown-menu-item']:hover {
   background: #f5f5f5 !important;
   color: #111 !important;
+  /* Prevent any transform or layout changes on hover */
+  transform: translateZ(0) !important;
+  /* Lock dimensions on hover */
+  padding: 10px 12px !important;
+  margin: 2px 0 !important;
+}
+
+/* When modal is open, ensure dropdown items don't cause any layout shifts */
+body.scroll-locked .user-menu-content [data-slot='dropdown-menu-item'] {
+  /* Lock item dimensions to prevent layout recalculation */
+  contain: strict !important;
+  transform: translateZ(0) !important;
+  /* Force stable dimensions */
+  min-height: 38px !important;
+  height: auto !important;
+  box-sizing: border-box !important;
+  /* Prevent any layout changes */
+  position: relative !important;
+  isolation: isolate !important;
+}
+
+body.scroll-locked .user-menu-content [data-slot='dropdown-menu-item']:hover {
+  transform: translateZ(0) !important;
+  /* Maintain exact same dimensions on hover */
+  padding: 10px 12px !important;
+  margin: 2px 0 !important;
+  min-height: 38px !important;
+  /* Prevent any layout recalculation */
+  contain: strict !important;
 }
 
 .user-menu-content [data-slot='dropdown-menu-item']:active {

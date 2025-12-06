@@ -137,6 +137,11 @@
   height: 100%;
   z-index: 1;
   pointer-events: none;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: high-quality;
+  -ms-interpolation-mode: bicubic;
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
 /* Mobile: Fill screen better, reduce empty space */

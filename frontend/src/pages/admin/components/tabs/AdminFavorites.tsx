@@ -25,7 +25,7 @@ interface Favorite {
 export function AdminFavorites() {
     const { hasPermission, isSuperAdmin } = usePermissions();
     const [favorites, setFavorites] = useState<Favorite[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [favoriteToDelete, setFavoriteToDelete] = useState<{ userId: string; imageId: string } | null>(null);

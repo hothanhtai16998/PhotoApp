@@ -254,7 +254,7 @@ function ImageModal({
     const [frontSrc, setFrontSrc] = useState<string | null>(null); // Full-quality image (front layer)
     const [backSrc, setBackSrc] = useState<string | null>(imageState.src); // Low-quality placeholder (back layer)
     const backSrcRef = useRef<string | null>(imageState.src); // Track current backSrc to prevent unnecessary updates
-    const isFullQuality = imageState.isFullQuality || frontSrc !== null; // True if front layer is ready
+    // const isFullQuality = imageState.isFullQuality || frontSrc !== null; // True if front layer is ready
 
     // Initialize refs (simplified - no aspect ratio calculations needed)
     const imgElementRef = useRef<HTMLImageElement | null>(null);
@@ -268,7 +268,7 @@ function ImageModal({
     const isFavorited = useBatchedFavoriteCheck(img?._id);
     const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
     const [showDownloadMenu, setShowDownloadMenu] = useState(false);
-    const [showShareMenu, setShowShareMenu] = useState(false);
+    const [, setShowShareMenu] = useState(false);
     const [showAuthorTooltip, setShowAuthorTooltip] = useState(false);
     const [tooltipAnimating, setTooltipAnimating] = useState(false);
     const authorTooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -1763,7 +1763,7 @@ function calculateImageLayout(
         GRID_CONFIG.minRowSpan,
         Math.min(GRID_CONFIG.maxRowSpan, rowSpan)
     );
-    const actualRenderedHeight = finalRowSpan * baseRowHeight + (finalRowSpan - 1) * GRID_CONFIG.gap;
+    // const actualRenderedHeight = finalRowSpan * baseRowHeight + (finalRowSpan - 1) * GRID_CONFIG.gap;
 
     return {
         rowSpan: finalRowSpan,
@@ -1985,7 +1985,7 @@ export default function NoFlashGridPage() {
         // This is more accurate than row-based tracking
         const columnHeights = new Array(columnCount).fill(0); // Start at 0px for each column
 
-        return filteredImages.map((image, index) => {
+        return filteredImages.map((image) => {
             // Get dimensions (from state or image properties)
             const dimensions = imageDimensions.get(image._id) || null;
 
@@ -1998,7 +1998,7 @@ export default function NoFlashGridPage() {
             );
 
             // Calculate actual image height
-            const imageHeight = layout.rowSpan * GRID_CONFIG.baseRowHeight;
+            // const imageHeight = layout.rowSpan * GRID_CONFIG.baseRowHeight;
 
             // Find the shortest column (by pixel height)
             let shortestColumnIndex = 0;

@@ -5,7 +5,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Save, Megaphone, X, Settings, Upload, Shield, Bell, Globe, ChevronDown, ChevronUp, HelpCircle, CheckCircle2, AlertCircle, ChevronRight, Home, Info, AlertTriangle, CheckCircle, XCircle, Eye, EyeOff, FileText, Image as ImageIcon, Server, Database, Lock, Unlock, Mail, Languages, Clock, Link2, Facebook, Twitter, Instagram, Linkedin, Youtube, Image, Video, Maximize2, Plus, Minus, Palette, Type, Layout, Monitor, AtSign, Send, FileEdit, Users, UserPlus, UserCheck, Trash2, Calendar, Target, Star, History, BookOpen, Save as SaveIcon, FolderOpen, Activity, AlertCircle as AlertCircleIcon, Zap } from 'lucide-react';
+import { Save, Megaphone, X, Settings, Upload, Shield, Bell, Globe, ChevronDown, ChevronUp, HelpCircle, CheckCircle2, AlertCircle, ChevronRight, Home, Info, AlertTriangle, CheckCircle, XCircle, Eye, FileText, Image as ImageIcon, Server, Database, Lock, Unlock, Mail, Languages, Clock, Link2, Facebook, Twitter, Instagram, Linkedin, Youtube, Image, Video, Maximize2, Plus, Palette, Type, Layout, Monitor, AtSign, Send, FileEdit, Users, UserPlus, UserCheck, Trash2, Calendar, Target, Star, History, BookOpen, Save as SaveIcon, FolderOpen, Activity, AlertCircle as AlertCircleIcon, Zap } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { useSiteSettings } from '@/hooks/useSiteSettings';
 import { t } from '@/i18n';
@@ -23,7 +23,7 @@ export function AdminSettings() {
     const swipeStartX = useRef<number>(0);
     const swipeStartY = useRef<number>(0);
     const swipeStartTime = useRef<number>(0);
-    
+
     const [settings, setSettings] = useState({
         siteName: 'PhotoApp',
         siteDescription: '',
@@ -131,7 +131,7 @@ export function AdminSettings() {
             errorRate: 5, // percentage
         },
         emailAlertsEnabled: true,
-        emailAlertRecipients: [], // array of email addresses
+        emailAlertRecipients: [] as string[], // array of email addresses
         alertEvents: {
             systemDown: true,
             highCpuUsage: true,
@@ -143,7 +143,7 @@ export function AdminSettings() {
             storageConnectionFailure: true,
         },
     });
-    
+
     // Available file types for selection
     const availableFileTypes = [
         { value: 'jpg', label: 'JPG' },
@@ -157,12 +157,12 @@ export function AdminSettings() {
         { value: 'mp4', label: 'MP4' },
         { value: 'webm', label: 'WebM' },
     ];
-    
+
     // Convert comma-separated string to array for checkbox handling (memoized)
     const selectedFileTypes = useMemo(() => {
         return settings.allowedFileTypes.split(',').map(t => t.trim()).filter(t => t);
     }, [settings.allowedFileTypes]);
-    
+
     const handleFileTypeToggle = useCallback((fileType: string) => {
         const currentTypes = selectedFileTypes;
         const newTypes = currentTypes.includes(fileType)
@@ -170,9 +170,9 @@ export function AdminSettings() {
             : [...currentTypes, fileType];
         setSettings(prev => ({ ...prev, allowedFileTypes: newTypes.join(',') }));
     }, [selectedFileTypes]);
-    const [loading, setLoading] = useState(false);
+    const [_loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
-    
+
     // System Announcement state
     const [showAnnouncementForm, setShowAnnouncementForm] = useState(false);
     const [announcementData, setAnnouncementData] = useState({
@@ -192,7 +192,7 @@ export function AdminSettings() {
     const [announcementHistory, setAnnouncementHistory] = useState<Array<{ id: string; title: string; sentAt: string; recipientCount: number; readCount: number }>>([]);
     const [showHistory, setShowHistory] = useState(false);
     const [showTemplates, setShowTemplates] = useState(false);
-    const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+    // const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
     const [originalSettings, setOriginalSettings] = useState(settings);
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [isFadingOut, setIsFadingOut] = useState(false);
@@ -200,13 +200,13 @@ export function AdminSettings() {
     const [showMaintenanceConfirm, setShowMaintenanceConfirm] = useState(false);
     const [uploadingLogo, setUploadingLogo] = useState(false);
     const [uploadingFavicon, setUploadingFavicon] = useState(false);
-    
+
     // Available languages
     const availableLanguages = [
         { value: 'vi', label: 'Tiếng Việt (Vietnamese)' },
         { value: 'en', label: 'English' },
     ];
-    
+
     // Common timezones
     const timezones = [
         { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
@@ -228,13 +228,13 @@ export function AdminSettings() {
             // Don't block UI - load in background
             // setLoading(true);
             console.log('[AdminSettings] Starting to load settings in background...');
-            
+
             // Use admin endpoint to get full settings (requires auth)
             // Add timeout to prevent hanging
             const timeoutPromise = new Promise((_, reject) => {
                 setTimeout(() => reject(new Error('Request timeout')), 10000); // 10 second timeout
             });
-            
+
             const startTime = Date.now();
             const data = await Promise.race([
                 adminService.getSettings(),
@@ -296,12 +296,12 @@ export function AdminSettings() {
                     defaultLanguage: (settingsData.defaultLanguage as string) || 'vi',
                     timezone: (settingsData.timezone as string) || 'UTC',
                     contactEmail: (settingsData.contactEmail as string) || '',
-                    socialMediaLinks: settingsData.socialMediaLinks || {
-                        facebook: '',
-                        twitter: '',
-                        instagram: '',
-                        linkedin: '',
-                        youtube: '',
+                    socialMediaLinks: {
+                        facebook: (settingsData.socialMediaLinks?.facebook as string) || '',
+                        twitter: (settingsData.socialMediaLinks?.twitter as string) || '',
+                        instagram: (settingsData.socialMediaLinks?.instagram as string) || '',
+                        linkedin: (settingsData.socialMediaLinks?.linkedin as string) || '',
+                        youtube: (settingsData.socialMediaLinks?.youtube as string) || '',
                     },
                     // Upload & Media Settings
                     imageQuality: (settingsData.imageQuality as number) || 85,
@@ -325,71 +325,71 @@ export function AdminSettings() {
                     maxConcurrentSessions: (settingsData.maxConcurrentSessions as number) || 0,
                     forceLogoutOnPasswordChange: (settingsData.forceLogoutOnPasswordChange as boolean) ?? true,
                     // Appearance & Branding Settings
-                    themePrimaryColor: (settingsData.themePrimaryColor as string) || '#7c3aed',
-                    themeSecondaryColor: (settingsData.themeSecondaryColor as string) || '#a78bfa',
-                    themeAccentColor: (settingsData.themeAccentColor as string) || '#67e8f9',
-                    themeSuccessColor: (settingsData.themeSuccessColor as string) || '#10b981',
-                    themeWarningColor: (settingsData.themeWarningColor as string) || '#f59e0b',
-                    themeErrorColor: (settingsData.themeErrorColor as string) || '#ef4444',
-                    themeInfoColor: (settingsData.themeInfoColor as string) || '#3b82f6',
-                    borderRadius: (settingsData.borderRadius as string) || '1rem',
-                    animationsEnabled: (settingsData.animationsEnabled as boolean) ?? true,
-                    animationSpeed: (settingsData.animationSpeed as string) || 'normal',
-                    buttonStyle: (settingsData.buttonStyle as string) || 'default',
-                    cardStyle: (settingsData.cardStyle as string) || 'default',
-                    darkModeEnabled: (settingsData.darkModeEnabled as boolean) ?? false,
-                    darkModeDefault: (settingsData.darkModeDefault as string) || 'auto',
-                    customCSS: (settingsData.customCSS as string) || '',
-                    fontFamily: (settingsData.fontFamily as string) || 'Roboto',
-                    fontSize: (settingsData.fontSize as string) || '16px',
-                    defaultViewMode: (settingsData.defaultViewMode as string) || 'grid',
-                    homepageLayout: (settingsData.homepageLayout as string) || 'default',
+                    themePrimaryColor: ((settingsData as any).themePrimaryColor as string) || '#7c3aed',
+                    themeSecondaryColor: ((settingsData as any).themeSecondaryColor as string) || '#a78bfa',
+                    themeAccentColor: ((settingsData as any).themeAccentColor as string) || '#67e8f9',
+                    themeSuccessColor: ((settingsData as any).themeSuccessColor as string) || '#10b981',
+                    themeWarningColor: ((settingsData as any).themeWarningColor as string) || '#f59e0b',
+                    themeErrorColor: ((settingsData as any).themeErrorColor as string) || '#ef4444',
+                    themeInfoColor: ((settingsData as any).themeInfoColor as string) || '#3b82f6',
+                    borderRadius: ((settingsData as any).borderRadius as string) || '1rem',
+                    animationsEnabled: ((settingsData as any).animationsEnabled as boolean) ?? true,
+                    animationSpeed: ((settingsData as any).animationSpeed as string) || 'normal',
+                    buttonStyle: ((settingsData as any).buttonStyle as string) || 'default',
+                    cardStyle: ((settingsData as any).cardStyle as string) || 'default',
+                    darkModeEnabled: ((settingsData as any).darkModeEnabled as boolean) ?? false,
+                    darkModeDefault: ((settingsData as any).darkModeDefault as string) || 'auto',
+                    customCSS: ((settingsData as any).customCSS as string) || '',
+                    fontFamily: ((settingsData as any).fontFamily as string) || 'Roboto',
+                    fontSize: ((settingsData as any).fontSize as string) || '16px',
+                    defaultViewMode: ((settingsData as any).defaultViewMode as string) || 'grid',
+                    homepageLayout: ((settingsData as any).homepageLayout as string) || 'default',
                     // Email & Notifications Settings
-                    smtpEnabled: (settingsData.smtpEnabled as boolean) ?? false,
-                    smtpHost: (settingsData.smtpHost as string) || '',
-                    smtpPort: (settingsData.smtpPort as number) || 587,
-                    smtpSecure: (settingsData.smtpSecure as boolean) ?? false,
-                    smtpUser: (settingsData.smtpUser as string) || '',
-                    smtpPassword: (settingsData.smtpPassword as string) || '',
-                    smtpFromName: (settingsData.smtpFromName as string) || '',
-                    smtpFromEmail: (settingsData.smtpFromEmail as string) || '',
-                    emailVerificationRequired: (settingsData.emailVerificationRequired as boolean) ?? false,
-                    welcomeEmailEnabled: (settingsData.welcomeEmailEnabled as boolean) ?? true,
-                    welcomeEmailSubject: (settingsData.welcomeEmailSubject as string) || 'Welcome to {siteName}!',
-                    welcomeEmailContent: (settingsData.welcomeEmailContent as string) || '',
-                    notifyOnSignup: (settingsData.notifyOnSignup as boolean) ?? true,
-                    notifyOnPasswordChange: (settingsData.notifyOnPasswordChange as boolean) ?? true,
-                    notifyOnProfileUpdate: (settingsData.notifyOnProfileUpdate as boolean) ?? false,
-                    notifyOnImageUpload: (settingsData.notifyOnImageUpload as boolean) ?? false,
-                    notifyOnComment: (settingsData.notifyOnComment as boolean) ?? true,
-                    notifyOnFavorite: (settingsData.notifyOnFavorite as boolean) ?? false,
+                    smtpEnabled: ((settingsData as any).smtpEnabled as boolean) ?? false,
+                    smtpHost: ((settingsData as any).smtpHost as string) || '',
+                    smtpPort: ((settingsData as any).smtpPort as number) || 587,
+                    smtpSecure: ((settingsData as any).smtpSecure as boolean) ?? false,
+                    smtpUser: ((settingsData as any).smtpUser as string) || '',
+                    smtpPassword: ((settingsData as any).smtpPassword as string) || '',
+                    smtpFromName: ((settingsData as any).smtpFromName as string) || '',
+                    smtpFromEmail: ((settingsData as any).smtpFromEmail as string) || '',
+                    emailVerificationRequired: ((settingsData as any).emailVerificationRequired as boolean) ?? false,
+                    welcomeEmailEnabled: ((settingsData as any).welcomeEmailEnabled as boolean) ?? true,
+                    welcomeEmailSubject: ((settingsData as any).welcomeEmailSubject as string) || 'Welcome to {siteName}!',
+                    welcomeEmailContent: ((settingsData as any).welcomeEmailContent as string) || '',
+                    notifyOnSignup: ((settingsData as any).notifyOnSignup as boolean) ?? true,
+                    notifyOnPasswordChange: ((settingsData as any).notifyOnPasswordChange as boolean) ?? true,
+                    notifyOnProfileUpdate: ((settingsData as any).notifyOnProfileUpdate as boolean) ?? false,
+                    notifyOnImageUpload: ((settingsData as any).notifyOnImageUpload as boolean) ?? false,
+                    notifyOnComment: ((settingsData as any).notifyOnComment as boolean) ?? true,
+                    notifyOnFavorite: ((settingsData as any).notifyOnFavorite as boolean) ?? false,
                     // User Management Settings
-                    registrationEnabled: (settingsData.registrationEnabled as boolean) ?? true,
-                    registrationType: (settingsData.registrationType as string) || 'open',
-                    defaultUserRole: (settingsData.defaultUserRole as string) || 'user',
-                    requireEmailVerification: (settingsData.requireEmailVerification as boolean) ?? false,
-                    requirePhoneVerification: (settingsData.requirePhoneVerification as boolean) ?? false,
-                    allowAccountSelfDeletion: (settingsData.allowAccountSelfDeletion as boolean) ?? true,
-                    requiredProfileFields: settingsData.requiredProfileFields || {
+                    registrationEnabled: ((settingsData as any).registrationEnabled as boolean) ?? true,
+                    registrationType: ((settingsData as any).registrationType as string) || 'open',
+                    defaultUserRole: ((settingsData as any).defaultUserRole as string) || 'user',
+                    requireEmailVerification: ((settingsData as any).requireEmailVerification as boolean) ?? false,
+                    requirePhoneVerification: ((settingsData as any).requirePhoneVerification as boolean) ?? false,
+                    allowAccountSelfDeletion: ((settingsData as any).allowAccountSelfDeletion as boolean) ?? true,
+                    requiredProfileFields: ((settingsData as any).requiredProfileFields || {
                         displayName: true,
                         bio: false,
                         location: false,
                         website: false,
                         phone: false,
-                    },
+                    }) as { displayName: boolean; bio: boolean; location: boolean; website: boolean; phone: boolean },
                     // Monitoring & Alerts Settings
-                    healthCheckEnabled: (settingsData.healthCheckEnabled as boolean) ?? true,
-                    healthCheckInterval: (settingsData.healthCheckInterval as number) || 60,
-                    alertThresholds: settingsData.alertThresholds || {
+                    healthCheckEnabled: ((settingsData as any).healthCheckEnabled as boolean) ?? true,
+                    healthCheckInterval: ((settingsData as any).healthCheckInterval as number) || 60,
+                    alertThresholds: ((settingsData as any).alertThresholds || {
                         cpuUsage: 80,
                         memoryUsage: 85,
                         diskUsage: 90,
                         responseTime: 1000,
                         errorRate: 5,
-                    },
-                    emailAlertsEnabled: (settingsData.emailAlertsEnabled as boolean) ?? true,
-                    emailAlertRecipients: (settingsData.emailAlertRecipients as string[]) || [],
-                    alertEvents: settingsData.alertEvents || {
+                    }) as { cpuUsage: number; memoryUsage: number; diskUsage: number; responseTime: number; errorRate: number },
+                    emailAlertsEnabled: ((settingsData as any).emailAlertsEnabled as boolean) ?? true,
+                    emailAlertRecipients: ((settingsData as any).emailAlertRecipients as string[]) || [],
+                    alertEvents: ((settingsData as any).alertEvents || {
                         systemDown: true,
                         highCpuUsage: true,
                         highMemoryUsage: true,
@@ -398,11 +398,11 @@ export function AdminSettings() {
                         highErrorRate: true,
                         databaseConnectionFailure: true,
                         storageConnectionFailure: true,
-                    },
+                    }) as { systemDown: boolean; highCpuUsage: boolean; highMemoryUsage: boolean; highDiskUsage: boolean; slowResponseTime: boolean; highErrorRate: boolean; databaseConnectionFailure: boolean; storageConnectionFailure: boolean },
                 };
                 setSettings(loadedSettings);
                 setOriginalSettings(loadedSettings);
-                
+
                 // Apply appearance settings when loaded
                 applyAppearanceSettings({
                     themePrimaryColor: loadedSettings.themePrimaryColor,
@@ -432,14 +432,14 @@ export function AdminSettings() {
         } catch (error: unknown) {
             const axiosError = error as { response?: { data?: { message?: string } } | undefined; message?: string };
             console.error('Failed to load settings:', error);
-            
+
             // Check if it's a timeout error
             if (axiosError.message === 'Request timeout' || error instanceof Error && error.message === 'Request timeout') {
                 toast.error('Yêu cầu hết thời gian. Đang sử dụng cài đặt mặc định.');
             } else {
                 toast.error(axiosError.response?.data?.message || axiosError.message || 'Lỗi khi tải cài đặt. Đang sử dụng cài đặt mặc định.');
             }
-            
+
             // Use default settings if API fails - don't block the UI
             // Settings are already initialized with defaults, so we can proceed
         } finally {
@@ -451,20 +451,20 @@ export function AdminSettings() {
     // Load settings on mount
     useEffect(() => {
         let mounted = true;
-        let timeoutId: NodeJS.Timeout;
-        
+        let timeoutId: NodeJS.Timeout | undefined;
+
         const initializeSettings = async () => {
             // Check permissions first
             if (!isSuperAdmin() && !hasPermission('manageSettings')) {
                 if (mounted) {
                     toast.error('Bạn không có quyền quản lý cài đặt');
-            setLoading(false);
+                    setLoading(false);
                 }
                 return;
             }
-            
+
             // No timeout needed - UI is already shown
-            
+
             try {
                 await loadSettings();
                 if (mounted && timeoutId) {
@@ -477,9 +477,9 @@ export function AdminSettings() {
                 }
             }
         };
-        
+
         initializeSettings();
-        
+
         return () => {
             mounted = false;
             if (timeoutId) {
@@ -492,30 +492,30 @@ export function AdminSettings() {
     // Real-time validation (memoized to avoid recreating on every render)
     const validateSettings = useCallback(() => {
         const errors: Record<string, string> = {};
-        
+
         if (!settings.siteName.trim()) {
             errors.siteName = 'Site name is required';
         } else if (settings.siteName.length > 100) {
             errors.siteName = 'Site name must be less than 100 characters';
         }
-        
+
         if (settings.siteDescription.length > 500) {
             errors.siteDescription = 'Description must be less than 500 characters';
         }
-        
+
         if (settings.maxUploadSize < 1 || settings.maxUploadSize > 1000) {
             errors.maxUploadSize = 'Upload size must be between 1 and 1000 MB';
         }
-        
+
         if (selectedFileTypes.length === 0) {
             errors.allowedFileTypes = 'At least one file format must be selected';
         }
-        
+
         // Validate contact email if provided
         if (settings.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.contactEmail)) {
             errors.contactEmail = 'Please enter a valid email address';
         }
-        
+
         // Validate social media URLs if provided
         const urlPattern = /^https?:\/\/.+/;
         if (settings.socialMediaLinks.facebook && !urlPattern.test(settings.socialMediaLinks.facebook)) {
@@ -527,19 +527,19 @@ export function AdminSettings() {
             if (!settings.smtpHost.trim()) {
                 errors.smtpHost = 'SMTP host is required when SMTP is enabled';
             }
-            
+
             if (!settings.smtpPort || settings.smtpPort < 1 || settings.smtpPort > 65535) {
                 errors.smtpPort = 'SMTP port must be between 1 and 65535';
             }
-            
+
             if (!settings.smtpUser.trim()) {
                 errors.smtpUser = 'SMTP username is required when SMTP is enabled';
             }
-            
+
             if (!settings.smtpPassword.trim()) {
                 errors.smtpPassword = 'SMTP password is required when SMTP is enabled';
             }
-            
+
             if (!settings.smtpFromEmail.trim()) {
                 errors.smtpFromEmail = 'From email is required when SMTP is enabled';
             } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.smtpFromEmail)) {
@@ -558,27 +558,27 @@ export function AdminSettings() {
         if (settings.socialMediaLinks.youtube && !urlPattern.test(settings.socialMediaLinks.youtube)) {
             errors.socialYoutube = 'Please enter a valid URL (must start with http:// or https://)';
         }
-        
+
         // Validate security settings
         if (settings.passwordMinLength < 6 || settings.passwordMinLength > 20) {
             errors.passwordMinLength = 'Password minimum length must be between 6 and 20 characters';
         }
-        
+
         if (settings.passwordExpirationDays < 0 || settings.passwordExpirationDays > 365) {
             errors.passwordExpirationDays = 'Password expiration must be between 0 and 365 days';
         }
-        
+
         if (settings.refreshTokenExpiry < 1 || settings.refreshTokenExpiry > 365) {
             errors.refreshTokenExpiry = 'Refresh token expiry must be between 1 and 365 days';
         }
-        
+
         if (settings.maxConcurrentSessions < 0 || settings.maxConcurrentSessions > 100) {
             errors.maxConcurrentSessions = 'Max concurrent sessions must be between 0 and 100';
         }
-        
+
         // Allow all complexity requirements to be disabled (admin choice)
         // Removed validation - admin can choose to have no complexity requirements
-        
+
         setValidationErrors(errors);
         return Object.keys(errors).length === 0;
     }, [settings, selectedFileTypes]);
@@ -588,10 +588,10 @@ export function AdminSettings() {
         const current = settings.socialMediaLinks;
         const original = originalSettings.socialMediaLinks;
         return current.facebook !== original.facebook ||
-               current.twitter !== original.twitter ||
-               current.instagram !== original.instagram ||
-               current.linkedin !== original.linkedin ||
-               current.youtube !== original.youtube;
+            current.twitter !== original.twitter ||
+            current.instagram !== original.instagram ||
+            current.linkedin !== original.linkedin ||
+            current.youtube !== original.youtube;
     }, [
         settings.socialMediaLinks.facebook,
         settings.socialMediaLinks.twitter,
@@ -608,9 +608,9 @@ export function AdminSettings() {
     // Memoize password complexity comparison (shallow comparison for performance)
     const passwordComplexityChanged = useMemo(() => {
         return settings.passwordRequireUppercase !== originalSettings.passwordRequireUppercase ||
-               settings.passwordRequireLowercase !== originalSettings.passwordRequireLowercase ||
-               settings.passwordRequireNumber !== originalSettings.passwordRequireNumber ||
-               settings.passwordRequireSpecialChar !== originalSettings.passwordRequireSpecialChar;
+            settings.passwordRequireLowercase !== originalSettings.passwordRequireLowercase ||
+            settings.passwordRequireNumber !== originalSettings.passwordRequireNumber ||
+            settings.passwordRequireSpecialChar !== originalSettings.passwordRequireSpecialChar;
     }, [
         settings.passwordRequireUppercase,
         settings.passwordRequireLowercase,
@@ -625,116 +625,120 @@ export function AdminSettings() {
     // Debounced hasChanges calculation to avoid expensive checks on every keystroke
     const [hasChanges, setHasChanges] = useState(false);
     const hasChangesTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    
+
     // Calculate hasChanges with debounce (only after user stops typing for 300ms)
     useEffect(() => {
         if (hasChangesTimeoutRef.current) {
             clearTimeout(hasChangesTimeoutRef.current);
         }
-        
+
         hasChangesTimeoutRef.current = setTimeout(() => {
             // Quick shallow comparison for common changes
             const changed = settings.siteName !== originalSettings.siteName ||
-            settings.siteDescription !== originalSettings.siteDescription ||
-            settings.maxUploadSize !== originalSettings.maxUploadSize ||
-            settings.allowedFileTypes !== originalSettings.allowedFileTypes ||
-            settings.maintenanceMode !== originalSettings.maintenanceMode ||
-            settings.siteLogo !== originalSettings.siteLogo ||
-            settings.favicon !== originalSettings.favicon ||
-            settings.defaultLanguage !== originalSettings.defaultLanguage ||
-            settings.timezone !== originalSettings.timezone ||
-            settings.contactEmail !== originalSettings.contactEmail ||
-            settings.imageQuality !== originalSettings.imageQuality ||
-            settings.watermarkEnabled !== originalSettings.watermarkEnabled ||
-            settings.watermarkImage !== originalSettings.watermarkImage ||
-            settings.autoResizeEnabled !== originalSettings.autoResizeEnabled ||
-            settings.autoResizeMaxWidth !== originalSettings.autoResizeMaxWidth ||
-            settings.autoResizeMaxHeight !== originalSettings.autoResizeMaxHeight ||
-            settings.maxVideoDuration !== originalSettings.maxVideoDuration ||
-            settings.videoQuality !== originalSettings.videoQuality ||
-            settings.batchUploadLimit !== originalSettings.batchUploadLimit ||
-            settings.passwordMinLength !== originalSettings.passwordMinLength ||
-            settings.passwordExpirationDays !== originalSettings.passwordExpirationDays ||
-            settings.accessTokenExpiry !== originalSettings.accessTokenExpiry ||
-            settings.refreshTokenExpiry !== originalSettings.refreshTokenExpiry ||
-            settings.maxConcurrentSessions !== originalSettings.maxConcurrentSessions ||
-            settings.forceLogoutOnPasswordChange !== originalSettings.forceLogoutOnPasswordChange ||
-            socialLinksChanged ||
-            passwordComplexityChanged ||
-            // Appearance & Branding Settings
-            settings.themePrimaryColor !== originalSettings.themePrimaryColor ||
-            settings.themeSecondaryColor !== originalSettings.themeSecondaryColor ||
-            settings.themeAccentColor !== originalSettings.themeAccentColor ||
-            settings.themeSuccessColor !== originalSettings.themeSuccessColor ||
-            settings.themeWarningColor !== originalSettings.themeWarningColor ||
-            settings.themeErrorColor !== originalSettings.themeErrorColor ||
-            settings.themeInfoColor !== originalSettings.themeInfoColor ||
-            settings.borderRadius !== originalSettings.borderRadius ||
-            settings.animationsEnabled !== originalSettings.animationsEnabled ||
-            settings.animationSpeed !== originalSettings.animationSpeed ||
-            settings.buttonStyle !== originalSettings.buttonStyle ||
-            settings.cardStyle !== originalSettings.cardStyle ||
-            settings.darkModeEnabled !== originalSettings.darkModeEnabled ||
-            settings.darkModeDefault !== originalSettings.darkModeDefault ||
-            settings.customCSS !== originalSettings.customCSS ||
-            settings.fontFamily !== originalSettings.fontFamily ||
-            settings.fontSize !== originalSettings.fontSize ||
-            settings.defaultViewMode !== originalSettings.defaultViewMode ||
-            settings.homepageLayout !== originalSettings.homepageLayout ||
-            // Email & Notifications Settings
-            settings.smtpEnabled !== originalSettings.smtpEnabled ||
-            settings.smtpHost !== originalSettings.smtpHost ||
-            settings.smtpPort !== originalSettings.smtpPort ||
-            settings.smtpSecure !== originalSettings.smtpSecure ||
-            settings.smtpUser !== originalSettings.smtpUser ||
-            settings.smtpPassword !== originalSettings.smtpPassword ||
-            settings.smtpFromName !== originalSettings.smtpFromName ||
-            settings.smtpFromEmail !== originalSettings.smtpFromEmail ||
-            settings.emailVerificationRequired !== originalSettings.emailVerificationRequired ||
-            settings.welcomeEmailEnabled !== originalSettings.welcomeEmailEnabled ||
-            settings.welcomeEmailSubject !== originalSettings.welcomeEmailSubject ||
-            settings.welcomeEmailContent !== originalSettings.welcomeEmailContent ||
-            settings.notifyOnSignup !== originalSettings.notifyOnSignup ||
-            settings.notifyOnPasswordChange !== originalSettings.notifyOnPasswordChange ||
-            settings.notifyOnProfileUpdate !== originalSettings.notifyOnProfileUpdate ||
-            settings.notifyOnImageUpload !== originalSettings.notifyOnImageUpload ||
-            settings.notifyOnComment !== originalSettings.notifyOnComment ||
-            settings.notifyOnFavorite !== originalSettings.notifyOnFavorite ||
-            // User Management Settings
-            settings.registrationEnabled !== originalSettings.registrationEnabled ||
-            settings.registrationType !== originalSettings.registrationType ||
-            settings.defaultUserRole !== originalSettings.defaultUserRole ||
-            settings.requireEmailVerification !== originalSettings.requireEmailVerification ||
-            settings.requirePhoneVerification !== originalSettings.requirePhoneVerification ||
-            settings.allowAccountSelfDeletion !== originalSettings.allowAccountSelfDeletion ||
-            // Required Profile Fields (shallow array comparison)
-            (settings.requiredProfileFields?.length !== originalSettings.requiredProfileFields?.length ||
-             settings.requiredProfileFields?.some((field, i) => field !== originalSettings.requiredProfileFields?.[i])) ||
-            // Monitoring & Alerts Settings
-            settings.healthCheckEnabled !== originalSettings.healthCheckEnabled ||
-            settings.healthCheckInterval !== originalSettings.healthCheckInterval ||
-            // Alert Thresholds (shallow object comparison)
-            (settings.alertThresholds?.cpuUsage !== originalSettings.alertThresholds?.cpuUsage ||
-             settings.alertThresholds?.memoryUsage !== originalSettings.alertThresholds?.memoryUsage ||
-             settings.alertThresholds?.diskUsage !== originalSettings.alertThresholds?.diskUsage ||
-             settings.alertThresholds?.responseTime !== originalSettings.alertThresholds?.responseTime ||
-             settings.alertThresholds?.errorRate !== originalSettings.alertThresholds?.errorRate) ||
-            settings.emailAlertsEnabled !== originalSettings.emailAlertsEnabled ||
-            // Email Alert Recipients (shallow array comparison)
-            (settings.emailAlertRecipients?.length !== originalSettings.emailAlertRecipients?.length ||
-             settings.emailAlertRecipients?.some((email, i) => email !== originalSettings.emailAlertRecipients?.[i])) ||
-            // Alert Events (shallow object comparison)
-            (settings.alertEvents?.cpuHigh !== originalSettings.alertEvents?.cpuHigh ||
-             settings.alertEvents?.memoryHigh !== originalSettings.alertEvents?.memoryHigh ||
-             settings.alertEvents?.diskHigh !== originalSettings.alertEvents?.diskHigh ||
-             settings.alertEvents?.responseTimeHigh !== originalSettings.alertEvents?.responseTimeHigh ||
-             settings.alertEvents?.errorRateHigh !== originalSettings.alertEvents?.errorRateHigh ||
-             settings.alertEvents?.databaseDown !== originalSettings.alertEvents?.databaseDown ||
-             settings.alertEvents?.storageDown !== originalSettings.alertEvents?.storageDown);
-            
+                settings.siteDescription !== originalSettings.siteDescription ||
+                settings.maxUploadSize !== originalSettings.maxUploadSize ||
+                settings.allowedFileTypes !== originalSettings.allowedFileTypes ||
+                settings.maintenanceMode !== originalSettings.maintenanceMode ||
+                settings.siteLogo !== originalSettings.siteLogo ||
+                settings.favicon !== originalSettings.favicon ||
+                settings.defaultLanguage !== originalSettings.defaultLanguage ||
+                settings.timezone !== originalSettings.timezone ||
+                settings.contactEmail !== originalSettings.contactEmail ||
+                settings.imageQuality !== originalSettings.imageQuality ||
+                settings.watermarkEnabled !== originalSettings.watermarkEnabled ||
+                settings.watermarkImage !== originalSettings.watermarkImage ||
+                settings.autoResizeEnabled !== originalSettings.autoResizeEnabled ||
+                settings.autoResizeMaxWidth !== originalSettings.autoResizeMaxWidth ||
+                settings.autoResizeMaxHeight !== originalSettings.autoResizeMaxHeight ||
+                settings.maxVideoDuration !== originalSettings.maxVideoDuration ||
+                settings.videoQuality !== originalSettings.videoQuality ||
+                settings.batchUploadLimit !== originalSettings.batchUploadLimit ||
+                settings.passwordMinLength !== originalSettings.passwordMinLength ||
+                settings.passwordExpirationDays !== originalSettings.passwordExpirationDays ||
+                settings.accessTokenExpiry !== originalSettings.accessTokenExpiry ||
+                settings.refreshTokenExpiry !== originalSettings.refreshTokenExpiry ||
+                settings.maxConcurrentSessions !== originalSettings.maxConcurrentSessions ||
+                settings.forceLogoutOnPasswordChange !== originalSettings.forceLogoutOnPasswordChange ||
+                socialLinksChanged ||
+                passwordComplexityChanged ||
+                // Appearance & Branding Settings
+                settings.themePrimaryColor !== originalSettings.themePrimaryColor ||
+                settings.themeSecondaryColor !== originalSettings.themeSecondaryColor ||
+                settings.themeAccentColor !== originalSettings.themeAccentColor ||
+                settings.themeSuccessColor !== originalSettings.themeSuccessColor ||
+                settings.themeWarningColor !== originalSettings.themeWarningColor ||
+                settings.themeErrorColor !== originalSettings.themeErrorColor ||
+                settings.themeInfoColor !== originalSettings.themeInfoColor ||
+                settings.borderRadius !== originalSettings.borderRadius ||
+                settings.animationsEnabled !== originalSettings.animationsEnabled ||
+                settings.animationSpeed !== originalSettings.animationSpeed ||
+                settings.buttonStyle !== originalSettings.buttonStyle ||
+                settings.cardStyle !== originalSettings.cardStyle ||
+                settings.darkModeEnabled !== originalSettings.darkModeEnabled ||
+                settings.darkModeDefault !== originalSettings.darkModeDefault ||
+                settings.customCSS !== originalSettings.customCSS ||
+                settings.fontFamily !== originalSettings.fontFamily ||
+                settings.fontSize !== originalSettings.fontSize ||
+                settings.defaultViewMode !== originalSettings.defaultViewMode ||
+                settings.homepageLayout !== originalSettings.homepageLayout ||
+                // Email & Notifications Settings
+                settings.smtpEnabled !== originalSettings.smtpEnabled ||
+                settings.smtpHost !== originalSettings.smtpHost ||
+                settings.smtpPort !== originalSettings.smtpPort ||
+                settings.smtpSecure !== originalSettings.smtpSecure ||
+                settings.smtpUser !== originalSettings.smtpUser ||
+                settings.smtpPassword !== originalSettings.smtpPassword ||
+                settings.smtpFromName !== originalSettings.smtpFromName ||
+                settings.smtpFromEmail !== originalSettings.smtpFromEmail ||
+                settings.emailVerificationRequired !== originalSettings.emailVerificationRequired ||
+                settings.welcomeEmailEnabled !== originalSettings.welcomeEmailEnabled ||
+                settings.welcomeEmailSubject !== originalSettings.welcomeEmailSubject ||
+                settings.welcomeEmailContent !== originalSettings.welcomeEmailContent ||
+                settings.notifyOnSignup !== originalSettings.notifyOnSignup ||
+                settings.notifyOnPasswordChange !== originalSettings.notifyOnPasswordChange ||
+                settings.notifyOnProfileUpdate !== originalSettings.notifyOnProfileUpdate ||
+                settings.notifyOnImageUpload !== originalSettings.notifyOnImageUpload ||
+                settings.notifyOnComment !== originalSettings.notifyOnComment ||
+                settings.notifyOnFavorite !== originalSettings.notifyOnFavorite ||
+                // User Management Settings
+                settings.registrationEnabled !== originalSettings.registrationEnabled ||
+                settings.registrationType !== originalSettings.registrationType ||
+                settings.defaultUserRole !== originalSettings.defaultUserRole ||
+                settings.requireEmailVerification !== originalSettings.requireEmailVerification ||
+                settings.requirePhoneVerification !== originalSettings.requirePhoneVerification ||
+                settings.allowAccountSelfDeletion !== originalSettings.allowAccountSelfDeletion ||
+                // Required Profile Fields (object comparison)
+                (settings.requiredProfileFields?.displayName !== originalSettings.requiredProfileFields?.displayName ||
+                    settings.requiredProfileFields?.bio !== originalSettings.requiredProfileFields?.bio ||
+                    settings.requiredProfileFields?.location !== originalSettings.requiredProfileFields?.location ||
+                    settings.requiredProfileFields?.website !== originalSettings.requiredProfileFields?.website ||
+                    settings.requiredProfileFields?.phone !== originalSettings.requiredProfileFields?.phone) ||
+                // Monitoring & Alerts Settings
+                settings.healthCheckEnabled !== originalSettings.healthCheckEnabled ||
+                settings.healthCheckInterval !== originalSettings.healthCheckInterval ||
+                // Alert Thresholds (shallow object comparison)
+                (settings.alertThresholds?.cpuUsage !== originalSettings.alertThresholds?.cpuUsage ||
+                    settings.alertThresholds?.memoryUsage !== originalSettings.alertThresholds?.memoryUsage ||
+                    settings.alertThresholds?.diskUsage !== originalSettings.alertThresholds?.diskUsage ||
+                    settings.alertThresholds?.responseTime !== originalSettings.alertThresholds?.responseTime ||
+                    settings.alertThresholds?.errorRate !== originalSettings.alertThresholds?.errorRate) ||
+                settings.emailAlertsEnabled !== originalSettings.emailAlertsEnabled ||
+                // Email Alert Recipients (shallow array comparison)
+                (settings.emailAlertRecipients?.length !== originalSettings.emailAlertRecipients?.length ||
+                    settings.emailAlertRecipients?.some((email, i) => email !== originalSettings.emailAlertRecipients?.[i])) ||
+                // Alert Events (shallow object comparison)
+                (settings.alertEvents?.systemDown !== originalSettings.alertEvents?.systemDown ||
+                    settings.alertEvents?.highCpuUsage !== originalSettings.alertEvents?.highCpuUsage ||
+                    settings.alertEvents?.highMemoryUsage !== originalSettings.alertEvents?.highMemoryUsage ||
+                    settings.alertEvents?.highDiskUsage !== originalSettings.alertEvents?.highDiskUsage ||
+                    settings.alertEvents?.slowResponseTime !== originalSettings.alertEvents?.slowResponseTime ||
+                    settings.alertEvents?.highErrorRate !== originalSettings.alertEvents?.highErrorRate ||
+                    settings.alertEvents?.databaseConnectionFailure !== originalSettings.alertEvents?.databaseConnectionFailure ||
+                    settings.alertEvents?.storageConnectionFailure !== originalSettings.alertEvents?.storageConnectionFailure);
+
             setHasChanges(changed);
         }, 300); // Debounce by 300ms - only check after user stops typing
-        
+
         return () => {
             if (hasChangesTimeoutRef.current) {
                 clearTimeout(hasChangesTimeoutRef.current);
@@ -762,7 +766,7 @@ export function AdminSettings() {
                 allowedFileTypes: settings.allowedFileTypes.split(',').map(t => t.trim()),
             };
             await adminService.updateSettings(updateData);
-            
+
             // Apply appearance settings immediately after save
             applyAppearanceSettings({
                 themePrimaryColor: settings.themePrimaryColor,
@@ -785,18 +789,18 @@ export function AdminSettings() {
                 defaultViewMode: settings.defaultViewMode,
                 homepageLayout: settings.homepageLayout,
             });
-            
+
             // Update original settings to reflect saved state (prevent flash)
             setOriginalSettings(settings);
-            
+
             // Show success indicator
             setSaveSuccess(true);
             setIsFadingOut(false);
             toast.success('Đã lưu cài đặt thành công');
-            
+
             // Refresh site settings globally (updates document title) without full reload
             await refreshSettings();
-            
+
             // Clear success indicator after 3 seconds with fade out
             setTimeout(() => {
                 setIsFadingOut(true);
@@ -831,11 +835,11 @@ export function AdminSettings() {
     useEffect(() => {
         // Don't block validation - UI is already shown
         // if (loading) return;
-        
+
         const timeoutId = setTimeout(() => {
             validateSettings();
         }, 500); // Debounce validation by 500ms to reduce lag
-        
+
         return () => clearTimeout(timeoutId);
     }, [settings, selectedFileTypes, validateSettings]);
 
@@ -866,7 +870,7 @@ export function AdminSettings() {
 
         try {
             setSendingAnnouncement(true);
-            
+
             // Prepare announcement data for API
             const announcementPayload: any = {
                 type: announcementData.type,
@@ -892,7 +896,7 @@ export function AdminSettings() {
             }
 
             const result = await adminService.createSystemAnnouncement(announcementPayload);
-            
+
             // Add to history
             const newHistoryItem = {
                 id: Date.now().toString(),
@@ -904,11 +908,11 @@ export function AdminSettings() {
             setAnnouncementHistory(prev => [newHistoryItem, ...prev]);
 
             toast.success(
-                announcementData.scheduledDate 
+                announcementData.scheduledDate
                     ? `Announcement scheduled for ${new Date(announcementData.scheduledDate).toLocaleString()}`
                     : (result.message || `Announcement sent to ${result.recipientCount} users`)
             );
-            
+
             setShowAnnouncementForm(false);
             setAnnouncementData({
                 type: 'system_announcement',
@@ -931,9 +935,10 @@ export function AdminSettings() {
 
     // Swipe gesture handlers for mobile tab navigation
     const tabs = ['general', 'upload', 'system', 'security', 'appearance', 'email', 'users', 'notifications', 'monitoring'];
-    
+
     const handleTouchStart = (e: React.TouchEvent) => {
         if (!isMobile) return;
+        if (!e.touches[0]) return;
         swipeStartX.current = e.touches[0].clientX;
         swipeStartY.current = e.touches[0].clientY;
         swipeStartTime.current = Date.now();
@@ -941,6 +946,7 @@ export function AdminSettings() {
 
     const handleTouchMove = (e: React.TouchEvent) => {
         if (!isMobile) return;
+        if (!e.touches[0]) return;
         // Prevent default scrolling if horizontal swipe
         const deltaX = Math.abs(e.touches[0].clientX - swipeStartX.current);
         const deltaY = Math.abs(e.touches[0].clientY - swipeStartY.current);
@@ -951,6 +957,7 @@ export function AdminSettings() {
 
     const handleTouchEnd = (e: React.TouchEvent) => {
         if (!isMobile) return;
+        if (!e.changedTouches[0]) return;
         const deltaX = e.changedTouches[0].clientX - swipeStartX.current;
         const deltaY = Math.abs(e.changedTouches[0].clientY - swipeStartY.current);
         const deltaTime = Date.now() - swipeStartTime.current;
@@ -963,17 +970,19 @@ export function AdminSettings() {
         // 2. Swipe distance is sufficient
         // 3. Swipe time is quick enough
         // 4. Vertical movement is minimal
-        if (Math.abs(deltaX) > minSwipeDistance && 
-            deltaTime < maxSwipeTime && 
+        if (Math.abs(deltaX) > minSwipeDistance &&
+            deltaTime < maxSwipeTime &&
             Math.abs(deltaX) > deltaY &&
             deltaY < maxVerticalDistance) {
             const currentIndex = tabs.indexOf(activeTab);
             if (deltaX < 0 && currentIndex < tabs.length - 1) {
                 // Swipe left - next tab
-                setActiveTab(tabs[currentIndex + 1]);
+                const nextTab = tabs[currentIndex + 1];
+                if (nextTab) setActiveTab(nextTab);
             } else if (deltaX > 0 && currentIndex > 0) {
                 // Swipe right - previous tab
-                setActiveTab(tabs[currentIndex - 1]);
+                const prevTab = tabs[currentIndex - 1];
+                if (prevTab) setActiveTab(prevTab);
             }
         }
     };
@@ -986,6 +995,7 @@ export function AdminSettings() {
 
     const handleContentTouchStart = (e: React.TouchEvent) => {
         if (!isMobile) return;
+        if (!e.touches[0]) return;
         contentSwipeStartX.current = e.touches[0].clientX;
         contentSwipeStartY.current = e.touches[0].clientY;
         contentSwipeStartTime.current = Date.now();
@@ -993,6 +1003,7 @@ export function AdminSettings() {
 
     const handleContentTouchMove = (e: React.TouchEvent) => {
         if (!isMobile) return;
+        if (!e.touches[0]) return;
         const deltaX = Math.abs(e.touches[0].clientX - contentSwipeStartX.current);
         const deltaY = Math.abs(e.touches[0].clientY - contentSwipeStartY.current);
         // Only prevent default if it's clearly a horizontal swipe
@@ -1003,6 +1014,7 @@ export function AdminSettings() {
 
     const handleContentTouchEnd = (e: React.TouchEvent) => {
         if (!isMobile) return;
+        if (!e.changedTouches[0]) return;
         const deltaX = e.changedTouches[0].clientX - contentSwipeStartX.current;
         const deltaY = Math.abs(e.changedTouches[0].clientY - contentSwipeStartY.current);
         const deltaTime = Date.now() - contentSwipeStartTime.current;
@@ -1010,15 +1022,17 @@ export function AdminSettings() {
         const maxSwipeTime = 400;
         const maxVerticalDistance = 50;
 
-        if (Math.abs(deltaX) > minSwipeDistance && 
-            deltaTime < maxSwipeTime && 
+        if (Math.abs(deltaX) > minSwipeDistance &&
+            deltaTime < maxSwipeTime &&
             Math.abs(deltaX) > deltaY * 1.5 &&
             deltaY < maxVerticalDistance) {
             const currentIndex = tabs.indexOf(activeTab);
             if (deltaX < 0 && currentIndex < tabs.length - 1) {
-                setActiveTab(tabs[currentIndex + 1]);
+                const nextTab = tabs[currentIndex + 1];
+                if (nextTab) setActiveTab(nextTab);
             } else if (deltaX > 0 && currentIndex > 0) {
-                setActiveTab(tabs[currentIndex - 1]);
+                const prevTab = tabs[currentIndex - 1];
+                if (prevTab) setActiveTab(prevTab);
             }
         }
     };
@@ -1063,15 +1077,14 @@ export function AdminSettings() {
                 <h1 className="admin-title" id="admin-settings-main-content" tabIndex={-1}>{t('admin.systemSettings')}</h1>
             </div>
 
-            <Tabs 
-                value={activeTab} 
+            <Tabs
+                value={activeTab}
                 onValueChange={setActiveTab}
-                className="admin-settings-tabs" 
+                className="admin-settings-tabs"
                 aria-label="Settings sections"
             >
-                <TabsList 
-                    className="admin-settings-tabs-list" 
-                    role="tablist"
+                <TabsList
+                    className="admin-settings-tabs-list"
                     ref={tabsContainerRef}
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
@@ -1116,8 +1129,8 @@ export function AdminSettings() {
                 </TabsList>
 
                 {/* General Settings Tab */}
-                <TabsContent 
-                    value="general" 
+                <TabsContent
+                    value="general"
                     className="admin-settings-tab-content"
                     ref={tabContentRef}
                     onTouchStart={handleContentTouchStart}
@@ -1136,7 +1149,7 @@ export function AdminSettings() {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-            <div className="admin-form">
+                                <div className="admin-form">
                                     <div className={`admin-form-group admin-form-group-critical ${validationErrors.siteName ? 'has-error' : ''} ${settings.siteName !== originalSettings.siteName ? 'has-changes' : ''}`}>
                                         <Label htmlFor="site-name-input" className="admin-form-label-with-icon">
                                             <FileText size={16} className="admin-form-label-icon" aria-hidden="true" />
@@ -1155,10 +1168,10 @@ export function AdminSettings() {
                                             <span className="admin-setting-preview-label">Preview:</span>
                                             <span className="admin-setting-preview-value">{settings.siteName || 'Your Site Name'}</span>
                                         </div>
-                    <Input
+                                        <Input
                                             id="site-name-input"
-                        value={settings.siteName}
-                        onChange={(e) => setSettings(prev => ({ ...prev, siteName: e.target.value }))}
+                                            value={settings.siteName}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, siteName: e.target.value }))}
                                             placeholder="Enter site name"
                                             className={validationErrors.siteName ? 'input-error' : ''}
                                             aria-describedby={validationErrors.siteName ? 'site-name-error' : 'site-name-help'}
@@ -1180,455 +1193,455 @@ export function AdminSettings() {
                                                 Modified
                                             </p>
                                         )}
-                </div>
+                                    </div>
 
-                                <div className={`admin-form-group admin-form-group-important ${validationErrors.siteDescription ? 'has-error' : ''} ${settings.siteDescription !== originalSettings.siteDescription ? 'has-changes' : ''}`}>
-                                    <Label htmlFor="site-description-input" className="admin-form-label-with-icon">
-                                        <Info size={16} className="admin-form-label-icon" aria-hidden="true" />
-                                        {t('admin.siteDescription')}
-                                        <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
-                                        <div className="admin-tooltip-wrapper">
-                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
-                                            <span className="admin-tooltip-text" role="tooltip">
-                                                A brief description of your site (used for SEO and social sharing)
-                                            </span>
-                                        </div>
-                                    </Label>
-                    <Input
-                                        id="site-description-input"
-                        value={settings.siteDescription}
-                        onChange={(e) => setSettings(prev => ({ ...prev, siteDescription: e.target.value }))}
-                                        placeholder="Enter site description"
-                                        className={validationErrors.siteDescription ? 'input-error' : ''}
-                                        aria-describedby={validationErrors.siteDescription ? 'site-description-error' : 'site-description-help'}
-                                        aria-invalid={validationErrors.siteDescription ? 'true' : 'false'}
-                                        maxLength={500}
-                                    />
-                                    {validationErrors.siteDescription && (
-                                        <p className="admin-validation-error" id="site-description-error" role="alert" aria-live="polite">
-                                            <AlertCircle size={14} aria-hidden="true" />
-                                            {validationErrors.siteDescription}
-                                        </p>
-                                    )}
-                                    {settings.siteDescription !== originalSettings.siteDescription && !validationErrors.siteDescription && (
-                                        <p className="admin-change-indicator" aria-live="polite">
-                                            <span className="admin-change-dot" aria-hidden="true"></span>
-                                            Modified
-                                        </p>
-                                    )}
-                                    <p className="admin-form-help-text" id="site-description-help">
-                                        {settings.siteDescription.length}/500 characters
-                                    </p>
-                </div>
-
-                                {/* Site Logo Upload */}
-                                <div className={`admin-form-group admin-form-group-important ${settings.siteLogo !== originalSettings.siteLogo ? 'has-changes' : ''}`}>
-                                    <Label htmlFor="site-logo-upload" className="admin-form-label-with-icon">
-                                        <ImageIcon size={16} className="admin-form-label-icon" aria-hidden="true" />
-                                        Site Logo
-                                        <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
-                                        <div className="admin-tooltip-wrapper">
-                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
-                                            <span className="admin-tooltip-text" role="tooltip">
-                                                Upload a custom logo for your site. Recommended size: 200x50px. Supported formats: PNG, JPG, SVG
-                                            </span>
-                                        </div>
-                                    </Label>
-                                    <div className="admin-file-upload-wrapper">
-                                        <input
-                                            type="file"
-                                            id="site-logo-upload"
-                                            accept="image/png,image/jpeg,image/jpg,image/svg+xml"
-                                            onChange={async (e) => {
-                                                const file = e.target.files?.[0];
-                                                if (!file) return;
-                                                
-                                                if (file.size > 5 * 1024 * 1024) {
-                                                    toast.error('Logo file size must be less than 5MB');
-                                                    return;
-                                                }
-                                                
-                                                try {
-                                                    setUploadingLogo(true);
-                                                    // TODO: Implement actual upload to server
-                                                    // For now, create a preview URL
-                                                    const reader = new FileReader();
-                                                    reader.onload = (event) => {
-                                                        const result = event.target?.result as string;
-                                                        setSettings({ ...settings, siteLogo: result });
-                                                    };
-                                                    reader.readAsDataURL(file);
-                                                    toast.success('Logo uploaded successfully');
-                                                } catch (error) {
-                                                    toast.error('Failed to upload logo');
-                                                } finally {
-                                                    setUploadingLogo(false);
-                                                }
-                                            }}
-                                            className="admin-file-input"
-                                            disabled={uploadingLogo}
-                                        />
-                                        <label htmlFor="site-logo-upload" className="admin-file-upload-label">
-                                            <Upload size={16} aria-hidden="true" />
-                                            {uploadingLogo ? 'Uploading...' : settings.siteLogo ? 'Change Logo' : 'Upload Logo'}
-                                        </label>
-                                        {settings.siteLogo && (
-                                            <div className="admin-image-preview">
-                                                <img src={settings.siteLogo} alt="Site logo preview" className="admin-image-preview-img" />
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => setSettings(prev => ({ ...prev, siteLogo: '' }))}
-                                                    className="admin-image-preview-remove"
-                                                    aria-label="Remove logo"
-                                                >
-                                                    <X size={16} />
-                                                </Button>
+                                    <div className={`admin-form-group admin-form-group-important ${validationErrors.siteDescription ? 'has-error' : ''} ${settings.siteDescription !== originalSettings.siteDescription ? 'has-changes' : ''}`}>
+                                        <Label htmlFor="site-description-input" className="admin-form-label-with-icon">
+                                            <Info size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                            {t('admin.siteDescription')}
+                                            <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
+                                            <div className="admin-tooltip-wrapper">
+                                                <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                                <span className="admin-tooltip-text" role="tooltip">
+                                                    A brief description of your site (used for SEO and social sharing)
+                                                </span>
                                             </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Favicon Upload */}
-                                <div className={`admin-form-group admin-form-group-important ${settings.favicon !== originalSettings.favicon ? 'has-changes' : ''}`}>
-                                    <Label htmlFor="favicon-upload" className="admin-form-label-with-icon">
-                                        <ImageIcon size={16} className="admin-form-label-icon" aria-hidden="true" />
-                                        Favicon
-                                        <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
-                                        <div className="admin-tooltip-wrapper">
-                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
-                                            <span className="admin-tooltip-text" role="tooltip">
-                                                Upload a custom favicon. Recommended size: 32x32px or 16x16px. Supported formats: ICO, PNG
-                                            </span>
-                                        </div>
-                                    </Label>
-                                    <div className="admin-file-upload-wrapper">
-                                        <input
-                                            type="file"
-                                            id="favicon-upload"
-                                            accept="image/x-icon,image/png,image/ico"
-                                            onChange={async (e) => {
-                                                const file = e.target.files?.[0];
-                                                if (!file) return;
-                                                
-                                                if (file.size > 1 * 1024 * 1024) {
-                                                    toast.error('Favicon file size must be less than 1MB');
-                                                    return;
-                                                }
-                                                
-                                                try {
-                                                    setUploadingFavicon(true);
-                                                    // TODO: Implement actual upload to server
-                                                    const reader = new FileReader();
-                                                    reader.onload = (event) => {
-                                                        const result = event.target?.result as string;
-                                                        setSettings({ ...settings, favicon: result });
-                                                    };
-                                                    reader.readAsDataURL(file);
-                                                    toast.success('Favicon uploaded successfully');
-                                                } catch (error) {
-                                                    toast.error('Failed to upload favicon');
-                                                } finally {
-                                                    setUploadingFavicon(false);
-                                                }
-                                            }}
-                                            className="admin-file-input"
-                                            disabled={uploadingFavicon}
+                                        </Label>
+                                        <Input
+                                            id="site-description-input"
+                                            value={settings.siteDescription}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, siteDescription: e.target.value }))}
+                                            placeholder="Enter site description"
+                                            className={validationErrors.siteDescription ? 'input-error' : ''}
+                                            aria-describedby={validationErrors.siteDescription ? 'site-description-error' : 'site-description-help'}
+                                            aria-invalid={validationErrors.siteDescription ? 'true' : 'false'}
+                                            maxLength={500}
                                         />
-                                        <label htmlFor="favicon-upload" className="admin-file-upload-label">
-                                            <Upload size={16} aria-hidden="true" />
-                                            {uploadingFavicon ? 'Uploading...' : settings.favicon ? 'Change Favicon' : 'Upload Favicon'}
-                                        </label>
-                                        {settings.favicon && (
-                                            <div className="admin-image-preview admin-image-preview-small">
-                                                <img src={settings.favicon} alt="Favicon preview" className="admin-image-preview-img" />
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => setSettings(prev => ({ ...prev, favicon: '' }))}
-                                                    className="admin-image-preview-remove"
-                                                    aria-label="Remove favicon"
-                                                >
-                                                    <X size={16} />
-                                                </Button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Default Language */}
-                                <div className={`admin-form-group admin-form-group-important ${settings.defaultLanguage !== originalSettings.defaultLanguage ? 'has-changes' : ''}`}>
-                                    <Label htmlFor="default-language-select" className="admin-form-label-with-icon">
-                                        <Languages size={16} className="admin-form-label-icon" aria-hidden="true" />
-                                        Default Language
-                                        <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
-                                        <div className="admin-tooltip-wrapper">
-                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
-                                            <span className="admin-tooltip-text" role="tooltip">
-                                                Set the default language for new users and the site interface
-                                            </span>
-                                        </div>
-                                    </Label>
-                                    <select
-                                        id="default-language-select"
-                                        value={settings.defaultLanguage}
-                                        onChange={(e) => setSettings(prev => ({ ...prev, defaultLanguage: e.target.value }))}
-                                        className="admin-select"
-                                        aria-describedby="default-language-help"
-                                    >
-                                        {availableLanguages.map((lang) => (
-                                            <option key={lang.value} value={lang.value}>
-                                                {lang.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <span id="default-language-help" className="sr-only">
-                                        Select the default language for the site
-                                    </span>
-                                    {settings.defaultLanguage !== originalSettings.defaultLanguage && (
-                                        <p className="admin-change-indicator" aria-live="polite">
-                                            <span className="admin-change-dot" aria-hidden="true"></span>
-                                            Modified
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Timezone */}
-                                <div className={`admin-form-group admin-form-group-important ${settings.timezone !== originalSettings.timezone ? 'has-changes' : ''}`}>
-                                    <Label htmlFor="timezone-select" className="admin-form-label-with-icon">
-                                        <Clock size={16} className="admin-form-label-icon" aria-hidden="true" />
-                                        Timezone
-                                        <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
-                                        <div className="admin-tooltip-wrapper">
-                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
-                                            <span className="admin-tooltip-text" role="tooltip">
-                                                Set the default timezone for the application
-                                            </span>
-                                        </div>
-                                    </Label>
-                                    <select
-                                        id="timezone-select"
-                                        value={settings.timezone}
-                                        onChange={(e) => setSettings(prev => ({ ...prev, timezone: e.target.value }))}
-                                        className="admin-select"
-                                        aria-describedby="timezone-help"
-                                    >
-                                        {timezones.map((tz) => (
-                                            <option key={tz.value} value={tz.value}>
-                                                {tz.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <span id="timezone-help" className="sr-only">
-                                        Select the default timezone for the site
-                                    </span>
-                                    {settings.timezone !== originalSettings.timezone && (
-                                        <p className="admin-change-indicator" aria-live="polite">
-                                            <span className="admin-change-dot" aria-hidden="true"></span>
-                                            Modified
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Contact Email */}
-                                <div className={`admin-form-group admin-form-group-important ${settings.contactEmail !== originalSettings.contactEmail ? 'has-changes' : ''}`}>
-                                    <Label htmlFor="contact-email-input" className="admin-form-label-with-icon">
-                                        <Mail size={16} className="admin-form-label-icon" aria-hidden="true" />
-                                        Contact Email
-                                        <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
-                                        <div className="admin-tooltip-wrapper">
-                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
-                                            <span className="admin-tooltip-text" role="tooltip">
-                                                Set the contact email address for support inquiries
-                                            </span>
-                                        </div>
-                                    </Label>
-                                    <Input
-                                        id="contact-email-input"
-                                        type="email"
-                                        value={settings.contactEmail}
-                                        onChange={(e) => setSettings(prev => ({ ...prev, contactEmail: e.target.value }))}
-                                        placeholder="support@example.com"
-                                        className={validationErrors.contactEmail ? 'input-error' : ''}
-                                        aria-describedby={validationErrors.contactEmail ? 'contact-email-error' : 'contact-email-help'}
-                                        aria-invalid={validationErrors.contactEmail ? 'true' : 'false'}
-                                    />
-                                    {validationErrors.contactEmail && (
-                                        <p className="admin-validation-error" id="contact-email-error" role="alert" aria-live="polite">
-                                            <AlertCircle size={14} aria-hidden="true" />
-                                            {validationErrors.contactEmail}
-                                        </p>
-                                    )}
-                                    <span id="contact-email-help" className="sr-only">
-                                        Enter a valid email address for support inquiries
-                                    </span>
-                                    {settings.contactEmail !== originalSettings.contactEmail && !validationErrors.contactEmail && (
-                                        <p className="admin-change-indicator" aria-live="polite">
-                                            <span className="admin-change-dot" aria-hidden="true"></span>
-                                            Modified
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Social Media Links */}
-                                <div className={`admin-form-group ${socialLinksChanged ? 'has-changes' : ''}`}>
-                                    <Label className="admin-form-label-with-icon">
-                                        <Link2 size={16} className="admin-form-label-icon" aria-hidden="true" />
-                                        Social Media Links
-                                        <div className="admin-tooltip-wrapper">
-                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
-                                            <span className="admin-tooltip-text" role="tooltip">
-                                                Add links to your social media profiles
-                                            </span>
-                                        </div>
-                                    </Label>
-                                    <div className="admin-social-links-grid">
-                <div className="admin-form-group">
-                                            <Label htmlFor="social-facebook" className="admin-social-label">
-                                                <Facebook size={16} className="admin-social-icon" aria-hidden="true" />
-                                                Facebook
-                                            </Label>
-                    <Input
-                                                id="social-facebook"
-                                                type="url"
-                                                value={settings.socialMediaLinks.facebook}
-                                                onChange={(e) => setSettings({
-                                                    ...settings,
-                                                    socialMediaLinks: { ...settings.socialMediaLinks, facebook: e.target.value }
-                                                })}
-                                                placeholder="https://facebook.com/yourpage"
-                                            />
-                                        </div>
-                                        <div className="admin-form-group">
-                                            <Label htmlFor="social-twitter" className="admin-social-label">
-                                                <Twitter size={16} className="admin-social-icon" aria-hidden="true" />
-                                                Twitter
-                                            </Label>
-                                            <Input
-                                                id="social-twitter"
-                                                type="url"
-                                                value={settings.socialMediaLinks.twitter}
-                                                onChange={(e) => setSettings({
-                                                    ...settings,
-                                                    socialMediaLinks: { ...settings.socialMediaLinks, twitter: e.target.value }
-                                                })}
-                                                placeholder="https://twitter.com/yourhandle"
-                                            />
-                                        </div>
-                                        <div className="admin-form-group">
-                                            <Label htmlFor="social-instagram" className="admin-social-label">
-                                                <Instagram size={16} className="admin-social-icon" aria-hidden="true" />
-                                                Instagram
-                                            </Label>
-                                            <Input
-                                                id="social-instagram"
-                                                type="url"
-                                                value={settings.socialMediaLinks.instagram}
-                                                onChange={(e) => setSettings({
-                                                    ...settings,
-                                                    socialMediaLinks: { ...settings.socialMediaLinks, instagram: e.target.value }
-                                                })}
-                                                placeholder="https://instagram.com/yourhandle"
-                                            />
-                                        </div>
-                                        <div className="admin-form-group">
-                                            <Label htmlFor="social-linkedin" className="admin-social-label">
-                                                <Linkedin size={16} className="admin-social-icon" aria-hidden="true" />
-                                                LinkedIn
-                                            </Label>
-                                            <Input
-                                                id="social-linkedin"
-                                                type="url"
-                                                value={settings.socialMediaLinks.linkedin}
-                                                onChange={(e) => setSettings({
-                                                    ...settings,
-                                                    socialMediaLinks: { ...settings.socialMediaLinks, linkedin: e.target.value }
-                                                })}
-                                                placeholder="https://linkedin.com/company/yourcompany"
-                                            />
-                                        </div>
-                                        <div className="admin-form-group">
-                                            <Label htmlFor="social-youtube" className="admin-social-label">
-                                                <Youtube size={16} className="admin-social-icon" aria-hidden="true" />
-                                                YouTube
-                                            </Label>
-                                            <Input
-                                                id="social-youtube"
-                                                type="url"
-                                                value={settings.socialMediaLinks.youtube}
-                                                onChange={(e) => setSettings({
-                                                    ...settings,
-                                                    socialMediaLinks: { ...settings.socialMediaLinks, youtube: e.target.value }
-                                                })}
-                                                placeholder="https://youtube.com/@yourchannel"
-                                            />
-                                        </div>
-                                    </div>
-                                    {socialLinksChanged && (
-                                        <p className="admin-change-indicator" aria-live="polite">
-                                            <span className="admin-change-dot" aria-hidden="true"></span>
-                                            Modified
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Progressive Disclosure - Advanced Settings */}
-                                <div className="admin-advanced-settings-section">
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        className="admin-advanced-settings-toggle"
-                                        onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
-                                    >
-                                        <span>Advanced Settings</span>
-                                        {showAdvancedSettings ? (
-                                            <ChevronUp size={18} />
-                                        ) : (
-                                            <ChevronDown size={18} />
-                                        )}
-                                    </Button>
-                                    {showAdvancedSettings && (
-                                        <div className="admin-advanced-settings-content">
-                                            {/* Additional advanced settings can be added here */}
-                                            <p className="admin-form-help-text">
-                                                Advanced configuration options will be available here.
+                                        {validationErrors.siteDescription && (
+                                            <p className="admin-validation-error" id="site-description-error" role="alert" aria-live="polite">
+                                                <AlertCircle size={14} aria-hidden="true" />
+                                                {validationErrors.siteDescription}
                                             </p>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="admin-modal-actions">
-                                    <div className="admin-actions-status">
-                                        {hasChanges && (
-                                            <div className="admin-unsaved-changes-indicator">
-                                                <AlertCircle size={16} />
-                                                <span>You have unsaved changes</span>
-                                            </div>
                                         )}
-                                        {saveSuccess && (
-                                            <div className={`admin-save-success-indicator ${isFadingOut ? 'fade-out' : ''}`}>
-                                                <CheckCircle2 size={16} />
-                                                <span>Settings saved successfully!</span>
+                                        {settings.siteDescription !== originalSettings.siteDescription && !validationErrors.siteDescription && (
+                                            <p className="admin-change-indicator" aria-live="polite">
+                                                <span className="admin-change-dot" aria-hidden="true"></span>
+                                                Modified
+                                            </p>
+                                        )}
+                                        <p className="admin-form-help-text" id="site-description-help">
+                                            {settings.siteDescription.length}/500 characters
+                                        </p>
+                                    </div>
+
+                                    {/* Site Logo Upload */}
+                                    <div className={`admin-form-group admin-form-group-important ${settings.siteLogo !== originalSettings.siteLogo ? 'has-changes' : ''}`}>
+                                        <Label htmlFor="site-logo-upload" className="admin-form-label-with-icon">
+                                            <ImageIcon size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                            Site Logo
+                                            <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
+                                            <div className="admin-tooltip-wrapper">
+                                                <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                                <span className="admin-tooltip-text" role="tooltip">
+                                                    Upload a custom logo for your site. Recommended size: 200x50px. Supported formats: PNG, JPG, SVG
+                                                </span>
+                                            </div>
+                                        </Label>
+                                        <div className="admin-file-upload-wrapper">
+                                            <input
+                                                type="file"
+                                                id="site-logo-upload"
+                                                accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                                                onChange={async (e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (!file) return;
+
+                                                    if (file.size > 5 * 1024 * 1024) {
+                                                        toast.error('Logo file size must be less than 5MB');
+                                                        return;
+                                                    }
+
+                                                    try {
+                                                        setUploadingLogo(true);
+                                                        // TODO: Implement actual upload to server
+                                                        // For now, create a preview URL
+                                                        const reader = new FileReader();
+                                                        reader.onload = (event) => {
+                                                            const result = event.target?.result as string;
+                                                            setSettings({ ...settings, siteLogo: result });
+                                                        };
+                                                        reader.readAsDataURL(file);
+                                                        toast.success('Logo uploaded successfully');
+                                                    } catch (_error) {
+                                                        toast.error('Failed to upload logo');
+                                                    } finally {
+                                                        setUploadingLogo(false);
+                                                    }
+                                                }}
+                                                className="admin-file-input"
+                                                disabled={uploadingLogo}
+                                            />
+                                            <label htmlFor="site-logo-upload" className="admin-file-upload-label">
+                                                <Upload size={16} aria-hidden="true" />
+                                                {uploadingLogo ? 'Uploading...' : settings.siteLogo ? 'Change Logo' : 'Upload Logo'}
+                                            </label>
+                                            {settings.siteLogo && (
+                                                <div className="admin-image-preview">
+                                                    <img src={settings.siteLogo} alt="Site logo preview" className="admin-image-preview-img" />
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => setSettings(prev => ({ ...prev, siteLogo: '' }))}
+                                                        className="admin-image-preview-remove"
+                                                        aria-label="Remove logo"
+                                                    >
+                                                        <X size={16} />
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Favicon Upload */}
+                                    <div className={`admin-form-group admin-form-group-important ${settings.favicon !== originalSettings.favicon ? 'has-changes' : ''}`}>
+                                        <Label htmlFor="favicon-upload" className="admin-form-label-with-icon">
+                                            <ImageIcon size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                            Favicon
+                                            <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
+                                            <div className="admin-tooltip-wrapper">
+                                                <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                                <span className="admin-tooltip-text" role="tooltip">
+                                                    Upload a custom favicon. Recommended size: 32x32px or 16x16px. Supported formats: ICO, PNG
+                                                </span>
+                                            </div>
+                                        </Label>
+                                        <div className="admin-file-upload-wrapper">
+                                            <input
+                                                type="file"
+                                                id="favicon-upload"
+                                                accept="image/x-icon,image/png,image/ico"
+                                                onChange={async (e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (!file) return;
+
+                                                    if (file.size > 1 * 1024 * 1024) {
+                                                        toast.error('Favicon file size must be less than 1MB');
+                                                        return;
+                                                    }
+
+                                                    try {
+                                                        setUploadingFavicon(true);
+                                                        // TODO: Implement actual upload to server
+                                                        const reader = new FileReader();
+                                                        reader.onload = (event) => {
+                                                            const result = event.target?.result as string;
+                                                            setSettings({ ...settings, favicon: result });
+                                                        };
+                                                        reader.readAsDataURL(file);
+                                                        toast.success('Favicon uploaded successfully');
+                                                    } catch (_error) {
+                                                        toast.error('Failed to upload favicon');
+                                                    } finally {
+                                                        setUploadingFavicon(false);
+                                                    }
+                                                }}
+                                                className="admin-file-input"
+                                                disabled={uploadingFavicon}
+                                            />
+                                            <label htmlFor="favicon-upload" className="admin-file-upload-label">
+                                                <Upload size={16} aria-hidden="true" />
+                                                {uploadingFavicon ? 'Uploading...' : settings.favicon ? 'Change Favicon' : 'Upload Favicon'}
+                                            </label>
+                                            {settings.favicon && (
+                                                <div className="admin-image-preview admin-image-preview-small">
+                                                    <img src={settings.favicon} alt="Favicon preview" className="admin-image-preview-img" />
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => setSettings(prev => ({ ...prev, favicon: '' }))}
+                                                        className="admin-image-preview-remove"
+                                                        aria-label="Remove favicon"
+                                                    >
+                                                        <X size={16} />
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Default Language */}
+                                    <div className={`admin-form-group admin-form-group-important ${settings.defaultLanguage !== originalSettings.defaultLanguage ? 'has-changes' : ''}`}>
+                                        <Label htmlFor="default-language-select" className="admin-form-label-with-icon">
+                                            <Languages size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                            Default Language
+                                            <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
+                                            <div className="admin-tooltip-wrapper">
+                                                <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                                <span className="admin-tooltip-text" role="tooltip">
+                                                    Set the default language for new users and the site interface
+                                                </span>
+                                            </div>
+                                        </Label>
+                                        <select
+                                            id="default-language-select"
+                                            value={settings.defaultLanguage}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, defaultLanguage: e.target.value }))}
+                                            className="admin-select"
+                                            aria-describedby="default-language-help"
+                                        >
+                                            {availableLanguages.map((lang) => (
+                                                <option key={lang.value} value={lang.value}>
+                                                    {lang.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <span id="default-language-help" className="sr-only">
+                                            Select the default language for the site
+                                        </span>
+                                        {settings.defaultLanguage !== originalSettings.defaultLanguage && (
+                                            <p className="admin-change-indicator" aria-live="polite">
+                                                <span className="admin-change-dot" aria-hidden="true"></span>
+                                                Modified
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Timezone */}
+                                    <div className={`admin-form-group admin-form-group-important ${settings.timezone !== originalSettings.timezone ? 'has-changes' : ''}`}>
+                                        <Label htmlFor="timezone-select" className="admin-form-label-with-icon">
+                                            <Clock size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                            Timezone
+                                            <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
+                                            <div className="admin-tooltip-wrapper">
+                                                <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                                <span className="admin-tooltip-text" role="tooltip">
+                                                    Set the default timezone for the application
+                                                </span>
+                                            </div>
+                                        </Label>
+                                        <select
+                                            id="timezone-select"
+                                            value={settings.timezone}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, timezone: e.target.value }))}
+                                            className="admin-select"
+                                            aria-describedby="timezone-help"
+                                        >
+                                            {timezones.map((tz) => (
+                                                <option key={tz.value} value={tz.value}>
+                                                    {tz.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <span id="timezone-help" className="sr-only">
+                                            Select the default timezone for the site
+                                        </span>
+                                        {settings.timezone !== originalSettings.timezone && (
+                                            <p className="admin-change-indicator" aria-live="polite">
+                                                <span className="admin-change-dot" aria-hidden="true"></span>
+                                                Modified
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Contact Email */}
+                                    <div className={`admin-form-group admin-form-group-important ${settings.contactEmail !== originalSettings.contactEmail ? 'has-changes' : ''}`}>
+                                        <Label htmlFor="contact-email-input" className="admin-form-label-with-icon">
+                                            <Mail size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                            Contact Email
+                                            <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
+                                            <div className="admin-tooltip-wrapper">
+                                                <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                                <span className="admin-tooltip-text" role="tooltip">
+                                                    Set the contact email address for support inquiries
+                                                </span>
+                                            </div>
+                                        </Label>
+                                        <Input
+                                            id="contact-email-input"
+                                            type="email"
+                                            value={settings.contactEmail}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, contactEmail: e.target.value }))}
+                                            placeholder="support@example.com"
+                                            className={validationErrors.contactEmail ? 'input-error' : ''}
+                                            aria-describedby={validationErrors.contactEmail ? 'contact-email-error' : 'contact-email-help'}
+                                            aria-invalid={validationErrors.contactEmail ? 'true' : 'false'}
+                                        />
+                                        {validationErrors.contactEmail && (
+                                            <p className="admin-validation-error" id="contact-email-error" role="alert" aria-live="polite">
+                                                <AlertCircle size={14} aria-hidden="true" />
+                                                {validationErrors.contactEmail}
+                                            </p>
+                                        )}
+                                        <span id="contact-email-help" className="sr-only">
+                                            Enter a valid email address for support inquiries
+                                        </span>
+                                        {settings.contactEmail !== originalSettings.contactEmail && !validationErrors.contactEmail && (
+                                            <p className="admin-change-indicator" aria-live="polite">
+                                                <span className="admin-change-dot" aria-hidden="true"></span>
+                                                Modified
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Social Media Links */}
+                                    <div className={`admin-form-group ${socialLinksChanged ? 'has-changes' : ''}`}>
+                                        <Label className="admin-form-label-with-icon">
+                                            <Link2 size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                            Social Media Links
+                                            <div className="admin-tooltip-wrapper">
+                                                <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                                <span className="admin-tooltip-text" role="tooltip">
+                                                    Add links to your social media profiles
+                                                </span>
+                                            </div>
+                                        </Label>
+                                        <div className="admin-social-links-grid">
+                                            <div className="admin-form-group">
+                                                <Label htmlFor="social-facebook" className="admin-social-label">
+                                                    <Facebook size={16} className="admin-social-icon" aria-hidden="true" />
+                                                    Facebook
+                                                </Label>
+                                                <Input
+                                                    id="social-facebook"
+                                                    type="url"
+                                                    value={settings.socialMediaLinks.facebook}
+                                                    onChange={(e) => setSettings({
+                                                        ...settings,
+                                                        socialMediaLinks: { ...settings.socialMediaLinks, facebook: e.target.value }
+                                                    })}
+                                                    placeholder="https://facebook.com/yourpage"
+                                                />
+                                            </div>
+                                            <div className="admin-form-group">
+                                                <Label htmlFor="social-twitter" className="admin-social-label">
+                                                    <Twitter size={16} className="admin-social-icon" aria-hidden="true" />
+                                                    Twitter
+                                                </Label>
+                                                <Input
+                                                    id="social-twitter"
+                                                    type="url"
+                                                    value={settings.socialMediaLinks.twitter}
+                                                    onChange={(e) => setSettings({
+                                                        ...settings,
+                                                        socialMediaLinks: { ...settings.socialMediaLinks, twitter: e.target.value }
+                                                    })}
+                                                    placeholder="https://twitter.com/yourhandle"
+                                                />
+                                            </div>
+                                            <div className="admin-form-group">
+                                                <Label htmlFor="social-instagram" className="admin-social-label">
+                                                    <Instagram size={16} className="admin-social-icon" aria-hidden="true" />
+                                                    Instagram
+                                                </Label>
+                                                <Input
+                                                    id="social-instagram"
+                                                    type="url"
+                                                    value={settings.socialMediaLinks.instagram}
+                                                    onChange={(e) => setSettings({
+                                                        ...settings,
+                                                        socialMediaLinks: { ...settings.socialMediaLinks, instagram: e.target.value }
+                                                    })}
+                                                    placeholder="https://instagram.com/yourhandle"
+                                                />
+                                            </div>
+                                            <div className="admin-form-group">
+                                                <Label htmlFor="social-linkedin" className="admin-social-label">
+                                                    <Linkedin size={16} className="admin-social-icon" aria-hidden="true" />
+                                                    LinkedIn
+                                                </Label>
+                                                <Input
+                                                    id="social-linkedin"
+                                                    type="url"
+                                                    value={settings.socialMediaLinks.linkedin}
+                                                    onChange={(e) => setSettings({
+                                                        ...settings,
+                                                        socialMediaLinks: { ...settings.socialMediaLinks, linkedin: e.target.value }
+                                                    })}
+                                                    placeholder="https://linkedin.com/company/yourcompany"
+                                                />
+                                            </div>
+                                            <div className="admin-form-group">
+                                                <Label htmlFor="social-youtube" className="admin-social-label">
+                                                    <Youtube size={16} className="admin-social-icon" aria-hidden="true" />
+                                                    YouTube
+                                                </Label>
+                                                <Input
+                                                    id="social-youtube"
+                                                    type="url"
+                                                    value={settings.socialMediaLinks.youtube}
+                                                    onChange={(e) => setSettings({
+                                                        ...settings,
+                                                        socialMediaLinks: { ...settings.socialMediaLinks, youtube: e.target.value }
+                                                    })}
+                                                    placeholder="https://youtube.com/@yourchannel"
+                                                />
+                                            </div>
+                                        </div>
+                                        {socialLinksChanged && (
+                                            <p className="admin-change-indicator" aria-live="polite">
+                                                <span className="admin-change-dot" aria-hidden="true"></span>
+                                                Modified
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Progressive Disclosure - Advanced Settings */}
+                                    <div className="admin-advanced-settings-section">
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            className="admin-advanced-settings-toggle"
+                                            onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+                                        >
+                                            <span>Advanced Settings</span>
+                                            {showAdvancedSettings ? (
+                                                <ChevronUp size={18} />
+                                            ) : (
+                                                <ChevronDown size={18} />
+                                            )}
+                                        </Button>
+                                        {showAdvancedSettings && (
+                                            <div className="admin-advanced-settings-content">
+                                                {/* Additional advanced settings can be added here */}
+                                                <p className="admin-form-help-text">
+                                                    Advanced configuration options will be available here.
+                                                </p>
                                             </div>
                                         )}
                                     </div>
-                                    <Button 
-                                        onClick={handleSave} 
-                                        loading={saving}
-                                        disabled={!hasChanges || Object.keys(validationErrors).length > 0} 
-                                        className="admin-add-category-btn"
-                                        aria-label={saving ? 'Saving settings' : 'Save all settings'}
-                                        aria-describedby="save-button-help"
-                                    >
-                                        {!saving && <Save size={16} aria-hidden="true" />}
-                                        {saving ? t('admin.saving') : t('admin.saveSettings')}
-                                    </Button>
-                                    <span id="save-button-help" className="sr-only">
-                                        {!hasChanges ? 'No changes to save' : Object.keys(validationErrors).length > 0 ? 'Please fix errors before saving' : 'Save all settings changes'}
-                                    </span>
-                                </div>
+
+                                    <div className="admin-modal-actions">
+                                        <div className="admin-actions-status">
+                                            {hasChanges && (
+                                                <div className="admin-unsaved-changes-indicator">
+                                                    <AlertCircle size={16} />
+                                                    <span>You have unsaved changes</span>
+                                                </div>
+                                            )}
+                                            {saveSuccess && (
+                                                <div className={`admin-save-success-indicator ${isFadingOut ? 'fade-out' : ''}`}>
+                                                    <CheckCircle2 size={16} />
+                                                    <span>Settings saved successfully!</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <Button
+                                            onClick={handleSave}
+                                            loading={saving}
+                                            disabled={!hasChanges || Object.keys(validationErrors).length > 0}
+                                            className="admin-add-category-btn"
+                                            aria-label={saving ? 'Saving settings' : 'Save all settings'}
+                                            aria-describedby="save-button-help"
+                                        >
+                                            {!saving && <Save size={16} aria-hidden="true" />}
+                                            {saving ? t('admin.saving') : t('admin.saveSettings')}
+                                        </Button>
+                                        <span id="save-button-help" className="sr-only">
+                                            {!hasChanges ? 'No changes to save' : Object.keys(validationErrors).length > 0 ? 'Please fix errors before saving' : 'Save all settings changes'}
+                                        </span>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
@@ -1636,8 +1649,8 @@ export function AdminSettings() {
                 </TabsContent>
 
                 {/* Upload Settings Tab */}
-                <TabsContent 
-                    value="upload" 
+                <TabsContent
+                    value="upload"
                     className="admin-settings-tab-content"
                     ref={tabContentRef}
                     onTouchStart={handleContentTouchStart}
@@ -1684,11 +1697,11 @@ export function AdminSettings() {
                                             )}
                                         </span>
                                     </div>
-                    <Input
+                                    <Input
                                         id="max-upload-size-input"
-                        type="number"
-                        value={settings.maxUploadSize}
-                        onChange={(e) => setSettings(prev => ({ ...prev, maxUploadSize: parseInt(e.target.value) || 10 }))}
+                                        type="number"
+                                        value={settings.maxUploadSize}
+                                        onChange={(e) => setSettings(prev => ({ ...prev, maxUploadSize: parseInt(e.target.value) || 10 }))}
                                         min="1"
                                         max="1000"
                                         className={validationErrors.maxUploadSize ? 'input-error' : ''}
@@ -1711,7 +1724,7 @@ export function AdminSettings() {
                                     <p className="admin-form-help-text" id="max-upload-size-help">
                                         Maximum file size users can upload (1-1000 MB)
                                     </p>
-                </div>
+                                </div>
 
                                 <div className={`admin-form-group admin-form-group-critical ${validationErrors.allowedFileTypes ? 'has-error' : ''} ${settings.allowedFileTypes !== originalSettings.allowedFileTypes ? 'has-changes' : ''}`}>
                                     <Label id="file-formats-label" className="admin-form-label-with-icon">
@@ -1746,31 +1759,31 @@ export function AdminSettings() {
                                             )}
                                         </span>
                                     </div>
-                                    <div 
+                                    <div
                                         className="admin-file-types-selector"
                                         role="group"
                                         aria-labelledby="file-formats-label"
                                         aria-describedby="file-formats-help"
                                     >
-                        {availableFileTypes.map((fileType) => {
-                            const isSelected = selectedFileTypes.includes(fileType.value);
-                            return (
-                                <label
-                                    key={fileType.value}
-                                    className={`admin-file-type-checkbox ${isSelected ? 'selected' : ''}`}
-                                >
-                                    <input
-                                        type="checkbox"
-                                        checked={isSelected}
-                                        onChange={() => handleFileTypeToggle(fileType.value)}
+                                        {availableFileTypes.map((fileType) => {
+                                            const isSelected = selectedFileTypes.includes(fileType.value);
+                                            return (
+                                                <label
+                                                    key={fileType.value}
+                                                    className={`admin-file-type-checkbox ${isSelected ? 'selected' : ''}`}
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isSelected}
+                                                        onChange={() => handleFileTypeToggle(fileType.value)}
                                                         aria-label={`${fileType.label} file format`}
                                                         aria-describedby={`file-format-${fileType.value}-desc`}
-                                    />
+                                                    />
                                                     <span id={`file-format-${fileType.value}-desc`}>{fileType.label}</span>
-                                </label>
-                            );
-                        })}
-                    </div>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
                                     {validationErrors.allowedFileTypes && (
                                         <p className="admin-validation-error" id="file-formats-error" role="alert" aria-live="polite">
                                             <AlertCircle size={14} aria-hidden="true" />
@@ -1784,9 +1797,9 @@ export function AdminSettings() {
                                         <p className="admin-change-indicator">
                                             <span className="admin-change-dot"></span>
                                             Modified
-                        </p>
-                    )}
-                </div>
+                                        </p>
+                                    )}
+                                </div>
 
                                 {/* Image Quality */}
                                 <div className={`admin-form-group admin-form-group-important ${settings.imageQuality !== originalSettings.imageQuality ? 'has-changes' : ''}`}>
@@ -1836,9 +1849,9 @@ export function AdminSettings() {
                                             </span>
                                         </div>
                                     </Label>
-                <div className="admin-form-group">
+                                    <div className="admin-form-group">
                                         <Label className="admin-maintenance-toggle-label" htmlFor="watermark-enabled-toggle">
-                        <input
+                                            <input
                                                 id="watermark-enabled-toggle"
                                                 type="checkbox"
                                                 checked={settings.watermarkEnabled}
@@ -2035,10 +2048,10 @@ export function AdminSettings() {
                                             </div>
                                         )}
                                     </div>
-                                    <Button 
-                                        onClick={handleSave} 
+                                    <Button
+                                        onClick={handleSave}
                                         loading={saving}
-                                        disabled={!hasChanges || Object.keys(validationErrors).length > 0} 
+                                        disabled={!hasChanges || Object.keys(validationErrors).length > 0}
                                         className="admin-add-category-btn"
                                         aria-label={saving ? 'Saving settings' : 'Save all settings'}
                                         aria-describedby="save-button-help"
@@ -2056,8 +2069,8 @@ export function AdminSettings() {
                 </TabsContent>
 
                 {/* Appearance & Branding Tab */}
-                <TabsContent 
-                    value="appearance" 
+                <TabsContent
+                    value="appearance"
                     className="admin-settings-tab-content"
                     ref={tabContentRef}
                     onTouchStart={handleContentTouchStart}
@@ -2086,129 +2099,129 @@ export function AdminSettings() {
 
                                 {/* Color Picker Grid */}
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '1rem' }}>
-                                {/* Primary Color */}
-                                <div className={`admin-form-group admin-form-group-important ${settings.themePrimaryColor !== originalSettings.themePrimaryColor ? 'has-changes' : ''}`} style={{ flex: '0 0 auto', minWidth: '120px' }}>
-                                    <Label htmlFor="theme-primary-color-input" className="admin-form-label-with-icon">
-                                        <Palette size={16} className="admin-form-label-icon" aria-hidden="true" />
-                                        Primary Color
-                                        <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
-                                        <div className="admin-tooltip-wrapper">
-                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
-                                            <span className="admin-tooltip-text" role="tooltip">
-                                                Main brand color used for buttons, links, and primary actions
-                                            </span>
+                                    {/* Primary Color */}
+                                    <div className={`admin-form-group admin-form-group-important ${settings.themePrimaryColor !== originalSettings.themePrimaryColor ? 'has-changes' : ''}`} style={{ flex: '0 0 auto', minWidth: '120px' }}>
+                                        <Label htmlFor="theme-primary-color-input" className="admin-form-label-with-icon">
+                                            <Palette size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                            Primary Color
+                                            <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
+                                            <div className="admin-tooltip-wrapper">
+                                                <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                                <span className="admin-tooltip-text" role="tooltip">
+                                                    Main brand color used for buttons, links, and primary actions
+                                                </span>
+                                            </div>
+                                        </Label>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'fit-content' }}>
+                                            <Input
+                                                id="theme-primary-color-input"
+                                                type="color"
+                                                value={settings.themePrimaryColor}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, themePrimaryColor: e.target.value }))}
+                                                style={{ width: '60px', height: '40px', padding: '2px', cursor: 'pointer' }}
+                                                aria-describedby="theme-primary-color-help"
+                                            />
+                                            <Input
+                                                type="text"
+                                                value={settings.themePrimaryColor}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, themePrimaryColor: e.target.value }))}
+                                                placeholder="#7c3aed"
+                                                style={{ width: '100px' }}
+                                                aria-label="Primary color hex code"
+                                            />
                                         </div>
-                                    </Label>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'fit-content' }}>
-                                        <Input
-                                            id="theme-primary-color-input"
-                                            type="color"
-                                            value={settings.themePrimaryColor}
-                                            onChange={(e) => setSettings(prev => ({ ...prev, themePrimaryColor: e.target.value }))}
-                                            style={{ width: '60px', height: '40px', padding: '2px', cursor: 'pointer' }}
-                                            aria-describedby="theme-primary-color-help"
-                                        />
-                                        <Input
-                                            type="text"
-                                            value={settings.themePrimaryColor}
-                                            onChange={(e) => setSettings(prev => ({ ...prev, themePrimaryColor: e.target.value }))}
-                                            placeholder="#7c3aed"
-                                            style={{ width: '100px' }}
-                                            aria-label="Primary color hex code"
-                                        />
-                                    </div>
-                                    <p className="admin-form-help-text" id="theme-primary-color-help">
-                                        Main brand color (hex format: #RRGGBB)
-                                    </p>
-                                    {settings.themePrimaryColor !== originalSettings.themePrimaryColor && (
-                                        <p className="admin-change-indicator" aria-live="polite">
-                                            <span className="admin-change-dot" aria-hidden="true"></span>
-                                            Modified
+                                        <p className="admin-form-help-text" id="theme-primary-color-help">
+                                            Main brand color (hex format: #RRGGBB)
                                         </p>
-                                    )}
-                                </div>
+                                        {settings.themePrimaryColor !== originalSettings.themePrimaryColor && (
+                                            <p className="admin-change-indicator" aria-live="polite">
+                                                <span className="admin-change-dot" aria-hidden="true"></span>
+                                                Modified
+                                            </p>
+                                        )}
+                                    </div>
 
-                                {/* Secondary Color */}
-                                <div className={`admin-form-group ${settings.themeSecondaryColor !== originalSettings.themeSecondaryColor ? 'has-changes' : ''}`} style={{ flex: '0 0 auto', minWidth: '120px' }}>
-                                    <Label htmlFor="theme-secondary-color-input" className="admin-form-label-with-icon">
-                                        <Palette size={16} className="admin-form-label-icon" aria-hidden="true" />
-                                        Secondary Color
-                                        <div className="admin-tooltip-wrapper">
-                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
-                                            <span className="admin-tooltip-text" role="tooltip">
-                                                Secondary brand color for accents and highlights
-                                            </span>
+                                    {/* Secondary Color */}
+                                    <div className={`admin-form-group ${settings.themeSecondaryColor !== originalSettings.themeSecondaryColor ? 'has-changes' : ''}`} style={{ flex: '0 0 auto', minWidth: '120px' }}>
+                                        <Label htmlFor="theme-secondary-color-input" className="admin-form-label-with-icon">
+                                            <Palette size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                            Secondary Color
+                                            <div className="admin-tooltip-wrapper">
+                                                <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                                <span className="admin-tooltip-text" role="tooltip">
+                                                    Secondary brand color for accents and highlights
+                                                </span>
+                                            </div>
+                                        </Label>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'fit-content' }}>
+                                            <Input
+                                                id="theme-secondary-color-input"
+                                                type="color"
+                                                value={settings.themeSecondaryColor}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, themeSecondaryColor: e.target.value }))}
+                                                style={{ width: '60px', height: '40px', padding: '2px', cursor: 'pointer' }}
+                                                aria-describedby="theme-secondary-color-help"
+                                            />
+                                            <Input
+                                                type="text"
+                                                value={settings.themeSecondaryColor}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, themeSecondaryColor: e.target.value }))}
+                                                placeholder="#a78bfa"
+                                                style={{ width: '100px' }}
+                                                aria-label="Secondary color hex code"
+                                            />
                                         </div>
-                                    </Label>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'fit-content' }}>
-                                        <Input
-                                            id="theme-secondary-color-input"
-                                            type="color"
-                                            value={settings.themeSecondaryColor}
-                                            onChange={(e) => setSettings(prev => ({ ...prev, themeSecondaryColor: e.target.value }))}
-                                            style={{ width: '60px', height: '40px', padding: '2px', cursor: 'pointer' }}
-                                            aria-describedby="theme-secondary-color-help"
-                                        />
-                                        <Input
-                                            type="text"
-                                            value={settings.themeSecondaryColor}
-                                            onChange={(e) => setSettings(prev => ({ ...prev, themeSecondaryColor: e.target.value }))}
-                                            placeholder="#a78bfa"
-                                            style={{ width: '100px' }}
-                                            aria-label="Secondary color hex code"
-                                        />
-                                    </div>
-                                    <p className="admin-form-help-text" id="theme-secondary-color-help">
-                                        Secondary brand color (hex format: #RRGGBB)
-                                    </p>
-                                    {settings.themeSecondaryColor !== originalSettings.themeSecondaryColor && (
-                                        <p className="admin-change-indicator" aria-live="polite">
-                                            <span className="admin-change-dot" aria-hidden="true"></span>
-                                            Modified
+                                        <p className="admin-form-help-text" id="theme-secondary-color-help">
+                                            Secondary brand color (hex format: #RRGGBB)
                                         </p>
-                                    )}
-                                </div>
+                                        {settings.themeSecondaryColor !== originalSettings.themeSecondaryColor && (
+                                            <p className="admin-change-indicator" aria-live="polite">
+                                                <span className="admin-change-dot" aria-hidden="true"></span>
+                                                Modified
+                                            </p>
+                                        )}
+                                    </div>
 
-                                {/* Accent Color */}
-                                <div className={`admin-form-group ${settings.themeAccentColor !== originalSettings.themeAccentColor ? 'has-changes' : ''}`} style={{ flex: '0 0 auto', minWidth: '120px' }}>
-                                    <Label htmlFor="theme-accent-color-input" className="admin-form-label-with-icon">
-                                        <Palette size={16} className="admin-form-label-icon" aria-hidden="true" />
-                                        Accent Color
-                                        <div className="admin-tooltip-wrapper">
-                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
-                                            <span className="admin-tooltip-text" role="tooltip">
-                                                Accent color for special highlights and call-to-action elements
-                                            </span>
+                                    {/* Accent Color */}
+                                    <div className={`admin-form-group ${settings.themeAccentColor !== originalSettings.themeAccentColor ? 'has-changes' : ''}`} style={{ flex: '0 0 auto', minWidth: '120px' }}>
+                                        <Label htmlFor="theme-accent-color-input" className="admin-form-label-with-icon">
+                                            <Palette size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                            Accent Color
+                                            <div className="admin-tooltip-wrapper">
+                                                <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                                <span className="admin-tooltip-text" role="tooltip">
+                                                    Accent color for special highlights and call-to-action elements
+                                                </span>
+                                            </div>
+                                        </Label>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'fit-content' }}>
+                                            <Input
+                                                id="theme-accent-color-input"
+                                                type="color"
+                                                value={settings.themeAccentColor}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, themeAccentColor: e.target.value }))}
+                                                style={{ width: '60px', height: '40px', padding: '2px', cursor: 'pointer' }}
+                                                aria-describedby="theme-accent-color-help"
+                                            />
+                                            <Input
+                                                type="text"
+                                                value={settings.themeAccentColor}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, themeAccentColor: e.target.value }))}
+                                                placeholder="#67e8f9"
+                                                style={{ width: '100px' }}
+                                                aria-label="Accent color hex code"
+                                            />
                                         </div>
-                                    </Label>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'fit-content' }}>
-                                        <Input
-                                            id="theme-accent-color-input"
-                                            type="color"
-                                            value={settings.themeAccentColor}
-                                            onChange={(e) => setSettings(prev => ({ ...prev, themeAccentColor: e.target.value }))}
-                                            style={{ width: '60px', height: '40px', padding: '2px', cursor: 'pointer' }}
-                                            aria-describedby="theme-accent-color-help"
-                                        />
-                                        <Input
-                                            type="text"
-                                            value={settings.themeAccentColor}
-                                            onChange={(e) => setSettings(prev => ({ ...prev, themeAccentColor: e.target.value }))}
-                                            placeholder="#67e8f9"
-                                            style={{ width: '100px' }}
-                                            aria-label="Accent color hex code"
-                                        />
-                                    </div>
-                                    <p className="admin-form-help-text" id="theme-accent-color-help">
-                                        Accent color (hex format: #RRGGBB)
-                                    </p>
-                                    {settings.themeAccentColor !== originalSettings.themeAccentColor && (
-                                        <p className="admin-change-indicator" aria-live="polite">
-                                            <span className="admin-change-dot" aria-hidden="true"></span>
-                                            Modified
+                                        <p className="admin-form-help-text" id="theme-accent-color-help">
+                                            Accent color (hex format: #RRGGBB)
                                         </p>
-                                    )}
-                                </div>
+                                        {settings.themeAccentColor !== originalSettings.themeAccentColor && (
+                                            <p className="admin-change-indicator" aria-live="polite">
+                                                <span className="admin-change-dot" aria-hidden="true"></span>
+                                                Modified
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* Extended Color Palette */}
@@ -2221,149 +2234,149 @@ export function AdminSettings() {
 
                                 {/* Status Colors Grid */}
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '1rem' }}>
-                                {/* Success Color */}
-                                <div className={`admin-form-group ${settings.themeSuccessColor !== originalSettings.themeSuccessColor ? 'has-changes' : ''}`} style={{ flex: '0 0 auto', minWidth: '120px' }}>
-                                    <Label htmlFor="theme-success-color-input" className="admin-form-label-with-icon">
-                                        <CheckCircle size={16} className="admin-form-label-icon" aria-hidden="true" />
-                                        Success Color
-                                        <div className="admin-tooltip-wrapper">
-                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
-                                            <span className="admin-tooltip-text" role="tooltip">
-                                                Color for success messages and positive actions
-                                            </span>
+                                    {/* Success Color */}
+                                    <div className={`admin-form-group ${settings.themeSuccessColor !== originalSettings.themeSuccessColor ? 'has-changes' : ''}`} style={{ flex: '0 0 auto', minWidth: '120px' }}>
+                                        <Label htmlFor="theme-success-color-input" className="admin-form-label-with-icon">
+                                            <CheckCircle size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                            Success Color
+                                            <div className="admin-tooltip-wrapper">
+                                                <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                                <span className="admin-tooltip-text" role="tooltip">
+                                                    Color for success messages and positive actions
+                                                </span>
+                                            </div>
+                                        </Label>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'fit-content' }}>
+                                            <Input
+                                                id="theme-success-color-input"
+                                                type="color"
+                                                value={settings.themeSuccessColor}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, themeSuccessColor: e.target.value }))}
+                                                style={{ width: '60px', height: '40px', padding: '2px', cursor: 'pointer' }}
+                                            />
+                                            <Input
+                                                type="text"
+                                                value={settings.themeSuccessColor}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, themeSuccessColor: e.target.value }))}
+                                                placeholder="#10b981"
+                                                style={{ width: '100px' }}
+                                            />
                                         </div>
-                                    </Label>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'fit-content' }}>
-                                        <Input
-                                            id="theme-success-color-input"
-                                            type="color"
-                                            value={settings.themeSuccessColor}
-                                            onChange={(e) => setSettings(prev => ({ ...prev, themeSuccessColor: e.target.value }))}
-                                            style={{ width: '60px', height: '40px', padding: '2px', cursor: 'pointer' }}
-                                        />
-                                        <Input
-                                            type="text"
-                                            value={settings.themeSuccessColor}
-                                            onChange={(e) => setSettings(prev => ({ ...prev, themeSuccessColor: e.target.value }))}
-                                            placeholder="#10b981"
-                                            style={{ width: '100px' }}
-                                        />
+                                        {settings.themeSuccessColor !== originalSettings.themeSuccessColor && (
+                                            <p className="admin-change-indicator" aria-live="polite">
+                                                <span className="admin-change-dot" aria-hidden="true"></span>
+                                                Modified
+                                            </p>
+                                        )}
                                     </div>
-                                    {settings.themeSuccessColor !== originalSettings.themeSuccessColor && (
-                                        <p className="admin-change-indicator" aria-live="polite">
-                                            <span className="admin-change-dot" aria-hidden="true"></span>
-                                            Modified
-                                        </p>
-                                    )}
-                                </div>
 
-                                {/* Warning Color */}
-                                <div className={`admin-form-group ${settings.themeWarningColor !== originalSettings.themeWarningColor ? 'has-changes' : ''}`} style={{ flex: '0 0 auto', minWidth: '120px' }}>
-                                    <Label htmlFor="theme-warning-color-input" className="admin-form-label-with-icon">
-                                        <AlertTriangle size={16} className="admin-form-label-icon" aria-hidden="true" />
-                                        Warning Color
-                                        <div className="admin-tooltip-wrapper">
-                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
-                                            <span className="admin-tooltip-text" role="tooltip">
-                                                Color for warning messages and caution indicators
-                                            </span>
+                                    {/* Warning Color */}
+                                    <div className={`admin-form-group ${settings.themeWarningColor !== originalSettings.themeWarningColor ? 'has-changes' : ''}`} style={{ flex: '0 0 auto', minWidth: '120px' }}>
+                                        <Label htmlFor="theme-warning-color-input" className="admin-form-label-with-icon">
+                                            <AlertTriangle size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                            Warning Color
+                                            <div className="admin-tooltip-wrapper">
+                                                <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                                <span className="admin-tooltip-text" role="tooltip">
+                                                    Color for warning messages and caution indicators
+                                                </span>
+                                            </div>
+                                        </Label>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'fit-content' }}>
+                                            <Input
+                                                id="theme-warning-color-input"
+                                                type="color"
+                                                value={settings.themeWarningColor}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, themeWarningColor: e.target.value }))}
+                                                style={{ width: '60px', height: '40px', padding: '2px', cursor: 'pointer' }}
+                                            />
+                                            <Input
+                                                type="text"
+                                                value={settings.themeWarningColor}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, themeWarningColor: e.target.value }))}
+                                                placeholder="#f59e0b"
+                                                style={{ width: '100px' }}
+                                            />
                                         </div>
-                                    </Label>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'fit-content' }}>
-                                        <Input
-                                            id="theme-warning-color-input"
-                                            type="color"
-                                            value={settings.themeWarningColor}
-                                            onChange={(e) => setSettings(prev => ({ ...prev, themeWarningColor: e.target.value }))}
-                                            style={{ width: '60px', height: '40px', padding: '2px', cursor: 'pointer' }}
-                                        />
-                                        <Input
-                                            type="text"
-                                            value={settings.themeWarningColor}
-                                            onChange={(e) => setSettings(prev => ({ ...prev, themeWarningColor: e.target.value }))}
-                                            placeholder="#f59e0b"
-                                            style={{ width: '100px' }}
-                                        />
+                                        {settings.themeWarningColor !== originalSettings.themeWarningColor && (
+                                            <p className="admin-change-indicator" aria-live="polite">
+                                                <span className="admin-change-dot" aria-hidden="true"></span>
+                                                Modified
+                                            </p>
+                                        )}
                                     </div>
-                                    {settings.themeWarningColor !== originalSettings.themeWarningColor && (
-                                        <p className="admin-change-indicator" aria-live="polite">
-                                            <span className="admin-change-dot" aria-hidden="true"></span>
-                                            Modified
-                                        </p>
-                                    )}
-                                </div>
 
-                                {/* Error Color */}
-                                <div className={`admin-form-group ${settings.themeErrorColor !== originalSettings.themeErrorColor ? 'has-changes' : ''}`} style={{ flex: '0 0 auto', minWidth: '120px' }}>
-                                    <Label htmlFor="theme-error-color-input" className="admin-form-label-with-icon">
-                                        <XCircle size={16} className="admin-form-label-icon" aria-hidden="true" />
-                                        Error Color
-                                        <div className="admin-tooltip-wrapper">
-                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
-                                            <span className="admin-tooltip-text" role="tooltip">
-                                                Color for error messages and destructive actions
-                                            </span>
+                                    {/* Error Color */}
+                                    <div className={`admin-form-group ${settings.themeErrorColor !== originalSettings.themeErrorColor ? 'has-changes' : ''}`} style={{ flex: '0 0 auto', minWidth: '120px' }}>
+                                        <Label htmlFor="theme-error-color-input" className="admin-form-label-with-icon">
+                                            <XCircle size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                            Error Color
+                                            <div className="admin-tooltip-wrapper">
+                                                <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                                <span className="admin-tooltip-text" role="tooltip">
+                                                    Color for error messages and destructive actions
+                                                </span>
+                                            </div>
+                                        </Label>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'fit-content' }}>
+                                            <Input
+                                                id="theme-error-color-input"
+                                                type="color"
+                                                value={settings.themeErrorColor}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, themeErrorColor: e.target.value }))}
+                                                style={{ width: '60px', height: '40px', padding: '2px', cursor: 'pointer' }}
+                                            />
+                                            <Input
+                                                type="text"
+                                                value={settings.themeErrorColor}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, themeErrorColor: e.target.value }))}
+                                                placeholder="#ef4444"
+                                                style={{ width: '100px' }}
+                                            />
                                         </div>
-                                    </Label>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'fit-content' }}>
-                                        <Input
-                                            id="theme-error-color-input"
-                                            type="color"
-                                            value={settings.themeErrorColor}
-                                            onChange={(e) => setSettings(prev => ({ ...prev, themeErrorColor: e.target.value }))}
-                                            style={{ width: '60px', height: '40px', padding: '2px', cursor: 'pointer' }}
-                                        />
-                                        <Input
-                                            type="text"
-                                            value={settings.themeErrorColor}
-                                            onChange={(e) => setSettings(prev => ({ ...prev, themeErrorColor: e.target.value }))}
-                                            placeholder="#ef4444"
-                                            style={{ width: '100px' }}
-                                        />
+                                        {settings.themeErrorColor !== originalSettings.themeErrorColor && (
+                                            <p className="admin-change-indicator" aria-live="polite">
+                                                <span className="admin-change-dot" aria-hidden="true"></span>
+                                                Modified
+                                            </p>
+                                        )}
                                     </div>
-                                    {settings.themeErrorColor !== originalSettings.themeErrorColor && (
-                                        <p className="admin-change-indicator" aria-live="polite">
-                                            <span className="admin-change-dot" aria-hidden="true"></span>
-                                            Modified
-                                        </p>
-                                    )}
-                                </div>
 
-                                {/* Info Color */}
-                                <div className={`admin-form-group ${settings.themeInfoColor !== originalSettings.themeInfoColor ? 'has-changes' : ''}`} style={{ flex: '0 0 auto', minWidth: '120px' }}>
-                                    <Label htmlFor="theme-info-color-input" className="admin-form-label-with-icon">
-                                        <Info size={16} className="admin-form-label-icon" aria-hidden="true" />
-                                        Info Color
-                                        <div className="admin-tooltip-wrapper">
-                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
-                                            <span className="admin-tooltip-text" role="tooltip">
-                                                Color for informational messages and neutral actions
-                                            </span>
+                                    {/* Info Color */}
+                                    <div className={`admin-form-group ${settings.themeInfoColor !== originalSettings.themeInfoColor ? 'has-changes' : ''}`} style={{ flex: '0 0 auto', minWidth: '120px' }}>
+                                        <Label htmlFor="theme-info-color-input" className="admin-form-label-with-icon">
+                                            <Info size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                            Info Color
+                                            <div className="admin-tooltip-wrapper">
+                                                <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                                <span className="admin-tooltip-text" role="tooltip">
+                                                    Color for informational messages and neutral actions
+                                                </span>
+                                            </div>
+                                        </Label>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'fit-content' }}>
+                                            <Input
+                                                id="theme-info-color-input"
+                                                type="color"
+                                                value={settings.themeInfoColor}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, themeInfoColor: e.target.value }))}
+                                                style={{ width: '60px', height: '40px', padding: '2px', cursor: 'pointer' }}
+                                            />
+                                            <Input
+                                                type="text"
+                                                value={settings.themeInfoColor}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, themeInfoColor: e.target.value }))}
+                                                placeholder="#3b82f6"
+                                                style={{ width: '100px' }}
+                                            />
                                         </div>
-                                    </Label>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'fit-content' }}>
-                                        <Input
-                                            id="theme-info-color-input"
-                                            type="color"
-                                            value={settings.themeInfoColor}
-                                            onChange={(e) => setSettings(prev => ({ ...prev, themeInfoColor: e.target.value }))}
-                                            style={{ width: '60px', height: '40px', padding: '2px', cursor: 'pointer' }}
-                                        />
-                                        <Input
-                                            type="text"
-                                            value={settings.themeInfoColor}
-                                            onChange={(e) => setSettings(prev => ({ ...prev, themeInfoColor: e.target.value }))}
-                                            placeholder="#3b82f6"
-                                            style={{ width: '100px' }}
-                                        />
+                                        {settings.themeInfoColor !== originalSettings.themeInfoColor && (
+                                            <p className="admin-change-indicator" aria-live="polite">
+                                                <span className="admin-change-dot" aria-hidden="true"></span>
+                                                Modified
+                                            </p>
+                                        )}
                                     </div>
-                                    {settings.themeInfoColor !== originalSettings.themeInfoColor && (
-                                        <p className="admin-change-indicator" aria-live="polite">
-                                            <span className="admin-change-dot" aria-hidden="true"></span>
-                                            Modified
-                                        </p>
-                                    )}
-                                </div>
                                 </div>
 
                                 {/* Design Tokens Section */}
@@ -2835,10 +2848,10 @@ export function AdminSettings() {
                                             </div>
                                         )}
                                     </div>
-                                    <Button 
-                                        onClick={handleSave} 
+                                    <Button
+                                        onClick={handleSave}
                                         loading={saving}
-                                        disabled={!hasChanges || Object.keys(validationErrors).length > 0} 
+                                        disabled={!hasChanges || Object.keys(validationErrors).length > 0}
                                         className="admin-add-category-btn"
                                         aria-label={saving ? 'Saving settings' : 'Save all settings'}
                                         aria-describedby="save-button-help"
@@ -2856,8 +2869,8 @@ export function AdminSettings() {
                 </TabsContent>
 
                 {/* System Settings Tab */}
-                <TabsContent 
-                    value="system" 
+                <TabsContent
+                    value="system"
                     className="admin-settings-tab-content"
                     ref={tabContentRef}
                     onTouchStart={handleContentTouchStart}
@@ -2883,10 +2896,10 @@ export function AdminSettings() {
                                         ) : (
                                             <Unlock size={16} className="admin-form-label-icon" aria-hidden="true" />
                                         )}
-                        <input
+                                        <input
                                             id="maintenance-mode-toggle"
-                            type="checkbox"
-                            checked={settings.maintenanceMode}
+                                            type="checkbox"
+                                            checked={settings.maintenanceMode}
                                             onChange={(e) => handleMaintenanceModeChange(e.target.checked)}
                                             className="admin-maintenance-checkbox"
                                             aria-describedby="maintenance-mode-help"
@@ -2905,7 +2918,7 @@ export function AdminSettings() {
                                                 Inactive - Site Online
                                             </span>
                                         )}
-                    </Label>
+                                    </Label>
                                     <p className="admin-form-help-text" id="maintenance-mode-help">
                                         When enabled, the site will be unavailable to regular users. Only administrators can access.
                                     </p>
@@ -2915,7 +2928,7 @@ export function AdminSettings() {
                                             Modified
                                         </p>
                                     )}
-                </div>
+                                </div>
 
                                 {/* Maintenance Mode Confirmation Dialog */}
                                 {showMaintenanceConfirm && (
@@ -2947,7 +2960,7 @@ export function AdminSettings() {
                                     </div>
                                 )}
 
-                <div className="admin-modal-actions">
+                                <div className="admin-modal-actions">
                                     <div className="admin-actions-status">
                                         {hasChanges && (
                                             <div className="admin-unsaved-changes-indicator">
@@ -2962,28 +2975,28 @@ export function AdminSettings() {
                                             </div>
                                         )}
                                     </div>
-                                    <Button 
-                                        onClick={handleSave} 
-                                        disabled={saving || !hasChanges || Object.keys(validationErrors).length > 0} 
+                                    <Button
+                                        onClick={handleSave}
+                                        disabled={saving || !hasChanges || Object.keys(validationErrors).length > 0}
                                         className="admin-add-category-btn"
                                         aria-label={saving ? 'Saving settings' : 'Save all settings'}
                                         aria-describedby="save-button-help"
                                     >
                                         <Save size={16} aria-hidden="true" />
-                        {saving ? t('admin.saving') : t('admin.saveSettings')}
-                    </Button>
+                                        {saving ? t('admin.saving') : t('admin.saveSettings')}
+                                    </Button>
                                     <span id="save-button-help" className="sr-only">
                                         {!hasChanges ? 'No changes to save' : Object.keys(validationErrors).length > 0 ? 'Please fix errors before saving' : 'Save all settings changes'}
                                     </span>
-                </div>
-            </div>
+                                </div>
+                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
 
                 {/* Security Settings Tab */}
-                <TabsContent 
-                    value="security" 
+                <TabsContent
+                    value="security"
                     className="admin-settings-tab-content"
                     ref={tabContentRef}
                     onTouchStart={handleContentTouchStart}
@@ -3049,7 +3062,7 @@ export function AdminSettings() {
                                             Modified
                                         </p>
                                     )}
-                </div>
+                                </div>
 
                                 {/* Password Complexity Requirements */}
                                 <div className={`admin-form-group admin-form-group-important ${passwordComplexityChanged ? 'has-changes' : ''}`}>
@@ -3131,8 +3144,8 @@ export function AdminSettings() {
                                         max="365"
                                     />
                                     <p className="admin-form-help-text">
-                                        {settings.passwordExpirationDays === 0 
-                                            ? 'Passwords never expire' 
+                                        {settings.passwordExpirationDays === 0
+                                            ? 'Passwords never expire'
                                             : `Passwords expire after ${settings.passwordExpirationDays} days`}
                                     </p>
                                     {settings.passwordExpirationDays !== originalSettings.passwordExpirationDays && (
@@ -3242,8 +3255,8 @@ export function AdminSettings() {
                                         max="100"
                                     />
                                     <p className="admin-form-help-text">
-                                        {settings.maxConcurrentSessions === 0 
-                                            ? 'Unlimited concurrent sessions allowed' 
+                                        {settings.maxConcurrentSessions === 0
+                                            ? 'Unlimited concurrent sessions allowed'
                                             : `Users can have up to ${settings.maxConcurrentSessions} active sessions`}
                                     </p>
                                     {settings.maxConcurrentSessions !== originalSettings.maxConcurrentSessions && (
@@ -3277,8 +3290,8 @@ export function AdminSettings() {
                                         <span className="admin-toggle-slider"></span>
                                     </label>
                                     <p className="admin-form-help-text">
-                                        {settings.forceLogoutOnPasswordChange 
-                                            ? 'All sessions will be terminated when password is changed' 
+                                        {settings.forceLogoutOnPasswordChange
+                                            ? 'All sessions will be terminated when password is changed'
                                             : 'Users will remain logged in after password change'}
                                     </p>
                                     {settings.forceLogoutOnPasswordChange !== originalSettings.forceLogoutOnPasswordChange && (
@@ -3304,10 +3317,10 @@ export function AdminSettings() {
                                             </div>
                                         )}
                                     </div>
-                                    <Button 
-                                        onClick={handleSave} 
+                                    <Button
+                                        onClick={handleSave}
                                         loading={saving}
-                                        disabled={!hasChanges || Object.keys(validationErrors).length > 0} 
+                                        disabled={!hasChanges || Object.keys(validationErrors).length > 0}
                                         className="admin-add-category-btn"
                                         aria-label={saving ? 'Saving settings' : 'Save all settings'}
                                         aria-describedby="save-button-help"
@@ -3325,8 +3338,8 @@ export function AdminSettings() {
                 </TabsContent>
 
                 {/* Email & Notifications Tab */}
-                <TabsContent 
-                    value="email" 
+                <TabsContent
+                    value="email"
                     className="admin-settings-tab-content"
                     ref={tabContentRef}
                     onTouchStart={handleContentTouchStart}
@@ -3702,8 +3715,8 @@ export function AdminSettings() {
                 </TabsContent>
 
                 {/* User Management Tab */}
-                <TabsContent 
-                    value="users" 
+                <TabsContent
+                    value="users"
                     className="admin-settings-tab-content"
                     ref={tabContentRef}
                     onTouchStart={handleContentTouchStart}
@@ -3980,13 +3993,13 @@ export function AdminSettings() {
                                 </div>
 
                                 {/* Save Button */}
-                                <div style={{ 
-                                    display: 'flex', 
-                                    justifyContent: 'space-between', 
-                                    alignItems: 'center', 
-                                    marginTop: '2rem', 
-                                    paddingTop: '1.5rem', 
-                                    borderTop: '1px solid hsl(var(--border))' 
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginTop: '2rem',
+                                    paddingTop: '1.5rem',
+                                    borderTop: '1px solid hsl(var(--border))'
                                 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                         {hasChanges && (
@@ -4002,9 +4015,9 @@ export function AdminSettings() {
                                             </div>
                                         )}
                                     </div>
-                                    <Button 
-                                        onClick={handleSave} 
-                                        disabled={saving || !hasChanges || Object.keys(validationErrors).length > 0} 
+                                    <Button
+                                        onClick={handleSave}
+                                        disabled={saving || !hasChanges || Object.keys(validationErrors).length > 0}
                                         className="admin-add-category-btn"
                                         aria-label={saving ? 'Saving settings' : 'Save all settings'}
                                         aria-describedby="save-button-help-users"
@@ -4022,8 +4035,8 @@ export function AdminSettings() {
                 </TabsContent>
 
                 {/* Notifications Tab */}
-                <TabsContent 
-                    value="notifications" 
+                <TabsContent
+                    value="notifications"
                     className="admin-settings-tab-content"
                     ref={tabContentRef}
                     onTouchStart={handleContentTouchStart}
@@ -4037,11 +4050,11 @@ export function AdminSettings() {
                                 System Notifications
                             </CardTitle>
                             <CardDescription>
-                        {t('admin.systemNotificationsDescription')}
+                                {t('admin.systemNotificationsDescription')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                {!showAnnouncementForm && !showHistory && !showTemplates ? (
+                            {!showAnnouncementForm && !showHistory && !showTemplates ? (
                                 <div className="admin-empty-state">
                                     <div className="admin-empty-state-icon">
                                         <Bell size={48} />
@@ -4051,21 +4064,21 @@ export function AdminSettings() {
                                         Create, schedule, and manage system-wide notifications to inform users about important updates, maintenance, or announcements.
                                     </p>
                                     <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                    <Button 
-                        onClick={() => setShowAnnouncementForm(true)}
-                        className="admin-add-category-btn"
-                    >
-                        <Megaphone size={16} style={{ marginRight: '0.5rem' }} />
+                                        <Button
+                                            onClick={() => setShowAnnouncementForm(true)}
+                                            className="admin-add-category-btn"
+                                        >
+                                            <Megaphone size={16} style={{ marginRight: '0.5rem' }} />
                                             Create Announcement
-                    </Button>
-                                        <Button 
+                                        </Button>
+                                        <Button
                                             onClick={() => setShowHistory(true)}
                                             variant="outline"
                                         >
                                             <History size={16} style={{ marginRight: '0.5rem' }} />
                                             View History
                                         </Button>
-                                        <Button 
+                                        <Button
                                             onClick={() => setShowTemplates(true)}
                                             variant="outline"
                                         >
@@ -4227,273 +4240,273 @@ export function AdminSettings() {
                                             >
                                                 <SaveIcon size={16} />
                                             </Button>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                    setShowAnnouncementForm(false);
-                                    setAnnouncementData({
-                                        type: 'system_announcement',
-                                        title: '',
-                                        message: '',
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setShowAnnouncementForm(false);
+                                                    setAnnouncementData({
+                                                        type: 'system_announcement',
+                                                        title: '',
+                                                        message: '',
                                                         scheduledDate: '',
                                                         priority: 'medium',
                                                         expirationDate: '',
                                                         targetRoles: [],
                                                         targetUserIds: [],
                                                         sendToAll: true,
-                                    });
-                                }}
-                            >
-                                <X size={16} />
-                            </Button>
+                                                    });
+                                                }}
+                                            >
+                                                <X size={16} />
+                                            </Button>
                                         </div>
-                        </div>
+                                    </div>
 
-                        <div className="admin-form-group">
+                                    <div className="admin-form-group">
                                         <Label htmlFor="announcement-type-select">Loại thông báo</Label>
-                            <select
+                                        <select
                                             id="announcement-type-select"
-                                value={announcementData.type}
-                                onChange={(e) => setAnnouncementData({ ...announcementData, type: e.target.value as 'system_announcement' | 'feature_update' | 'maintenance_scheduled' | 'terms_updated' })}
+                                            value={announcementData.type}
+                                            onChange={(e) => setAnnouncementData({ ...announcementData, type: e.target.value as 'system_announcement' | 'feature_update' | 'maintenance_scheduled' | 'terms_updated' })}
                                             className="admin-select"
                                             aria-describedby="announcement-type-help"
-                            >
-                                <option value="system_announcement">Thông báo hệ thống</option>
-                                <option value="feature_update">Cập nhật tính năng</option>
-                                <option value="maintenance_scheduled">Bảo trì hệ thống</option>
-                                <option value="terms_updated">Cập nhật điều khoản</option>
-                            </select>
+                                        >
+                                            <option value="system_announcement">Thông báo hệ thống</option>
+                                            <option value="feature_update">Cập nhật tính năng</option>
+                                            <option value="maintenance_scheduled">Bảo trì hệ thống</option>
+                                            <option value="terms_updated">Cập nhật điều khoản</option>
+                                        </select>
                                         <span id="announcement-type-help" className="sr-only">
                                             Select the type of system announcement to send
                                         </span>
-                        </div>
+                                    </div>
 
-                        <div className="admin-form-group">
+                                    <div className="admin-form-group">
                                         <Label htmlFor="announcement-title-input">Tiêu đề</Label>
-                            <Input
+                                        <Input
                                             id="announcement-title-input"
-                                value={announcementData.title}
-                                onChange={(e) => setAnnouncementData({ ...announcementData, title: e.target.value })}
-                                placeholder="Nhập tiêu đề thông báo"
+                                            value={announcementData.title}
+                                            onChange={(e) => setAnnouncementData({ ...announcementData, title: e.target.value })}
+                                            placeholder="Nhập tiêu đề thông báo"
                                             aria-required="true"
                                             aria-describedby="announcement-title-help"
-                            />
+                                        />
                                         <span id="announcement-title-help" className="sr-only">
                                             Enter the title for the system announcement
                                         </span>
-                        </div>
+                                    </div>
 
-                        <div className="admin-form-group">
+                                    <div className="admin-form-group">
                                         <Label htmlFor="announcement-message-textarea">Content</Label>
-                            <Textarea
+                                        <Textarea
                                             id="announcement-message-textarea"
-                                value={announcementData.message}
-                                onChange={(e) => setAnnouncementData({ ...announcementData, message: e.target.value })}
-                                placeholder="Enter announcement content (supports basic HTML)"
-                                rows={8}
+                                            value={announcementData.message}
+                                            onChange={(e) => setAnnouncementData({ ...announcementData, message: e.target.value })}
+                                            placeholder="Enter announcement content (supports basic HTML)"
+                                            rows={8}
                                             aria-required="true"
                                             aria-describedby="announcement-message-help"
-                            />
+                                        />
                                         <p className="admin-form-help-text">Supports basic HTML formatting (bold, italic, links, lists)</p>
                                         <span id="announcement-message-help" className="sr-only">
                                             Enter the message content for the system announcement
                                         </span>
-                        </div>
-
-                        {/* Advanced Settings Section */}
-                        <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid hsl(var(--border))' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                <h4 style={{ fontSize: '1rem', fontWeight: 600 }}>Advanced Settings</h4>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
-                                >
-                                    {showAdvancedSettings ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                    {showAdvancedSettings ? 'Hide' : 'Show'}
-                                </Button>
-                            </div>
-
-                            {showAdvancedSettings && (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                    {/* Priority Level */}
-                                    <div className="admin-form-group">
-                                        <Label htmlFor="announcement-priority-select" className="admin-form-label-with-icon">
-                                            <Star size={16} className="admin-form-label-icon" aria-hidden="true" />
-                                            Priority Level
-                                        </Label>
-                                        <select
-                                            id="announcement-priority-select"
-                                            value={announcementData.priority}
-                                            onChange={(e) => setAnnouncementData({ ...announcementData, priority: e.target.value as 'low' | 'medium' | 'high' | 'urgent' })}
-                                            className="admin-select"
-                                        >
-                                            <option value="low">Low - General information</option>
-                                            <option value="medium">Medium - Important notice</option>
-                                            <option value="high">High - Urgent action required</option>
-                                            <option value="urgent">Urgent - Immediate attention</option>
-                                        </select>
                                     </div>
 
-                                    {/* Scheduled Date */}
-                                    <div className="admin-form-group">
-                                        <Label htmlFor="announcement-scheduled-date" className="admin-form-label-with-icon">
-                                            <Calendar size={16} className="admin-form-label-icon" aria-hidden="true" />
-                                            Schedule Announcement
-                                        </Label>
-                                        <Input
-                                            id="announcement-scheduled-date"
-                                            type="datetime-local"
-                                            value={announcementData.scheduledDate ? new Date(announcementData.scheduledDate).toISOString().slice(0, 16) : ''}
-                                            onChange={(e) => {
-                                                const dateValue = e.target.value;
-                                                setAnnouncementData({ 
-                                                    ...announcementData, 
-                                                    scheduledDate: dateValue ? new Date(dateValue).toISOString() : '' 
-                                                });
-                                            }}
-                                        />
-                                        <p className="admin-form-help-text">Leave empty to send immediately, or set a future date/time</p>
-                                    </div>
+                                    {/* Advanced Settings Section */}
+                                    <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid hsl(var(--border))' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                            <h4 style={{ fontSize: '1rem', fontWeight: 600 }}>Advanced Settings</h4>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+                                            >
+                                                {showAdvancedSettings ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                {showAdvancedSettings ? 'Hide' : 'Show'}
+                                            </Button>
+                                        </div>
 
-                                    {/* Expiration Date */}
-                                    <div className="admin-form-group">
-                                        <Label htmlFor="announcement-expiration-date" className="admin-form-label-with-icon">
-                                            <Clock size={16} className="admin-form-label-icon" aria-hidden="true" />
-                                            Expiration Date
-                                        </Label>
-                                        <Input
-                                            id="announcement-expiration-date"
-                                            type="datetime-local"
-                                            value={announcementData.expirationDate ? new Date(announcementData.expirationDate).toISOString().slice(0, 16) : ''}
-                                            onChange={(e) => {
-                                                const dateValue = e.target.value;
-                                                setAnnouncementData({ 
-                                                    ...announcementData, 
-                                                    expirationDate: dateValue ? new Date(dateValue).toISOString() : '' 
-                                                });
-                                            }}
-                                        />
-                                        <p className="admin-form-help-text">Announcement will automatically expire after this date</p>
-                                    </div>
-
-                                    {/* Target Audience */}
-                                    <div className="admin-form-group">
-                                        <Label className="admin-form-label-with-icon">
-                                            <Target size={16} className="admin-form-label-icon" aria-hidden="true" />
-                                            Target Audience
-                                        </Label>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                            <Label className="admin-maintenance-toggle-label" htmlFor="send-to-all-toggle">
-                                                <input
-                                                    id="send-to-all-toggle"
-                                                    type="checkbox"
-                                                    checked={announcementData.sendToAll}
-                                                    onChange={(e) => setAnnouncementData({ ...announcementData, sendToAll: e.target.checked })}
-                                                    className="admin-maintenance-checkbox"
-                                                />
-                                                <span>Send to All Users</span>
-                                            </Label>
-                                            {!announcementData.sendToAll && (
-                                                <div style={{ paddingLeft: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                    <Label className="admin-maintenance-toggle-label" htmlFor="target-role-user">
-                                                        <input
-                                                            id="target-role-user"
-                                                            type="checkbox"
-                                                            checked={announcementData.targetRoles.includes('user')}
-                                                            onChange={(e) => {
-                                                                const roles = e.target.checked
-                                                                    ? [...announcementData.targetRoles, 'user']
-                                                                    : announcementData.targetRoles.filter(r => r !== 'user');
-                                                                setAnnouncementData({ ...announcementData, targetRoles: roles });
-                                                            }}
-                                                            className="admin-maintenance-checkbox"
-                                                        />
-                                                        <span>Users</span>
+                                        {showAdvancedSettings && (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                                {/* Priority Level */}
+                                                <div className="admin-form-group">
+                                                    <Label htmlFor="announcement-priority-select" className="admin-form-label-with-icon">
+                                                        <Star size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                                        Priority Level
                                                     </Label>
-                                                    <Label className="admin-maintenance-toggle-label" htmlFor="target-role-moderator">
-                                                        <input
-                                                            id="target-role-moderator"
-                                                            type="checkbox"
-                                                            checked={announcementData.targetRoles.includes('moderator')}
-                                                            onChange={(e) => {
-                                                                const roles = e.target.checked
-                                                                    ? [...announcementData.targetRoles, 'moderator']
-                                                                    : announcementData.targetRoles.filter(r => r !== 'moderator');
-                                                                setAnnouncementData({ ...announcementData, targetRoles: roles });
-                                                            }}
-                                                            className="admin-maintenance-checkbox"
-                                                        />
-                                                        <span>Moderators</span>
-                                                    </Label>
-                                                    <Label className="admin-maintenance-toggle-label" htmlFor="target-role-admin">
-                                                        <input
-                                                            id="target-role-admin"
-                                                            type="checkbox"
-                                                            checked={announcementData.targetRoles.includes('admin')}
-                                                            onChange={(e) => {
-                                                                const roles = e.target.checked
-                                                                    ? [...announcementData.targetRoles, 'admin']
-                                                                    : announcementData.targetRoles.filter(r => r !== 'admin');
-                                                                setAnnouncementData({ ...announcementData, targetRoles: roles });
-                                                            }}
-                                                            className="admin-maintenance-checkbox"
-                                                        />
-                                                        <span>Admins</span>
-                                                    </Label>
+                                                    <select
+                                                        id="announcement-priority-select"
+                                                        value={announcementData.priority}
+                                                        onChange={(e) => setAnnouncementData({ ...announcementData, priority: e.target.value as 'low' | 'medium' | 'high' | 'urgent' })}
+                                                        className="admin-select"
+                                                    >
+                                                        <option value="low">Low - General information</option>
+                                                        <option value="medium">Medium - Important notice</option>
+                                                        <option value="high">High - Urgent action required</option>
+                                                        <option value="urgent">Urgent - Immediate attention</option>
+                                                    </select>
                                                 </div>
-                                            )}
+
+                                                {/* Scheduled Date */}
+                                                <div className="admin-form-group">
+                                                    <Label htmlFor="announcement-scheduled-date" className="admin-form-label-with-icon">
+                                                        <Calendar size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                                        Schedule Announcement
+                                                    </Label>
+                                                    <Input
+                                                        id="announcement-scheduled-date"
+                                                        type="datetime-local"
+                                                        value={announcementData.scheduledDate ? new Date(announcementData.scheduledDate).toISOString().slice(0, 16) : ''}
+                                                        onChange={(e) => {
+                                                            const dateValue = e.target.value;
+                                                            setAnnouncementData({
+                                                                ...announcementData,
+                                                                scheduledDate: dateValue ? new Date(dateValue).toISOString() : ''
+                                                            });
+                                                        }}
+                                                    />
+                                                    <p className="admin-form-help-text">Leave empty to send immediately, or set a future date/time</p>
+                                                </div>
+
+                                                {/* Expiration Date */}
+                                                <div className="admin-form-group">
+                                                    <Label htmlFor="announcement-expiration-date" className="admin-form-label-with-icon">
+                                                        <Clock size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                                        Expiration Date
+                                                    </Label>
+                                                    <Input
+                                                        id="announcement-expiration-date"
+                                                        type="datetime-local"
+                                                        value={announcementData.expirationDate ? new Date(announcementData.expirationDate).toISOString().slice(0, 16) : ''}
+                                                        onChange={(e) => {
+                                                            const dateValue = e.target.value;
+                                                            setAnnouncementData({
+                                                                ...announcementData,
+                                                                expirationDate: dateValue ? new Date(dateValue).toISOString() : ''
+                                                            });
+                                                        }}
+                                                    />
+                                                    <p className="admin-form-help-text">Announcement will automatically expire after this date</p>
+                                                </div>
+
+                                                {/* Target Audience */}
+                                                <div className="admin-form-group">
+                                                    <Label className="admin-form-label-with-icon">
+                                                        <Target size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                                        Target Audience
+                                                    </Label>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                                        <Label className="admin-maintenance-toggle-label" htmlFor="send-to-all-toggle">
+                                                            <input
+                                                                id="send-to-all-toggle"
+                                                                type="checkbox"
+                                                                checked={announcementData.sendToAll}
+                                                                onChange={(e) => setAnnouncementData({ ...announcementData, sendToAll: e.target.checked })}
+                                                                className="admin-maintenance-checkbox"
+                                                            />
+                                                            <span>Send to All Users</span>
+                                                        </Label>
+                                                        {!announcementData.sendToAll && (
+                                                            <div style={{ paddingLeft: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                                <Label className="admin-maintenance-toggle-label" htmlFor="target-role-user">
+                                                                    <input
+                                                                        id="target-role-user"
+                                                                        type="checkbox"
+                                                                        checked={announcementData.targetRoles.includes('user')}
+                                                                        onChange={(e) => {
+                                                                            const roles = e.target.checked
+                                                                                ? [...announcementData.targetRoles, 'user']
+                                                                                : announcementData.targetRoles.filter(r => r !== 'user');
+                                                                            setAnnouncementData({ ...announcementData, targetRoles: roles });
+                                                                        }}
+                                                                        className="admin-maintenance-checkbox"
+                                                                    />
+                                                                    <span>Users</span>
+                                                                </Label>
+                                                                <Label className="admin-maintenance-toggle-label" htmlFor="target-role-moderator">
+                                                                    <input
+                                                                        id="target-role-moderator"
+                                                                        type="checkbox"
+                                                                        checked={announcementData.targetRoles.includes('moderator')}
+                                                                        onChange={(e) => {
+                                                                            const roles = e.target.checked
+                                                                                ? [...announcementData.targetRoles, 'moderator']
+                                                                                : announcementData.targetRoles.filter(r => r !== 'moderator');
+                                                                            setAnnouncementData({ ...announcementData, targetRoles: roles });
+                                                                        }}
+                                                                        className="admin-maintenance-checkbox"
+                                                                    />
+                                                                    <span>Moderators</span>
+                                                                </Label>
+                                                                <Label className="admin-maintenance-toggle-label" htmlFor="target-role-admin">
+                                                                    <input
+                                                                        id="target-role-admin"
+                                                                        type="checkbox"
+                                                                        checked={announcementData.targetRoles.includes('admin')}
+                                                                        onChange={(e) => {
+                                                                            const roles = e.target.checked
+                                                                                ? [...announcementData.targetRoles, 'admin']
+                                                                                : announcementData.targetRoles.filter(r => r !== 'admin');
+                                                                            setAnnouncementData({ ...announcementData, targetRoles: roles });
+                                                                        }}
+                                                                        className="admin-maintenance-checkbox"
+                                                                    />
+                                                                    <span>Admins</span>
+                                                                </Label>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="admin-modal-actions">
+                                        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                            <Button
+                                                onClick={handleSendAnnouncement}
+                                                disabled={sendingAnnouncement || !announcementData.title.trim() || !announcementData.message.trim()}
+                                                className="admin-add-category-btn"
+                                            >
+                                                <Megaphone size={16} style={{ marginRight: '0.5rem' }} />
+                                                {announcementData.scheduledDate
+                                                    ? (sendingAnnouncement ? 'Scheduling...' : 'Schedule Announcement')
+                                                    : (sendingAnnouncement ? 'Sending...' : 'Send Announcement')
+                                                }
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => {
+                                                    setShowAnnouncementForm(false);
+                                                    setAnnouncementData({
+                                                        type: 'system_announcement',
+                                                        title: '',
+                                                        message: '',
+                                                        scheduledDate: '',
+                                                        priority: 'medium',
+                                                        expirationDate: '',
+                                                        targetRoles: [],
+                                                        targetUserIds: [],
+                                                        sendToAll: true,
+                                                    });
+                                                }}
+                                                disabled={sendingAnnouncement}
+                                            >
+                                                Cancel
+                                            </Button>
                                         </div>
                                     </div>
                                 </div>
                             )}
-                        </div>
-
-                        <div className="admin-modal-actions">
-                            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                            <Button 
-                                onClick={handleSendAnnouncement} 
-                                    disabled={sendingAnnouncement || !announcementData.title.trim() || !announcementData.message.trim()}
-                                    className="admin-add-category-btn"
-                            >
-                                <Megaphone size={16} style={{ marginRight: '0.5rem' }} />
-                                    {announcementData.scheduledDate 
-                                        ? (sendingAnnouncement ? 'Scheduling...' : 'Schedule Announcement')
-                                        : (sendingAnnouncement ? 'Sending...' : 'Send Announcement')
-                                    }
-                            </Button>
-                            <Button
-                                variant="outline"
-                                onClick={() => {
-                                    setShowAnnouncementForm(false);
-                                    setAnnouncementData({
-                                        type: 'system_announcement',
-                                        title: '',
-                                        message: '',
-                                            scheduledDate: '',
-                                            priority: 'medium',
-                                            expirationDate: '',
-                                            targetRoles: [],
-                                            targetUserIds: [],
-                                            sendToAll: true,
-                                    });
-                                }}
-                                disabled={sendingAnnouncement}
-                            >
-                                    Cancel
-                            </Button>
-                            </div>
-                        </div>
-                    </div>
-                )}
                         </CardContent>
                     </Card>
                 </TabsContent>
 
                 {/* Monitoring & Alerts Tab */}
-                <TabsContent 
-                    value="monitoring" 
+                <TabsContent
+                    value="monitoring"
                     className="admin-settings-tab-content"
                     ref={tabContentRef}
                     onTouchStart={handleContentTouchStart}
@@ -4762,13 +4775,13 @@ export function AdminSettings() {
                                 ))}
 
                                 {/* Save Button */}
-                                <div style={{ 
-                                    display: 'flex', 
-                                    justifyContent: 'space-between', 
-                                    alignItems: 'center', 
-                                    marginTop: '2rem', 
-                                    paddingTop: '1.5rem', 
-                                    borderTop: '1px solid hsl(var(--border))' 
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginTop: '2rem',
+                                    paddingTop: '1.5rem',
+                                    borderTop: '1px solid hsl(var(--border))'
                                 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                         {hasChanges && (
@@ -4784,9 +4797,9 @@ export function AdminSettings() {
                                             </div>
                                         )}
                                     </div>
-                                    <Button 
-                                        onClick={handleSave} 
-                                        disabled={saving || !hasChanges || Object.keys(validationErrors).length > 0} 
+                                    <Button
+                                        onClick={handleSave}
+                                        disabled={saving || !hasChanges || Object.keys(validationErrors).length > 0}
                                         className="admin-add-category-btn"
                                         aria-label={saving ? 'Saving settings' : 'Save all settings'}
                                         aria-describedby="save-button-help-monitoring"

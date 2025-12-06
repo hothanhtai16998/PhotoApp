@@ -26,7 +26,7 @@ interface Collection {
 }
 
 export function AdminCollections() {
-    const [loading, setLoading] = useState(true);
+    const [, setLoading] = useState(true);
     const [collections, setCollections] = useState<Collection[]>([]);
     const [pagination, setPagination] = useState<Pagination>({ page: 1, pages: 1, total: 0, limit: 20 });
     const [search, setSearch] = useState('');

@@ -5,6 +5,29 @@
   padding: 40px 20px;
   padding-top: calc(var(--header-height, 56px) + 40px);
   margin-top: 0;
+  position: relative;
+}
+
+/* Profile Switch Loading Overlay */
+.profile-switch-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: hsl(var(--background) / 0.95);
+  backdrop-filter: blur(4px);
+  z-index: 10;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 80px;
+}
+
+.profile-switch-skeleton {
+  width: 100%;
+  max-width: 600px;
+  padding: 0 20px;
 }
 
 .profile-container {
@@ -94,9 +117,46 @@
 }
 
 .edit-profile-btn:hover,
-.edit-pins-btn:hover {
+.edit-pins-btn:hover,
+.follow-btn:hover {
   background: hsl(var(--muted));
   border-color: hsl(var(--foreground));
+}
+
+.follow-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 100px;
+}
+
+.follow-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.loading-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid hsl(var(--muted));
+  border-top-color: hsl(var(--foreground));
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .profile-description {
@@ -770,7 +830,8 @@
   }
 
   .tab-label {
-    display: none; /* Hide label on very small screens, keep icon and count */
+    display: block; /* Keep labels visible for better UX */
+    font-size: 0.75rem; /* Smaller but visible */
   }
 
   .profile-image-grid {

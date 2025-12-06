@@ -1,4 +1,4 @@
-import type { User } from '@/types/user';
+// import type { User } from '@/types/user';
 
 /**
  * Get display name for a user, with fallback to username

@@ -1,10 +1,9 @@
 import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
-import { useEffect, useRef, useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Image } from '@/types/image';
 import type { UseImageZoomReturn } from './hooks/useImageZoom';
 import {
   getImageClassName,
-  generateModalSrcSet,
   getModalImageStyles,
   MODAL_IMAGE
 } from './imageModalUtils';
@@ -24,15 +23,15 @@ interface ImageModalContentProps {
 export const ImageModalContent = ({
   image,
   imageTypes,
-  modalImageSrc,
-  modalPlaceholderSrc,
-  isModalImageLoaded,
+  modalImageSrc: _modalImageSrc,
+  modalPlaceholderSrc: _modalPlaceholderSrc,
+  isModalImageLoaded: _isModalImageLoaded,
   setIsModalImageLoaded,
   zoomProps,
-  wasCachedInitially,
+  wasCachedInitially: _wasCachedInitially,
 }: ImageModalContentProps) => {
   // Use modalImageSrc if available, otherwise fallback to image URLs
-  const imageSrc = modalImageSrc || image.regularUrl || image.imageUrl || image.smallUrl || '';
+  // const imageSrc = modalImageSrc || image.regularUrl || image.imageUrl || image.smallUrl || '';
   const derivePlaceholder = (img: Image) =>
     img.thumbnailUrl ||
     img.smallUrl ||
@@ -56,29 +55,29 @@ export const ImageModalContent = ({
 
   // Compute values once
   const imageType = (imageTypes.get(image._id) ?? 'landscape') as 'portrait' | 'landscape';
-  const imageStyles = useMemo(() => getModalImageStyles(modalPlaceholderSrc), [modalPlaceholderSrc]);
-  const imageClassName = getImageClassName(isModalImageLoaded, imageType);
+  // const imageStyles = useMemo(() => getModalImageStyles(modalPlaceholderSrc), [modalPlaceholderSrc]);
+  // const imageClassName = getImageClassName(isModalImageLoaded, imageType);
 
-  // Generate srcSets
-  const avifSrcSet = useMemo(
-    () => generateModalSrcSet(
-      image.thumbnailAvifUrl,
-      image.smallAvifUrl,
-      image.regularAvifUrl,
-      image.imageAvifUrl
-    ),
-    [image.thumbnailAvifUrl, image.smallAvifUrl, image.regularAvifUrl, image.imageAvifUrl]
-  );
+  // Generate srcSets (commented out - unused)
+  // const avifSrcSet = useMemo(
+  //   () => generateModalSrcSet(
+  //     image.thumbnailAvifUrl,
+  //     image.smallAvifUrl,
+  //     image.regularAvifUrl,
+  //     image.imageAvifUrl
+  //   ),
+  //   [image.thumbnailAvifUrl, image.smallAvifUrl, image.regularAvifUrl, image.imageAvifUrl]
+  // );
 
-  const webpSrcSet = useMemo(
-    () => generateModalSrcSet(
-      image.thumbnailUrl,
-      image.smallUrl,
-      image.regularUrl,
-      image.imageUrl
-    ),
-    [image.thumbnailUrl, image.smallUrl, image.regularUrl, image.imageUrl]
-  );
+  // const webpSrcSet = useMemo(
+  //   () => generateModalSrcSet(
+  //     image.thumbnailUrl,
+  //     image.smallUrl,
+  //     image.regularUrl,
+  //     image.imageUrl
+  //   ),
+  //   [image.thumbnailUrl, image.smallUrl, image.regularUrl, image.imageUrl]
+  // );
 
   const {
     zoom,

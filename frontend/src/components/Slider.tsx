@@ -329,14 +329,14 @@ function Slider() {
   }, [prevSlide, nextSlide, goToSlide, images.length]);
 
 
-  // Get best image URL
+  // Get best image URL - prioritize full resolution for slider
   const getImageUrl = (image: Image | null): string | null => {
     if (!image) return null;
     return (
-      image.regularAvifUrl ||
-      image.regularUrl ||
       image.imageAvifUrl ||
       image.imageUrl ||
+      image.regularAvifUrl ||
+      image.regularUrl ||
       image.smallUrl ||
       image.thumbnailUrl ||
       null
@@ -408,10 +408,10 @@ function Slider() {
         if (!image) continue;
 
         const imageUrl =
-          image.regularAvifUrl ||
-          image.regularUrl ||
           image.imageAvifUrl ||
           image.imageUrl ||
+          image.regularAvifUrl ||
+          image.regularUrl ||
           image.smallUrl ||
           image.thumbnailUrl ||
           null;

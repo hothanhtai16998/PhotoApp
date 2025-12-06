@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/Avatar";
 // import { ProfileCompletion } from "./ProfileCompletion";
-import { Star, MapPin, Globe, Instagram, Twitter, Users } from "lucide-react";
+import { Star, MapPin, Globe, Instagram, Twitter, Users, UserPlus, UserMinus } from "lucide-react";
 import type { PublicUser } from "@/services/userService";
 import type { UserStats } from "@/services/userStatsService";
+import { PinnedImages } from "./PinnedImages";
 import { t } from "@/i18n";
 
 interface ProfileHeaderProps {
@@ -18,15 +19,19 @@ interface ProfileHeaderProps {
     followStats: { followers: number; following: number; isFollowing: boolean };
     onEditProfile: () => void;
     onEditPins: () => void;
-    onTabChange: (tab: 'photos' | 'following' | 'collections' | 'stats') => void;
+    onTabChange: (tab: 'photos' | 'following' | 'followers' | 'collections' | 'stats') => void;
+    onFollowToggle?: () => void;
+    isFollowingLoading?: boolean;
 }
 
 export function ProfileHeader({
     displayUser,
     isOwnProfile,
-
+    followStats,
     onEditProfile,
     onEditPins,
+    onFollowToggle,
+    isFollowingLoading = false,
 }: ProfileHeaderProps) {
     return (
         <div className="profile-header">
@@ -41,7 +46,7 @@ export function ProfileHeader({
             <div className="profile-info">
                 <div className="profile-name-section">
                     <h1 className="profile-name">{displayUser.displayName || displayUser.username}</h1>
-                    {isOwnProfile && (
+                    {isOwnProfile ? (
                         <div className="profile-actions">
                             <Button
                                 variant="outline"
@@ -59,6 +64,33 @@ export function ProfileHeader({
                             >
                                 <Star size={16} />
                                 {t('profile.editPins')}
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="profile-actions">
+                            <Button
+                                variant={followStats.isFollowing ? "outline" : "default"}
+                                size="sm"
+                                onClick={onFollowToggle}
+                                disabled={isFollowingLoading}
+                                className="follow-btn"
+                            >
+                                {isFollowingLoading ? (
+                                    <>
+                                        <span className="loading-spinner" />
+                                        {t('common.loading')}
+                                    </>
+                                ) : followStats.isFollowing ? (
+                                    <>
+                                        <UserMinus size={16} />
+                                        {t('follow.unfollow') || 'Following'}
+                                    </>
+                                ) : (
+                                    <>
+                                        <UserPlus size={16} />
+                                        {t('follow.follow') || 'Follow'}
+                                    </>
+                                )}
                             </Button>
                         </div>
                     )}
@@ -123,6 +155,11 @@ export function ProfileHeader({
                             </a>
                         )}
                     </div>
+                )}
+
+                {/* Pinned Images */}
+                {displayUser.pinnedImages && displayUser.pinnedImages.length > 0 && (
+                    <PinnedImages images={displayUser.pinnedImages} isOwnProfile={isOwnProfile} />
                 )}
 
                 {/* Profile Completion - Commented out, not using it now */}

@@ -76,7 +76,7 @@ export const ProfileForm = ({
             loading={isUploadingAvatar}
           >
             {t('profile.changeAvatar')}
-          </button>
+          </Button>
           {user?.isOAuthUser && (
             <p className="field-hint" style={{ fontSize: '0.8125rem', color: '#767676', marginTop: '8px', textAlign: 'center' }}>
               {t('profile.oauthAvatarNote')}

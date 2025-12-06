@@ -9,6 +9,8 @@ export interface UserSearchResult {
 	avatarUrl?: string;
 }
 
+import type { Image } from '@/types/image';
+
 export interface PublicUser {
 	_id: string;
 	username: string;
@@ -21,6 +23,7 @@ export interface PublicUser {
 	twitter?: string;
 	facebook?: string;
 	createdAt: string;
+	pinnedImages?: Image[];
 }
 
 export const userService = {

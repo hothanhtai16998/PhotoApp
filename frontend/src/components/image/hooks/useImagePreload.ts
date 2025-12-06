@@ -18,44 +18,45 @@ if (typeof window !== 'undefined') {
 
 /**
  * Check if an image URL is already loaded in browser cache
+ * (Currently unused - kept for potential future use)
  */
-const isImageCached = (url: string): Promise<boolean> => {
-  return new Promise((resolve) => {
-    if (modalImageCache.has(url)) {
-      resolve(true);
-      return;
-    }
-
-    const img = new Image();
-    // Removed crossOrigin to avoid CORS issues
-    // img.crossOrigin = 'anonymous';
-    let resolved = false;
-
-    const resolveOnce = (value: boolean) => {
-      if (!resolved) {
-        resolved = true;
-        if (value) {
-          modalImageCache.add(url);
-        }
-        resolve(value);
-      }
-    };
-
-    // Short timeout - if image loads quickly, it's cached
-    const timeout = setTimeout(() => resolveOnce(false), 50);
-
-    img.onload = () => {
-      clearTimeout(timeout);
-      resolveOnce(true);
-    };
-    img.onerror = () => {
-      clearTimeout(timeout);
-      resolveOnce(false);
-    };
-
-    img.src = url;
-  });
-};
+// const isImageCached = (url: string): Promise<boolean> => {
+//   return new Promise((resolve) => {
+//     if (modalImageCache.has(url)) {
+//       resolve(true);
+//       return;
+//     }
+//
+//     const img = new Image();
+//     // Removed crossOrigin to avoid CORS issues
+//     // img.crossOrigin = 'anonymous';
+//     let resolved = false;
+//
+//     const resolveOnce = (value: boolean) => {
+//       if (!resolved) {
+//         resolved = true;
+//         if (value) {
+//           modalImageCache.add(url);
+//         }
+//         resolve(value);
+//       }
+//     };
+//
+//     // Short timeout - if image loads quickly, it's cached
+//     const timeout = setTimeout(() => resolveOnce(false), 50);
+//
+//     img.onload = () => {
+//       clearTimeout(timeout);
+//       resolveOnce(true);
+//     };
+//     img.onerror = () => {
+//       clearTimeout(timeout);
+//       resolveOnce(false);
+//     };
+//
+//     img.src = url;
+//   });
+// };
 
 /**
  * Synchronously check if an image is likely cached

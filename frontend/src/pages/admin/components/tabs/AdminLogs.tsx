@@ -15,7 +15,7 @@ export function AdminLogs() {
         userId?: string | { displayName?: string; username?: string };
     }
     const [logs, setLogs] = useState<Log[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [, setLoading] = useState(true);
     const [search, setSearch] = useState('');
 
     useEffect(() => {

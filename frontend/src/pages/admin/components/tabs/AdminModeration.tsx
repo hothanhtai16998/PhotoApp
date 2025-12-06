@@ -18,7 +18,7 @@ export function AdminModeration() {
         createdAt: string;
     }
     const [pendingContent, setPendingContent] = useState<PendingContentItem[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [contentToReject, setContentToReject] = useState<string | null>(null);

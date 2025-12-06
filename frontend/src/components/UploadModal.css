@@ -12,6 +12,11 @@
   justify-content: center;
   padding: 20px;
   overflow-y: auto;
+  /* Prevent layout shifts when dropdown opens */
+  isolation: isolate;
+  transform: translateZ(0);
+  will-change: auto;
+  backface-visibility: hidden;
 }
 
 /* Pre-upload Overlay (Unsplash-style) */

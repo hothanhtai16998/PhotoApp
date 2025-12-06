@@ -21,7 +21,7 @@ interface RealtimeData {
 type MetricTab = 'users' | 'images' | 'pending' | 'approved';
 
 export function AdminAnalytics() {
-    const [loading, setLoading] = useState(true);
+    const [, setLoading] = useState(true);
     const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
     const [realtimeData, setRealtimeData] = useState<RealtimeData | null>(null);
     const [days, setDays] = useState(30);

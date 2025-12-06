@@ -15,13 +15,13 @@ import { generateImageSlug, extractIdFromSlug } from "@/lib/utils";
 import { Folder, Eye } from "lucide-react";
 // Lazy load analytics dashboard - only needed when stats tab is active
 const UserAnalyticsDashboard = lazy(() => import("./components/UserAnalyticsDashboard").then(module => ({ default: module.UserAnalyticsDashboard })));
-// Lazy load following/followers component - only needed when following tab is active
-const FollowingFollowers = lazy(() => import("./components/FollowingFollowers").then(module => ({ default: module.FollowingFollowers })));
+const UserList = lazy(() => import("./components/UserList").then(module => ({ default: module.UserList })));
 // Lazy load ImageModal - conditionally rendered
 const ImageModal = lazy(() => import("@/components/ImageModal"));
 import { userStatsService } from "@/services/userStatsService";
 import { ProfileHeader } from "./components/ProfileHeader";
 import { ProfileTabs } from "./components/ProfileTabs";
+import { EditPinsModal } from "./components/EditPinsModal";
 import { useRequestCancellationOnChange } from "@/hooks/useRequestCancellation";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { toast } from "sonner";
@@ -31,12 +31,13 @@ import { uiConfig } from "@/config/uiConfig";
 import { t } from "@/i18n";
 import "./ProfilePage.css";
 
-type TabType = 'photos' | 'following' | 'collections' | 'stats';
+type TabType = 'photos' | 'following' | 'followers' | 'collections' | 'stats';
 
 // Profile tab IDs
 const TABS = {
     PHOTOS: 'photos',
     FOLLOWING: 'following',
+    FOLLOWERS: 'followers',
     COLLECTIONS: 'collections',
     STATS: 'stats',
 } as const;
@@ -125,12 +126,40 @@ function ProfilePage() {
         return displayUserId === currentUser?._id;
     }, [displayUserId, currentUser?._id]);
 
+    // Compute displayUser early so it can be used in callbacks
+    const displayUser = useMemo(() => {
+        if (!currentUser) return null;
+        return profileUser || {
+            _id: currentUser._id,
+            username: currentUser.username,
+            displayName: currentUser.displayName || currentUser.username,
+            avatarUrl: currentUser.avatarUrl,
+            bio: currentUser.bio,
+            location: currentUser.location,
+            website: currentUser.website,
+            instagram: currentUser.instagram,
+            twitter: currentUser.twitter,
+            facebook: currentUser.facebook,
+            createdAt: currentUser.createdAt || new Date().toISOString(),
+        };
+    }, [profileUser, currentUser]);
+
     // Statistics tab - Only allow access for own profile
+    // Also check URL params to prevent direct access via URL manipulation
     useEffect(() => {
-        if (activeTab === TABS.STATS && !isOwnProfile) {
+        const tabParam = searchParams.get('tab');
+        if (tabParam === 'stats' && !isOwnProfile) {
+            // Remove invalid tab param and redirect to photos
+            setSearchParams(prev => {
+                const newParams = new URLSearchParams(prev);
+                newParams.delete('tab');
+                return newParams;
+            });
+            setActiveTab(TABS.PHOTOS);
+        } else if (activeTab === TABS.STATS && !isOwnProfile) {
             setActiveTab(TABS.PHOTOS);
         }
-    }, [activeTab, isOwnProfile]);
+    }, [activeTab, isOwnProfile, searchParams, setSearchParams]);
 
     // Reset all state immediately when params change to prevent flashing old data
     useEffect(() => {
@@ -149,13 +178,18 @@ function ProfilePage() {
             clearProfile();
             clearImages();
             processedImages.current.clear();
+            
+            // Reset active tab to photos when switching profiles (unless it's own profile and stats is valid)
+            if (activeTab === TABS.STATS) {
+                setActiveTab(TABS.PHOTOS);
+            }
         }
 
         // Update the ref for next comparison (on initial mount, this will be set)
         if (!previousParams.current || previousParams.current !== paramsKey) {
             previousParams.current = paramsKey;
         }
-    }, [params.username, params.userId, clearProfile, clearImages]);
+    }, [params.username, params.userId, clearProfile, clearImages, activeTab]);
 
     // Helper to update statsUserId if still on the same user
     const updateStatsUserIdIfSame = useCallback((capturedUserId: string) => {
@@ -179,36 +213,64 @@ function ProfilePage() {
 
     // Wrapper to handle race condition checks and own profile check
     const fetchCollectionsWrapper = useCallback(async (signal?: AbortSignal) => {
-        if (!displayUserId) return;
+        if (!displayUserId) {
+            setIsSwitchingProfile(false);
+            return;
+        }
         // For now, only fetch own collections. TODO: Add endpoint to fetch other users' collections
-        if (!isOwnProfile) return;
+        if (!isOwnProfile) {
+            setIsSwitchingProfile(false);
+            return;
+        }
 
         const currentUserId = displayUserId; // Capture at start of fetch
 
         try {
             await fetchCollections(displayUserId, signal);
             updateStatsUserIdIfSame(currentUserId);
+            // Reset switching state after successful fetch
+            if (displayUserId === currentUserId) {
+                setIsSwitchingProfile(false);
+            }
         } catch (_error) {
             // Error already handled in store
+            // Reset switching state on error
+            if (displayUserId === currentUserId) {
+                setIsSwitchingProfile(false);
+            }
         }
-    }, [displayUserId, isOwnProfile, fetchCollections, updateStatsUserIdIfSame]);
+    }, [displayUserId, isOwnProfile, fetchCollections, updateStatsUserIdIfSame, setIsSwitchingProfile]);
 
     // Wrapper to handle race condition checks
     const fetchFollowStatsWrapper = useCallback(async (signal?: AbortSignal) => {
-        if (!displayUserId) return;
+        if (!displayUserId) {
+            setIsSwitchingProfile(false);
+            return;
+        }
         const currentUserId = displayUserId; // Capture at start of fetch
 
         try {
             await fetchFollowStats(displayUserId, signal);
             updateStatsUserIdIfSame(currentUserId);
+            // Reset switching state after successful fetch
+            if (displayUserId === currentUserId) {
+                setIsSwitchingProfile(false);
+            }
         } catch (_error) {
             // Error already handled in store
+            // Reset switching state on error
+            if (displayUserId === currentUserId) {
+                setIsSwitchingProfile(false);
+            }
         }
-    }, [displayUserId, fetchFollowStats, updateStatsUserIdIfSame]);
+    }, [displayUserId, fetchFollowStats, updateStatsUserIdIfSame, setIsSwitchingProfile]);
 
     // Wrapper to handle race condition checks
     const fetchUserStatsWrapper = useCallback(async (signal?: AbortSignal) => {
-        if (!displayUserId) return;
+        if (!displayUserId) {
+            setIsSwitchingProfile(false);
+            return;
+        }
         const currentUserId = displayUserId; // Capture at start of fetch
 
         try {
@@ -220,7 +282,11 @@ function ProfilePage() {
             }
         } catch (_error) {
             // Error already handled in store
+            // Always reset switching state on error to prevent stuck loading state
             if (displayUserId === currentUserId) {
+                setIsSwitchingProfile(false);
+            } else {
+                // If user changed during fetch, also reset
                 setIsSwitchingProfile(false);
             }
         }
@@ -306,10 +372,65 @@ function ProfilePage() {
         navigate('/profile/edit');
     };
 
+    const [isEditPinsModalOpen, setIsEditPinsModalOpen] = useState(false);
+    
     const handleEditPins = () => {
-        // Feature coming soon - allows users to pin favorite images to their profile
-        toast.info(t('profile.pinnedEditSoon'));
+        if (isOwnProfile) {
+            setIsEditPinsModalOpen(true);
+        }
     };
+
+    const handlePinnedImagesUpdate = useCallback((updatedImages: Image[]) => {
+        // Update displayUser with new pinned images
+        if (displayUser) {
+            displayUser.pinnedImages = updatedImages;
+        }
+        // Also update profileUser if it exists
+        if (profileUser) {
+            useProfileStore.setState((state) => {
+                if (state.profileUser) {
+                    state.profileUser.pinnedImages = updatedImages;
+                }
+            });
+        }
+    }, [displayUser, profileUser]);
+
+    // Follow/Unfollow handler
+    const [isFollowingLoading, setIsFollowingLoading] = useState(false);
+    const handleFollowToggle = useCallback(async () => {
+        if (!displayUserId || isOwnProfile || isFollowingLoading || !displayUser) return;
+
+        setIsFollowingLoading(true);
+        try {
+            const { followService } = await import('@/services/followService');
+            const userName = displayUser.displayName || displayUser.username;
+            
+            if (followStats.isFollowing) {
+                await followService.unfollowUser(displayUserId);
+                // Update follow stats optimistically
+                useProfileStore.setState((state) => {
+                    state.followStats.isFollowing = false;
+                });
+                toast.success(t('follow.unfollowed', { name: userName }) || 'Unfollowed successfully');
+            } else {
+                await followService.followUser(displayUserId);
+                // Update follow stats optimistically
+                useProfileStore.setState((state) => {
+                    state.followStats.isFollowing = true;
+                });
+                toast.success(t('follow.followed', { name: userName }) || 'Followed successfully');
+            }
+            // Refresh follow stats to get accurate counts
+            await fetchFollowStatsWrapper(cancelSignal);
+        } catch (error) {
+            console.error('Failed to toggle follow:', error);
+            toast.error(t('follow.followToggleFailed') || 'Failed to update follow status');
+            // Refresh to get correct state
+            await fetchFollowStatsWrapper(cancelSignal);
+        } finally {
+            setIsFollowingLoading(false);
+        }
+    }, [displayUserId, displayUser, isOwnProfile, isFollowingLoading, followStats.isFollowing, fetchFollowStatsWrapper, cancelSignal]);
 
 
     // Calculate display images based on active tab
@@ -389,11 +510,22 @@ function ProfilePage() {
         // Only process once per image and only if image still exists
         if (!currentImageIds.has(imageId) || processedImages.current.has(imageId)) return;
 
+        // Double-check that image still exists in current set (race condition protection)
+        if (!currentImageIds.has(imageId)) return;
+
         processedImages.current.add(imageId);
         const isPortrait = img.naturalHeight > img.naturalWidth;
         const imageType = isPortrait ? 'portrait' : 'landscape';
         setImageType(imageId, imageType);
     }, [currentImageIds, setImageType]);
+
+    // Cleanup processedImages when component unmounts or displayUserId changes
+    useEffect(() => {
+        return () => {
+            // Cleanup on unmount
+            processedImages.current.clear();
+        };
+    }, [displayUserId]);
 
     // Update image in the state when stats change
     const handleImageUpdate = useCallback((updatedImage: Image) => {
@@ -531,7 +663,7 @@ function ProfilePage() {
     }
 
     // Guard: Ensure currentUser exists before accessing its properties
-    if (!currentUser) {
+    if (!currentUser || !displayUser) {
         return (
             <>
                 <Header />
@@ -544,26 +676,21 @@ function ProfilePage() {
         );
     }
 
-    // Use profileUser if available, otherwise fallback to currentUser
-    const displayUser = profileUser || {
-        _id: currentUser._id,
-        username: currentUser.username,
-        displayName: currentUser.displayName || currentUser.username,
-        avatarUrl: currentUser.avatarUrl,
-        bio: currentUser.bio,
-        location: currentUser.location,
-        website: currentUser.website,
-        instagram: currentUser.instagram,
-        twitter: currentUser.twitter,
-        facebook: currentUser.facebook,
-        createdAt: currentUser.createdAt || new Date().toISOString(),
-    };
-
     return (
         <>
             <Header />
             <main className="profile-page">
                 <div className="profile-container">
+                    {/* Loading Overlay for Profile Switch */}
+                    {isSwitchingProfile && (
+                        <div className="profile-switch-overlay">
+                            <div className="profile-switch-skeleton">
+                                <Skeleton className="h-32 w-full mb-4" />
+                                <Skeleton className="h-8 w-64 mb-2" />
+                                <Skeleton className="h-4 w-48" />
+                            </div>
+                        </div>
+                    )}
                     {/* Profile Header */}
                     <ProfileHeader
                         displayUser={displayUser}
@@ -578,6 +705,8 @@ function ProfilePage() {
                         onEditProfile={handleEditProfile}
                         onEditPins={handleEditPins}
                         onTabChange={setActiveTab}
+                        onFollowToggle={handleFollowToggle}
+                        isFollowingLoading={isFollowingLoading}
                     />
 
                     {/* Navigation Tabs */}
@@ -622,7 +751,11 @@ function ProfilePage() {
                             )
                         ) : activeTab === TABS.FOLLOWING ? (
                             <Suspense fallback={<div className="following-loading"><Skeleton className="h-64 w-full" /></div>}>
-                                {displayUserId && <FollowingFollowers userId={displayUserId} />}
+                                {displayUserId && <UserList userId={displayUserId} mode="following" />}
+                            </Suspense>
+                        ) : activeTab === TABS.FOLLOWERS ? (
+                            <Suspense fallback={<div className="following-loading"><Skeleton className="h-64 w-full" /></div>}>
+                                {displayUserId && <UserList userId={displayUserId} mode="followers" />}
                             </Suspense>
                         ) : activeTab === TABS.COLLECTIONS ? (
                             collectionsLoading ? (
@@ -637,13 +770,15 @@ function ProfilePage() {
                             ) : collections.length === 0 ? (
                                 <div className="empty-state" role="status" aria-live="polite">
                                     <p>{t('profile.noCollections')}</p>
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => navigate('/')}
-                                        className="mt-4"
-                                    >
-                                        {t('favorites.explore')}
-                                    </Button>
+                                    {isOwnProfile && (
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => navigate('/collections')}
+                                            className="mt-4"
+                                        >
+                                            {t('collections.createCollection') || 'Create Collection'}
+                                        </Button>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="profile-collections-grid">
@@ -757,6 +892,17 @@ function ProfilePage() {
                         processedImages={processedImages}
                     />
                 </Suspense>
+            )}
+
+            {/* Edit Pins Modal */}
+            {isOwnProfile && displayUserId && (
+                <EditPinsModal
+                    isOpen={isEditPinsModalOpen}
+                    onClose={() => setIsEditPinsModalOpen(false)}
+                    currentPinnedImages={displayUser?.pinnedImages || []}
+                    onPinnedImagesUpdate={handlePinnedImagesUpdate}
+                    userId={displayUserId}
+                />
             )}
         </>
     );

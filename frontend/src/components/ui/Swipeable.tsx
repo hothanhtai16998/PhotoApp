@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, ReactNode } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from './button';
 
@@ -28,11 +29,12 @@ export function Swipeable({
   const containerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
+  const [, setIsDragging] = useState(false);
   const autoPlayRef = useRef<number | null>(null);
 
   // Handle touch start
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (!e.touches[0]) return;
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     setIsDragging(true);
@@ -41,6 +43,7 @@ export function Swipeable({
   // Handle touch move
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!touchStartX.current || !touchStartY.current) return;
+    if (!e.touches[0]) return;
     
     const touchX = e.touches[0].clientX;
     const touchY = e.touches[0].clientY;
@@ -56,6 +59,7 @@ export function Swipeable({
   // Handle touch end
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (!touchStartX.current) return;
+    if (!e.changedTouches[0]) return;
 
     const touchEndX = e.changedTouches[0].clientX;
     const deltaX = touchEndX - touchStartX.current;
@@ -89,6 +93,7 @@ export function Swipeable({
         }
       };
     }
+    return undefined;
   }, [autoPlay, currentIndex, items.length, interval, onIndexChange]);
 
   const goToPrevious = () => {

@@ -680,7 +680,7 @@ export default function CollectionModal({
 											disabled={!newCollectionName.trim()}
 										>
 											{creating ? t('collections.creating') : t('collections.createNew')}
-										</button>
+										</Button>
 									</div>
 								</div>
 							)}

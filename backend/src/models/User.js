@@ -72,6 +72,11 @@ const userSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Collection',
         }],
+        // Pinned Images - array of image IDs that user has pinned to profile (max 6)
+        pinnedImages: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Image',
+        }],
         // Ban status
         isBanned: {
             type: Boolean,
