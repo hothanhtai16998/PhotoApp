@@ -111,6 +111,22 @@ export const adminService = {
         });
         return res.data;
     },
+    getSystemMetrics: async (): Promise<{
+        status: 'healthy' | 'warning' | 'critical';
+        cpuUsage?: number;
+        memoryUsage?: number;
+        diskUsage?: number;
+        responseTime?: number;
+        errorRate?: number;
+        databaseStatus?: 'connected' | 'disconnected';
+        storageStatus?: 'connected' | 'disconnected';
+        timestamp?: string;
+    }> => {
+        const res = await api.get('/admin/dashboard/metrics', {
+            withCredentials: true,
+        });
+        return res.data;
+    },
 
     getAllUsers: async (params?: {
         page?: number;

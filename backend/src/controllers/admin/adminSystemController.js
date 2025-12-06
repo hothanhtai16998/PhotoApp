@@ -156,6 +156,14 @@ export const updateSettings = asyncHandler(async (req, res) => {
         metadata: { settings },
     });
 
+    // Invalidate monitoring settings cache if it exists
+    try {
+        const { invalidateSettingsCache } = await import('../../utils/alertMonitor.js');
+        invalidateSettingsCache();
+    } catch (error) {
+        // Ignore if alertMonitor not available
+    }
+
     res.json({
         message: 'Đã cập nhật cài đặt thành công',
         settings: systemSettings.value,
@@ -253,5 +261,15 @@ export const getCacheStats = asyncHandler(async (req, res) => {
         cache: stats,
         timestamp: new Date().toISOString(),
     });
+});
+
+// System Metrics Endpoint
+export const getSystemMetrics = asyncHandler(async (req, res) => {
+    // Permission check is handled by requirePermission('viewDashboard') middleware in routes
+    
+    const { getSystemStatus } = await import('../../utils/systemMetrics.js');
+    const status = await getSystemStatus();
+    
+    res.json(status);
 });
 

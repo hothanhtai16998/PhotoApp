@@ -5,7 +5,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Save, Megaphone, X, Settings, Upload, Shield, Bell, Globe, ChevronDown, ChevronUp, HelpCircle, CheckCircle2, AlertCircle, ChevronRight, Home, Info, AlertTriangle, CheckCircle, XCircle, Eye, EyeOff, FileText, Image as ImageIcon, Server, Database, Lock, Unlock, Mail, Languages, Clock, Link2, Facebook, Twitter, Instagram, Linkedin, Youtube, Image, Video, Maximize2, Plus, Minus, Palette, Type, Layout, Monitor, AtSign, Send, FileEdit, Users, UserPlus, UserCheck, Trash2, Calendar, Target, Star, History, BookOpen, Save as SaveIcon, FolderOpen } from 'lucide-react';
+import { Save, Megaphone, X, Settings, Upload, Shield, Bell, Globe, ChevronDown, ChevronUp, HelpCircle, CheckCircle2, AlertCircle, ChevronRight, Home, Info, AlertTriangle, CheckCircle, XCircle, Eye, EyeOff, FileText, Image as ImageIcon, Server, Database, Lock, Unlock, Mail, Languages, Clock, Link2, Facebook, Twitter, Instagram, Linkedin, Youtube, Image, Video, Maximize2, Plus, Minus, Palette, Type, Layout, Monitor, AtSign, Send, FileEdit, Users, UserPlus, UserCheck, Trash2, Calendar, Target, Star, History, BookOpen, Save as SaveIcon, FolderOpen, Activity, AlertCircle as AlertCircleIcon, Zap } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { useSiteSettings } from '@/hooks/useSiteSettings';
 import { t } from '@/i18n';
@@ -119,6 +119,28 @@ export function AdminSettings() {
             location: false,
             website: false,
             phone: false,
+        },
+        // Monitoring & Alerts Settings
+        healthCheckEnabled: true,
+        healthCheckInterval: 60, // seconds
+        alertThresholds: {
+            cpuUsage: 80, // percentage
+            memoryUsage: 85, // percentage
+            diskUsage: 90, // percentage
+            responseTime: 1000, // milliseconds
+            errorRate: 5, // percentage
+        },
+        emailAlertsEnabled: true,
+        emailAlertRecipients: [], // array of email addresses
+        alertEvents: {
+            systemDown: true,
+            highCpuUsage: true,
+            highMemoryUsage: true,
+            highDiskUsage: true,
+            slowResponseTime: true,
+            highErrorRate: true,
+            databaseConnectionFailure: true,
+            storageConnectionFailure: true,
         },
     });
     
@@ -354,6 +376,28 @@ export function AdminSettings() {
                         location: false,
                         website: false,
                         phone: false,
+                    },
+                    // Monitoring & Alerts Settings
+                    healthCheckEnabled: (settingsData.healthCheckEnabled as boolean) ?? true,
+                    healthCheckInterval: (settingsData.healthCheckInterval as number) || 60,
+                    alertThresholds: settingsData.alertThresholds || {
+                        cpuUsage: 80,
+                        memoryUsage: 85,
+                        diskUsage: 90,
+                        responseTime: 1000,
+                        errorRate: 5,
+                    },
+                    emailAlertsEnabled: (settingsData.emailAlertsEnabled as boolean) ?? true,
+                    emailAlertRecipients: (settingsData.emailAlertRecipients as string[]) || [],
+                    alertEvents: settingsData.alertEvents || {
+                        systemDown: true,
+                        highCpuUsage: true,
+                        highMemoryUsage: true,
+                        highDiskUsage: true,
+                        slowResponseTime: true,
+                        highErrorRate: true,
+                        databaseConnectionFailure: true,
+                        storageConnectionFailure: true,
                     },
                 };
                 setSettings(loadedSettings);
@@ -644,7 +688,14 @@ export function AdminSettings() {
             settings.requireEmailVerification !== originalSettings.requireEmailVerification ||
             settings.requirePhoneVerification !== originalSettings.requirePhoneVerification ||
             settings.allowAccountSelfDeletion !== originalSettings.allowAccountSelfDeletion ||
-            JSON.stringify(settings.requiredProfileFields) !== JSON.stringify(originalSettings.requiredProfileFields)
+            JSON.stringify(settings.requiredProfileFields) !== JSON.stringify(originalSettings.requiredProfileFields) ||
+            // Monitoring & Alerts Settings
+            settings.healthCheckEnabled !== originalSettings.healthCheckEnabled ||
+            settings.healthCheckInterval !== originalSettings.healthCheckInterval ||
+            JSON.stringify(settings.alertThresholds || {}) !== JSON.stringify(originalSettings.alertThresholds || {}) ||
+            settings.emailAlertsEnabled !== originalSettings.emailAlertsEnabled ||
+            JSON.stringify(settings.emailAlertRecipients || []) !== JSON.stringify(originalSettings.emailAlertRecipients || []) ||
+            JSON.stringify(settings.alertEvents || {}) !== JSON.stringify(originalSettings.alertEvents || {})
         ) {
             return true;
         }
@@ -840,7 +891,7 @@ export function AdminSettings() {
     };
 
     // Swipe gesture handlers for mobile tab navigation
-    const tabs = ['general', 'upload', 'system', 'security', 'appearance', 'email', 'users', 'notifications'];
+    const tabs = ['general', 'upload', 'system', 'security', 'appearance', 'email', 'users', 'notifications', 'monitoring'];
     
     const handleTouchStart = (e: React.TouchEvent) => {
         if (!isMobile) return;
@@ -1018,6 +1069,10 @@ export function AdminSettings() {
                     <TabsTrigger value="notifications">
                         <Bell size={16} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
                         <span>Notifications</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="monitoring">
+                        <Activity size={16} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                        <span>Monitoring</span>
                     </TabsTrigger>
                 </TabsList>
 
@@ -3946,13 +4001,13 @@ export function AdminSettings() {
                                         Create, schedule, and manage system-wide notifications to inform users about important updates, maintenance, or announcements.
                                     </p>
                                     <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                                        <Button 
-                                            onClick={() => setShowAnnouncementForm(true)}
-                                            className="admin-add-category-btn"
-                                        >
-                                            <Megaphone size={16} style={{ marginRight: '0.5rem' }} />
+                    <Button 
+                        onClick={() => setShowAnnouncementForm(true)}
+                        className="admin-add-category-btn"
+                    >
+                        <Megaphone size={16} style={{ marginRight: '0.5rem' }} />
                                             Create Announcement
-                                        </Button>
+                    </Button>
                                         <Button 
                                             onClick={() => setShowHistory(true)}
                                             variant="outline"
@@ -4122,26 +4177,26 @@ export function AdminSettings() {
                                             >
                                                 <SaveIcon size={16} />
                                             </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => {
-                                                    setShowAnnouncementForm(false);
-                                                    setAnnouncementData({
-                                                        type: 'system_announcement',
-                                                        title: '',
-                                                        message: '',
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                    setShowAnnouncementForm(false);
+                                    setAnnouncementData({
+                                        type: 'system_announcement',
+                                        title: '',
+                                        message: '',
                                                         scheduledDate: '',
                                                         priority: 'medium',
                                                         expirationDate: '',
                                                         targetRoles: [],
                                                         targetUserIds: [],
                                                         sendToAll: true,
-                                                    });
-                                                }}
-                                            >
-                                                <X size={16} />
-                                            </Button>
+                                    });
+                                }}
+                            >
+                                <X size={16} />
+                            </Button>
                                         </div>
                         </div>
 
@@ -4347,41 +4402,353 @@ export function AdminSettings() {
 
                         <div className="admin-modal-actions">
                             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                                <Button 
-                                    onClick={handleSendAnnouncement} 
+                            <Button 
+                                onClick={handleSendAnnouncement} 
                                     disabled={sendingAnnouncement || !announcementData.title.trim() || !announcementData.message.trim()}
                                     className="admin-add-category-btn"
-                                >
-                                    <Megaphone size={16} style={{ marginRight: '0.5rem' }} />
+                            >
+                                <Megaphone size={16} style={{ marginRight: '0.5rem' }} />
                                     {announcementData.scheduledDate 
                                         ? (sendingAnnouncement ? 'Scheduling...' : 'Schedule Announcement')
                                         : (sendingAnnouncement ? 'Sending...' : 'Send Announcement')
                                     }
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    onClick={() => {
-                                        setShowAnnouncementForm(false);
-                                        setAnnouncementData({
-                                            type: 'system_announcement',
-                                            title: '',
-                                            message: '',
+                            </Button>
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    setShowAnnouncementForm(false);
+                                    setAnnouncementData({
+                                        type: 'system_announcement',
+                                        title: '',
+                                        message: '',
                                             scheduledDate: '',
                                             priority: 'medium',
                                             expirationDate: '',
                                             targetRoles: [],
                                             targetUserIds: [],
                                             sendToAll: true,
-                                        });
-                                    }}
-                                    disabled={sendingAnnouncement}
-                                >
+                                    });
+                                }}
+                                disabled={sendingAnnouncement}
+                            >
                                     Cancel
-                                </Button>
+                            </Button>
                             </div>
                         </div>
                     </div>
                 )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* Monitoring & Alerts Tab */}
+                <TabsContent 
+                    value="monitoring" 
+                    className="admin-settings-tab-content"
+                    ref={tabContentRef}
+                    onTouchStart={handleContentTouchStart}
+                    onTouchMove={handleContentTouchMove}
+                    onTouchEnd={handleContentTouchEnd}
+                >
+                    <Card className="admin-settings-card">
+                        <CardHeader>
+                            <CardTitle className="admin-settings-card-title">
+                                <Activity size={20} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                Monitoring & Alerts
+                            </CardTitle>
+                            <CardDescription>
+                                Configure system health monitoring, alert thresholds, and email notifications for critical events.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="admin-form">
+                                {/* Health Checks */}
+                                <div className="admin-settings-section-divider">
+                                    <h3 className="admin-settings-section-title">
+                                        <Activity size={18} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                        Health Checks
+                                    </h3>
+                                </div>
+
+                                <div className={`admin-form-group ${settings.healthCheckEnabled !== originalSettings.healthCheckEnabled ? 'has-changes' : ''}`}>
+                                    <Label className="admin-maintenance-toggle-label" htmlFor="health-check-enabled-toggle">
+                                        <input
+                                            id="health-check-enabled-toggle"
+                                            type="checkbox"
+                                            checked={settings.healthCheckEnabled}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, healthCheckEnabled: e.target.checked }))}
+                                            className="admin-maintenance-checkbox"
+                                        />
+                                        <span>Enable Health Checks</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Automatically monitor system health and performance metrics
+                                            </span>
+                                        </div>
+                                    </Label>
+                                </div>
+
+                                {settings.healthCheckEnabled && (
+                                    <div className={`admin-form-group ${settings.healthCheckInterval !== originalSettings.healthCheckInterval ? 'has-changes' : ''}`}>
+                                        <Label htmlFor="health-check-interval-input" className="admin-form-label-with-icon">
+                                            <Clock size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                            Check Interval (seconds)
+                                        </Label>
+                                        <Input
+                                            id="health-check-interval-input"
+                                            type="number"
+                                            value={settings.healthCheckInterval}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, healthCheckInterval: parseInt(e.target.value) || 60 }))}
+                                            min="10"
+                                            max="3600"
+                                            placeholder="60"
+                                        />
+                                        <p className="admin-form-help-text">How often to perform health checks (10-3600 seconds)</p>
+                                    </div>
+                                )}
+
+                                {/* Alert Thresholds */}
+                                <div className="admin-settings-section-divider" style={{ marginTop: '2rem' }}>
+                                    <h3 className="admin-settings-section-title">
+                                        <AlertCircleIcon size={18} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                        Alert Thresholds
+                                    </h3>
+                                </div>
+
+                                <p className="admin-form-help-text" style={{ marginBottom: '1rem' }}>Set thresholds for when alerts should be triggered</p>
+
+                                <div className={`admin-form-group ${(settings.alertThresholds?.cpuUsage ?? 80) !== (originalSettings.alertThresholds?.cpuUsage ?? 80) ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="cpu-threshold-input" className="admin-form-label-with-icon">
+                                        <Zap size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        CPU Usage Threshold (%)
+                                    </Label>
+                                    <Input
+                                        id="cpu-threshold-input"
+                                        type="number"
+                                        value={settings.alertThresholds?.cpuUsage ?? 80}
+                                        onChange={(e) => setSettings(prev => ({
+                                            ...prev,
+                                            alertThresholds: {
+                                                ...(prev.alertThresholds || {}),
+                                                cpuUsage: parseInt(e.target.value) || 80
+                                            }
+                                        }))}
+                                        min="50"
+                                        max="100"
+                                        placeholder="80"
+                                    />
+                                    <p className="admin-form-help-text">Alert when CPU usage exceeds this percentage</p>
+                                </div>
+
+                                <div className={`admin-form-group ${(settings.alertThresholds?.memoryUsage ?? 85) !== (originalSettings.alertThresholds?.memoryUsage ?? 85) ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="memory-threshold-input" className="admin-form-label-with-icon">
+                                        <Database size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Memory Usage Threshold (%)
+                                    </Label>
+                                    <Input
+                                        id="memory-threshold-input"
+                                        type="number"
+                                        value={settings.alertThresholds?.memoryUsage ?? 85}
+                                        onChange={(e) => setSettings(prev => ({
+                                            ...prev,
+                                            alertThresholds: {
+                                                ...(prev.alertThresholds || {}),
+                                                memoryUsage: parseInt(e.target.value) || 85
+                                            }
+                                        }))}
+                                        min="50"
+                                        max="100"
+                                        placeholder="85"
+                                    />
+                                    <p className="admin-form-help-text">Alert when memory usage exceeds this percentage</p>
+                                </div>
+
+                                <div className={`admin-form-group ${(settings.alertThresholds?.diskUsage ?? 90) !== (originalSettings.alertThresholds?.diskUsage ?? 90) ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="disk-threshold-input" className="admin-form-label-with-icon">
+                                        <Server size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Disk Usage Threshold (%)
+                                    </Label>
+                                    <Input
+                                        id="disk-threshold-input"
+                                        type="number"
+                                        value={settings.alertThresholds?.diskUsage ?? 90}
+                                        onChange={(e) => setSettings(prev => ({
+                                            ...prev,
+                                            alertThresholds: {
+                                                ...(prev.alertThresholds || {}),
+                                                diskUsage: parseInt(e.target.value) || 90
+                                            }
+                                        }))}
+                                        min="50"
+                                        max="100"
+                                        placeholder="90"
+                                    />
+                                    <p className="admin-form-help-text">Alert when disk usage exceeds this percentage</p>
+                                </div>
+
+                                <div className={`admin-form-group ${(settings.alertThresholds?.responseTime ?? 1000) !== (originalSettings.alertThresholds?.responseTime ?? 1000) ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="response-time-threshold-input" className="admin-form-label-with-icon">
+                                        <Clock size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Response Time Threshold (ms)
+                                    </Label>
+                                    <Input
+                                        id="response-time-threshold-input"
+                                        type="number"
+                                        value={settings.alertThresholds?.responseTime ?? 1000}
+                                        onChange={(e) => setSettings(prev => ({
+                                            ...prev,
+                                            alertThresholds: {
+                                                ...(prev.alertThresholds || {}),
+                                                responseTime: parseInt(e.target.value) || 1000
+                                            }
+                                        }))}
+                                        min="100"
+                                        max="10000"
+                                        placeholder="1000"
+                                    />
+                                    <p className="admin-form-help-text">Alert when average response time exceeds this value (milliseconds)</p>
+                                </div>
+
+                                <div className={`admin-form-group ${(settings.alertThresholds?.errorRate ?? 5) !== (originalSettings.alertThresholds?.errorRate ?? 5) ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="error-rate-threshold-input" className="admin-form-label-with-icon">
+                                        <AlertTriangle size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Error Rate Threshold (%)
+                                    </Label>
+                                    <Input
+                                        id="error-rate-threshold-input"
+                                        type="number"
+                                        value={settings.alertThresholds?.errorRate ?? 5}
+                                        onChange={(e) => setSettings(prev => ({
+                                            ...prev,
+                                            alertThresholds: {
+                                                ...(prev.alertThresholds || {}),
+                                                errorRate: parseInt(e.target.value) || 5
+                                            }
+                                        }))}
+                                        min="0"
+                                        max="100"
+                                        placeholder="5"
+                                    />
+                                    <p className="admin-form-help-text">Alert when error rate exceeds this percentage</p>
+                                </div>
+
+                                {/* Email Alerts */}
+                                <div className="admin-settings-section-divider" style={{ marginTop: '2rem' }}>
+                                    <h3 className="admin-settings-section-title">
+                                        <Mail size={18} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                        Email Alerts
+                                    </h3>
+                                </div>
+
+                                <div className={`admin-form-group ${settings.emailAlertsEnabled !== originalSettings.emailAlertsEnabled ? 'has-changes' : ''}`}>
+                                    <Label className="admin-maintenance-toggle-label" htmlFor="email-alerts-enabled-toggle">
+                                        <input
+                                            id="email-alerts-enabled-toggle"
+                                            type="checkbox"
+                                            checked={settings.emailAlertsEnabled}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, emailAlertsEnabled: e.target.checked }))}
+                                            className="admin-maintenance-checkbox"
+                                        />
+                                        <span>Enable Email Alerts</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Send email notifications when alert thresholds are exceeded
+                                            </span>
+                                        </div>
+                                    </Label>
+                                </div>
+
+                                {settings.emailAlertsEnabled && (
+                                    <div className={`admin-form-group ${JSON.stringify(settings.emailAlertRecipients) !== JSON.stringify(originalSettings.emailAlertRecipients) ? 'has-changes' : ''}`}>
+                                        <Label htmlFor="email-alert-recipients-textarea" className="admin-form-label-with-icon">
+                                            <Mail size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                            Alert Recipients
+                                        </Label>
+                                        <Textarea
+                                            id="email-alert-recipients-textarea"
+                                            value={(settings.emailAlertRecipients || []).join(', ')}
+                                            onChange={(e) => {
+                                                const emails = e.target.value.split(',').map(email => email.trim()).filter(email => email);
+                                                setSettings(prev => ({ ...prev, emailAlertRecipients: emails }));
+                                            }}
+                                            placeholder="admin@example.com, support@example.com"
+                                            rows={3}
+                                        />
+                                        <p className="admin-form-help-text">Comma-separated list of email addresses to receive alerts</p>
+                                    </div>
+                                )}
+
+                                {/* Alert Events */}
+                                <div className="admin-settings-section-divider" style={{ marginTop: '2rem' }}>
+                                    <h3 className="admin-settings-section-title">
+                                        <Bell size={18} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                        Alert Events
+                                    </h3>
+                                </div>
+
+                                <p className="admin-form-help-text" style={{ marginBottom: '1rem' }}>Select which events should trigger alerts</p>
+
+                                {settings.alertEvents && Object.entries(settings.alertEvents).map(([key, value]) => (
+                                    <div key={key} className={`admin-form-group ${(settings.alertEvents?.[key as keyof typeof settings.alertEvents] ?? false) !== (originalSettings.alertEvents?.[key as keyof typeof originalSettings.alertEvents] ?? false) ? 'has-changes' : ''}`}>
+                                        <Label className="admin-maintenance-toggle-label" htmlFor={`alert-event-${key}-toggle`}>
+                                            <input
+                                                id={`alert-event-${key}-toggle`}
+                                                type="checkbox"
+                                                checked={value || false}
+                                                onChange={(e) => setSettings(prev => ({
+                                                    ...prev,
+                                                    alertEvents: {
+                                                        ...(prev.alertEvents || {}),
+                                                        [key]: e.target.checked
+                                                    }
+                                                }))}
+                                                className="admin-maintenance-checkbox"
+                                            />
+                                            <span>{key.split(/(?=[A-Z])/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</span>
+                                        </Label>
+                                    </div>
+                                ))}
+
+                                {/* Save Button */}
+                                <div style={{ 
+                                    display: 'flex', 
+                                    justifyContent: 'space-between', 
+                                    alignItems: 'center', 
+                                    marginTop: '2rem', 
+                                    paddingTop: '1.5rem', 
+                                    borderTop: '1px solid hsl(var(--border))' 
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        {hasChanges && (
+                                            <span className="admin-change-indicator" style={{ fontSize: '0.875rem', color: 'hsl(var(--muted-foreground))' }}>
+                                                <AlertCircle size={14} style={{ marginRight: '0.25rem' }} aria-hidden="true" />
+                                                You have unsaved changes
+                                            </span>
+                                        )}
+                                        {saveSuccess && (
+                                            <div className={`admin-save-success-indicator ${isFadingOut ? 'fade-out' : ''}`}>
+                                                <CheckCircle2 size={16} />
+                                                <span>Settings saved successfully!</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <Button 
+                                        onClick={handleSave} 
+                                        disabled={saving || !hasChanges || Object.keys(validationErrors).length > 0} 
+                                        className="admin-add-category-btn"
+                                        aria-label={saving ? 'Saving settings' : 'Save all settings'}
+                                        aria-describedby="save-button-help-monitoring"
+                                    >
+                                        <Save size={16} aria-hidden="true" />
+                                        {saving ? t('admin.saving') : t('admin.saveSettings')}
+                                    </Button>
+                                    <span id="save-button-help-monitoring" className="sr-only">
+                                        {!hasChanges ? 'No changes to save' : Object.keys(validationErrors).length > 0 ? 'Please fix errors before saving' : 'Save all settings changes'}
+                                    </span>
+                                </div>
+                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>

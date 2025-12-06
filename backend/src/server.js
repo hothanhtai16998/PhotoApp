@@ -167,12 +167,27 @@ app.use('/api', csrfToken);
 app.use('/api', validateCsrf);
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-    res.status(200).json({
-        status: 'ok',
-        timestamp: new Date().toISOString(),
-        version: '1.0.0-cors-fix', // Version marker to verify deployment
-    });
+app.get('/api/health', async (req, res) => {
+    try {
+        const { getSystemStatus } = await import('./utils/systemMetrics.js');
+        const systemStatus = await getSystemStatus();
+        
+        res.status(200).json({
+            status: systemStatus.status === 'critical' ? 'error' : 'ok',
+            timestamp: new Date().toISOString(),
+            version: '1.0.0-cors-fix',
+            system: {
+                database: systemStatus.databaseStatus,
+                storage: systemStatus.storageStatus,
+            },
+        });
+    } catch (error) {
+        res.status(200).json({
+            status: 'ok',
+            timestamp: new Date().toISOString(),
+            version: '1.0.0-cors-fix',
+        });
+    }
 });
 
 // CSRF token endpoint (for frontend to retrieve token)
@@ -297,6 +312,10 @@ const startServer = async () => {
         
         // Start pre-upload cleanup scheduler
         startPreUploadCleanup();
+        
+        // Start system monitoring and alerting
+        const { startMonitoring } = await import('./utils/alertMonitor.js');
+        startMonitoring();
 
         const PORT = env.PORT;
         app.listen(PORT, '0.0.0.0', () => {
@@ -305,17 +324,21 @@ const startServer = async () => {
         });
 
         // Graceful shutdown handlers
-        process.on('SIGTERM', () => {
+        process.on('SIGTERM', async () => {
             logger.info('SIGTERM received, shutting down gracefully...');
             stopSessionCleanup();
             stopPreUploadCleanup();
+            const { stopMonitoring } = await import('./utils/alertMonitor.js');
+            stopMonitoring();
             process.exit(0);
         });
 
-        process.on('SIGINT', () => {
+        process.on('SIGINT', async () => {
             logger.info('SIGINT received, shutting down gracefully...');
             stopSessionCleanup();
             stopPreUploadCleanup();
+            const { stopMonitoring } = await import('./utils/alertMonitor.js');
+            stopMonitoring();
             process.exit(0);
         });
     } catch (error) {
