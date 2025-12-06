@@ -132,19 +132,25 @@ export function AdminSettings() {
         { value: 'Australia/Sydney', label: 'Australia/Sydney (AEDT)' },
     ];
 
-    useEffect(() => {
-        if (!isSuperAdmin() && !hasPermission('manageSettings')) {
-            toast.error('Bạn không có quyền quản lý cài đặt');
-            return;
-        }
-        loadSettings();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    const loadSettings = async () => {
+    const loadSettings = useCallback(async () => {
         try {
-            setLoading(true);
-            const data = await adminService.getSettings();
+            // Don't block UI - load in background
+            // setLoading(true);
+            console.log('[AdminSettings] Starting to load settings in background...');
+            
+            // Use admin endpoint to get full settings (requires auth)
+            // Add timeout to prevent hanging
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Request timeout')), 10000); // 10 second timeout
+            });
+            
+            const startTime = Date.now();
+            const data = await Promise.race([
+                adminService.getSettings(),
+                timeoutPromise
+            ]) as { settings: Record<string, unknown> };
+            const endTime = Date.now();
+            console.log(`[AdminSettings] Settings loaded in ${endTime - startTime}ms`, data);
             if (data.settings) {
                 const settingsData = data.settings as {
                     siteName?: string;
@@ -230,14 +236,69 @@ export function AdminSettings() {
                 };
                 setSettings(loadedSettings);
                 setOriginalSettings(loadedSettings);
+            } else {
+                // If no settings returned, use defaults (already set in initial state)
+                console.warn('No settings data returned from API');
             }
         } catch (error: unknown) {
-            const axiosError = error as { response?: { data?: { message?: string } } };
-            toast.error(axiosError.response?.data?.message || 'Lỗi khi tải cài đặt');
+            const axiosError = error as { response?: { data?: { message?: string } } | undefined; message?: string };
+            console.error('Failed to load settings:', error);
+            
+            // Check if it's a timeout error
+            if (axiosError.message === 'Request timeout' || error instanceof Error && error.message === 'Request timeout') {
+                toast.error('Yêu cầu hết thời gian. Đang sử dụng cài đặt mặc định.');
+            } else {
+                toast.error(axiosError.response?.data?.message || axiosError.message || 'Lỗi khi tải cài đặt. Đang sử dụng cài đặt mặc định.');
+            }
+            
+            // Use default settings if API fails - don't block the UI
+            // Settings are already initialized with defaults, so we can proceed
         } finally {
-            setLoading(false);
+            // UI is already shown, no need to set loading
+            // setLoading(false);
         }
-    };
+    }, []);
+
+    // Load settings on mount
+    useEffect(() => {
+        let mounted = true;
+        let timeoutId: NodeJS.Timeout;
+        
+        const initializeSettings = async () => {
+            // Check permissions first
+            if (!isSuperAdmin() && !hasPermission('manageSettings')) {
+                if (mounted) {
+                    toast.error('Bạn không có quyền quản lý cài đặt');
+                    setLoading(false);
+                }
+                return;
+            }
+            
+            // No timeout needed - UI is already shown
+            
+            try {
+                await loadSettings();
+                if (mounted && timeoutId) {
+                    clearTimeout(timeoutId);
+                }
+            } catch (error) {
+                if (mounted) {
+                    console.error('Failed to load settings:', error);
+                    // Don't set loading - UI is already shown with defaults
+                }
+            }
+        };
+        
+        initializeSettings();
+        
+        return () => {
+            mounted = false;
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Only run once on mount
 
     // Real-time validation (memoized to avoid recreating on every render)
     const validateSettings = useCallback(() => {
@@ -284,14 +345,98 @@ export function AdminSettings() {
             errors.socialYoutube = 'Please enter a valid URL (must start with http:// or https://)';
         }
         
+        // Validate security settings
+        if (settings.passwordMinLength < 6 || settings.passwordMinLength > 20) {
+            errors.passwordMinLength = 'Password minimum length must be between 6 and 20 characters';
+        }
+        
+        if (settings.passwordExpirationDays < 0 || settings.passwordExpirationDays > 365) {
+            errors.passwordExpirationDays = 'Password expiration must be between 0 and 365 days';
+        }
+        
+        if (settings.refreshTokenExpiry < 1 || settings.refreshTokenExpiry > 365) {
+            errors.refreshTokenExpiry = 'Refresh token expiry must be between 1 and 365 days';
+        }
+        
+        if (settings.maxConcurrentSessions < 0 || settings.maxConcurrentSessions > 100) {
+            errors.maxConcurrentSessions = 'Max concurrent sessions must be between 0 and 100';
+        }
+        
+        // Validate that at least one complexity requirement is enabled
+        if (!settings.passwordRequireUppercase && !settings.passwordRequireLowercase && 
+            !settings.passwordRequireNumber && !settings.passwordRequireSpecialChar) {
+            errors.passwordComplexity = 'At least one complexity requirement must be enabled';
+        }
+        
         setValidationErrors(errors);
         return Object.keys(errors).length === 0;
     }, [settings, selectedFileTypes]);
 
-    // Check if settings have changed (memoized to avoid expensive JSON.stringify on every render)
+    // Memoize social media links comparison to avoid expensive JSON.stringify in render
+    const socialLinksChanged = useMemo(() => {
+        return JSON.stringify(settings.socialMediaLinks) !== JSON.stringify(originalSettings.socialMediaLinks);
+    }, [settings.socialMediaLinks, originalSettings.socialMediaLinks]);
+
+    // Memoize password complexity comparison
+    const passwordComplexityChanged = useMemo(() => {
+        return JSON.stringify({
+            passwordRequireUppercase: settings.passwordRequireUppercase,
+            passwordRequireLowercase: settings.passwordRequireLowercase,
+            passwordRequireNumber: settings.passwordRequireNumber,
+            passwordRequireSpecialChar: settings.passwordRequireSpecialChar,
+        }) !== JSON.stringify({
+            passwordRequireUppercase: originalSettings.passwordRequireUppercase,
+            passwordRequireLowercase: originalSettings.passwordRequireLowercase,
+            passwordRequireNumber: originalSettings.passwordRequireNumber,
+            passwordRequireSpecialChar: originalSettings.passwordRequireSpecialChar,
+        });
+    }, [
+        settings.passwordRequireUppercase,
+        settings.passwordRequireLowercase,
+        settings.passwordRequireNumber,
+        settings.passwordRequireSpecialChar,
+        originalSettings.passwordRequireUppercase,
+        originalSettings.passwordRequireLowercase,
+        originalSettings.passwordRequireNumber,
+        originalSettings.passwordRequireSpecialChar,
+    ]);
+
+    // Check if settings have changed (optimized shallow comparison first, then deep if needed)
     const hasChanges = useMemo(() => {
+        // Quick shallow comparison for common changes
+        if (settings.siteName !== originalSettings.siteName ||
+            settings.siteDescription !== originalSettings.siteDescription ||
+            settings.maxUploadSize !== originalSettings.maxUploadSize ||
+            settings.allowedFileTypes !== originalSettings.allowedFileTypes ||
+            settings.maintenanceMode !== originalSettings.maintenanceMode ||
+            settings.siteLogo !== originalSettings.siteLogo ||
+            settings.favicon !== originalSettings.favicon ||
+            settings.defaultLanguage !== originalSettings.defaultLanguage ||
+            settings.timezone !== originalSettings.timezone ||
+            settings.contactEmail !== originalSettings.contactEmail ||
+            settings.imageQuality !== originalSettings.imageQuality ||
+            settings.watermarkEnabled !== originalSettings.watermarkEnabled ||
+            settings.watermarkImage !== originalSettings.watermarkImage ||
+            settings.autoResizeEnabled !== originalSettings.autoResizeEnabled ||
+            settings.autoResizeMaxWidth !== originalSettings.autoResizeMaxWidth ||
+            settings.autoResizeMaxHeight !== originalSettings.autoResizeMaxHeight ||
+            settings.maxVideoDuration !== originalSettings.maxVideoDuration ||
+            settings.videoQuality !== originalSettings.videoQuality ||
+            settings.batchUploadLimit !== originalSettings.batchUploadLimit ||
+            settings.passwordMinLength !== originalSettings.passwordMinLength ||
+            settings.passwordExpirationDays !== originalSettings.passwordExpirationDays ||
+            settings.accessTokenExpiry !== originalSettings.accessTokenExpiry ||
+            settings.refreshTokenExpiry !== originalSettings.refreshTokenExpiry ||
+            settings.maxConcurrentSessions !== originalSettings.maxConcurrentSessions ||
+            settings.forceLogoutOnPasswordChange !== originalSettings.forceLogoutOnPasswordChange ||
+            socialLinksChanged ||
+            passwordComplexityChanged
+        ) {
+            return true;
+        }
+        // If shallow comparison passes, do deep comparison (rare case)
         return JSON.stringify(settings) !== JSON.stringify(originalSettings);
-    }, [settings, originalSettings]);
+    }, [settings, originalSettings, socialLinksChanged, passwordComplexityChanged]);
 
     const handleSave = async () => {
         if (!isSuperAdmin() && !hasPermission('manageSettings')) {
@@ -357,14 +502,15 @@ export function AdminSettings() {
 
     // Validate on settings change (debounced to avoid excessive validation)
     useEffect(() => {
-        if (loading) return;
+        // Don't block validation - UI is already shown
+        // if (loading) return;
         
         const timeoutId = setTimeout(() => {
             validateSettings();
         }, 300); // Debounce validation by 300ms
         
         return () => clearTimeout(timeoutId);
-    }, [settings, selectedFileTypes, loading, validateSettings]);
+    }, [settings, selectedFileTypes, validateSettings]);
 
     const handleSendAnnouncement = async () => {
         if (!isSuperAdmin() && !hasPermission('manageSettings')) {
@@ -489,9 +635,10 @@ export function AdminSettings() {
         }
     };
 
-    if (loading) {
-        return <div className="admin-loading">Đang tải...</div>;
-    }
+    // Don't block UI - show immediately with defaults, load in background
+    // if (loading) {
+    //     return <div className="admin-loading">Đang tải...</div>;
+    // }
 
     return (
         <div className="admin-settings">
@@ -918,7 +1065,7 @@ export function AdminSettings() {
                                 </div>
 
                                 {/* Social Media Links */}
-                                <div className={`admin-form-group ${JSON.stringify(settings.socialMediaLinks) !== JSON.stringify(originalSettings.socialMediaLinks) ? 'has-changes' : ''}`}>
+                                <div className={`admin-form-group ${socialLinksChanged ? 'has-changes' : ''}`}>
                                     <Label className="admin-form-label-with-icon">
                                         <Link2 size={16} className="admin-form-label-icon" aria-hidden="true" />
                                         Social Media Links
@@ -1011,7 +1158,7 @@ export function AdminSettings() {
                                             />
                                         </div>
                                     </div>
-                                    {JSON.stringify(settings.socialMediaLinks) !== JSON.stringify(originalSettings.socialMediaLinks) && (
+                                    {socialLinksChanged && (
                                         <p className="admin-change-indicator" aria-live="polite">
                                             <span className="admin-change-dot" aria-hidden="true"></span>
                                             Modified
@@ -1617,6 +1764,348 @@ export function AdminSettings() {
                                     </span>
                 </div>
             </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* Security Settings Tab */}
+                <TabsContent 
+                    value="security" 
+                    className="admin-settings-tab-content"
+                    ref={tabContentRef}
+                    onTouchStart={handleContentTouchStart}
+                    onTouchMove={handleContentTouchMove}
+                    onTouchEnd={handleContentTouchEnd}
+                >
+                    <Card className="admin-settings-card">
+                        <CardHeader>
+                            <CardTitle className="admin-settings-card-title">
+                                <Lock size={20} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                Security Settings
+                            </CardTitle>
+                            <CardDescription>
+                                Configure password policies, session management, and security settings
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="admin-form">
+                                {/* Password Policy Section */}
+                                <div className="admin-settings-section-divider">
+                                    <h3 className="admin-settings-section-title">
+                                        <Shield size={18} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                        Password Policy
+                                    </h3>
+                                </div>
+
+                                {/* Password Minimum Length */}
+                                <div className={`admin-form-group admin-form-group-critical ${settings.passwordMinLength !== originalSettings.passwordMinLength ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="password-min-length-input" className="admin-form-label-with-icon">
+                                        <Lock size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Minimum Length
+                                        <span className="admin-setting-importance-badge admin-setting-importance-critical">Critical</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Minimum number of characters required for passwords
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <Input
+                                        id="password-min-length-input"
+                                        type="number"
+                                        value={settings.passwordMinLength}
+                                        onChange={(e) => setSettings(prev => ({ ...prev, passwordMinLength: parseInt(e.target.value) || 6 }))}
+                                        min="6"
+                                        max="20"
+                                        className={validationErrors.passwordMinLength ? 'input-error' : ''}
+                                        aria-describedby={validationErrors.passwordMinLength ? 'password-min-length-error' : 'password-min-length-help'}
+                                        aria-invalid={validationErrors.passwordMinLength ? 'true' : 'false'}
+                                    />
+                                    {validationErrors.passwordMinLength && (
+                                        <p className="admin-validation-error" id="password-min-length-error" role="alert" aria-live="polite">
+                                            <AlertCircle size={14} aria-hidden="true" />
+                                            {validationErrors.passwordMinLength}
+                                        </p>
+                                    )}
+                                    <p id="password-min-length-help" className="admin-form-help-text">
+                                        Passwords must be at least {settings.passwordMinLength} characters long
+                                    </p>
+                                    {settings.passwordMinLength !== originalSettings.passwordMinLength && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Password Complexity Requirements */}
+                                <div className={`admin-form-group admin-form-group-important ${passwordComplexityChanged ? 'has-changes' : ''}`}>
+                                    <Label className="admin-form-label-with-icon">
+                                        <Shield size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Complexity Requirements
+                                        <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Configure which character types are required in passwords
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <div className="admin-checkbox-group">
+                                        <label className="admin-checkbox-label">
+                                            <input
+                                                type="checkbox"
+                                                checked={settings.passwordRequireUppercase}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, passwordRequireUppercase: e.target.checked }))}
+                                                className="admin-checkbox"
+                                            />
+                                            <span>Require Uppercase (A-Z)</span>
+                                        </label>
+                                        <label className="admin-checkbox-label">
+                                            <input
+                                                type="checkbox"
+                                                checked={settings.passwordRequireLowercase}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, passwordRequireLowercase: e.target.checked }))}
+                                                className="admin-checkbox"
+                                            />
+                                            <span>Require Lowercase (a-z)</span>
+                                        </label>
+                                        <label className="admin-checkbox-label">
+                                            <input
+                                                type="checkbox"
+                                                checked={settings.passwordRequireNumber}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, passwordRequireNumber: e.target.checked }))}
+                                                className="admin-checkbox"
+                                            />
+                                            <span>Require Number (0-9)</span>
+                                        </label>
+                                        <label className="admin-checkbox-label">
+                                            <input
+                                                type="checkbox"
+                                                checked={settings.passwordRequireSpecialChar}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, passwordRequireSpecialChar: e.target.checked }))}
+                                                className="admin-checkbox"
+                                            />
+                                            <span>Require Special Character (!@#$%^&*)</span>
+                                        </label>
+                                    </div>
+                                    {passwordComplexityChanged && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Password Expiration */}
+                                <div className={`admin-form-group ${settings.passwordExpirationDays !== originalSettings.passwordExpirationDays ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="password-expiration-input" className="admin-form-label-with-icon">
+                                        <Clock size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Password Expiration (Days)
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Number of days until passwords expire. Set to 0 to disable expiration.
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <Input
+                                        id="password-expiration-input"
+                                        type="number"
+                                        value={settings.passwordExpirationDays}
+                                        onChange={(e) => setSettings(prev => ({ ...prev, passwordExpirationDays: parseInt(e.target.value) || 0 }))}
+                                        min="0"
+                                        max="365"
+                                    />
+                                    <p className="admin-form-help-text">
+                                        {settings.passwordExpirationDays === 0 
+                                            ? 'Passwords never expire' 
+                                            : `Passwords expire after ${settings.passwordExpirationDays} days`}
+                                    </p>
+                                    {settings.passwordExpirationDays !== originalSettings.passwordExpirationDays && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Session Management Section */}
+                                <div className="admin-settings-section-divider" style={{ marginTop: '2rem' }}>
+                                    <h3 className="admin-settings-section-title">
+                                        <Clock size={18} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                        Session Management
+                                    </h3>
+                                </div>
+
+                                {/* Access Token Expiry */}
+                                <div className={`admin-form-group admin-form-group-important ${settings.accessTokenExpiry !== originalSettings.accessTokenExpiry ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="access-token-expiry-select" className="admin-form-label-with-icon">
+                                        <Lock size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Access Token Expiry
+                                        <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                How long access tokens remain valid before requiring refresh
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <select
+                                        id="access-token-expiry-select"
+                                        value={settings.accessTokenExpiry}
+                                        onChange={(e) => setSettings(prev => ({ ...prev, accessTokenExpiry: e.target.value }))}
+                                        className="admin-select"
+                                    >
+                                        <option value="15m">15 minutes</option>
+                                        <option value="30m">30 minutes</option>
+                                        <option value="1h">1 hour</option>
+                                        <option value="2h">2 hours</option>
+                                        <option value="4h">4 hours</option>
+                                        <option value="8h">8 hours</option>
+                                        <option value="24h">24 hours</option>
+                                    </select>
+                                    <p className="admin-form-help-text">
+                                        Current: {settings.accessTokenExpiry}
+                                    </p>
+                                    {settings.accessTokenExpiry !== originalSettings.accessTokenExpiry && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Refresh Token Expiry */}
+                                <div className={`admin-form-group admin-form-group-important ${settings.refreshTokenExpiry !== originalSettings.refreshTokenExpiry ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="refresh-token-expiry-input" className="admin-form-label-with-icon">
+                                        <Clock size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Refresh Token Expiry (Days)
+                                        <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                How long refresh tokens remain valid before users must log in again
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <Input
+                                        id="refresh-token-expiry-input"
+                                        type="number"
+                                        value={settings.refreshTokenExpiry}
+                                        onChange={(e) => setSettings(prev => ({ ...prev, refreshTokenExpiry: parseInt(e.target.value) || 7 }))}
+                                        min="1"
+                                        max="365"
+                                    />
+                                    <p className="admin-form-help-text">
+                                        Users stay logged in for {settings.refreshTokenExpiry} days
+                                    </p>
+                                    {settings.refreshTokenExpiry !== originalSettings.refreshTokenExpiry && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Max Concurrent Sessions */}
+                                <div className={`admin-form-group ${settings.maxConcurrentSessions !== originalSettings.maxConcurrentSessions ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="max-concurrent-sessions-input" className="admin-form-label-with-icon">
+                                        <Server size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Max Concurrent Sessions
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Maximum number of active sessions per user. Set to 0 for unlimited.
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <Input
+                                        id="max-concurrent-sessions-input"
+                                        type="number"
+                                        value={settings.maxConcurrentSessions}
+                                        onChange={(e) => setSettings(prev => ({ ...prev, maxConcurrentSessions: parseInt(e.target.value) || 0 }))}
+                                        min="0"
+                                        max="100"
+                                    />
+                                    <p className="admin-form-help-text">
+                                        {settings.maxConcurrentSessions === 0 
+                                            ? 'Unlimited concurrent sessions allowed' 
+                                            : `Users can have up to ${settings.maxConcurrentSessions} active sessions`}
+                                    </p>
+                                    {settings.maxConcurrentSessions !== originalSettings.maxConcurrentSessions && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Force Logout on Password Change */}
+                                <div className={`admin-form-group ${settings.forceLogoutOnPasswordChange !== originalSettings.forceLogoutOnPasswordChange ? 'has-changes' : ''}`}>
+                                    <Label className="admin-form-label-with-icon" htmlFor="force-logout-toggle">
+                                        <Shield size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Force Logout on Password Change
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Automatically log out all user sessions when password is changed
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <label className="admin-toggle-switch">
+                                        <input
+                                            id="force-logout-toggle"
+                                            type="checkbox"
+                                            checked={settings.forceLogoutOnPasswordChange}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, forceLogoutOnPasswordChange: e.target.checked }))}
+                                            className="admin-toggle-input"
+                                        />
+                                        <span className="admin-toggle-slider"></span>
+                                    </label>
+                                    <p className="admin-form-help-text">
+                                        {settings.forceLogoutOnPasswordChange 
+                                            ? 'All sessions will be terminated when password is changed' 
+                                            : 'Users will remain logged in after password change'}
+                                    </p>
+                                    {settings.forceLogoutOnPasswordChange !== originalSettings.forceLogoutOnPasswordChange && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="admin-modal-actions">
+                                    <div className="admin-actions-status">
+                                        {hasChanges && (
+                                            <div className="admin-unsaved-changes-indicator">
+                                                <AlertCircle size={16} />
+                                                <span>You have unsaved changes</span>
+                                            </div>
+                                        )}
+                                        {saveSuccess && (
+                                            <div className={`admin-save-success-indicator ${isFadingOut ? 'fade-out' : ''}`}>
+                                                <CheckCircle2 size={16} />
+                                                <span>Settings saved successfully!</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <Button 
+                                        onClick={handleSave} 
+                                        disabled={saving || !hasChanges || Object.keys(validationErrors).length > 0} 
+                                        className="admin-add-category-btn"
+                                        aria-label={saving ? 'Saving settings' : 'Save all settings'}
+                                        aria-describedby="save-button-help"
+                                    >
+                                        <Save size={16} aria-hidden="true" />
+                                        {saving ? t('admin.saving') : t('admin.saveSettings')}
+                                    </Button>
+                                    <span id="save-button-help" className="sr-only">
+                                        {!hasChanges ? 'No changes to save' : Object.keys(validationErrors).length > 0 ? 'Please fix errors before saving' : 'Save all settings changes'}
+                                    </span>
+                                </div>
+                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
