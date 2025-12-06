@@ -36,10 +36,7 @@ const ImagePage = lazy(() => import("./pages/ImagePage"));
 const CollectionsPage = lazy(() => import("./pages/CollectionsPage"));
 const CollectionDetailPage = lazy(() => import("./pages/collection/CollectionDetailPage"));
 const AboutPage = lazy(() => import("./pages/AboutPage"));
-const UnsplashGridTestPage = lazy(() => import("./pages/ImageGrid"));
-const UnsplashModalTestPage = lazy(() => import("./pages/test/UnsplashModalTest"));
 const NoFlashGridPage = lazy(() => import("./pages/test/NoFlashGrid"));
-const ImageGridTest = lazy(() => import("./pages/test/ImageGridTest"));
 
 
 // Loading fallback component
@@ -57,7 +54,7 @@ function App() {
   const location = useLocation();
   // Load site settings to update document title and meta tags
   const { settings } = useSiteSettings();
-  
+
   // Update meta description when site description changes
   useEffect(() => {
     if (settings.siteDescription) {
@@ -67,7 +64,7 @@ function App() {
       }
     }
   }, [settings.siteDescription]);
-  
+
   // Check maintenance mode - block non-admin users from accessing the site
   useEffect(() => {
     if (settings.maintenanceMode && !location.pathname.startsWith('/admin') && !location.pathname.startsWith('/maintenance')) {
@@ -100,7 +97,7 @@ function App() {
           </div>
         `;
         document.body.appendChild(maintenanceMessage);
-        
+
         return () => {
           const overlay = document.getElementById('maintenance-overlay');
           if (overlay) overlay.remove();
@@ -110,7 +107,7 @@ function App() {
     // Return undefined if no cleanup needed
     return undefined;
   }, [settings.maintenanceMode, location.pathname]);
-  
+
   // When navigating to a photo from the grid, keep the previous
   // location as background so the grid stays mounted under the modal.
   const state = location.state as { background?: Location; inlineModal?: boolean } | undefined;
@@ -146,10 +143,7 @@ function App() {
           <Route path="/signin" element={<SignInPage />} />
           <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
           <Route path="/about" element={<AboutPage />} />
-          <Route path="/UnsplashGridTestPage" element={<UnsplashGridTestPage />} />
-          <Route path="/test/unsplash-modal" element={<UnsplashModalTestPage />} />
           <Route path="/test/no-flash-grid" element={<NoFlashGridPage />} />
-          <Route path="/test/image-grid" element={<ImageGridTest />} />
           {/* <Route path="/UnsplashGrid" element={<UnsplashGrid />} /> */}
 
 
