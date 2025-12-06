@@ -5,7 +5,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Save, Megaphone, X, Settings, Upload, Shield, Bell, Globe, ChevronDown, ChevronUp, HelpCircle, CheckCircle2, AlertCircle, ChevronRight, Home, Info, AlertTriangle, CheckCircle, XCircle, Eye, EyeOff, FileText, Image as ImageIcon, Server, Database, Lock, Unlock, Mail, Languages, Clock, Link2, Facebook, Twitter, Instagram, Linkedin, Youtube, Image, Video, HardDrive, Cloud, Maximize2, Plus, Minus } from 'lucide-react';
+import { Save, Megaphone, X, Settings, Upload, Shield, Bell, Globe, ChevronDown, ChevronUp, HelpCircle, CheckCircle2, AlertCircle, ChevronRight, Home, Info, AlertTriangle, CheckCircle, XCircle, Eye, EyeOff, FileText, Image as ImageIcon, Server, Database, Lock, Unlock, Mail, Languages, Clock, Link2, Facebook, Twitter, Instagram, Linkedin, Youtube, Image, Video, Maximize2, Plus, Minus } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { useSiteSettings } from '@/hooks/useSiteSettings';
 import { t } from '@/i18n';
@@ -43,17 +43,25 @@ export function AdminSettings() {
         },
         // Upload & Media Settings
         imageQuality: 85,
-        thumbnailSizes: ['150x150', '300x300', '600x600'],
         watermarkEnabled: false,
         watermarkImage: '',
         autoResizeEnabled: true,
         autoResizeMaxWidth: 1920,
         autoResizeMaxHeight: 1080,
-        storageProvider: 's3',
-        cdnUrl: '',
         maxVideoDuration: 300,
         videoQuality: 'high',
         batchUploadLimit: 10,
+        // Security Settings
+        passwordMinLength: 8,
+        passwordRequireUppercase: true,
+        passwordRequireLowercase: true,
+        passwordRequireNumber: true,
+        passwordRequireSpecialChar: false,
+        passwordExpirationDays: 0,
+        accessTokenExpiry: '30m',
+        refreshTokenExpiry: 14,
+        maxConcurrentSessions: 0,
+        forceLogoutOnPasswordChange: true,
     });
     
     // Available file types for selection
@@ -70,10 +78,12 @@ export function AdminSettings() {
         { value: 'webm', label: 'WebM' },
     ];
     
-    // Convert comma-separated string to array for checkbox handling
-    const selectedFileTypes = settings.allowedFileTypes.split(',').map(t => t.trim()).filter(t => t);
+    // Convert comma-separated string to array for checkbox handling (memoized)
+    const selectedFileTypes = useMemo(() => {
+        return settings.allowedFileTypes.split(',').map(t => t.trim()).filter(t => t);
+    }, [settings.allowedFileTypes]);
     
-    const handleFileTypeToggle = (fileType: string) => {
+    const handleFileTypeToggle = useCallback((fileType: string) => {
         const currentTypes = selectedFileTypes;
         const newTypes = currentTypes.includes(fileType)
             ? currentTypes.filter(t => t !== fileType)
@@ -156,17 +166,25 @@ export function AdminSettings() {
                     };
                     // Upload & Media Settings
                     imageQuality?: number;
-                    thumbnailSizes?: string[];
                     watermarkEnabled?: boolean;
                     watermarkImage?: string;
                     autoResizeEnabled?: boolean;
                     autoResizeMaxWidth?: number;
                     autoResizeMaxHeight?: number;
-                    storageProvider?: string;
-                    cdnUrl?: string;
                     maxVideoDuration?: number;
                     videoQuality?: string;
                     batchUploadLimit?: number;
+                    // Security Settings
+                    passwordMinLength?: number;
+                    passwordRequireUppercase?: boolean;
+                    passwordRequireLowercase?: boolean;
+                    passwordRequireNumber?: boolean;
+                    passwordRequireSpecialChar?: boolean;
+                    passwordExpirationDays?: number;
+                    accessTokenExpiry?: string;
+                    refreshTokenExpiry?: number;
+                    maxConcurrentSessions?: number;
+                    forceLogoutOnPasswordChange?: boolean;
                 };
                 const loadedSettings = {
                     siteName: (settingsData.siteName as string) || 'PhotoApp',
@@ -190,17 +208,25 @@ export function AdminSettings() {
                     },
                     // Upload & Media Settings
                     imageQuality: (settingsData.imageQuality as number) || 85,
-                    thumbnailSizes: (settingsData.thumbnailSizes as string[]) || ['150x150', '300x300', '600x600'],
                     watermarkEnabled: (settingsData.watermarkEnabled as boolean) || false,
                     watermarkImage: (settingsData.watermarkImage as string) || '',
                     autoResizeEnabled: (settingsData.autoResizeEnabled as boolean) ?? true,
                     autoResizeMaxWidth: (settingsData.autoResizeMaxWidth as number) || 1920,
                     autoResizeMaxHeight: (settingsData.autoResizeMaxHeight as number) || 1080,
-                    storageProvider: (settingsData.storageProvider as string) || 's3',
-                    cdnUrl: (settingsData.cdnUrl as string) || '',
                     maxVideoDuration: (settingsData.maxVideoDuration as number) || 300,
                     videoQuality: (settingsData.videoQuality as string) || 'high',
                     batchUploadLimit: (settingsData.batchUploadLimit as number) || 10,
+                    // Security Settings
+                    passwordMinLength: (settingsData.passwordMinLength as number) || 8,
+                    passwordRequireUppercase: (settingsData.passwordRequireUppercase as boolean) ?? true,
+                    passwordRequireLowercase: (settingsData.passwordRequireLowercase as boolean) ?? true,
+                    passwordRequireNumber: (settingsData.passwordRequireNumber as boolean) ?? true,
+                    passwordRequireSpecialChar: (settingsData.passwordRequireSpecialChar as boolean) ?? false,
+                    passwordExpirationDays: (settingsData.passwordExpirationDays as number) || 0,
+                    accessTokenExpiry: (settingsData.accessTokenExpiry as string) || '30m',
+                    refreshTokenExpiry: (settingsData.refreshTokenExpiry as number) || 14,
+                    maxConcurrentSessions: (settingsData.maxConcurrentSessions as number) || 0,
+                    forceLogoutOnPasswordChange: (settingsData.forceLogoutOnPasswordChange as boolean) ?? true,
                 };
                 setSettings(loadedSettings);
                 setOriginalSettings(loadedSettings);
@@ -527,6 +553,10 @@ export function AdminSettings() {
                     <TabsTrigger value="system">
                         <Shield size={16} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
                         <span>System</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="security">
+                        <Lock size={16} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                        <span>Security</span>
                     </TabsTrigger>
                     <TabsTrigger value="notifications">
                         <Bell size={16} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
@@ -1237,64 +1267,6 @@ export function AdminSettings() {
                                     )}
                                 </div>
 
-                                {/* Thumbnail Sizes */}
-                                <div className={`admin-form-group admin-form-group-important ${JSON.stringify(settings.thumbnailSizes) !== JSON.stringify(originalSettings.thumbnailSizes) ? 'has-changes' : ''}`}>
-                                    <Label className="admin-form-label-with-icon">
-                                        <Image size={16} className="admin-form-label-icon" aria-hidden="true" />
-                                        Thumbnail Sizes
-                                        <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
-                                        <div className="admin-tooltip-wrapper">
-                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
-                                            <span className="admin-tooltip-text" role="tooltip">
-                                                Configure multiple thumbnail sizes to be generated automatically for each uploaded image
-                                            </span>
-                                        </div>
-                                    </Label>
-                                    <div className="admin-thumbnail-sizes-list">
-                                        {settings.thumbnailSizes.map((size, index) => (
-                                            <div key={index} className="admin-thumbnail-size-item">
-                                                <Input
-                                                    type="text"
-                                                    value={size}
-                                                    onChange={(e) => {
-                                                        const newSizes = [...settings.thumbnailSizes];
-                                                        newSizes[index] = e.target.value;
-                                                        setSettings({ ...settings, thumbnailSizes: newSizes });
-                                                    }}
-                                                    placeholder="150x150"
-                                                    pattern="\d+x\d+"
-                                                    className="admin-thumbnail-size-input"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        const newSizes = settings.thumbnailSizes.filter((_, i) => i !== index);
-                                                        setSettings({ ...settings, thumbnailSizes: newSizes });
-                                                    }}
-                                                    className="admin-thumbnail-size-remove"
-                                                    aria-label="Remove thumbnail size"
-                                                >
-                                                    <X size={16} />
-                                                </button>
-                                            </div>
-                                        ))}
-                                        <button
-                                            type="button"
-                                            onClick={() => setSettings({ ...settings, thumbnailSizes: [...settings.thumbnailSizes, ''] })}
-                                            className="admin-thumbnail-size-add"
-                                        >
-                                            <Plus size={16} />
-                                            Add Size
-                                        </button>
-                                    </div>
-                                    {JSON.stringify(settings.thumbnailSizes) !== JSON.stringify(originalSettings.thumbnailSizes) && (
-                                        <p className="admin-change-indicator" aria-live="polite">
-                                            <span className="admin-change-dot" aria-hidden="true"></span>
-                                            Modified
-                                        </p>
-                                    )}
-                                </div>
-
                                 {/* Watermark Settings */}
                                 <div className={`admin-form-group ${settings.watermarkEnabled !== originalSettings.watermarkEnabled || settings.watermarkImage !== originalSettings.watermarkImage ? 'has-changes' : ''}`}>
                                     <Label className="admin-form-label-with-icon">
@@ -1412,64 +1384,6 @@ export function AdminSettings() {
                                                 />
                                             </div>
                                         </div>
-                                    )}
-                                </div>
-
-                                {/* Storage Provider */}
-                                <div className={`admin-form-group admin-form-group-critical ${settings.storageProvider !== originalSettings.storageProvider ? 'has-changes' : ''}`}>
-                                    <Label htmlFor="storage-provider-select" className="admin-form-label-with-icon">
-                                        <HardDrive size={16} className="admin-form-label-icon" aria-hidden="true" />
-                                        Storage Provider
-                                        <span className="admin-setting-importance-badge admin-setting-importance-critical">Critical</span>
-                                        <div className="admin-tooltip-wrapper">
-                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
-                                            <span className="admin-tooltip-text" role="tooltip">
-                                                Choose where to store uploaded files: S3 (Amazon S3), R2 (Cloudflare R2), or local storage
-                                            </span>
-                                        </div>
-                                    </Label>
-                                    <select
-                                        id="storage-provider-select"
-                                        value={settings.storageProvider}
-                                        onChange={(e) => setSettings({ ...settings, storageProvider: e.target.value })}
-                                        className="admin-select"
-                                    >
-                                        <option value="s3">Amazon S3</option>
-                                        <option value="r2">Cloudflare R2</option>
-                                        <option value="local">Local Storage</option>
-                                    </select>
-                                    {settings.storageProvider !== originalSettings.storageProvider && (
-                                        <p className="admin-change-indicator" aria-live="polite">
-                                            <span className="admin-change-dot" aria-hidden="true"></span>
-                                            Modified
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* CDN URL */}
-                                <div className={`admin-form-group ${settings.cdnUrl !== originalSettings.cdnUrl ? 'has-changes' : ''}`}>
-                                    <Label htmlFor="cdn-url-input" className="admin-form-label-with-icon">
-                                        <Cloud size={16} className="admin-form-label-icon" aria-hidden="true" />
-                                        CDN URL
-                                        <div className="admin-tooltip-wrapper">
-                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
-                                            <span className="admin-tooltip-text" role="tooltip">
-                                                Configure CDN endpoint for faster media delivery (e.g., https://cdn.example.com)
-                                            </span>
-                                        </div>
-                                    </Label>
-                                    <Input
-                                        id="cdn-url-input"
-                                        type="url"
-                                        value={settings.cdnUrl}
-                                        onChange={(e) => setSettings({ ...settings, cdnUrl: e.target.value })}
-                                        placeholder="https://cdn.example.com"
-                                    />
-                                    {settings.cdnUrl !== originalSettings.cdnUrl && (
-                                        <p className="admin-change-indicator" aria-live="polite">
-                                            <span className="admin-change-dot" aria-hidden="true"></span>
-                                            Modified
-                                        </p>
                                     )}
                                 </div>
 

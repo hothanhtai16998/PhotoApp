@@ -2118,37 +2118,54 @@
   margin-bottom: 8px;
 }
 
-/* Enhanced Focus Indicators for Keyboard Navigation */
+/* Enhanced Focus Indicators for Keyboard Navigation Only */
+/* Remove ALL focus outlines and rings for mouse clicks */
 .admin-settings input:focus,
 .admin-settings select:focus,
 .admin-settings textarea:focus,
 .admin-settings button:focus,
 .admin-settings a:focus {
-  outline: 2px solid #667eea;
-  outline-offset: 2px;
-  border-radius: 4px;
+  outline: none !important;
+  box-shadow: none !important;
+  ring: none !important;
+  border-color: var(--admin-border) !important;
 }
 
+/* Remove focus-visible styles too (no blue borders at all) */
 .admin-settings input:focus-visible,
 .admin-settings select:focus-visible,
 .admin-settings textarea:focus-visible,
 .admin-settings button:focus-visible,
 .admin-settings a:focus-visible {
-  outline: 3px solid #667eea;
-  outline-offset: 3px;
-  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+  outline: none !important;
+  box-shadow: none !important;
+  ring: none !important;
+  border-color: var(--admin-border) !important;
+}
+
+/* Override UI component focus styles */
+.admin-settings input[data-slot="input"]:focus,
+.admin-settings input[data-slot="input"]:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  ring: none !important;
+  border-color: var(--admin-border) !important;
 }
 
 /* File Type Checkbox Keyboard Navigation */
 .admin-file-type-checkbox:focus-within {
-  outline: 2px solid #667eea;
-  outline-offset: 2px;
-  border-radius: 6px;
+  outline: none;
 }
 
 .admin-file-type-checkbox input[type="checkbox"]:focus {
-  outline: 2px solid #667eea;
+  outline: none;
+}
+
+.admin-file-type-checkbox:focus-visible,
+.admin-file-type-checkbox input[type="checkbox"]:focus-visible {
+  outline: 3px solid #667eea;
   outline-offset: 2px;
+  border-radius: 6px;
 }
 
 /* Tab Keyboard Navigation */
@@ -2159,15 +2176,17 @@
   position: relative;
 }
 
-/* Card Focus States */
+/* Card Focus States - Remove for mouse clicks */
 .admin-settings-card:focus-within {
-  outline: 2px solid #667eea;
-  outline-offset: 4px;
-  border-radius: 12px;
+  outline: none;
 }
 
 /* Advanced Settings Toggle Keyboard Navigation */
 .admin-advanced-settings-toggle:focus {
+  outline: none;
+}
+
+.admin-advanced-settings-toggle:focus-visible {
   outline: 3px solid #667eea;
   outline-offset: 2px;
 }
@@ -2178,9 +2197,19 @@
   outline-offset: 2px;
 }
 
-/* Remove default focus outline for mouse users, keep for keyboard */
-.admin-settings *:focus:not(:focus-visible) {
-  outline: none;
+/* Remove ALL focus outlines completely */
+.admin-settings *:focus,
+.admin-settings *:focus-visible,
+.admin-settings *:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Exception: Keep focus for skip link (accessibility) */
+.admin-skip-link:focus,
+.admin-skip-link:focus-visible {
+  outline: 3px solid #667eea !important;
+  outline-offset: 2px !important;
 }
 
 .admin-form-group {
@@ -2353,14 +2382,22 @@
   transition: all 0.2s ease;
 }
 
+.admin-select:focus,
+.admin-select:focus-visible {
+  outline: none !important;
+  border-color: var(--admin-border) !important;
+  box-shadow: none !important;
+}
+
 .admin-select:hover {
   border-color: #667eea;
 }
 
-.admin-select:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+.admin-select:focus,
+.admin-select:focus-visible {
+  outline: none !important;
+  border-color: var(--admin-border) !important;
+  box-shadow: none !important;
 }
 
 /* Progressive Disclosure - Advanced Settings */
@@ -3116,6 +3153,44 @@
   .admin-resize-dimensions {
     grid-template-columns: 1fr;
   }
+}
+
+/* Storage Provider Warning */
+.admin-storage-provider-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  margin-top: 12px;
+}
+
+.dark-theme .admin-storage-provider-warning {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.admin-warning-icon {
+  color: #f59e0b;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.admin-warning-content {
+  flex: 1;
+  font-size: 0.875rem;
+  color: #92400e;
+  line-height: 1.5;
+}
+
+.dark-theme .admin-warning-content {
+  color: #fcd34d;
+}
+
+.admin-warning-content strong {
+  font-weight: 600;
 }
 
 /* Real-time Validation Styles */
@@ -4668,9 +4743,11 @@
   border-color: #111;
 }
 
-.admin-select:focus {
-  outline: none;
-  border-color: #111;
+.admin-select:focus,
+.admin-select:focus-visible {
+  outline: none !important;
+  border-color: var(--admin-border) !important;
+  box-shadow: none !important;
 }
 
 .admin-section-title {
