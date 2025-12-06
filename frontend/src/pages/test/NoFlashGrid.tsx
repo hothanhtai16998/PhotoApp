@@ -1258,141 +1258,141 @@ function ImageModal({
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Bottom info */}
-                    <div
-                        style={{
-                            background: '#0a54e6',
-                            color: '#fff',
-                            padding: '24px 16px',
-                        }}
-                    >
+                        {/* Bottom info (scrolls with content) */}
                         <div
                             style={{
-                                display: 'flex',
-                                gap: 24,
-                                flexWrap: 'wrap',
-                                marginBottom: 24,
+                                background: '#ffffff',
+                                color: '#333',
+                                padding: '24px 16px',
                             }}
                         >
-                            {/* Left: image info */}
-                            <div style={{ flex: '1 1 480px', minWidth: 320 }}>
-                                <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>
-                                    {img.imageTitle || 'Untitled image'}
-                                </div>
-                                <div style={{ display: 'flex', gap: 12, marginBottom: 12, fontSize: 14 }}>
-                                    <span>Views: {(img as any)?.views ?? '—'}</span>
-                                    <span>Downloads: {(img as any)?.downloads ?? '—'}</span>
-                                </div>
-                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-                                    <span style={{ padding: '6px 10px', borderRadius: 16, background: '#fff2', fontSize: 13 }}>
-                                        Tag 1
-                                    </span>
-                                    <span style={{ padding: '6px 10px', borderRadius: 16, background: '#fff2', fontSize: 13 }}>
-                                        Tag 2
-                                    </span>
-                                    <span style={{ padding: '6px 10px', borderRadius: 16, background: '#fff2', fontSize: 13 }}>
-                                        Tag 3
-                                    </span>
-                                </div>
-                                <div style={{ fontSize: 14, lineHeight: 1.5 }}>
-                                    {(img as any)?.description || 'No description provided.'}
-                                </div>
-                            </div>
-
-                            {/* Right: actions */}
                             <div
                                 style={{
-                                    flex: '1 1 240px',
-                                    minWidth: 200,
                                     display: 'flex',
+                                    gap: 24,
                                     flexWrap: 'wrap',
-                                    gap: 8,
-                                    alignItems: 'center',
-                                    justifyContent: 'flex-start',
+                                    marginBottom: 24,
                                 }}
                             >
-                                {['Save', 'Share', 'Report', 'Edit', 'Download'].map((label) => (
-                                    <button
-                                        key={label}
-                                        style={{
-                                            padding: '10px 12px',
-                                            borderRadius: 6,
-                                            border: 'none',
-                                            cursor: 'pointer',
-                                            minWidth: 100,
-                                        }}
-                                    >
-                                        {label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
+                                {/* Left: image info */}
+                                <div style={{ flex: '1 1 480px', minWidth: 320 }}>
+                                    <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>
+                                        {img.imageTitle || 'Untitled image'}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 12, marginBottom: 12, fontSize: 14 }}>
+                                        <span>Views: {(img as any)?.views ?? '—'}</span>
+                                        <span>Downloads: {(img as any)?.downloads ?? '—'}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                                        <span style={{ padding: '6px 10px', borderRadius: 16, background: '#fff2', fontSize: 13 }}>
+                                            Tag 1
+                                        </span>
+                                        <span style={{ padding: '6px 10px', borderRadius: 16, background: '#fff2', fontSize: 13 }}>
+                                            Tag 2
+                                        </span>
+                                        <span style={{ padding: '6px 10px', borderRadius: 16, background: '#fff2', fontSize: 13 }}>
+                                            Tag 3
+                                        </span>
+                                    </div>
+                                    <div style={{ fontSize: 14, lineHeight: 1.5 }}>
+                                        {(img as any)?.description || 'No description provided.'}
+                                    </div>
+                                </div>
 
-                        {/* Related images */}
-                        <div>
-                            <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Related images</div>
-                            <div
-                                style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-                                    gap: 12,
-                                }}
-                            >
-                                {images
-                                    .filter((_, i) => i !== index)
-                                    .slice(0, 8)
-                                    .map((related, i) => {
-                                        const originalIdx = images.findIndex((imgItem) => imgItem === related);
-                                        return (
-                                            <div
-                                                key={related._id || i}
-                                                style={{
-                                                    width: '100%',
-                                                    paddingBottom: '70%',
-                                                    position: 'relative',
-                                                    borderRadius: 8,
-                                                    overflow: 'hidden',
-                                                    background: '#fff2',
-                                                    cursor: 'pointer',
-                                                }}
-                                                onClick={() => {
-                                                    if (onSelectIndex && originalIdx >= 0) {
-                                                        onSelectIndex(originalIdx);
-                                                    }
-                                                }}
-                                            >
-                                                {related.thumbnailUrl || related.smallUrl || related.imageUrl ? (
-                                                    <img
-                                                        src={related.thumbnailUrl || related.smallUrl || related.imageUrl}
-                                                        alt={related.imageTitle || 'related'}
-                                                        style={{
-                                                            position: 'absolute',
-                                                            inset: 0,
-                                                            width: '100%',
-                                                            height: '100%',
-                                                            objectFit: 'cover',
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <div
-                                                        style={{
-                                                            position: 'absolute',
-                                                            inset: 0,
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            color: '#fff',
-                                                            opacity: 0.8,
-                                                        }}
-                                                    >
-                                                        No preview
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
+                                {/* Right: actions */}
+                                <div
+                                    style={{
+                                        flex: '1 1 240px',
+                                        minWidth: 200,
+                                        display: 'flex',
+                                        flexWrap: 'wrap',
+                                        gap: 8,
+                                        alignItems: 'center',
+                                        justifyContent: 'flex-start',
+                                    }}
+                                >
+                                    {['Save', 'Share', 'Report', 'Edit', 'Download'].map((label) => (
+                                        <button
+                                            key={label}
+                                            style={{
+                                                padding: '10px 12px',
+                                                borderRadius: 6,
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                minWidth: 100,
+                                            }}
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Related images */}
+                            <div>
+                                <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Related images</div>
+                                <div
+                                    style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                                        gap: 12,
+                                    }}
+                                >
+                                    {images
+                                        .filter((_, i) => i !== index)
+                                        .slice(0, 8)
+                                        .map((related, i) => {
+                                            const originalIdx = images.findIndex((imgItem) => imgItem === related);
+                                            return (
+                                                <div
+                                                    key={related._id || i}
+                                                    style={{
+                                                        width: '100%',
+                                                        paddingBottom: '70%',
+                                                        position: 'relative',
+                                                        borderRadius: 8,
+                                                        overflow: 'hidden',
+                                                        background: '#fff2',
+                                                        cursor: 'pointer',
+                                                    }}
+                                                    onClick={() => {
+                                                        if (onSelectIndex && originalIdx >= 0) {
+                                                            onSelectIndex(originalIdx);
+                                                        }
+                                                    }}
+                                                >
+                                                    {related.thumbnailUrl || related.smallUrl || related.imageUrl ? (
+                                                        <img
+                                                            src={related.thumbnailUrl || related.smallUrl || related.imageUrl}
+                                                            alt={related.imageTitle || 'related'}
+                                                            style={{
+                                                                position: 'absolute',
+                                                                inset: 0,
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                objectFit: 'cover',
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <div
+                                                            style={{
+                                                                position: 'absolute',
+                                                                inset: 0,
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                color: '#333',
+                                                                opacity: 0.8,
+                                                            }}
+                                                        >
+                                                            No preview
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                </div>
                             </div>
                         </div>
                     </div>
