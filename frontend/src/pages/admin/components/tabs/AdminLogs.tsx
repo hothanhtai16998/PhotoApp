@@ -29,7 +29,8 @@ export function AdminLogs() {
 
     const loadLogs = async (page = 1) => {
         try {
-            setLoading(true);
+            // Don't block UI - load in background
+            // setLoading(true);
             const data = await adminService.getSystemLogs({ page, limit: 50, search });
             setLogs((data.logs as Log[]) || []);
         } catch (error: unknown) {
@@ -45,9 +46,10 @@ export function AdminLogs() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [search]);
 
-    if (loading) {
-        return <div className="admin-loading">Đang tải...</div>;
-    }
+    // Show UI immediately - don't block
+    // if (loading) {
+    //     return <div className="admin-loading">Đang tải...</div>;
+    // }
 
     return (
         <div className="admin-logs">

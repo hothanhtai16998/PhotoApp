@@ -5,7 +5,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Save, Megaphone, X, Settings, Upload, Shield, Bell, Globe, ChevronDown, ChevronUp, HelpCircle, CheckCircle2, AlertCircle, ChevronRight, Home, Info, AlertTriangle, CheckCircle, XCircle, Eye, EyeOff, FileText, Image as ImageIcon, Server, Database, Lock, Unlock, Mail, Languages, Clock, Link2, Facebook, Twitter, Instagram, Linkedin, Youtube, Image, Video, Maximize2, Plus, Minus } from 'lucide-react';
+import { Save, Megaphone, X, Settings, Upload, Shield, Bell, Globe, ChevronDown, ChevronUp, HelpCircle, CheckCircle2, AlertCircle, ChevronRight, Home, Info, AlertTriangle, CheckCircle, XCircle, Eye, EyeOff, FileText, Image as ImageIcon, Server, Database, Lock, Unlock, Mail, Languages, Clock, Link2, Facebook, Twitter, Instagram, Linkedin, Youtube, Image, Video, Maximize2, Plus, Minus, Palette, Type, Layout, Monitor } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { useSiteSettings } from '@/hooks/useSiteSettings';
 import { t } from '@/i18n';
@@ -62,6 +62,17 @@ export function AdminSettings() {
         refreshTokenExpiry: 14,
         maxConcurrentSessions: 0,
         forceLogoutOnPasswordChange: true,
+        // Appearance & Branding Settings
+        themePrimaryColor: '#7c3aed',
+        themeSecondaryColor: '#a78bfa',
+        themeAccentColor: '#67e8f9',
+        darkModeEnabled: false,
+        darkModeDefault: 'auto',
+        customCSS: '',
+        fontFamily: 'Roboto',
+        fontSize: '16px',
+        defaultViewMode: 'grid',
+        homepageLayout: 'default',
     });
     
     // Available file types for selection
@@ -233,6 +244,17 @@ export function AdminSettings() {
                     refreshTokenExpiry: (settingsData.refreshTokenExpiry as number) || 14,
                     maxConcurrentSessions: (settingsData.maxConcurrentSessions as number) || 0,
                     forceLogoutOnPasswordChange: (settingsData.forceLogoutOnPasswordChange as boolean) ?? true,
+                    // Appearance & Branding Settings
+                    themePrimaryColor: (settingsData.themePrimaryColor as string) || '#7c3aed',
+                    themeSecondaryColor: (settingsData.themeSecondaryColor as string) || '#a78bfa',
+                    themeAccentColor: (settingsData.themeAccentColor as string) || '#67e8f9',
+                    darkModeEnabled: (settingsData.darkModeEnabled as boolean) ?? false,
+                    darkModeDefault: (settingsData.darkModeDefault as string) || 'auto',
+                    customCSS: (settingsData.customCSS as string) || '',
+                    fontFamily: (settingsData.fontFamily as string) || 'Roboto',
+                    fontSize: (settingsData.fontSize as string) || '16px',
+                    defaultViewMode: (settingsData.defaultViewMode as string) || 'grid',
+                    homepageLayout: (settingsData.homepageLayout as string) || 'default',
                 };
                 setSettings(loadedSettings);
                 setOriginalSettings(loadedSettings);
@@ -269,7 +291,7 @@ export function AdminSettings() {
             if (!isSuperAdmin() && !hasPermission('manageSettings')) {
                 if (mounted) {
                     toast.error('Bạn không có quyền quản lý cài đặt');
-                    setLoading(false);
+            setLoading(false);
                 }
                 return;
             }
@@ -362,11 +384,8 @@ export function AdminSettings() {
             errors.maxConcurrentSessions = 'Max concurrent sessions must be between 0 and 100';
         }
         
-        // Validate that at least one complexity requirement is enabled
-        if (!settings.passwordRequireUppercase && !settings.passwordRequireLowercase && 
-            !settings.passwordRequireNumber && !settings.passwordRequireSpecialChar) {
-            errors.passwordComplexity = 'At least one complexity requirement must be enabled';
-        }
+        // Allow all complexity requirements to be disabled (admin choice)
+        // Removed validation - admin can choose to have no complexity requirements
         
         setValidationErrors(errors);
         return Object.keys(errors).length === 0;
@@ -430,7 +449,18 @@ export function AdminSettings() {
             settings.maxConcurrentSessions !== originalSettings.maxConcurrentSessions ||
             settings.forceLogoutOnPasswordChange !== originalSettings.forceLogoutOnPasswordChange ||
             socialLinksChanged ||
-            passwordComplexityChanged
+            passwordComplexityChanged ||
+            // Appearance & Branding Settings
+            settings.themePrimaryColor !== originalSettings.themePrimaryColor ||
+            settings.themeSecondaryColor !== originalSettings.themeSecondaryColor ||
+            settings.themeAccentColor !== originalSettings.themeAccentColor ||
+            settings.darkModeEnabled !== originalSettings.darkModeEnabled ||
+            settings.darkModeDefault !== originalSettings.darkModeDefault ||
+            settings.customCSS !== originalSettings.customCSS ||
+            settings.fontFamily !== originalSettings.fontFamily ||
+            settings.fontSize !== originalSettings.fontSize ||
+            settings.defaultViewMode !== originalSettings.defaultViewMode ||
+            settings.homepageLayout !== originalSettings.homepageLayout
         ) {
             return true;
         }
@@ -704,6 +734,10 @@ export function AdminSettings() {
                     <TabsTrigger value="security">
                         <Lock size={16} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
                         <span>Security</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="appearance">
+                        <Palette size={16} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                        <span>Appearance</span>
                     </TabsTrigger>
                     <TabsTrigger value="notifications">
                         <Bell size={16} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
@@ -1077,12 +1111,12 @@ export function AdminSettings() {
                                         </div>
                                     </Label>
                                     <div className="admin-social-links-grid">
-                                        <div className="admin-form-group">
+                <div className="admin-form-group">
                                             <Label htmlFor="social-facebook" className="admin-social-label">
                                                 <Facebook size={16} className="admin-social-icon" aria-hidden="true" />
                                                 Facebook
                                             </Label>
-                                            <Input
+                    <Input
                                                 id="social-facebook"
                                                 type="url"
                                                 value={settings.socialMediaLinks.facebook}
@@ -1426,9 +1460,9 @@ export function AdminSettings() {
                                             </span>
                                         </div>
                                     </Label>
-                                    <div className="admin-form-group">
+                <div className="admin-form-group">
                                         <Label className="admin-maintenance-toggle-label" htmlFor="watermark-enabled-toggle">
-                                            <input
+                        <input
                                                 id="watermark-enabled-toggle"
                                                 type="checkbox"
                                                 checked={settings.watermarkEnabled}
@@ -1601,6 +1635,466 @@ export function AdminSettings() {
                                         Users can upload up to {settings.batchUploadLimit} files at once
                                     </p>
                                     {settings.batchUploadLimit !== originalSettings.batchUploadLimit && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="admin-modal-actions">
+                                    <div className="admin-actions-status">
+                                        {hasChanges && (
+                                            <div className="admin-unsaved-changes-indicator">
+                                                <AlertCircle size={16} />
+                                                <span>You have unsaved changes</span>
+                                            </div>
+                                        )}
+                                        {saveSuccess && (
+                                            <div className={`admin-save-success-indicator ${isFadingOut ? 'fade-out' : ''}`}>
+                                                <CheckCircle2 size={16} />
+                                                <span>Settings saved successfully!</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <Button 
+                                        onClick={handleSave} 
+                                        disabled={saving || !hasChanges || Object.keys(validationErrors).length > 0} 
+                                        className="admin-add-category-btn"
+                                        aria-label={saving ? 'Saving settings' : 'Save all settings'}
+                                        aria-describedby="save-button-help"
+                                    >
+                                        <Save size={16} aria-hidden="true" />
+                                        {saving ? t('admin.saving') : t('admin.saveSettings')}
+                                    </Button>
+                                    <span id="save-button-help" className="sr-only">
+                                        {!hasChanges ? 'No changes to save' : Object.keys(validationErrors).length > 0 ? 'Please fix errors before saving' : 'Save all settings changes'}
+                                    </span>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* Appearance & Branding Tab */}
+                <TabsContent 
+                    value="appearance" 
+                    className="admin-settings-tab-content"
+                    ref={tabContentRef}
+                    onTouchStart={handleContentTouchStart}
+                    onTouchMove={handleContentTouchMove}
+                    onTouchEnd={handleContentTouchEnd}
+                >
+                    <Card className="admin-settings-card">
+                        <CardHeader>
+                            <CardTitle className="admin-settings-card-title">
+                                <Palette size={20} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                Appearance & Branding
+                            </CardTitle>
+                            <CardDescription>
+                                Customize the visual appearance, colors, fonts, and layout of your site.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="admin-form">
+                                {/* Theme Colors Section */}
+                                <div className="admin-settings-section-divider">
+                                    <h3 className="admin-settings-section-title">
+                                        <Palette size={18} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                        Theme Colors
+                                    </h3>
+                                </div>
+
+                                {/* Primary Color */}
+                                <div className={`admin-form-group admin-form-group-important ${settings.themePrimaryColor !== originalSettings.themePrimaryColor ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="theme-primary-color-input" className="admin-form-label-with-icon">
+                                        <Palette size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Primary Color
+                                        <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Main brand color used for buttons, links, and primary actions
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                        <Input
+                                            id="theme-primary-color-input"
+                                            type="color"
+                                            value={settings.themePrimaryColor}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, themePrimaryColor: e.target.value }))}
+                                            style={{ width: '60px', height: '40px', padding: '2px', cursor: 'pointer' }}
+                                            aria-describedby="theme-primary-color-help"
+                                        />
+                                        <Input
+                                            type="text"
+                                            value={settings.themePrimaryColor}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, themePrimaryColor: e.target.value }))}
+                                            placeholder="#7c3aed"
+                                            style={{ flex: 1 }}
+                                            aria-label="Primary color hex code"
+                                        />
+                                    </div>
+                                    <p className="admin-form-help-text" id="theme-primary-color-help">
+                                        Main brand color (hex format: #RRGGBB)
+                                    </p>
+                                    {settings.themePrimaryColor !== originalSettings.themePrimaryColor && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Secondary Color */}
+                                <div className={`admin-form-group ${settings.themeSecondaryColor !== originalSettings.themeSecondaryColor ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="theme-secondary-color-input" className="admin-form-label-with-icon">
+                                        <Palette size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Secondary Color
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Secondary brand color for accents and highlights
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                        <Input
+                                            id="theme-secondary-color-input"
+                                            type="color"
+                                            value={settings.themeSecondaryColor}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, themeSecondaryColor: e.target.value }))}
+                                            style={{ width: '60px', height: '40px', padding: '2px', cursor: 'pointer' }}
+                                            aria-describedby="theme-secondary-color-help"
+                                        />
+                                        <Input
+                                            type="text"
+                                            value={settings.themeSecondaryColor}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, themeSecondaryColor: e.target.value }))}
+                                            placeholder="#a78bfa"
+                                            style={{ flex: 1 }}
+                                            aria-label="Secondary color hex code"
+                                        />
+                                    </div>
+                                    <p className="admin-form-help-text" id="theme-secondary-color-help">
+                                        Secondary brand color (hex format: #RRGGBB)
+                                    </p>
+                                    {settings.themeSecondaryColor !== originalSettings.themeSecondaryColor && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Accent Color */}
+                                <div className={`admin-form-group ${settings.themeAccentColor !== originalSettings.themeAccentColor ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="theme-accent-color-input" className="admin-form-label-with-icon">
+                                        <Palette size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Accent Color
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Accent color for special highlights and call-to-action elements
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                        <Input
+                                            id="theme-accent-color-input"
+                                            type="color"
+                                            value={settings.themeAccentColor}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, themeAccentColor: e.target.value }))}
+                                            style={{ width: '60px', height: '40px', padding: '2px', cursor: 'pointer' }}
+                                            aria-describedby="theme-accent-color-help"
+                                        />
+                                        <Input
+                                            type="text"
+                                            value={settings.themeAccentColor}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, themeAccentColor: e.target.value }))}
+                                            placeholder="#67e8f9"
+                                            style={{ flex: 1 }}
+                                            aria-label="Accent color hex code"
+                                        />
+                                    </div>
+                                    <p className="admin-form-help-text" id="theme-accent-color-help">
+                                        Accent color (hex format: #RRGGBB)
+                                    </p>
+                                    {settings.themeAccentColor !== originalSettings.themeAccentColor && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Dark Mode Section */}
+                                <div className="admin-settings-section-divider" style={{ marginTop: '2rem' }}>
+                                    <h3 className="admin-settings-section-title">
+                                        <Monitor size={18} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                        Dark Mode
+                                    </h3>
+                                </div>
+
+                                {/* Dark Mode Enabled */}
+                                <div className={`admin-form-group admin-form-group-important ${settings.darkModeEnabled !== originalSettings.darkModeEnabled ? 'has-changes' : ''}`}>
+                                    <Label className="admin-form-label-with-icon" htmlFor="dark-mode-enabled-toggle">
+                                        <Monitor size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Enable Dark Mode
+                                        <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Allow users to switch between light and dark themes
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <label className="admin-toggle-switch-label" htmlFor="dark-mode-enabled-toggle">
+                                        <input
+                                            id="dark-mode-enabled-toggle"
+                                            type="checkbox"
+                                            checked={settings.darkModeEnabled}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, darkModeEnabled: e.target.checked }))}
+                                            className="admin-toggle-input"
+                                            aria-describedby="dark-mode-enabled-help"
+                                        />
+                                        <span className="admin-toggle-slider"></span>
+                                    </label>
+                                    <p className="admin-form-help-text" id="dark-mode-enabled-help">
+                                        {settings.darkModeEnabled ? 'Dark mode is available to users' : 'Dark mode is disabled'}
+                                    </p>
+                                    {settings.darkModeEnabled !== originalSettings.darkModeEnabled && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Dark Mode Default */}
+                                {settings.darkModeEnabled && (
+                                    <div className={`admin-form-group ${settings.darkModeDefault !== originalSettings.darkModeDefault ? 'has-changes' : ''}`}>
+                                        <Label htmlFor="dark-mode-default-select" className="admin-form-label-with-icon">
+                                            <Monitor size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                            Default Theme
+                                            <div className="admin-tooltip-wrapper">
+                                                <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                                <span className="admin-tooltip-text" role="tooltip">
+                                                    Default theme for new users (auto uses system preference)
+                                                </span>
+                                            </div>
+                                        </Label>
+                                        <select
+                                            id="dark-mode-default-select"
+                                            value={settings.darkModeDefault}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, darkModeDefault: e.target.value }))}
+                                            className="admin-select"
+                                            aria-describedby="dark-mode-default-help"
+                                        >
+                                            <option value="auto">Auto (System Preference)</option>
+                                            <option value="light">Light</option>
+                                            <option value="dark">Dark</option>
+                                        </select>
+                                        <p className="admin-form-help-text" id="dark-mode-default-help">
+                                            Default theme: {settings.darkModeDefault === 'auto' ? 'Follows system preference' : settings.darkModeDefault === 'dark' ? 'Dark mode' : 'Light mode'}
+                                        </p>
+                                        {settings.darkModeDefault !== originalSettings.darkModeDefault && (
+                                            <p className="admin-change-indicator" aria-live="polite">
+                                                <span className="admin-change-dot" aria-hidden="true"></span>
+                                                Modified
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Custom CSS Section */}
+                                <div className="admin-settings-section-divider" style={{ marginTop: '2rem' }}>
+                                    <h3 className="admin-settings-section-title">
+                                        <FileText size={18} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                        Custom CSS
+                                    </h3>
+                                </div>
+
+                                {/* Custom CSS */}
+                                <div className={`admin-form-group ${settings.customCSS !== originalSettings.customCSS ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="custom-css-textarea" className="admin-form-label-with-icon">
+                                        <FileText size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Custom CSS Code
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Inject custom CSS to override default styles. Use with caution.
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <Textarea
+                                        id="custom-css-textarea"
+                                        value={settings.customCSS}
+                                        onChange={(e) => setSettings(prev => ({ ...prev, customCSS: e.target.value }))}
+                                        placeholder="/* Your custom CSS here */"
+                                        rows={8}
+                                        className="admin-textarea"
+                                        style={{ fontFamily: 'monospace', fontSize: '13px' }}
+                                        aria-describedby="custom-css-help"
+                                    />
+                                    <p className="admin-form-help-text" id="custom-css-help">
+                                        Custom CSS will be injected into all pages. Use with caution.
+                                    </p>
+                                    {settings.customCSS !== originalSettings.customCSS && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Font Settings Section */}
+                                <div className="admin-settings-section-divider" style={{ marginTop: '2rem' }}>
+                                    <h3 className="admin-settings-section-title">
+                                        <Type size={18} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                        Font Settings
+                                    </h3>
+                                </div>
+
+                                {/* Font Family */}
+                                <div className={`admin-form-group ${settings.fontFamily !== originalSettings.fontFamily ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="font-family-select" className="admin-form-label-with-icon">
+                                        <Type size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Font Family
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Choose the default font family for the site
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <select
+                                        id="font-family-select"
+                                        value={settings.fontFamily}
+                                        onChange={(e) => setSettings(prev => ({ ...prev, fontFamily: e.target.value }))}
+                                        className="admin-select"
+                                        aria-describedby="font-family-help"
+                                    >
+                                        <option value="Roboto">Roboto</option>
+                                        <option value="Inter">Inter</option>
+                                        <option value="Open Sans">Open Sans</option>
+                                        <option value="Lato">Lato</option>
+                                        <option value="Montserrat">Montserrat</option>
+                                        <option value="Poppins">Poppins</option>
+                                        <option value="System">System Default</option>
+                                    </select>
+                                    <p className="admin-form-help-text" id="font-family-help">
+                                        Current font: {settings.fontFamily}
+                                    </p>
+                                    {settings.fontFamily !== originalSettings.fontFamily && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Font Size */}
+                                <div className={`admin-form-group ${settings.fontSize !== originalSettings.fontSize ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="font-size-input" className="admin-form-label-with-icon">
+                                        <Type size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Base Font Size
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Base font size for the site (px, rem, or em)
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <Input
+                                        id="font-size-input"
+                                        type="text"
+                                        value={settings.fontSize}
+                                        onChange={(e) => setSettings(prev => ({ ...prev, fontSize: e.target.value }))}
+                                        placeholder="16px"
+                                        aria-describedby="font-size-help"
+                                    />
+                                    <p className="admin-form-help-text" id="font-size-help">
+                                        Base font size: {settings.fontSize} (e.g., 16px, 1rem, 1em)
+                                    </p>
+                                    {settings.fontSize !== originalSettings.fontSize && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Layout Options Section */}
+                                <div className="admin-settings-section-divider" style={{ marginTop: '2rem' }}>
+                                    <h3 className="admin-settings-section-title">
+                                        <Layout size={18} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                        Layout Options
+                                    </h3>
+                                </div>
+
+                                {/* Default View Mode */}
+                                <div className={`admin-form-group ${settings.defaultViewMode !== originalSettings.defaultViewMode ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="default-view-mode-select" className="admin-form-label-with-icon">
+                                        <Layout size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Default View Mode
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Default view mode for image galleries and collections
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <select
+                                        id="default-view-mode-select"
+                                        value={settings.defaultViewMode}
+                                        onChange={(e) => setSettings(prev => ({ ...prev, defaultViewMode: e.target.value }))}
+                                        className="admin-select"
+                                        aria-describedby="default-view-mode-help"
+                                    >
+                                        <option value="grid">Grid View</option>
+                                        <option value="list">List View</option>
+                                    </select>
+                                    <p className="admin-form-help-text" id="default-view-mode-help">
+                                        Default view: {settings.defaultViewMode === 'grid' ? 'Grid (masonry layout)' : 'List (vertical list)'}
+                                    </p>
+                                    {settings.defaultViewMode !== originalSettings.defaultViewMode && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Homepage Layout */}
+                                <div className={`admin-form-group ${settings.homepageLayout !== originalSettings.homepageLayout ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="homepage-layout-select" className="admin-form-label-with-icon">
+                                        <Home size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Homepage Layout
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Choose the default layout style for the homepage
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <select
+                                        id="homepage-layout-select"
+                                        value={settings.homepageLayout}
+                                        onChange={(e) => setSettings(prev => ({ ...prev, homepageLayout: e.target.value }))}
+                                        className="admin-select"
+                                        aria-describedby="homepage-layout-help"
+                                    >
+                                        <option value="default">Default</option>
+                                        <option value="compact">Compact</option>
+                                        <option value="spacious">Spacious</option>
+                                        <option value="featured">Featured First</option>
+                                    </select>
+                                    <p className="admin-form-help-text" id="homepage-layout-help">
+                                        Homepage layout: {settings.homepageLayout}
+                                    </p>
+                                    {settings.homepageLayout !== originalSettings.homepageLayout && (
                                         <p className="admin-change-indicator" aria-live="polite">
                                             <span className="admin-change-dot" aria-hidden="true"></span>
                                             Modified
@@ -1836,7 +2330,7 @@ export function AdminSettings() {
                                             Modified
                                         </p>
                                     )}
-                                </div>
+                </div>
 
                                 {/* Password Complexity Requirements */}
                                 <div className={`admin-form-group admin-form-group-important ${passwordComplexityChanged ? 'has-changes' : ''}`}>
@@ -2130,7 +2624,7 @@ export function AdminSettings() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            {!showAnnouncementForm ? (
+                {!showAnnouncementForm ? (
                                 <div className="admin-empty-state">
                                     <div className="admin-empty-state-icon">
                                         <Bell size={48} />

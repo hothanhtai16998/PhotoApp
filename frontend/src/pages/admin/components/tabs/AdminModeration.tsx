@@ -34,7 +34,8 @@ export function AdminModeration() {
 
     const loadPendingContent = async () => {
         try {
-            setLoading(true);
+            // Don't block UI - load in background
+            // setLoading(true);
             const data = await adminService.getPendingContent();
             setPendingContent((data.content as PendingContentItem[]) || []);
         } catch (error: unknown) {
@@ -76,9 +77,10 @@ export function AdminModeration() {
         }
     };
 
-    if (loading) {
-        return <div className="admin-loading">{t('common.loading')}</div>;
-    }
+    // Show UI immediately - don't block
+    // if (loading) {
+    //     return <div className="admin-loading">{t('common.loading')}</div>;
+    // }
 
     return (
         <div className="admin-moderation">

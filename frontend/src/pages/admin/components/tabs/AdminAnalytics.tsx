@@ -30,7 +30,8 @@ export function AdminAnalytics() {
 
     const loadAnalytics = async () => {
         try {
-            setLoading(true);
+            // Don't block UI - load in background
+            // setLoading(true);
             const data = await adminService.getAnalytics(days);
             setAnalytics(data);
         } catch (error: unknown) {
@@ -78,29 +79,45 @@ export function AdminAnalytics() {
         return ((current - previous) / previous) * 100;
     };
 
+    // Use default/empty analytics if not loaded yet - define before useMemo
+    const displayAnalytics = analytics || {
+        users: { total: 0, new: 0 },
+        images: { total: 0, pendingModeration: 0, approved: 0 },
+        dailyUsers: [],
+        dailyUploads: [],
+        dailyPending: [],
+        dailyApproved: [],
+        dailyUsersComparison: [],
+        dailyUploadsComparison: [],
+        dailyPendingComparison: [],
+        dailyApprovedComparison: [],
+        topUploaders: [],
+        categories: [],
+    };
+
     // Prepare chart data based on active tab - MUST be called before early returns (Rules of Hooks)
     const chartData = useMemo(() => {
-        if (!analytics) return [];
+        if (!displayAnalytics || !displayAnalytics.dailyUsers) return [];
         
         let dataSource: Array<{ _id: string; count: number }> = [];
         let comparisonSource: Array<{ _id: string; count: number }> = [];
         
         switch (activeTab) {
             case 'users':
-                dataSource = analytics.dailyUsers || [];
-                comparisonSource = analytics.dailyUsersComparison || [];
+                dataSource = displayAnalytics.dailyUsers || [];
+                comparisonSource = displayAnalytics.dailyUsersComparison || [];
                 break;
             case 'images':
-                dataSource = analytics.dailyUploads || [];
-                comparisonSource = analytics.dailyUploadsComparison || [];
+                dataSource = displayAnalytics.dailyUploads || [];
+                comparisonSource = displayAnalytics.dailyUploadsComparison || [];
                 break;
             case 'pending':
-                dataSource = analytics.dailyPending || [];
-                comparisonSource = analytics.dailyPendingComparison || [];
+                dataSource = displayAnalytics.dailyPending || [];
+                comparisonSource = displayAnalytics.dailyPendingComparison || [];
                 break;
             case 'approved':
-                dataSource = analytics.dailyApproved || [];
-                comparisonSource = analytics.dailyApprovedComparison || [];
+                dataSource = displayAnalytics.dailyApproved || [];
+                comparisonSource = displayAnalytics.dailyApprovedComparison || [];
                 break;
         }
 
@@ -170,13 +187,13 @@ export function AdminAnalytics() {
         // Find first non-zero data point and slice from there
         const firstDataIndex = chartDataArray.findIndex(d => d.value > 0);
         return firstDataIndex >= 0 ? chartDataArray.slice(firstDataIndex) : chartDataArray;
-    }, [activeTab, analytics, days]);
+    }, [activeTab, displayAnalytics, days]);
 
     // Calculate percentages - safe to call even if analytics is null
-    const userPercentage = analytics ? calculatePercentage(analytics.users.total) : 0;
-    const imagePercentage = analytics ? calculatePercentage(analytics.images.total) : 0;
-    const pendingPercentage = analytics ? calculatePercentage(analytics.images.pendingModeration) : 0;
-    const approvedPercentage = analytics ? calculatePercentage(analytics.images.approved) : 0;
+    const userPercentage = displayAnalytics ? calculatePercentage(displayAnalytics.users.total) : 0;
+    const imagePercentage = displayAnalytics ? calculatePercentage(displayAnalytics.images.total) : 0;
+    const pendingPercentage = displayAnalytics ? calculatePercentage(displayAnalytics.images.pendingModeration) : 0;
+    const approvedPercentage = displayAnalytics ? calculatePercentage(displayAnalytics.images.approved) : 0;
 
     // Format chart data for the selected metric tab with profile page logic
     const formattedChartData = useMemo(() => {
@@ -214,13 +231,19 @@ export function AdminAnalytics() {
         },
     };
 
-    if (loading) {
-        return <div className="admin-loading">{t('common.loading')}</div>;
-    }
+    // Show UI immediately - don't block
+    // if (loading) {
+    //     return <div className="admin-loading">{t('common.loading')}</div>;
+    // }
 
-    if (!analytics) {
-        return <div className="admin-loading">Không có dữ liệu</div>;
-    }
+    // Show UI immediately with skeleton/placeholders - don't block
+    // if (!analytics) {
+    //     return (
+    //         <div className="admin-analytics-falcon">
+    //             <div className="admin-loading">{loading ? t('common.loading') : 'Không có dữ liệu'}</div>
+    //         </div>
+    //     );
+    // }
 
     return (
         <div className="admin-analytics-falcon">
@@ -231,7 +254,7 @@ export function AdminAnalytics() {
                     onClick={() => setActiveTab('users')}
                 >
                     <div className="falcon-metric-label">{t('admin.users')}</div>
-                    <div className="falcon-metric-value">{analytics.users.total.toLocaleString()}</div>
+                    <div className="falcon-metric-value">{displayAnalytics.users.total.toLocaleString()}</div>
                     <div className={`falcon-metric-change ${userPercentage >= 0 ? 'positive' : 'negative'}`}>
                         {userPercentage >= 0 ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
                         {Math.abs(userPercentage).toFixed(1)}%
@@ -242,7 +265,7 @@ export function AdminAnalytics() {
                     onClick={() => setActiveTab('images')}
                 >
                     <div className="falcon-metric-label">{t('admin.images')}</div>
-                    <div className="falcon-metric-value">{analytics.images.total.toLocaleString()}</div>
+                    <div className="falcon-metric-value">{displayAnalytics.images.total.toLocaleString()}</div>
                     <div className={`falcon-metric-change ${imagePercentage >= 0 ? 'positive' : 'negative'}`}>
                         {imagePercentage >= 0 ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
                         {Math.abs(imagePercentage).toFixed(1)}%
@@ -253,7 +276,7 @@ export function AdminAnalytics() {
                     onClick={() => setActiveTab('pending')}
                 >
                     <div className="falcon-metric-label">{t('admin.pending')}</div>
-                    <div className="falcon-metric-value">{analytics.images.pendingModeration.toLocaleString()}</div>
+                    <div className="falcon-metric-value">{displayAnalytics.images.pendingModeration.toLocaleString()}</div>
                     <div className={`falcon-metric-change ${pendingPercentage >= 0 ? 'positive' : 'negative'}`}>
                         {pendingPercentage >= 0 ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
                         {Math.abs(pendingPercentage).toFixed(1)}%
@@ -264,7 +287,7 @@ export function AdminAnalytics() {
                     onClick={() => setActiveTab('approved')}
                 >
                     <div className="falcon-metric-label">{t('admin.approved')}</div>
-                    <div className="falcon-metric-value">{analytics.images.approved.toLocaleString()}</div>
+                    <div className="falcon-metric-value">{displayAnalytics.images.approved.toLocaleString()}</div>
                     <div className={`falcon-metric-change ${approvedPercentage >= 0 ? 'positive' : 'negative'}`}>
                         {approvedPercentage >= 0 ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
                         {Math.abs(approvedPercentage).toFixed(1)}%
@@ -395,15 +418,15 @@ export function AdminAnalytics() {
                             <div className="falcon-stats-row">
                                 <div className="falcon-stat-item">
                                     <div className="falcon-stat-label">{t('admin.totalUsers')}</div>
-                                    <div className="falcon-stat-value">{analytics.users.total.toLocaleString()}</div>
+                                    <div className="falcon-stat-value">{displayAnalytics.users.total.toLocaleString()}</div>
                                 </div>
                                 <div className="falcon-stat-item">
                                     <div className="falcon-stat-label">{t('admin.newUsers', { days })}</div>
-                                    <div className="falcon-stat-value">{analytics.users.new.toLocaleString()}</div>
+                                    <div className="falcon-stat-value">{displayAnalytics.users.new.toLocaleString()}</div>
                                 </div>
                                 <div className="falcon-stat-item">
                                     <div className="falcon-stat-label">{t('admin.bannedUsers')}</div>
-                                    <div className="falcon-stat-value">{analytics.users.banned.toLocaleString()}</div>
+                                    <div className="falcon-stat-value">{(displayAnalytics.users as any).banned?.toLocaleString() || '0'}</div>
                                 </div>
                             </div>
                         </div>
@@ -421,19 +444,19 @@ export function AdminAnalytics() {
                             <div className="falcon-stats-row">
                                 <div className="falcon-stat-item">
                                     <div className="falcon-stat-label">Tổng ảnh</div>
-                                    <div className="falcon-stat-value">{analytics.images.total.toLocaleString()}</div>
+                                    <div className="falcon-stat-value">{displayAnalytics.images.total.toLocaleString()}</div>
                                 </div>
                                 <div className="falcon-stat-item">
                                     <div className="falcon-stat-label">{t('admin.newImages', { days })}</div>
-                                    <div className="falcon-stat-value">{analytics.images.new.toLocaleString()}</div>
+                                    <div className="falcon-stat-value">{(displayAnalytics.images as any).new?.toLocaleString() || '0'}</div>
                                 </div>
                                 <div className="falcon-stat-item">
                                     <div className="falcon-stat-label">Chờ duyệt</div>
-                                    <div className="falcon-stat-value">{analytics.images.pendingModeration.toLocaleString()}</div>
+                                    <div className="falcon-stat-value">{displayAnalytics.images.pendingModeration.toLocaleString()}</div>
                                 </div>
                                 <div className="falcon-stat-item">
                                     <div className="falcon-stat-label">Đã phê duyệt</div>
-                                    <div className="falcon-stat-value">{analytics.images.approved.toLocaleString()}</div>
+                                    <div className="falcon-stat-value">{displayAnalytics.images.approved.toLocaleString()}</div>
                                 </div>
                             </div>
                         </div>
@@ -452,8 +475,8 @@ export function AdminAnalytics() {
                         <div className="falcon-card-body">
                             <div className="falcon-chart-container">
                                 <div className="falcon-bar-chart">
-                                    {analytics.dailyUploads.map((day) => {
-                                        const maxCount = Math.max(...analytics.dailyUploads.map(d => d.count), 1);
+                                    {(displayAnalytics.dailyUploads || []).map((day) => {
+                                        const maxCount = Math.max(...(displayAnalytics.dailyUploads || []).map(d => d.count), 1);
                                         const height = (day.count / maxCount) * 100;
                                         return (
                                             <div key={day._id} className="falcon-bar-item">
@@ -481,7 +504,7 @@ export function AdminAnalytics() {
                         <div className="falcon-card-body">
                             <ResponsiveContainer width="100%" height={300}>
                                 <LineChart
-                                    data={analytics.categories.map(cat => ({
+                                    data={(displayAnalytics.categories || []).map(cat => ({
                                         name: cat.name || 'Không xác định',
                                         count: cat.count,
                                         _id: cat._id
@@ -557,7 +580,7 @@ export function AdminAnalytics() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {analytics.topUploaders?.map((uploader, index) => (
+                                        {(displayAnalytics.topUploaders || [])?.map((uploader, index) => (
                                             <tr key={uploader.userId}>
                                                 <td>{index + 1}</td>
                                                 <td>{uploader.username}</td>
@@ -581,8 +604,8 @@ export function AdminAnalytics() {
                 </h2>
                 <div className="admin-daily-uploads-chart">
                     {(() => {
-                        const maxCount = Math.max(...analytics.dailyUploads.map(d => d.count), 1);
-                        return analytics.dailyUploads.map((day) => {
+                        const maxCount = Math.max(...(displayAnalytics.dailyUploads || []).map(d => d.count), 1);
+                        return (displayAnalytics.dailyUploads || []).map((day) => {
                             const height = (day.count / maxCount) * 100;
                             const date = new Date(day._id);
                             const dayNumber = date.getDate();
@@ -611,8 +634,8 @@ export function AdminAnalytics() {
                     Top người tải lên ({days} ngày gần nhất)
                 </h2>
                 <div className="admin-top-uploaders">
-                    {analytics.topUploaders?.map((uploader, index) => {
-                        const maxCount = analytics.topUploaders?.[0]?.uploadCount || 1;
+                    {(displayAnalytics.topUploaders || [])?.map((uploader, index) => {
+                        const maxCount = (displayAnalytics.topUploaders || [])?.[0]?.uploadCount || 1;
                         const percentage = (uploader.uploadCount / maxCount) * 100;
                         const medalColors = ['#FFD700', '#C0C0C0', '#CD7F32'];
                         const medalColor = medalColors[index] || '#6B7280';

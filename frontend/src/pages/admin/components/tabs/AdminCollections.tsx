@@ -35,7 +35,10 @@ export function AdminCollections() {
 
     const loadCollections = async (page: number = 1) => {
         try {
-            setLoading(true);
+            // Don't block UI on initial load - only show loading for subsequent loads
+            if (collections.length > 0) {
+                setLoading(true);
+            }
             const data = await adminService.getAllCollections({
                 page,
                 limit: 20,
@@ -86,9 +89,10 @@ export function AdminCollections() {
         }
     };
 
-    if (loading && collections.length === 0) {
-        return <div className="admin-loading">Đang tải danh sách bộ sưu tập...</div>;
-    }
+    // Show UI immediately - don't block initial load
+    // if (loading && collections.length === 0) {
+    //     return <div className="admin-loading">Đang tải danh sách bộ sưu tập...</div>;
+    // }
 
     return (
         <div className="admin-collections">

@@ -43,7 +43,8 @@ export function AdminFavorites() {
 
     const loadFavorites = async (page = 1) => {
         try {
-            setLoading(true);
+            // Don't block UI - load in background
+            // setLoading(true);
             const data = await adminService.getAllFavorites({ page, limit: 20, search });
             setFavorites((data.favorites as Favorite[]) || []);
             setPagination(data.pagination);
@@ -80,9 +81,10 @@ export function AdminFavorites() {
         }
     };
 
-    if (loading) {
-        return <div className="admin-loading">{t('admin.loading')}</div>;
-    }
+    // Show UI immediately - don't block
+    // if (loading) {
+    //     return <div className="admin-loading">{t('admin.loading')}</div>;
+    // }
 
     return (
         <div className="admin-favorites">
