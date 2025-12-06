@@ -98,6 +98,7 @@ export async function processUploadJob(job) {
         
         const newImage = await Image.create({
             imageUrl: uploadResult.imageUrl,
+            base64Thumbnail: uploadResult.base64Thumbnail,
             thumbnailUrl: uploadResult.thumbnailUrl,
             smallUrl: uploadResult.smallUrl,
             regularUrl: uploadResult.regularUrl,

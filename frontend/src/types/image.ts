@@ -10,6 +10,7 @@ export interface Image {
   width: number;
   height: number;
   // Multiple image sizes for progressive loading (like Unsplash)
+  base64Thumbnail?: string; // Tiny base64 BMP (20x20px) for instant blur-up - data:image/bmp;base64,...
   thumbnailUrl?: string; // Small thumbnail for blur-up effect - WebP
   smallUrl?: string; // Small size for grid view - WebP
   regularUrl?: string; // Regular size for detail view - WebP

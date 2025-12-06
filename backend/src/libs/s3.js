@@ -170,6 +170,18 @@ export async function uploadImageWithSizes(buffer, bucket, filename, mimetype = 
 				contentType || 'image/gif'
 			);
 
+			// Generate tiny base64 PNG for instant blur-up
+			// Using PNG instead of BMP since Sharp doesn't support BMP output
+			// Preserve aspect ratio to prevent distortion
+			const tinyPngBuffer = await sharp(buffer)
+				.resize(20, 20, { 
+					fit: 'inside', // Preserve aspect ratio, fit inside 20x20 box
+					withoutEnlargement: true
+				})
+				.png({ compressionLevel: 9, quality: 80 }) // High compression for tiny image
+				.toBuffer();
+			const base64Thumbnail = `data:image/png;base64,${tinyPngBuffer.toString('base64')}`;
+
 			return {
 				publicId: filename,
 				thumbnailUrl: originalUrl,
@@ -180,6 +192,7 @@ export async function uploadImageWithSizes(buffer, bucket, filename, mimetype = 
 				thumbnailAvifUrl: originalUrl,
 				smallAvifUrl: originalUrl,
 				regularAvifUrl: originalUrl,
+				base64Thumbnail, // Tiny base64 BMP for instant blur-up
 			};
 		}
 
@@ -193,6 +206,18 @@ export async function uploadImageWithSizes(buffer, bucket, filename, mimetype = 
 				contentType || `image/${imageFormat}`
 			);
 
+			// Generate tiny base64 PNG for instant blur-up (even for SVGs/BMPs/ICOs)
+			// Using PNG instead of BMP since Sharp doesn't support BMP output
+			// Preserve aspect ratio to prevent distortion when stretching
+			const tinyPngBuffer = await sharp(buffer)
+				.resize(20, 20, { 
+					fit: 'inside', // Preserve aspect ratio, fit inside 20x20 box
+					withoutEnlargement: true
+				})
+				.png({ compressionLevel: 9, quality: 80 }) // High compression for tiny image
+				.toBuffer();
+			const base64Thumbnail = `data:image/png;base64,${tinyPngBuffer.toString('base64')}`;
+
 			// For these formats, use the same URL for all sizes (they handle their own scaling)
 			return {
 				publicId: filename,
@@ -204,6 +229,7 @@ export async function uploadImageWithSizes(buffer, bucket, filename, mimetype = 
 				thumbnailAvifUrl: originalUrl,
 				smallAvifUrl: originalUrl,
 				regularAvifUrl: originalUrl,
+				base64Thumbnail, // Tiny base64 BMP for instant blur-up
 			};
 		}
 
@@ -211,6 +237,20 @@ export async function uploadImageWithSizes(buffer, bucket, filename, mimetype = 
 		// Determine original file extension from detected format or default to jpg
 		const originalExtension = imageFormat === 'png' ? 'png' : imageFormat === 'jpeg' ? 'jpg' : 'jpg';
 		const originalContentType = contentType || (imageFormat === 'png' ? 'image/png' : 'image/jpeg');
+		
+		// Generate tiny base64 PNG for instant blur-up (like Unsplash uses BMP)
+		// Generate tiny thumbnail preserving aspect ratio (max 20px on longest side)
+		// Very small file size (1-2 KB), loads instantly
+		// Using PNG instead of BMP since Sharp doesn't support BMP output
+		// Preserve aspect ratio to prevent distortion when stretching to container
+		const tinyPngBuffer = await sharp(buffer)
+			.resize(20, 20, { 
+				fit: 'inside', // Preserve aspect ratio, fit inside 20x20 box
+				withoutEnlargement: true
+			})
+			.png({ compressionLevel: 9, quality: 80 }) // High compression for tiny image
+			.toBuffer();
+		const base64Thumbnail = `data:image/png;base64,${tinyPngBuffer.toString('base64')}`;
 		
 		const [thumbnailBuffer, smallBuffer, regularBuffer, webpFullBuffer, originalBuffer] = await Promise.all([
 			sharp(buffer).resize(200, 200, { fit: 'cover' }).webp().toBuffer(),
@@ -228,6 +268,10 @@ export async function uploadImageWithSizes(buffer, bucket, filename, mimetype = 
 			uploadToR2(webpFullBuffer, `${bucket}/${filename}.webp`, 'image/webp'), // WebP for display
 			uploadToR2(originalBuffer, `${bucket}/${filename}-original.${originalExtension}`, originalContentType), // True original
 		]);
+		
+		// Log file sizes for debugging
+		logger.info(`[UPLOAD] File sizes - Original: ${(originalBuffer.length / 1024 / 1024).toFixed(2)}MB, WebP: ${(webpFullBuffer.length / 1024 / 1024).toFixed(2)}MB`);
+		logger.info(`[UPLOAD] Original URL: ${original}, Extension: ${originalExtension}`);
 
 		return {
 			publicId: filename,
@@ -239,6 +283,7 @@ export async function uploadImageWithSizes(buffer, bucket, filename, mimetype = 
 			thumbnailAvifUrl: thumb,
 			smallAvifUrl: small,
 			regularAvifUrl: regular,
+			base64Thumbnail, // Tiny base64 BMP for instant blur-up (like Unsplash)
 		};
 	} catch (err) {
 		console.error('uploadImageWithSizes failed:', err?.message);

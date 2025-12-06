@@ -86,7 +86,7 @@
 }
 
 .blur-up-image.loading {
-  filter: blur(12px) saturate(1.05);
+  filter: none;
   transform: scale(1.02);
 }
 
@@ -201,7 +201,7 @@
 }
 
 .image-modal-image.blurred {
-  filter: blur(12px) saturate(1.05);
+  filter: none;
 }
 
 .image-modal-bottom-info {

@@ -28,6 +28,19 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
     
     // Track image orientations for masonry layout
     const [imageOrientations, setImageOrientations] = useState<Map<number, boolean>>(new Map());
+    
+    // Preserve quality toggle with localStorage persistence
+    const [preserveQuality, setPreserveQuality] = useState<boolean>(() => {
+        const saved = localStorage.getItem('uploadPreserveQuality');
+        return saved === 'true';
+    });
+    
+    const handlePreserveQualityChange = useCallback((checked: boolean) => {
+        setPreserveQuality(checked);
+        localStorage.setItem('uploadPreserveQuality', checked.toString());
+        // If images are already uploaded, they need to be re-uploaded with new setting
+        // For now, we'll just update the preference for future uploads
+    }, []);
 
     const {
         categories,
@@ -65,7 +78,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
         updateImageData,
         updateImageCoordinates,
         resetState,
-    } = useUploadModalState({ preUploadAllImages });
+    } = useUploadModalState({ preUploadAllImages, preserveQuality });
 
     // Fetch categories when modal opens
     useEffect(() => {
@@ -323,9 +336,41 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                     {/* Header */}
                     <div className="upload-modal-header">
                         <h2 className="upload-modal-title">{t('upload.title')}</h2>
-                        <button className="upload-modal-close" onClick={handleCancel}>
-                            <X size={20} />
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            {/* Quality Toggle - only show when images are selected */}
+                            {selectedFiles.length > 0 && (
+                                <label 
+                                    style={{ 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        gap: 8, 
+                                        cursor: imagesData.some(img => img.preUploadData) ? 'not-allowed' : 'pointer',
+                                        fontSize: 14,
+                                        color: imagesData.some(img => img.preUploadData) ? '#999' : '#666',
+                                        opacity: imagesData.some(img => img.preUploadData) ? 0.6 : 1,
+                                    }}
+                                    title={
+                                        imagesData.some(img => img.preUploadData) 
+                                            ? t('upload.waitForUpload') 
+                                            : preserveQuality 
+                                                ? t('upload.preserveQualityHint') 
+                                                : t('upload.compressImagesHint')
+                                    }
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={preserveQuality}
+                                        onChange={(e) => handlePreserveQualityChange(e.target.checked)}
+                                        disabled={imagesData.some(img => img.preUploadData)}
+                                        style={{ cursor: imagesData.some(img => img.preUploadData) ? 'not-allowed' : 'pointer' }}
+                                    />
+                                    <span>{preserveQuality ? t('upload.preserveQuality') : t('upload.compressImages')}</span>
+                                </label>
+                            )}
+                            <button className="upload-modal-close" onClick={handleCancel}>
+                                <X size={20} />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Upload Area */}
@@ -424,9 +469,41 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                 {/* Header */}
                 <div className="upload-modal-header">
                     <h2 className="upload-modal-title">{t('upload.title')}</h2>
-                    <button className="upload-modal-close" onClick={handleCancel}>
-                        <X size={20} />
-                    </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            {/* Quality Toggle - only show when images are selected */}
+                            {selectedFiles.length > 0 && (
+                                <label 
+                                    style={{ 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        gap: 8, 
+                                        cursor: imagesData.some(img => img.preUploadData) ? 'not-allowed' : 'pointer',
+                                        fontSize: 14,
+                                        color: imagesData.some(img => img.preUploadData) ? '#999' : '#666',
+                                        opacity: imagesData.some(img => img.preUploadData) ? 0.6 : 1,
+                                    }}
+                                    title={
+                                        imagesData.some(img => img.preUploadData) 
+                                            ? t('upload.waitForUpload') 
+                                            : preserveQuality 
+                                                ? t('upload.preserveQualityHint') 
+                                                : t('upload.compressImagesHint')
+                                    }
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={preserveQuality}
+                                        onChange={(e) => handlePreserveQualityChange(e.target.checked)}
+                                        disabled={imagesData.some(img => img.preUploadData)}
+                                        style={{ cursor: imagesData.some(img => img.preUploadData) ? 'not-allowed' : 'pointer' }}
+                                    />
+                                    <span>{preserveQuality ? t('upload.preserveQuality') : t('upload.compressImages')}</span>
+                                </label>
+                            )}
+                            <button className="upload-modal-close" onClick={handleCancel}>
+                                <X size={20} />
+                            </button>
+                        </div>
                 </div>
 
                 {/* Content - Scrollable container with all images and their forms */}

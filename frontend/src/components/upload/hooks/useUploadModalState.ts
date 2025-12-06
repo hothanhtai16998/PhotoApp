@@ -4,10 +4,11 @@ import { useSiteSettings } from '@/hooks/useSiteSettings';
 import type { ImageData } from './useImageUpload';
 
 interface UseUploadModalStateProps {
-  preUploadAllImages: (imagesData: ImageData[], onProgress?: (index: number, progress: number) => void) => Promise<ImageData[]>;
+  preUploadAllImages: (imagesData: ImageData[], preserveQuality: boolean, onProgress?: (index: number, progress: number) => void) => Promise<ImageData[]>;
+  preserveQuality: boolean;
 }
 
-export const useUploadModalState = ({ preUploadAllImages }: UseUploadModalStateProps) => {
+export const useUploadModalState = ({ preUploadAllImages, preserveQuality }: UseUploadModalStateProps) => {
   const { settings } = useSiteSettings();
   const [dragActive, setDragActive] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -106,7 +107,7 @@ export const useUploadModalState = ({ preUploadAllImages }: UseUploadModalStateP
         
         // Then start pre-uploading
         setTimeout(() => {
-          preUploadAllImages(updatedImagesData, (index, progress) => {
+          preUploadAllImages(updatedImagesData, preserveQuality, (index, progress) => {
             // Update progress in real-time (0-100%)
             // Keep isUploading true until we get preUploadData (upload truly complete)
             setImagesData(prev => {

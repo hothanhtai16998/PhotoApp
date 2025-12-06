@@ -1,8 +1,34 @@
 import 'dotenv/config';
 import mongoose from 'mongoose';
-import { CONNECT_DB } from '../configs/db.js';
 import Image from '../models/Image.js';
 import { logger } from '../utils/logger.js';
+
+/**
+ * Connect to MongoDB directly (bypasses env.js validation)
+ * Migration scripts only need MONGODB_URI
+ */
+const connectDB = async () => {
+    const mongoUri = process.env.MONGODB_URI;
+    if (!mongoUri) {
+        throw new Error('MONGODB_URI environment variable is required');
+    }
+    
+    try {
+        const options = {
+            maxPoolSize: 10,
+            minPoolSize: 5,
+            serverSelectionTimeoutMS: 5000,
+            socketTimeoutMS: 45000,
+            connectTimeoutMS: 10000,
+        };
+
+        await mongoose.connect(mongoUri, options);
+        logger.info('✅ MongoDB connected successfully');
+    } catch (error) {
+        logger.error(`❌ Error connecting to MongoDB: ${error.message}`, error);
+        throw error;
+    }
+};
 
 /**
  * Migration: Identify images where imageUrl points to WebP (original file not saved)
@@ -98,7 +124,7 @@ async function main() {
         logger.info('🚀 Starting image URL migration...');
         
         // Connect to database
-        await CONNECT_DB();
+        await connectDB();
         logger.info('✅ Connected to database');
 
         // Run migration

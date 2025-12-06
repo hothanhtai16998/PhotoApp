@@ -48,6 +48,12 @@ const imageSchema = new mongoose.Schema(
             type: String,
             // Optional - AVIF version of original
         },
+        // Base64 thumbnail for instant blur-up (like Unsplash)
+        base64Thumbnail: {
+            type: String,
+            // Optional - Tiny base64 BMP (20x20px, 1-2 KB) for instant placeholder
+            // Format: data:image/bmp;base64,...
+        },
         // Image dimensions (extracted during upload)
         width: {
             type: Number,

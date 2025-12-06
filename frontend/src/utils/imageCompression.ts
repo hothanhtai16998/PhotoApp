@@ -5,18 +5,24 @@ export interface CompressionOptions {
 	maxWidthOrHeight?: number;
 	useWebWorker?: boolean;
 	fileType?: string;
+	preserveQuality?: boolean; // If true, skip compression entirely
 }
 
 /**
  * Compress an image file before upload
  * @param file - The image file to compress
  * @param options - Compression options
- * @returns Compressed file
+ * @returns Compressed file (or original if preserveQuality is true)
  */
 export async function compressImage(
 	file: File,
 	options: CompressionOptions = {}
 ): Promise<File> {
+	// Skip compression if preserveQuality is true
+	if (options.preserveQuality) {
+		console.log(`[COMPRESSION] Preserving original quality: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+		return file;
+	}
 	// Skip compression for GIFs - they should be uploaded as-is
 	// Large GIFs (>2MB) will be converted to video on the backend
 	if (file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif')) {
@@ -30,9 +36,11 @@ export async function compressImage(
 		return file;
 	}
 
+	// Set compression options
+	// Default: compress more aggressively to save bandwidth (when preserveQuality is false)
 	const defaultOptions: CompressionOptions = {
-		maxSizeMB: 4, // Maximum file size in MB (4MB for better quality in photo apps)
-		maxWidthOrHeight: 2560, // Maximum width or height (2K resolution for high-DPI displays)
+		maxSizeMB: 4, // Compress to max 4MB (good balance)
+		maxWidthOrHeight: 2560, // Max 2K resolution (good for most displays)
 		useWebWorker: true, // Use web worker for better performance
 		fileType: file.type, // Preserve original file type
 	};
@@ -40,8 +48,10 @@ export async function compressImage(
 	const compressionOptions = { ...defaultOptions, ...options };
 
 	try {
-		// Only compress if file is larger than 2MB (preserve quality for smaller files)
-		if (file.size > 2 * 1024 * 1024) {
+		// Compress files larger than 2MB (aggressive compression to save bandwidth)
+		const compressionThreshold = 2 * 1024 * 1024;
+		
+		if (file.size > compressionThreshold) {
 			const compressedFile = await imageCompression(
 				file,
 				compressionOptions
@@ -51,6 +61,7 @@ export async function compressImage(
 			);
 			return compressedFile;
 		}
+		// For files under threshold, preserve original quality
 		return file;
 	} catch (error) {
 		console.error('Image compression failed:', error);

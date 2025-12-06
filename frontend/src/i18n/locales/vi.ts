@@ -215,6 +215,10 @@ export const vi = {
     finalizeSuccess: 'Tải ảnh lên thành công!',
     saving: 'Đang lưu...',
     selectImage: 'Vui lòng chọn ảnh',
+    preserveQuality: 'Giữ nguyên chất lượng gốc',
+    preserveQualityHint: 'Tải ảnh lên không nén (kích thước lớn hơn, chất lượng tốt hơn)',
+    compressImages: 'Nén ảnh',
+    compressImagesHint: 'Nén ảnh để tiết kiệm băng thông và dung lượng (khuyến nghị)',
   },
 
   // Header

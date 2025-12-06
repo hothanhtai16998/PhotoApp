@@ -24,6 +24,7 @@ export interface ImageData {
   uploadProgress?: number;
   isUploading?: boolean;
   uploadError?: string | null;
+  preserveQuality?: boolean; // User preference for compression
 }
 
 interface UseImageUploadProps {
@@ -74,15 +75,16 @@ export const useImageUpload = ({ onSuccess }: UseImageUploadProps = {}) => {
   // Pre-upload a single image
   const preUploadSingleImage = useCallback(async (
     imageData: ImageData,
+    preserveQuality: boolean = false,
     onProgress?: (progress: number) => void
   ): Promise<PreUploadResponse> => {
     try {
-      // Compress image first
-      const compressedFile = await compressImage(imageData.file);
+      // Compress image based on user preference
+      const fileToUpload = await compressImage(imageData.file, { preserveQuality });
       
       // Pre-upload to S3
       const result = await imageService.preUploadImage(
-        compressedFile,
+        fileToUpload,
         (progress) => {
           onProgress?.(progress);
         }
@@ -98,6 +100,7 @@ export const useImageUpload = ({ onSuccess }: UseImageUploadProps = {}) => {
   // Pre-upload all images when files are selected
   const preUploadAllImages = useCallback(async (
     imagesData: ImageData[],
+    preserveQuality: boolean = false,
     onImageProgress?: (index: number, progress: number) => void
   ): Promise<ImageData[]> => {
     const updatedImagesData: ImageData[] = [];
@@ -126,8 +129,11 @@ export const useImageUpload = ({ onSuccess }: UseImageUploadProps = {}) => {
         onImageProgress?.(i, 0);
 
         // Pre-upload image with real-time progress updates
+        // Use preserveQuality from parameter (global setting) or from imageData (per-image setting)
+        const shouldPreserveQuality = imgData.preserveQuality ?? preserveQuality;
         const preUploadResult = await preUploadSingleImage(
           imgData,
+          shouldPreserveQuality,
           (progress) => {
             // Update progress in real-time (0-100%)
             onImageProgress?.(i, progress);

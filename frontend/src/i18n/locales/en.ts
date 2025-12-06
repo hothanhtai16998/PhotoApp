@@ -217,6 +217,10 @@ export const en = {
     finalizeSuccess: 'Photo uploaded successfully!',
     saving: 'Saving...',
     selectImage: 'Please select a photo',
+    preserveQuality: 'Preserve original quality',
+    preserveQualityHint: 'Upload images without compression (larger file size, better quality)',
+    compressImages: 'Compress images',
+    compressImagesHint: 'Compress images to save bandwidth and storage (recommended)',
   },
 
   // Header

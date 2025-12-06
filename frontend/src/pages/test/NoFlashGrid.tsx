@@ -27,7 +27,8 @@ const imageLoadCache = new Map<string, Promise<string>>();
 const loadedImages = new Set<string>();
 
 // Preload an image and cache the promise
-const preloadImage = (src: string): Promise<string> => {
+// skipDecode: true for grid images (faster), false for modal images (prevents flash)
+const preloadImage = (src: string, skipDecode = false): Promise<string> => {
     if (!src) {
         return Promise.reject(new Error('Empty image source'));
     }
@@ -40,9 +41,26 @@ const preloadImage = (src: string): Promise<string> => {
     const promise = new Promise<string>((resolve, reject) => {
         const img = new Image();
         img.onload = () => {
-            loadedImages.add(src);
-            imageLoadCache.delete(src);
-            resolve(src);
+            if (skipDecode) {
+                // For grid images, skip decode for faster loading
+                loadedImages.add(src);
+                imageLoadCache.delete(src);
+                resolve(src);
+            } else {
+                // For modal images, decode to ensure it's ready for display (prevents flash)
+                img.decode()
+                    .then(() => {
+                        loadedImages.add(src);
+                        imageLoadCache.delete(src);
+                        resolve(src);
+                    })
+                    .catch(() => {
+                        // Even if decode fails, image is loaded
+                        loadedImages.add(src);
+                        imageLoadCache.delete(src);
+                        resolve(src);
+                    });
+            }
         };
         img.onerror = () => {
             imageLoadCache.delete(src);
@@ -55,20 +73,21 @@ const preloadImage = (src: string): Promise<string> => {
 };
 
 // Preload multiple images with priority
-const preloadImages = (sources: string[], priority = false) => {
+// skipDecode: true for background preloading (faster), false for critical images
+const preloadImages = (sources: string[], priority = false, skipDecode = true) => {
     const validSources = sources.filter(Boolean);
     if (validSources.length === 0) return;
 
     if (priority) {
         // Load first image immediately, then queue others
         if (validSources[0]) {
-            preloadImage(validSources[0]).catch(() => { });
+            preloadImage(validSources[0], skipDecode).catch(() => { });
         }
         // Queue rest with slight delay to not block
         if (validSources.length > 1) {
             setTimeout(() => {
                 validSources.slice(1).forEach(src => {
-                    if (src) preloadImage(src).catch(() => { });
+                    if (src) preloadImage(src, skipDecode).catch(() => { });
                 });
             }, 50);
         }
@@ -76,7 +95,7 @@ const preloadImages = (sources: string[], priority = false) => {
         // Load all with slight stagger to avoid overwhelming
         validSources.forEach((src, i) => {
             setTimeout(() => {
-                preloadImage(src).catch(() => { });
+                preloadImage(src, skipDecode).catch(() => { });
             }, i * 10);
         });
     }
@@ -93,7 +112,10 @@ function BlurUpImage({
     priority?: boolean;
     onLoadComplete?: () => void;
 }) {
-    const placeholderInitial = image.thumbnailUrl || image.smallUrl || image.imageUrl || null;
+    // Use base64 thumbnail for instant placeholder (like Unsplash) - no network request needed
+    const base64Placeholder = image.base64Thumbnail || null;
+    const networkPlaceholder = image.thumbnailUrl || image.smallUrl || image.imageUrl || null;
+    const placeholderInitial = base64Placeholder || networkPlaceholder;
     const [loaded, setLoaded] = useState(false);
     const [backSrc, setBackSrc] = useState<string | null>(placeholderInitial);
     const [isInView, setIsInView] = useState(priority);
@@ -121,7 +143,7 @@ function BlurUpImage({
                 });
             },
             {
-                rootMargin: '100px', // Start loading 100px before entering viewport
+                rootMargin: '500px', // Start loading 500px before entering viewport (more aggressive)
                 threshold: 0.01,
             }
         );
@@ -137,17 +159,20 @@ function BlurUpImage({
     useEffect(() => {
         if (!isInView || loadingRef.current) return;
 
-        const placeholder = image.thumbnailUrl || image.smallUrl || image.imageUrl || '';
-        const full = image.regularUrl || image.imageUrl || placeholder;
+        // Use regularUrl for grid view (1080px, optimized for display)
+        // This is similar to Unsplash's approach: grid uses "regular" size, not original
+        // Only fallback to imageUrl if regularUrl doesn't exist (for old images)
+        const full = image.regularUrl || image.imageUrl || image.smallUrl || image.thumbnailUrl || '';
 
         // If already using full image, no need to reload
         if (backSrc === full && loaded) return;
 
         loadingRef.current = true;
-        preloadImage(full)
+        // Skip decode for grid images to load faster (like admin page)
+        preloadImage(full, true)
             .then((src) => {
                 setBackSrc(src);
-            setLoaded(true);
+                setLoaded(true);
                 onLoadComplete?.();
             })
             .catch(() => {
@@ -162,9 +187,11 @@ function BlurUpImage({
     // Preload on hover for better UX
     const handleMouseEnter = useCallback(() => {
         if (!loaded && isInView) {
+            // Use regularUrl for hover preload (grid images)
             const full = image.regularUrl || image.imageUrl || image.thumbnailUrl || image.smallUrl;
             if (full && full !== backSrc) {
-                preloadImage(full).catch(() => { });
+                // Skip decode for hover preload (grid images)
+                preloadImage(full, true).catch(() => { });
             }
         }
     }, [loaded, isInView, image, backSrc]);
@@ -208,54 +235,35 @@ function ImageModal({
     // Calculate initial state based on current image
     const calculateInitialState = () => {
         if (!img) return { src: null, isFullQuality: false };
-        const thumbnail = img.thumbnailUrl || img.smallUrl || img.imageUrl || '';
+        // Use base64 thumbnail for instant display (no network delay)
+        // Then immediately load network thumbnail (larger, better quality)
+        const base64Placeholder = img.base64Thumbnail || null;
+        const networkThumbnail = img.thumbnailUrl || img.smallUrl || img.imageUrl || '';
         const full = img.regularUrl || img.imageUrl || '';
-        const displayThumbnail = thumbnail || full;
 
-        // If full is already cached, use it immediately
-        if (full && full !== thumbnail && loadedImages.has(full)) {
-            return { src: full, isFullQuality: true };
-        }
-        // Otherwise use thumbnail
-        return { src: displayThumbnail, isFullQuality: full === thumbnail || !full };
+        // Start with base64 for instant display (prevents blank space)
+        // Network thumbnail will load immediately after (fast, small file)
+        return {
+            src: base64Placeholder || networkThumbnail || full,
+            isFullQuality: false,
+            isBase64: !!base64Placeholder
+        };
     };
 
     const [imageState, setImageState] = useState(calculateInitialState);
-    const backSrc = imageState.src;
-    const isFullQuality = imageState.isFullQuality;
+    const [frontSrc, setFrontSrc] = useState<string | null>(null); // Full-quality image (front layer)
+    const [backSrc, setBackSrc] = useState<string | null>(imageState.src); // Low-quality placeholder (back layer)
+    const backSrcRef = useRef<string | null>(imageState.src); // Track current backSrc to prevent unnecessary updates
+    const isFullQuality = imageState.isFullQuality || frontSrc !== null; // True if front layer is ready
 
-    // Calculate image box helper function
-    const calculateImageBoxValue = (modalWidth: number, modalHeight: number, targetAspect: number) => {
-        const availableHeight = Math.max(200, modalHeight - 72 - 180);
-        let widthPct = 0.92;
-        let imgWidth = modalWidth * widthPct;
-        let imgHeight = imgWidth * targetAspect;
-        if (imgHeight > availableHeight) {
-            imgHeight = availableHeight;
-            imgWidth = imgHeight / targetAspect;
-            widthPct = Math.min(0.97, Math.max(0.82, imgWidth / modalWidth));
-        }
-        const gutter = Math.min(48, Math.max(20, modalWidth * 0.03));
-        const paddingBottom = `${Math.max(48, Math.min(88, (imgHeight / imgWidth) * 100))}%`;
-        return { widthPct, paddingBottom, gutter };
-    };
-
-    // Initialize with reasonable defaults based on viewport to prevent layout shift
-    const initialAspect = (img as any)?.width && (img as any)?.height ? (img as any).height / (img as any).width : 0.6;
-    const initialModalWidth = typeof window !== 'undefined' ? Math.min(1600, window.innerWidth * 0.9) : 1400;
-    const initialModalHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
-    const initialImageBox = calculateImageBoxValue(initialModalWidth, initialModalHeight, initialAspect);
-
-    // Use state - initialized with correct values to prevent layout shift
-    const [imageBox, setImageBox] = useState<{ widthPct: number; paddingBottom: string; gutter: number }>(initialImageBox);
-    const imageBoxRef = useRef(initialImageBox);
+    // Initialize refs (simplified - no aspect ratio calculations needed)
+    const imgElementRef = useRef<HTMLImageElement | null>(null);
     const modalRef = useRef<HTMLDivElement | null>(null);
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const scrollPosRef = useRef(0);
+    const previousImgRef = useRef<ExtendedImage | null>(img);
     const [isScrolled, setIsScrolled] = useState(false);
     const [shouldAnimate, setShouldAnimate] = useState(false);
-    const previousImgRef = useRef<ExtendedImage | null>(img);
-    const imgElementRef = useRef<HTMLImageElement | null>(null);
     const { user } = useUserStore();
     const isFavorited = useBatchedFavoriteCheck(img?._id);
     const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
@@ -274,7 +282,7 @@ function ImageModal({
         (img as any)?.author ||
         (img as any)?.user ||
         'Author';
-    const aspect = (img as any)?.width && (img as any)?.height ? (img as any).height / (img as any).width : 0.6;
+    // No aspect ratio calculations needed - browser handles it with object-fit: contain
 
     // lock body scroll
     useEffect(() => {
@@ -306,17 +314,17 @@ function ImageModal({
             }
         });
 
-        // Preload with priority for next/prev
+        // Preload with priority for next/prev (modal images - keep decode to prevent flash)
         if (sources.length > 0 && sources[0]) {
-            preloadImage(sources[0]); // Next image
+            preloadImage(sources[0], false); // Next image - decode for smooth transition
             if (sources.length > 1 && sources[1]) {
-                preloadImage(sources[1]); // Prev image
+                preloadImage(sources[1], false); // Prev image - decode for smooth transition
             }
-            // Preload nearby images with delay
+            // Preload nearby images with delay (can skip decode for background preload)
             if (sources.length > 2) {
                 setTimeout(() => {
                     sources.slice(2).forEach(src => {
-                        if (src) preloadImage(src).catch(() => { });
+                        if (src) preloadImage(src, true).catch(() => { }); // Skip decode for background preload
                     });
                 }, 200);
             }
@@ -327,6 +335,7 @@ function ImageModal({
         if (!img) return;
 
         // Track current image to prevent race conditions
+        const currentImageId = img._id;
         previousImgRef.current = img;
 
         // reset scroll to top when image changes so top bar/author stay visible
@@ -339,7 +348,7 @@ function ImageModal({
             setIsScrolled(false);
             setShouldAnimate(false);
         });
-        
+
         // Close menus when image changes
         setShowDownloadMenu(false);
         setShowShareMenu(false);
@@ -358,56 +367,122 @@ function ImageModal({
 
         // Calculate what the state should be
         const currentState = calculateInitialState();
+        const newBackSrc = currentState.src;
 
-        // Only update if state actually needs to change (prevents unnecessary renders)
-        if (imageState.src !== currentState.src || imageState.isFullQuality !== currentState.isFullQuality) {
-            // Update state once with both values - use requestAnimationFrame to batch with React
-            requestAnimationFrame(() => {
-                setImageState(currentState);
-            });
+        // Update imageState (for tracking, but don't use it directly for backSrc)
+        setImageState(currentState);
+
+        // Don't reset frontSrc immediately - keep old image visible until new backSrc is ready
+        // This prevents flash when both layers change at once
+        // We'll clear it after the new backSrc is set
+
+        // Update backSrc: Use base64 for instant display, then immediately load network thumbnail
+        if (newBackSrc && newBackSrc !== backSrcRef.current) {
+            const isBase64 = newBackSrc.startsWith('data:');
+
+            if (isBase64) {
+                // Base64 thumbnails are instant (embedded in JSON) - update synchronously
+                backSrcRef.current = newBackSrc;
+                setBackSrc(newBackSrc);
+
+                // Immediately load network thumbnail (larger, better quality) to replace base64
+                const networkThumbnail = img.thumbnailUrl || img.smallUrl || img.imageUrl || '';
+                if (networkThumbnail && networkThumbnail !== newBackSrc) {
+                    // Preload network thumbnail immediately (small file, loads fast)
+                    preloadImage(networkThumbnail, true) // Skip decode for faster loading
+                        .then((src) => {
+                            // Replace base64 with network thumbnail once loaded
+                            if (previousImgRef.current?._id === currentImageId) {
+                                backSrcRef.current = src;
+                                setBackSrc(src);
+                            }
+                        })
+                        .catch(() => {
+                            // Keep base64 if network thumbnail fails
+                        });
+                }
+
+                // Clear front layer after back layer is updated (prevents flash)
+                requestAnimationFrame(() => {
+                    if (previousImgRef.current?._id === currentImageId) {
+                        setFrontSrc(null);
+                    }
+                });
+            } else {
+                // For network thumbnails, check cache first
+                if (loadedImages.has(newBackSrc)) {
+                    // Already cached - update immediately (no flash)
+                    backSrcRef.current = newBackSrc;
+                    setBackSrc(newBackSrc);
+                    // Clear front layer after back layer is updated
+                    requestAnimationFrame(() => {
+                        if (previousImgRef.current?._id === currentImageId) {
+                            setFrontSrc(null);
+                        }
+                    });
+                } else {
+                    // Not cached - keep old placeholder visible, preload new one
+                    // Only update backSrc after new thumbnail is ready to prevent flash
+                    // Keep decode for modal images to prevent flashing
+                    preloadImage(newBackSrc, false)
+                        .then((src) => {
+                            // Only update if still showing the same image
+                            if (previousImgRef.current?._id === currentImageId) {
+                                backSrcRef.current = src;
+                                setBackSrc(src);
+                                // Clear front layer after back layer is updated
+                                requestAnimationFrame(() => {
+                                    if (previousImgRef.current?._id === currentImageId) {
+                                        setFrontSrc(null);
+                                    }
+                                });
+                            }
+                        })
+                        .catch(() => {
+                            // On error, still set it (better than blank)
+                            if (previousImgRef.current?._id === currentImageId) {
+                                backSrcRef.current = newBackSrc;
+                                setBackSrc(newBackSrc);
+                                setFrontSrc(null);
+                            }
+                        });
+                }
+            }
+        } else if (!newBackSrc) {
+            // If no backSrc, clear it
+            backSrcRef.current = null;
+            setBackSrc(null);
         }
 
-        // If full image needs to be loaded, preload it
-        if (full && full !== thumbnail && !loadedImages.has(full)) {
-            // Preload high-res image - Unsplash technique: wait for it to be ready
-            preloadImage(full)
-                .then((src) => {
-                    // Only update if still showing this image (prevent race conditions)
-                    if (previousImgRef.current?._id === img._id) {
-                        // Swap to full quality (single state update)
-                        setImageState({ src, isFullQuality: true });
-                    }
-                })
-                .catch(() => {
-                    // On error, keep low-res thumbnail visible (already blurred)
-                });
+        // Load full image in background (front layer)
+        // This creates the double-buffer effect: back layer (low-res) + front layer (high-res)
+        // Reuse thumbnail and full already declared above (lines 437-438)
+        // Only load full image if it's different from the thumbnail
+        if (full && full !== thumbnail) {
+            // Check if already loaded
+            if (loadedImages.has(full)) {
+                setFrontSrc(full);
+            } else {
+                // Preload full image (with decode for smooth transition)
+                preloadImage(full, false)
+                    .then((src) => {
+                        // Only update if still showing the same image
+                        if (previousImgRef.current?._id === currentImageId) {
+                            setFrontSrc(src);
+                        }
+                    })
+                    .catch(() => {
+                        // On error, keep showing back layer (thumbnail)
+                    });
+            }
+        } else {
+            // If no full image to load, ensure front layer is cleared
+            setFrontSrc(null);
         }
     }, [img]);
 
-    // Responsive image box sizing - update ref only (no state updates to prevent flash)
-    useLayoutEffect(() => {
-        const recalc = () => {
-            const modal = modalRef.current;
-            if (!modal) return;
-            const width = modal.clientWidth || window.innerWidth * 0.9;
-            const height = modal.clientHeight || window.innerHeight;
-            const newBox = calculateImageBoxValue(width, height, aspect || 0.6);
-            // Update ref only - no state update to prevent re-render flash
-            imageBoxRef.current = newBox;
-            // Force update only if significantly different
-            const current = imageBoxRef.current;
-            if (Math.abs(current.widthPct - newBox.widthPct) > 0.01) {
-                // Only update state if really needed (significant change)
-                setImageBox(newBox);
-            }
-        };
-        // Calculate immediately (synchronously before paint)
-        recalc();
-        // Also recalculate on resize
-        window.addEventListener('resize', recalc);
-        return () => window.removeEventListener('resize', recalc);
-    }, [aspect]);
-    
+    // No need for resize calculations - CSS handles it automatically
+
     // Cleanup author tooltip timeout on unmount
     useEffect(() => {
         return () => {
@@ -416,7 +491,7 @@ function ImageModal({
             }
         };
     }, []);
-    
+
     // Trigger animation when tooltip appears
     useEffect(() => {
         if (showAuthorTooltip) {
@@ -430,7 +505,7 @@ function ImageModal({
             setTooltipAnimating(false);
         }
     }, [showAuthorTooltip]);
-    
+
     // Listen for locale changes to re-render translations
     useEffect(() => {
         const handleLocaleChange = () => {
@@ -530,7 +605,7 @@ function ImageModal({
                 title: img.imageTitle || 'Photo',
                 text: `Check out this photo: ${img.imageTitle || 'Untitled'}`,
                 url: shareUrl,
-            }).catch(() => {});
+            }).catch(() => { });
         } else {
             shareService.copyToClipboard(shareUrl).then((success) => {
                 if (success) {
@@ -623,11 +698,11 @@ function ImageModal({
                                 zIndex: 10, // Ensure it stays on top when scrolling
                             }}
                         >
-                            <div 
+                            <div
                                 ref={authorAreaRef}
-                                style={{ 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
                                     gap: 8,
                                     position: 'relative',
                                 }}
@@ -672,7 +747,7 @@ function ImageModal({
                                         const tooltipRect = tooltipElement.getBoundingClientRect();
                                         const mouseX = (e as any).clientX || 0;
                                         const mouseY = (e as any).clientY || 0;
-                                        
+
                                         // Check if mouse is within tooltip bounds (with some padding for the gap)
                                         const isOverTooltip = (
                                             mouseX >= tooltipRect.left - 10 &&
@@ -680,7 +755,7 @@ function ImageModal({
                                             mouseY >= tooltipRect.top - 10 &&
                                             mouseY <= tooltipRect.bottom + 10
                                         );
-                                        
+
                                         if (!isOverTooltip) {
                                             // Start hide animation
                                             setTooltipAnimating(false);
@@ -695,7 +770,7 @@ function ImageModal({
                                             authorTooltipTimeoutRef.current = null;
                                         }
                                     }, 150);
-                                    
+
                                     // Store timeout to clear if mouse enters tooltip
                                     (authorAreaRef.current as any).hideTimeout = hideTimeout;
                                 }}
@@ -720,7 +795,7 @@ function ImageModal({
                                     <div style={{ fontWeight: 700 }}>{authorName}</div>
                                     <div style={{ fontSize: 12, opacity: 0.8 }}>{img.imageTitle || t('image.topInfo')}</div>
                                 </div>
-                                
+
                                 {/* Author tooltip/popup */}
                                 {showAuthorTooltip && authorAreaRef.current && (() => {
                                     const rect = authorAreaRef.current!.getBoundingClientRect();
@@ -763,137 +838,137 @@ function ImageModal({
                                                         }, 200);
                                                     }
                                                 }, 150);
-                                                
+
                                                 // Store timeout to clear if mouse enters author area
                                                 (e.currentTarget as any).hideTimeout = hideTimeout;
                                             }}
                                         >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                                            <div
-                                                style={{
-                                                    width: 48,
-                                                    height: 48,
-                                                    borderRadius: '50%',
-                                                    background: 'rgba(0, 0, 0, 0.1)',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    fontSize: 18,
-                                                    fontWeight: 600,
-                                                    color: '#333',
-                                                }}
-                                            >
-                                                {authorName ? authorName[0]?.toUpperCase() : 'A'}
-                            </div>
-                                            <div>
-                                                <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 2 }}>
-                                                    {authorName}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                                                <div
+                                                    style={{
+                                                        width: 48,
+                                                        height: 48,
+                                                        borderRadius: '50%',
+                                                        background: 'rgba(0, 0, 0, 0.1)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        fontSize: 18,
+                                                        fontWeight: 600,
+                                                        color: '#333',
+                                                    }}
+                                                >
+                                                    {authorName ? authorName[0]?.toUpperCase() : 'A'}
                                                 </div>
-                                                <div style={{ fontSize: 13, color: '#666' }}>
-                                                    {(img as any)?.uploadedBy?.bio || t('image.photographer')}
+                                                <div>
+                                                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 2 }}>
+                                                        {authorName}
+                                                    </div>
+                                                    <div style={{ fontSize: 13, color: '#666' }}>
+                                                        {(img as any)?.uploadedBy?.bio || t('image.photographer')}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div style={{ fontSize: 13, color: '#333', lineHeight: 1.4, marginBottom: 10 }}>
-                                            {(img as any)?.uploadedBy?.location || t('image.noLocation')}
-                                        </div>
-                                        
-                                        {/* Uploaded images section */}
-                                        {authorImages.length > 0 && (
-                                            <div style={{ marginBottom: 10 }}>
-                                                <div style={{ 
-                                                    display: 'grid', 
-                                                    gridTemplateColumns: 'repeat(3, 1fr)', 
-                                                    gap: 6,
-                                                    marginBottom: 0 
-                                                }}>
-                                                    {authorImages.slice(0, 3).map((authorImg, idx) => (
-                                                        <div
-                                                            key={authorImg._id || idx}
-                                                            style={{
-                                                                width: '100%',
-                                                                paddingBottom: '70%',
-                                                                position: 'relative',
-                                                                borderRadius: '4px',
-                                                                overflow: 'hidden',
-                                                                background: '#f0f0f0',
-                                                                cursor: 'pointer',
-                                                            }}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                const imageIndex = images.findIndex(i => i._id === authorImg._id);
-                                                                if (imageIndex >= 0 && onSelectIndex) {
-                                                                    onSelectIndex(imageIndex);
-                                                                }
-                                                            }}
-                                                        >
-                                                            {authorImg.thumbnailUrl || authorImg.smallUrl || authorImg.imageUrl ? (
-                                                                <img
-                                                                    src={authorImg.thumbnailUrl || authorImg.smallUrl || authorImg.imageUrl}
-                                                                    alt={authorImg.imageTitle || 'Photo'}
-                                                                    style={{
+                                            <div style={{ fontSize: 13, color: '#333', lineHeight: 1.4, marginBottom: 10 }}>
+                                                {(img as any)?.uploadedBy?.location || t('image.noLocation')}
+                                            </div>
+
+                                            {/* Uploaded images section */}
+                                            {authorImages.length > 0 && (
+                                                <div style={{ marginBottom: 10 }}>
+                                                    <div style={{
+                                                        display: 'grid',
+                                                        gridTemplateColumns: 'repeat(3, 1fr)',
+                                                        gap: 6,
+                                                        marginBottom: 0
+                                                    }}>
+                                                        {authorImages.slice(0, 3).map((authorImg, idx) => (
+                                                            <div
+                                                                key={authorImg._id || idx}
+                                                                style={{
+                                                                    width: '100%',
+                                                                    paddingBottom: '70%',
+                                                                    position: 'relative',
+                                                                    borderRadius: '4px',
+                                                                    overflow: 'hidden',
+                                                                    background: '#f0f0f0',
+                                                                    cursor: 'pointer',
+                                                                }}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    const imageIndex = images.findIndex(i => i._id === authorImg._id);
+                                                                    if (imageIndex >= 0 && onSelectIndex) {
+                                                                        onSelectIndex(imageIndex);
+                                                                    }
+                                                                }}
+                                                            >
+                                                                {authorImg.thumbnailUrl || authorImg.smallUrl || authorImg.imageUrl ? (
+                                                                    <img
+                                                                        src={authorImg.thumbnailUrl || authorImg.smallUrl || authorImg.imageUrl}
+                                                                        alt={authorImg.imageTitle || 'Photo'}
+                                                                        style={{
+                                                                            position: 'absolute',
+                                                                            inset: 0,
+                                                                            width: '100%',
+                                                                            height: '100%',
+                                                                            objectFit: 'cover',
+                                                                        }}
+                                                                    />
+                                                                ) : (
+                                                                    <div style={{
                                                                         position: 'absolute',
                                                                         inset: 0,
-                                                                        width: '100%',
-                                                                        height: '100%',
-                                                                        objectFit: 'cover',
-                                                                    }}
-                                                                />
-                                                            ) : (
-                                                                <div style={{
-                                                                    position: 'absolute',
-                                                                    inset: 0,
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    color: '#999',
-                                                                    fontSize: 12,
-                                                                }}>
-                                                                    {t('image.noImage')}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    ))}
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        color: '#999',
+                                                                        fontSize: 12,
+                                                                    }}>
+                                                                        {t('image.noImage')}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        )}
-                                        
-                                        {/* View profile button */}
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                const userId = (img as any)?.uploadedBy?._id || (img as any)?.uploadedBy;
-                                                const username = (img as any)?.uploadedBy?.username;
-                                                if (username) {
-                                                    navigate(`/profile/${username}`);
-                                                    onClose();
-                                                } else if (userId) {
-                                                    navigate(`/profile/user/${userId}`);
-                                                    onClose();
-                                                }
-                                                setShowAuthorTooltip(false);
-                                            }}
-                                            style={{
-                                                width: '100%',
-                                                padding: '8px 16px',
-                                                background: '#f5f5f5',
-                                                border: 'none',
-                                                borderRadius: '6px',
-                                                color: '#333',
-                                                fontSize: 14,
-                                                fontWeight: 500,
-                                                cursor: 'pointer',
-                                                transition: 'background 0.2s',
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.background = '#e8e8e8';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.background = '#f5f5f5';
-                                            }}
-                                        >
-                                            {t('image.viewProfile')}
-                                        </button>
+                                            )}
+
+                                            {/* View profile button */}
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    const userId = (img as any)?.uploadedBy?._id || (img as any)?.uploadedBy;
+                                                    const username = (img as any)?.uploadedBy?.username;
+                                                    if (username) {
+                                                        navigate(`/profile/${username}`);
+                                                        onClose();
+                                                    } else if (userId) {
+                                                        navigate(`/profile/user/${userId}`);
+                                                        onClose();
+                                                    }
+                                                    setShowAuthorTooltip(false);
+                                                }}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '8px 16px',
+                                                    background: '#f5f5f5',
+                                                    border: 'none',
+                                                    borderRadius: '6px',
+                                                    color: '#333',
+                                                    fontSize: 14,
+                                                    fontWeight: 500,
+                                                    cursor: 'pointer',
+                                                    transition: 'background 0.2s',
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.background = '#e8e8e8';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.background = '#f5f5f5';
+                                                }}
+                                            >
+                                                {t('image.viewProfile')}
+                                            </button>
                                         </div>
                                     );
                                 })()}
@@ -1072,213 +1147,257 @@ function ImageModal({
                             style={{
                                 background: '#ffffff',
                                 padding: '0px 0',
-                                minHeight: '100%',
+                                flex: 1,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                minHeight: '60vh', // Ensure minimum height for image display
                                 // No transition to prevent flash
                                 transition: 'none',
                             }}
                         >
+                            {/* Unsplash-style simple container - no complex calculations */}
                             <div
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    maxWidth: `${imageBox.widthPct * 100}%`,
-                                    margin: '0 auto',
-                                    padding: `0 ${imageBox.gutter}px`,
+                                    width: '100%',
+                                    flex: 1,
+                                    minHeight: '60vh', // Minimum height to ensure image is tall enough (flex: 1 will make it taller if space available)
+                                    padding: '0px 16px', // Match horizontal padding with top section (16px) so image aligns with author section
+                                    background: '#ffffff',
+                                    overflow: 'hidden',
                                 }}
                             >
-                                <div style={{ width: '100%', position: 'relative', background: '#ffffff' }}>
-                                    <div
-                                        style={{
-                                            position: 'relative',
-                                            width: '100%',
-                                            paddingBottom: imageBox.paddingBottom,
-                                            background: '#ffffff',
-                                        }}
-                                    >
-                                        {/* Unsplash technique: Blurred thumbnail → instant sharp swap (no fade-in) */}
-                                        {backSrc ? (
-                                            <img
-                                                ref={imgElementRef}
-                                                src={backSrc}
-                                                alt={img.imageTitle || 'photo'}
-                                                style={{
-                                                    position: 'absolute',
-                                                    inset: 0,
-                                                    width: '100%',
-                                                    height: '100%',
-                                                    objectFit: 'contain',
-                                                    // Unsplash technique: Blur when showing low-res, sharp when full-res
-                                                    // Blur masks pixelation and any visual artifacts during swap
-                                                    filter: isFullQuality ? 'none' : 'blur(12px) saturate(1.05)',
-                                                    // No opacity transition - instant display
-                                                    opacity: 1,
-                                                    // No transitions - instant blur removal for smooth swap
-                                                    transition: 'none',
-                                                    background: '#ffffff',
-                                                    // Prevent image from causing layout shifts
-                                                    display: 'block',
-                                                    // Prevent image from being selectable (can cause visual glitches)
-                                                    userSelect: 'none',
-                                                    pointerEvents: 'none',
-                                                }}
-                                                draggable={false}
-                                            />
-                                        ) : (
-                                            <div
-                                                style={{
-                                                    position: 'absolute',
-                                                    inset: 0,
-                                                    width: '100%',
-                                                    height: '100%',
-                                                    background: '#ffffff',
-                                                }}
-                                            />
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Bottom info */}
-                        <div
-                            style={{
-                                background: '#0a54e6',
-                                color: '#fff',
-                                padding: '24px 16px',
-                            }}
-                        >
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    gap: 24,
-                                    flexWrap: 'wrap',
-                                    marginBottom: 24,
-                                }}
-                            >
-                                {/* Left: image info */}
-                                <div style={{ flex: '1 1 480px', minWidth: 320 }}>
-                                    <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>
-                                        {img.imageTitle || 'Untitled image'}
-                                    </div>
-                                    <div style={{ display: 'flex', gap: 12, marginBottom: 12, fontSize: 14 }}>
-                                        <span>Views: {(img as any)?.views ?? '—'}</span>
-                                        <span>Downloads: {(img as any)?.downloads ?? '—'}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-                                        <span style={{ padding: '6px 10px', borderRadius: 16, background: '#fff2', fontSize: 13 }}>
-                                            Tag 1
-                                        </span>
-                                        <span style={{ padding: '6px 10px', borderRadius: 16, background: '#fff2', fontSize: 13 }}>
-                                            Tag 2
-                                        </span>
-                                        <span style={{ padding: '6px 10px', borderRadius: 16, background: '#fff2', fontSize: 13 }}>
-                                            Tag 3
-                                        </span>
-                                    </div>
-                                    <div style={{ fontSize: 14, lineHeight: 1.5 }}>
-                                        {(img as any)?.description || 'No description provided.'}
-                                    </div>
-                                </div>
-
-                                {/* Right: actions */}
                                 <div
                                     style={{
-                                        flex: '1 1 240px',
-                                        minWidth: 200,
+                                        position: 'relative',
                                         display: 'flex',
-                                        flexWrap: 'wrap',
-                                        gap: 8,
                                         alignItems: 'center',
-                                        justifyContent: 'flex-start',
+                                        justifyContent: 'center',
+                                        width: '100%',
+                                        height: '100%',
+                                        maxHeight: '100%', // Ensure it doesn't exceed container height
+                                        overflow: 'hidden', // Clip any content that extends beyond
+                                        background: '#ffffff',
                                     }}
                                 >
-                                    {['Save', 'Share', 'Report', 'Edit', 'Download'].map((label) => (
-                                        <button
-                                            key={label}
+                                    {/* Unsplash double-buffer technique: Back layer (blurred) + Front layer (sharp) */}
+                                    {/* Back layer: Always shows blurred low-quality placeholder */}
+                                    {backSrc ? (
+                                        <img
+                                            key={`back-${img._id}`}
+                                            src={backSrc}
+                                            alt={img.imageTitle || 'photo'}
                                             style={{
-                                                padding: '10px 12px',
-                                                borderRadius: 6,
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                minWidth: 100,
+                                                position: 'relative',
+                                                width: 'auto',
+                                                height: 'auto',
+                                                maxWidth: '100%', // Use full container width (like Unsplash - aligns with author section)
+                                                maxHeight: '100%', // Use 100% of container height (flex container automatically accounts for top/bottom bars)
+                                                objectFit: 'contain',
+                                                // Apply blur filter to base64 thumbnails (like Unsplash's BlurHash)
+                                                // This makes the tiny 20x20px image look better when stretched
+                                                filter: backSrc.startsWith('data:') ? 'blur(20px)' : 'none',
+                                                opacity: 1,
+                                                transition: 'none',
+                                                background: '#ffffff',
+                                                display: 'block',
+                                                userSelect: 'none',
+                                                pointerEvents: 'none',
+                                                zIndex: 1,
                                             }}
-                                        >
-                                            {label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Related images */}
-                            <div>
-                                <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Related images</div>
-                                <div
-                                    style={{
-                                        display: 'grid',
-                                        gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-                                        gap: 12,
-                                    }}
-                                >
-                                    {images
-                                        .filter((_, i) => i !== index)
-                                        .slice(0, 8)
-                                        .map((related, i) => {
-                                            const originalIdx = images.findIndex((imgItem) => imgItem === related);
-                                            return (
-                                                <div
-                                                    key={related._id || i}
-                                                    style={{
-                                                        width: '100%',
-                                                        paddingBottom: '70%',
-                                                        position: 'relative',
-                                                        borderRadius: 8,
-                                                        overflow: 'hidden',
-                                                        background: '#fff2',
-                                                        cursor: 'pointer',
-                                                    }}
-                                                    onClick={() => {
-                                                        if (onSelectIndex && originalIdx >= 0) {
-                                                            onSelectIndex(originalIdx);
-                                                        }
-                                                    }}
-                                                >
-                                                    {related.thumbnailUrl || related.smallUrl || related.imageUrl ? (
-                                                        <img
-                                                            src={related.thumbnailUrl || related.smallUrl || related.imageUrl}
-                                                            alt={related.imageTitle || 'related'}
-                                                            style={{
-                                                                position: 'absolute',
-                                                                inset: 0,
-                                                                width: '100%',
-                                                                height: '100%',
-                                                                objectFit: 'cover',
-                                                            }}
-                                                        />
-                                                    ) : (
-                                                        <div
-                                                            style={{
-                                                                position: 'absolute',
-                                                                inset: 0,
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                color: '#fff',
-                                                                opacity: 0.8,
-                                                            }}
-                                                        >
-                                                            No preview
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
+                                            draggable={false}
+                                            onLoad={(e) => {
+                                                // Ensure image is decoded before display
+                                                const imgEl = e.currentTarget;
+                                                if (imgEl.decode) {
+                                                    imgEl.decode().catch(() => { });
+                                                }
+                                            }}
+                                        />
+                                    ) : null}
+                                    {/* Front layer: Full-quality image (shown when ready, no blur) */}
+                                    {frontSrc ? (
+                                        <img
+                                            key={`front-${img._id}-${frontSrc}`}
+                                            ref={imgElementRef}
+                                            src={frontSrc}
+                                            alt={img.imageTitle || 'photo'}
+                                            style={{
+                                                position: 'absolute',
+                                                top: '50%',
+                                                left: '50%',
+                                                transform: 'translate(-50%, -50%)',
+                                                width: 'auto',
+                                                height: 'auto',
+                                                maxWidth: '100%', // Use full container width (like Unsplash - aligns with author section)
+                                                maxHeight: '100%', // Use 100% of container height (flex container automatically accounts for top/bottom bars)
+                                                objectFit: 'contain',
+                                                // No blur (front layer is sharp)
+                                                filter: 'none',
+                                                opacity: 1,
+                                                // No transitions - instant display to prevent flash
+                                                transition: 'none',
+                                                background: '#ffffff',
+                                                display: 'block',
+                                                userSelect: 'none',
+                                                pointerEvents: 'none',
+                                                zIndex: 2,
+                                            }}
+                                            draggable={false}
+                                            onLoad={(e) => {
+                                                // Ensure image is decoded before display
+                                                const imgEl = e.currentTarget;
+                                                if (imgEl.decode) {
+                                                    imgEl.decode().catch(() => { });
+                                                }
+                                            }}
+                                        />
+                                    ) : null}
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    {/* Bottom info */}
+                    <div
+                        style={{
+                            background: '#0a54e6',
+                            color: '#fff',
+                            padding: '24px 16px',
+                        }}
+                    >
+                        <div
+                            style={{
+                                display: 'flex',
+                                gap: 24,
+                                flexWrap: 'wrap',
+                                marginBottom: 24,
+                            }}
+                        >
+                            {/* Left: image info */}
+                            <div style={{ flex: '1 1 480px', minWidth: 320 }}>
+                                <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>
+                                    {img.imageTitle || 'Untitled image'}
+                                </div>
+                                <div style={{ display: 'flex', gap: 12, marginBottom: 12, fontSize: 14 }}>
+                                    <span>Views: {(img as any)?.views ?? '—'}</span>
+                                    <span>Downloads: {(img as any)?.downloads ?? '—'}</span>
+                                </div>
+                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                                    <span style={{ padding: '6px 10px', borderRadius: 16, background: '#fff2', fontSize: 13 }}>
+                                        Tag 1
+                                    </span>
+                                    <span style={{ padding: '6px 10px', borderRadius: 16, background: '#fff2', fontSize: 13 }}>
+                                        Tag 2
+                                    </span>
+                                    <span style={{ padding: '6px 10px', borderRadius: 16, background: '#fff2', fontSize: 13 }}>
+                                        Tag 3
+                                    </span>
+                                </div>
+                                <div style={{ fontSize: 14, lineHeight: 1.5 }}>
+                                    {(img as any)?.description || 'No description provided.'}
+                                </div>
+                            </div>
+
+                            {/* Right: actions */}
+                            <div
+                                style={{
+                                    flex: '1 1 240px',
+                                    minWidth: 200,
+                                    display: 'flex',
+                                    flexWrap: 'wrap',
+                                    gap: 8,
+                                    alignItems: 'center',
+                                    justifyContent: 'flex-start',
+                                }}
+                            >
+                                {['Save', 'Share', 'Report', 'Edit', 'Download'].map((label) => (
+                                    <button
+                                        key={label}
+                                        style={{
+                                            padding: '10px 12px',
+                                            borderRadius: 6,
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            minWidth: 100,
+                                        }}
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Related images */}
+                        <div>
+                            <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Related images</div>
+                            <div
+                                style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                                    gap: 12,
+                                }}
+                            >
+                                {images
+                                    .filter((_, i) => i !== index)
+                                    .slice(0, 8)
+                                    .map((related, i) => {
+                                        const originalIdx = images.findIndex((imgItem) => imgItem === related);
+                                        return (
+                                            <div
+                                                key={related._id || i}
+                                                style={{
+                                                    width: '100%',
+                                                    paddingBottom: '70%',
+                                                    position: 'relative',
+                                                    borderRadius: 8,
+                                                    overflow: 'hidden',
+                                                    background: '#fff2',
+                                                    cursor: 'pointer',
+                                                }}
+                                                onClick={() => {
+                                                    if (onSelectIndex && originalIdx >= 0) {
+                                                        onSelectIndex(originalIdx);
+                                                    }
+                                                }}
+                                            >
+                                                {related.thumbnailUrl || related.smallUrl || related.imageUrl ? (
+                                                    <img
+                                                        src={related.thumbnailUrl || related.smallUrl || related.imageUrl}
+                                                        alt={related.imageTitle || 'related'}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            inset: 0,
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            objectFit: 'cover',
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <div
+                                                        style={{
+                                                            position: 'absolute',
+                                                            inset: 0,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            color: '#fff',
+                                                            opacity: 0.8,
+                                                        }}
+                                                    >
+                                                        No preview
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                
+
                 {/* Close button - top left of overlay */}
                 <button
                     onClick={(e) => {
@@ -1321,7 +1440,7 @@ function ImageModal({
                         }}
                     />
                 </button>
-                
+
                 {/* Left navigation button - outside modal */}
                 <button
                     onClick={(e) => {
@@ -1502,8 +1621,6 @@ function calculateImageLayout(
         targetHeight = 250;
         categoryMin = 240;
         categoryMax = 260;
-        // eslint-disable-next-line no-console
-        console.warn('[calculateImageLayout] Invalid displayHeight:', { columnWidth, aspectRatio, displayHeight });
     } else {
 
         if (aspectRatio > 2.0) {
@@ -1654,21 +1771,6 @@ function calculateImageLayout(
     );
     const actualRenderedHeight = finalRowSpan * baseRowHeight + (finalRowSpan - 1) * GRID_CONFIG.gap;
 
-    // Always log for debugging - we'll remove this later
-    // eslint-disable-next-line no-console
-    console.log('[calculateImageLayout]', {
-        aspectRatio: aspectRatio.toFixed(2),
-        columnWidth: columnWidth.toFixed(0) + 'px',
-        displayHeight: displayHeight.toFixed(0) + 'px',
-        targetHeight: targetHeight.toFixed(0) + 'px',
-        exactRowSpan: exactRowsByUnit.toFixed(2),
-        rowSpan,
-        finalRowSpan,
-        actualRenderedHeight: actualRenderedHeight.toFixed(0) + 'px',
-        difference: (actualRenderedHeight - targetHeight).toFixed(0) + 'px',
-        baseRowHeight,
-    });
-
     return {
         rowSpan: finalRowSpan,
     };
@@ -1725,13 +1827,13 @@ export default function NoFlashGridPage() {
     const loadData = useCallback(async () => {
         try {
             setLoading(true);
-                const [imgsRes, catsRes] = await Promise.all([
-                    api.get('/images'),
-                    api.get('/categories'),
-                ]);
+            const [imgsRes, catsRes] = await Promise.all([
+                api.get('/images'),
+                api.get('/categories'),
+            ]);
             const loadedImages = toImageArray(imgsRes.data);
             setImages(loadedImages);
-                setCategories(toCategoryArray(catsRes.data));
+            setCategories(toCategoryArray(catsRes.data));
 
             // Clear image dimensions cache when refreshing (in case images were updated)
             setImageDimensions(new Map());
@@ -1742,13 +1844,13 @@ export default function NoFlashGridPage() {
                 .map(img => img.thumbnailUrl || img.smallUrl)
                 .filter((src): src is string => Boolean(src));
             preloadImages(thumbnails, true);
-            } catch (e) {
-                console.error('Failed to load data', e);
-                setImages([]);
-                setCategories([]);
-            } finally {
-                setLoading(false);
-            }
+        } catch (e) {
+            console.error('Failed to load data', e);
+            setImages([]);
+            setCategories([]);
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
     // Load data on mount
@@ -1837,8 +1939,6 @@ export default function NoFlashGridPage() {
                         try {
                             const dims = await loadImageDimensions(url);
                             if (dims) {
-                                // eslint-disable-next-line no-console
-                                console.log(`[Dimensions Loaded] Image ${image._id?.substring(0, 8)}: ${dims.width}x${dims.height} (aspect: ${(dims.width / dims.height).toFixed(2)})`);
                                 return { id: image._id, dims };
                             }
                         } catch (_error) {
@@ -1882,9 +1982,6 @@ export default function NoFlashGridPage() {
     const gridLayout = useMemo(() => {
         if (filteredImages.length === 0 || containerWidth === 0) return [];
 
-        // Log when layout recalculates
-        // eslint-disable-next-line no-console
-        console.log(`[GridLayout Recalc] Images: ${filteredImages.length}, Dimensions loaded: ${imageDimensions.size}`);
 
         // Calculate column width
         const gapTotal = GRID_CONFIG.gap * (columnCount - 1);
@@ -1928,64 +2025,10 @@ export default function NoFlashGridPage() {
             // Use rowStart only, let grid-row-end: span X handle the rest
             // This ensures CSS Grid handles gaps correctly
 
-            // Debug log BEFORE update (rowGap=0; vertical spacing via margin)
-            // eslint-disable-next-line no-console
-            console.log(
-                `[Placement] idx=${index} col=${shortestColumnIndex + 1} startH=${shortestHeight.toFixed(0)}px ` +
-                `rowUnit=${(GRID_CONFIG.baseRowHeight).toFixed(0)}px rowStart=${rowStart} span=${layout.rowSpan} ` +
-                `imgH=${imageHeight}px addGap=${GRID_CONFIG.gap}px → place col=${column}`
-            );
-
             // Update the column's height for the next item
             // Move by an exact number of full row units to the next top line
             columnHeights[shortestColumnIndex] =
                 shortestHeight + layout.rowSpan * rowUnit;
-
-            if (index < 20) {
-                // eslint-disable-next-line no-console
-                console.log(
-                    `[Placement] idx=${index} after: [${columnHeights.map(h => h.toFixed(0)).join(', ')}]px\n` +
-                    `→ newColH=${columnHeights[shortestColumnIndex].toFixed(0)}px (+img ${imageHeight}px +gap ${GRID_CONFIG.gap}px)`
-                );
-            }
-
-            // Debug: Log first few images to see what's happening
-            if (index < 10) {
-                const finalWidth = dimensions?.width || image.width;
-                const finalHeight = dimensions?.height || image.height;
-                const aspectRatio = finalWidth && finalHeight ? (finalWidth / finalHeight) : 0;
-                const calculatedHeight = aspectRatio ? (columnWidth / aspectRatio) : 0;
-                const actualHeight = layout.rowSpan * GRID_CONFIG.baseRowHeight;
-
-                // Determine category for logging
-                let category = 'unknown';
-                let _categoryRange = '';
-                if (aspectRatio > 2.0) {
-                    category = 'very-wide-landscape';
-                    _categoryRange = '200-230px';
-                } else if (aspectRatio >= 1.3) {
-                    category = 'standard-landscape';
-                    _categoryRange = '230-275px';
-                } else if (aspectRatio >= 0.9) {
-                    category = 'square';
-                    _categoryRange = '240-260px';
-                } else if (aspectRatio >= 0.6) {
-                    category = 'standard-portrait';
-                    _categoryRange = '400-600px';
-                } else if (aspectRatio > 0) {
-                    category = 'very-tall-portrait';
-                    _categoryRange = '600-800px';
-                }
-
-                // More visible logging (rowGap=0 mode)
-                // eslint-disable-next-line no-console
-                console.log(
-                    `[Grid Layout] #${index} | ${category} | AR:${aspectRatio ? aspectRatio.toFixed(2) : 'N/A'} ` +
-                    `natH:${calculatedHeight ? calculatedHeight.toFixed(0) + 'px' : 'N/A'} ` +
-                    `actH:${actualHeight.toFixed(0)}px rows:${layout.rowSpan} rowStart:${rowStart} col:${column} ` +
-                    `(rowUnit ${GRID_CONFIG.baseRowHeight}px, gap ${GRID_CONFIG.gap}px, range ${_categoryRange})`
-                );
-            }
 
             return {
                 image,
@@ -2128,15 +2171,16 @@ export default function NoFlashGridPage() {
                                     height: 'auto',
                                 }}
                             >
-                        <BlurUpImage
+                                <BlurUpImage
                                     image={image}
                                     onClick={async () => {
                                         // Unsplash technique: Preload image COMPLETELY before opening modal
                                         const full = image.regularUrl || image.imageUrl || image.smallUrl || image.thumbnailUrl;
                                         if (full) {
                                             try {
-                                                // Wait for image to be fully loaded before opening modal
-                                                await preloadImage(full);
+                                                // Wait for image to be fully loaded and decoded before opening modal
+                                                // Keep decode to ensure smooth modal opening
+                                                await preloadImage(full, false);
                                                 // Image is ready - open modal smoothly
                                                 setSelectedIndex(idx);
                                             } catch {
