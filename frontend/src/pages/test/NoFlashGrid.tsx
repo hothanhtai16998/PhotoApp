@@ -1150,7 +1150,7 @@ function ImageModal({
                                 flex: 1,
                                 display: 'flex',
                                 flexDirection: 'column',
-                                minHeight: '60vh', // Ensure minimum height for image display
+                                minHeight: '75vh', // Increase min height so image has more room
                                 // No transition to prevent flash
                                 transition: 'none',
                             }}
@@ -1163,7 +1163,7 @@ function ImageModal({
                                     justifyContent: 'center',
                                     width: '100%',
                                     flex: 1,
-                                    minHeight: '60vh', // Minimum height to ensure image is tall enough (flex: 1 will make it taller if space available)
+                                    minHeight: '75vh', // Match increased min height
                                     padding: '0px 16px', // Match horizontal padding with top section (16px) so image aligns with author section
                                     background: '#ffffff',
                                     overflow: 'hidden',
@@ -1191,10 +1191,8 @@ function ImageModal({
                                             alt={img.imageTitle || 'photo'}
                                             style={{
                                                 position: 'relative',
-                                                width: 'auto',
-                                                height: 'auto',
-                                                maxWidth: '100%', // Use full container width (like Unsplash - aligns with author section)
-                                                maxHeight: '100%', // Use 100% of container height (flex container automatically accounts for top/bottom bars)
+                                                width: '100%',
+                                                height: '100%',
                                                 objectFit: 'contain',
                                                 // Apply blur filter to base64 thumbnails (like Unsplash's BlurHash)
                                                 // This makes the tiny 20x20px image look better when stretched
@@ -1226,13 +1224,9 @@ function ImageModal({
                                             alt={img.imageTitle || 'photo'}
                                             style={{
                                                 position: 'absolute',
-                                                top: '50%',
-                                                left: '50%',
-                                                transform: 'translate(-50%, -50%)',
-                                                width: 'auto',
-                                                height: 'auto',
-                                                maxWidth: '100%', // Use full container width (like Unsplash - aligns with author section)
-                                                maxHeight: '100%', // Use 100% of container height (flex container automatically accounts for top/bottom bars)
+                                                inset: 0,
+                                                width: '100%',
+                                                height: '100%',
                                                 objectFit: 'contain',
                                                 // No blur (front layer is sharp)
                                                 filter: 'none',
