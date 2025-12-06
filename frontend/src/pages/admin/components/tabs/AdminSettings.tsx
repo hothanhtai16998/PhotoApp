@@ -1,26 +1,59 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { adminService } from '@/services/adminService';
 import { toast } from 'sonner';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Save, Megaphone, X, Settings, Upload, Shield, Bell, Globe, ChevronDown, ChevronUp, HelpCircle, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Save, Megaphone, X, Settings, Upload, Shield, Bell, Globe, ChevronDown, ChevronUp, HelpCircle, CheckCircle2, AlertCircle, ChevronRight, Home, Info, AlertTriangle, CheckCircle, XCircle, Eye, EyeOff, FileText, Image as ImageIcon, Server, Database, Lock, Unlock, Mail, Languages, Clock, Link2, Facebook, Twitter, Instagram, Linkedin, Youtube, Image, Video, HardDrive, Cloud, Maximize2, Plus, Minus } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { useSiteSettings } from '@/hooks/useSiteSettings';
 import { t } from '@/i18n';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 export function AdminSettings() {
     const { hasPermission, isSuperAdmin } = usePermissions();
     const { refreshSettings } = useSiteSettings();
+    const isMobile = useIsMobile();
+    const [activeTab, setActiveTab] = useState('general');
+    const tabsContainerRef = useRef<HTMLDivElement>(null);
+    const swipeStartX = useRef<number>(0);
+    const swipeStartY = useRef<number>(0);
+    const swipeStartTime = useRef<number>(0);
+    
     const [settings, setSettings] = useState({
         siteName: 'PhotoApp',
         siteDescription: '',
         maxUploadSize: 10,
         allowedFileTypes: 'jpg,jpeg,png,webp',
         maintenanceMode: false,
+        siteLogo: '',
+        favicon: '',
+        defaultLanguage: 'en',
+        timezone: 'UTC',
+        contactEmail: '',
+        socialMediaLinks: {
+            facebook: '',
+            twitter: '',
+            instagram: '',
+            linkedin: '',
+            youtube: '',
+        },
+        // Upload & Media Settings
+        imageQuality: 85,
+        thumbnailSizes: ['150x150', '300x300', '600x600'],
+        watermarkEnabled: false,
+        watermarkImage: '',
+        autoResizeEnabled: true,
+        autoResizeMaxWidth: 1920,
+        autoResizeMaxHeight: 1080,
+        storageProvider: 's3',
+        cdnUrl: '',
+        maxVideoDuration: 300,
+        videoQuality: 'high',
+        batchUploadLimit: 10,
     });
     
     // Available file types for selection
@@ -45,8 +78,8 @@ export function AdminSettings() {
         const newTypes = currentTypes.includes(fileType)
             ? currentTypes.filter(t => t !== fileType)
             : [...currentTypes, fileType];
-        setSettings({ ...settings, allowedFileTypes: newTypes.join(',') });
-    };
+        setSettings(prev => ({ ...prev, allowedFileTypes: newTypes.join(',') }));
+    }, [selectedFileTypes]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     
@@ -64,6 +97,30 @@ export function AdminSettings() {
     const [isFadingOut, setIsFadingOut] = useState(false);
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
     const [showMaintenanceConfirm, setShowMaintenanceConfirm] = useState(false);
+    const [uploadingLogo, setUploadingLogo] = useState(false);
+    const [uploadingFavicon, setUploadingFavicon] = useState(false);
+    
+    // Available languages
+    const availableLanguages = [
+        { value: 'vi', label: 'Tiếng Việt (Vietnamese)' },
+        { value: 'en', label: 'English' },
+    ];
+    
+    // Common timezones
+    const timezones = [
+        { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
+        { value: 'America/New_York', label: 'America/New_York (Eastern Time)' },
+        { value: 'America/Chicago', label: 'America/Chicago (Central Time)' },
+        { value: 'America/Denver', label: 'America/Denver (Mountain Time)' },
+        { value: 'America/Los_Angeles', label: 'America/Los_Angeles (Pacific Time)' },
+        { value: 'Europe/London', label: 'Europe/London (GMT)' },
+        { value: 'Europe/Paris', label: 'Europe/Paris (CET)' },
+        { value: 'Asia/Tokyo', label: 'Asia/Tokyo (JST)' },
+        { value: 'Asia/Shanghai', label: 'Asia/Shanghai (CST)' },
+        { value: 'Asia/Ho_Chi_Minh', label: 'Asia/Ho_Chi_Minh (ICT)' },
+        { value: 'Asia/Dubai', label: 'Asia/Dubai (GST)' },
+        { value: 'Australia/Sydney', label: 'Australia/Sydney (AEDT)' },
+    ];
 
     useEffect(() => {
         if (!isSuperAdmin() && !hasPermission('manageSettings')) {
@@ -85,6 +142,31 @@ export function AdminSettings() {
                     maxUploadSize?: number;
                     allowedFileTypes?: string[] | string;
                     maintenanceMode?: boolean;
+                    siteLogo?: string;
+                    favicon?: string;
+                    defaultLanguage?: string;
+                    timezone?: string;
+                    contactEmail?: string;
+                    socialMediaLinks?: {
+                        facebook?: string;
+                        twitter?: string;
+                        instagram?: string;
+                        linkedin?: string;
+                        youtube?: string;
+                    };
+                    // Upload & Media Settings
+                    imageQuality?: number;
+                    thumbnailSizes?: string[];
+                    watermarkEnabled?: boolean;
+                    watermarkImage?: string;
+                    autoResizeEnabled?: boolean;
+                    autoResizeMaxWidth?: number;
+                    autoResizeMaxHeight?: number;
+                    storageProvider?: string;
+                    cdnUrl?: string;
+                    maxVideoDuration?: number;
+                    videoQuality?: string;
+                    batchUploadLimit?: number;
                 };
                 const loadedSettings = {
                     siteName: (settingsData.siteName as string) || 'PhotoApp',
@@ -94,6 +176,31 @@ export function AdminSettings() {
                         ? settingsData.allowedFileTypes.join(',')
                         : (settingsData.allowedFileTypes as string) || 'jpg,jpeg,png,webp',
                     maintenanceMode: (settingsData.maintenanceMode as boolean) || false,
+                    siteLogo: (settingsData.siteLogo as string) || '',
+                    favicon: (settingsData.favicon as string) || '',
+                    defaultLanguage: (settingsData.defaultLanguage as string) || 'vi',
+                    timezone: (settingsData.timezone as string) || 'UTC',
+                    contactEmail: (settingsData.contactEmail as string) || '',
+                    socialMediaLinks: settingsData.socialMediaLinks || {
+                        facebook: '',
+                        twitter: '',
+                        instagram: '',
+                        linkedin: '',
+                        youtube: '',
+                    },
+                    // Upload & Media Settings
+                    imageQuality: (settingsData.imageQuality as number) || 85,
+                    thumbnailSizes: (settingsData.thumbnailSizes as string[]) || ['150x150', '300x300', '600x600'],
+                    watermarkEnabled: (settingsData.watermarkEnabled as boolean) || false,
+                    watermarkImage: (settingsData.watermarkImage as string) || '',
+                    autoResizeEnabled: (settingsData.autoResizeEnabled as boolean) ?? true,
+                    autoResizeMaxWidth: (settingsData.autoResizeMaxWidth as number) || 1920,
+                    autoResizeMaxHeight: (settingsData.autoResizeMaxHeight as number) || 1080,
+                    storageProvider: (settingsData.storageProvider as string) || 's3',
+                    cdnUrl: (settingsData.cdnUrl as string) || '',
+                    maxVideoDuration: (settingsData.maxVideoDuration as number) || 300,
+                    videoQuality: (settingsData.videoQuality as string) || 'high',
+                    batchUploadLimit: (settingsData.batchUploadLimit as number) || 10,
                 };
                 setSettings(loadedSettings);
                 setOriginalSettings(loadedSettings);
@@ -106,8 +213,8 @@ export function AdminSettings() {
         }
     };
 
-    // Real-time validation
-    const validateSettings = () => {
+    // Real-time validation (memoized to avoid recreating on every render)
+    const validateSettings = useCallback(() => {
         const errors: Record<string, string> = {};
         
         if (!settings.siteName.trim()) {
@@ -128,14 +235,37 @@ export function AdminSettings() {
             errors.allowedFileTypes = 'At least one file format must be selected';
         }
         
+        // Validate contact email if provided
+        if (settings.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.contactEmail)) {
+            errors.contactEmail = 'Please enter a valid email address';
+        }
+        
+        // Validate social media URLs if provided
+        const urlPattern = /^https?:\/\/.+/;
+        if (settings.socialMediaLinks.facebook && !urlPattern.test(settings.socialMediaLinks.facebook)) {
+            errors.socialFacebook = 'Please enter a valid URL (must start with http:// or https://)';
+        }
+        if (settings.socialMediaLinks.twitter && !urlPattern.test(settings.socialMediaLinks.twitter)) {
+            errors.socialTwitter = 'Please enter a valid URL (must start with http:// or https://)';
+        }
+        if (settings.socialMediaLinks.instagram && !urlPattern.test(settings.socialMediaLinks.instagram)) {
+            errors.socialInstagram = 'Please enter a valid URL (must start with http:// or https://)';
+        }
+        if (settings.socialMediaLinks.linkedin && !urlPattern.test(settings.socialMediaLinks.linkedin)) {
+            errors.socialLinkedin = 'Please enter a valid URL (must start with http:// or https://)';
+        }
+        if (settings.socialMediaLinks.youtube && !urlPattern.test(settings.socialMediaLinks.youtube)) {
+            errors.socialYoutube = 'Please enter a valid URL (must start with http:// or https://)';
+        }
+        
         setValidationErrors(errors);
         return Object.keys(errors).length === 0;
-    };
+    }, [settings, selectedFileTypes]);
 
-    // Check if settings have changed
-    const hasChanges = () => {
+    // Check if settings have changed (memoized to avoid expensive JSON.stringify on every render)
+    const hasChanges = useMemo(() => {
         return JSON.stringify(settings) !== JSON.stringify(originalSettings);
-    };
+    }, [settings, originalSettings]);
 
     const handleSave = async () => {
         if (!isSuperAdmin() && !hasPermission('manageSettings')) {
@@ -199,13 +329,16 @@ export function AdminSettings() {
         setShowMaintenanceConfirm(false);
     };
 
-    // Validate on settings change
+    // Validate on settings change (debounced to avoid excessive validation)
     useEffect(() => {
-        if (!loading) {
+        if (loading) return;
+        
+        const timeoutId = setTimeout(() => {
             validateSettings();
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [settings, selectedFileTypes]);
+        }, 300); // Debounce validation by 300ms
+        
+        return () => clearTimeout(timeoutId);
+    }, [settings, selectedFileTypes, loading, validateSettings]);
 
     const handleSendAnnouncement = async () => {
         if (!isSuperAdmin() && !hasPermission('manageSettings')) {
@@ -236,43 +369,185 @@ export function AdminSettings() {
         }
     };
 
+    // Swipe gesture handlers for mobile tab navigation
+    const tabs = ['general', 'upload', 'system', 'notifications'];
+    
+    const handleTouchStart = (e: React.TouchEvent) => {
+        if (!isMobile) return;
+        swipeStartX.current = e.touches[0].clientX;
+        swipeStartY.current = e.touches[0].clientY;
+        swipeStartTime.current = Date.now();
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (!isMobile) return;
+        // Prevent default scrolling if horizontal swipe
+        const deltaX = Math.abs(e.touches[0].clientX - swipeStartX.current);
+        const deltaY = Math.abs(e.touches[0].clientY - swipeStartY.current);
+        if (deltaX > deltaY && tabsContainerRef.current) {
+            e.preventDefault();
+        }
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (!isMobile) return;
+        const deltaX = e.changedTouches[0].clientX - swipeStartX.current;
+        const deltaY = Math.abs(e.changedTouches[0].clientY - swipeStartY.current);
+        const deltaTime = Date.now() - swipeStartTime.current;
+        const minSwipeDistance = 50;
+        const maxSwipeTime = 300;
+        const maxVerticalDistance = 30; // Prevent vertical scrolls from triggering swipe
+
+        // Only trigger swipe if:
+        // 1. Horizontal movement is greater than vertical (horizontal swipe)
+        // 2. Swipe distance is sufficient
+        // 3. Swipe time is quick enough
+        // 4. Vertical movement is minimal
+        if (Math.abs(deltaX) > minSwipeDistance && 
+            deltaTime < maxSwipeTime && 
+            Math.abs(deltaX) > deltaY &&
+            deltaY < maxVerticalDistance) {
+            const currentIndex = tabs.indexOf(activeTab);
+            if (deltaX < 0 && currentIndex < tabs.length - 1) {
+                // Swipe left - next tab
+                setActiveTab(tabs[currentIndex + 1]);
+            } else if (deltaX > 0 && currentIndex > 0) {
+                // Swipe right - previous tab
+                setActiveTab(tabs[currentIndex - 1]);
+            }
+        }
+    };
+
+    // Swipe gesture handlers for tab content area
+    const tabContentRef = useRef<HTMLDivElement>(null);
+    const contentSwipeStartX = useRef<number>(0);
+    const contentSwipeStartY = useRef<number>(0);
+    const contentSwipeStartTime = useRef<number>(0);
+
+    const handleContentTouchStart = (e: React.TouchEvent) => {
+        if (!isMobile) return;
+        contentSwipeStartX.current = e.touches[0].clientX;
+        contentSwipeStartY.current = e.touches[0].clientY;
+        contentSwipeStartTime.current = Date.now();
+    };
+
+    const handleContentTouchMove = (e: React.TouchEvent) => {
+        if (!isMobile) return;
+        const deltaX = Math.abs(e.touches[0].clientX - contentSwipeStartX.current);
+        const deltaY = Math.abs(e.touches[0].clientY - contentSwipeStartY.current);
+        // Only prevent default if it's clearly a horizontal swipe
+        if (deltaX > 30 && deltaX > deltaY * 1.5) {
+            e.preventDefault();
+        }
+    };
+
+    const handleContentTouchEnd = (e: React.TouchEvent) => {
+        if (!isMobile) return;
+        const deltaX = e.changedTouches[0].clientX - contentSwipeStartX.current;
+        const deltaY = Math.abs(e.changedTouches[0].clientY - contentSwipeStartY.current);
+        const deltaTime = Date.now() - contentSwipeStartTime.current;
+        const minSwipeDistance = 80; // Slightly higher for content area
+        const maxSwipeTime = 400;
+        const maxVerticalDistance = 50;
+
+        if (Math.abs(deltaX) > minSwipeDistance && 
+            deltaTime < maxSwipeTime && 
+            Math.abs(deltaX) > deltaY * 1.5 &&
+            deltaY < maxVerticalDistance) {
+            const currentIndex = tabs.indexOf(activeTab);
+            if (deltaX < 0 && currentIndex < tabs.length - 1) {
+                setActiveTab(tabs[currentIndex + 1]);
+            } else if (deltaX > 0 && currentIndex > 0) {
+                setActiveTab(tabs[currentIndex - 1]);
+            }
+        }
+    };
+
     if (loading) {
         return <div className="admin-loading">Đang tải...</div>;
     }
 
     return (
         <div className="admin-settings">
+            {/* Skip to Content Link */}
+            <a href="#admin-settings-main-content" className="admin-skip-link">
+                Skip to main content
+            </a>
+
+            {/* Breadcrumb Navigation */}
+            <nav className="admin-breadcrumb" aria-label="Breadcrumb">
+                <ol className="admin-breadcrumb-list">
+                    <li className="admin-breadcrumb-item">
+                        <a href="/" className="admin-breadcrumb-link" aria-label="Home">
+                            <Home size={16} />
+                            <span>Home</span>
+                        </a>
+                    </li>
+                    <li className="admin-breadcrumb-separator" aria-hidden="true">
+                        <ChevronRight size={16} />
+                    </li>
+                    <li className="admin-breadcrumb-item">
+                        <a href="/admin" className="admin-breadcrumb-link">Admin</a>
+                    </li>
+                    <li className="admin-breadcrumb-separator" aria-hidden="true">
+                        <ChevronRight size={16} />
+                    </li>
+                    <li className="admin-breadcrumb-item" aria-current="page">
+                        <span>Settings</span>
+                    </li>
+                </ol>
+            </nav>
+
             <div className="admin-header">
-                <h1 className="admin-title">{t('admin.systemSettings')}</h1>
+                <h1 className="admin-title" id="admin-settings-main-content" tabIndex={-1}>{t('admin.systemSettings')}</h1>
             </div>
 
-            <Tabs defaultValue="general" className="admin-settings-tabs">
-                <TabsList className="admin-settings-tabs-list">
+            <Tabs 
+                value={activeTab} 
+                onValueChange={setActiveTab}
+                className="admin-settings-tabs" 
+                aria-label="Settings sections"
+            >
+                <TabsList 
+                    className="admin-settings-tabs-list" 
+                    role="tablist"
+                    ref={tabsContainerRef}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                >
                     <TabsTrigger value="general">
-                        <Globe size={16} style={{ marginRight: '0.5rem' }} />
-                        General
+                        <Globe size={16} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                        <span>General</span>
                     </TabsTrigger>
                     <TabsTrigger value="upload">
-                        <Upload size={16} style={{ marginRight: '0.5rem' }} />
-                        Upload
+                        <Upload size={16} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                        <span>Upload</span>
                     </TabsTrigger>
                     <TabsTrigger value="system">
-                        <Shield size={16} style={{ marginRight: '0.5rem' }} />
-                        System
+                        <Shield size={16} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                        <span>System</span>
                     </TabsTrigger>
                     <TabsTrigger value="notifications">
-                        <Bell size={16} style={{ marginRight: '0.5rem' }} />
-                        Notifications
+                        <Bell size={16} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                        <span>Notifications</span>
                     </TabsTrigger>
                 </TabsList>
 
                 {/* General Settings Tab */}
-                <TabsContent value="general" className="admin-settings-tab-content">
+                <TabsContent 
+                    value="general" 
+                    className="admin-settings-tab-content"
+                    ref={tabContentRef}
+                    onTouchStart={handleContentTouchStart}
+                    onTouchMove={handleContentTouchMove}
+                    onTouchEnd={handleContentTouchEnd}
+                >
                     <div className="admin-settings-two-column">
                         <Card className="admin-settings-card">
                             <CardHeader>
                                 <CardTitle className="admin-settings-card-title">
-                                    <Globe size={20} style={{ marginRight: '0.5rem' }} />
+                                    <Globe size={20} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
                                     General Settings
                                 </CardTitle>
                                 <CardDescription>
@@ -280,69 +555,438 @@ export function AdminSettings() {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <div className="admin-form">
-                                    <div className={`admin-form-group ${validationErrors.siteName ? 'has-error' : ''} ${settings.siteName !== originalSettings.siteName ? 'has-changes' : ''}`}>
-                                        <Label>
+            <div className="admin-form">
+                                    <div className={`admin-form-group admin-form-group-critical ${validationErrors.siteName ? 'has-error' : ''} ${settings.siteName !== originalSettings.siteName ? 'has-changes' : ''}`}>
+                                        <Label htmlFor="site-name-input" className="admin-form-label-with-icon">
+                                            <FileText size={16} className="admin-form-label-icon" aria-hidden="true" />
                                             {t('admin.siteName')}
-                                            <span className="admin-required-indicator">*</span>
+                                            <span className="admin-required-indicator" aria-label="required">*</span>
+                                            <span className="admin-setting-importance-badge admin-setting-importance-critical">Critical</span>
                                             <div className="admin-tooltip-wrapper">
-                                                <HelpCircle size={14} className="admin-tooltip-icon" />
-                                                <span className="admin-tooltip-text">
+                                                <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                                <span className="admin-tooltip-text" role="tooltip">
                                                     The name displayed in the browser tab and site header
                                                 </span>
                                             </div>
                                         </Label>
-                                        <Input
-                                            value={settings.siteName}
-                                            onChange={(e) => setSettings({ ...settings, siteName: e.target.value })}
+                                        {/* Live Preview */}
+                                        <div className="admin-setting-preview">
+                                            <span className="admin-setting-preview-label">Preview:</span>
+                                            <span className="admin-setting-preview-value">{settings.siteName || 'Your Site Name'}</span>
+                                        </div>
+                    <Input
+                                            id="site-name-input"
+                        value={settings.siteName}
+                        onChange={(e) => setSettings({ ...settings, siteName: e.target.value })}
                                             placeholder="Enter site name"
                                             className={validationErrors.siteName ? 'input-error' : ''}
+                                            aria-describedby={validationErrors.siteName ? 'site-name-error' : 'site-name-help'}
+                                            aria-invalid={validationErrors.siteName ? 'true' : 'false'}
+                                            aria-required="true"
                                         />
                                         {validationErrors.siteName && (
-                                            <p className="admin-validation-error">
-                                                <AlertCircle size={14} />
+                                            <p className="admin-validation-error" id="site-name-error" role="alert" aria-live="polite">
+                                                <AlertCircle size={14} aria-hidden="true" />
                                                 {validationErrors.siteName}
                                             </p>
                                         )}
+                                        <span id="site-name-help" className="sr-only">
+                                            Enter the name that will be displayed in the browser tab and site header
+                                        </span>
                                         {settings.siteName !== originalSettings.siteName && !validationErrors.siteName && (
                                             <p className="admin-change-indicator">
                                                 <span className="admin-change-dot"></span>
                                                 Modified
                                             </p>
                                         )}
-                                    </div>
+                </div>
 
-                                <div className={`admin-form-group ${validationErrors.siteDescription ? 'has-error' : ''} ${settings.siteDescription !== originalSettings.siteDescription ? 'has-changes' : ''}`}>
-                                    <Label>
+                                <div className={`admin-form-group admin-form-group-important ${validationErrors.siteDescription ? 'has-error' : ''} ${settings.siteDescription !== originalSettings.siteDescription ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="site-description-input" className="admin-form-label-with-icon">
+                                        <Info size={16} className="admin-form-label-icon" aria-hidden="true" />
                                         {t('admin.siteDescription')}
+                                        <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
                                         <div className="admin-tooltip-wrapper">
-                                            <HelpCircle size={14} className="admin-tooltip-icon" />
-                                            <span className="admin-tooltip-text">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
                                                 A brief description of your site (used for SEO and social sharing)
                                             </span>
                                         </div>
                                     </Label>
-                                    <Input
-                                        value={settings.siteDescription}
-                                        onChange={(e) => setSettings({ ...settings, siteDescription: e.target.value })}
+                    <Input
+                                        id="site-description-input"
+                        value={settings.siteDescription}
+                        onChange={(e) => setSettings({ ...settings, siteDescription: e.target.value })}
                                         placeholder="Enter site description"
                                         className={validationErrors.siteDescription ? 'input-error' : ''}
+                                        aria-describedby={validationErrors.siteDescription ? 'site-description-error' : 'site-description-help'}
+                                        aria-invalid={validationErrors.siteDescription ? 'true' : 'false'}
+                                        maxLength={500}
                                     />
                                     {validationErrors.siteDescription && (
-                                        <p className="admin-validation-error">
-                                            <AlertCircle size={14} />
+                                        <p className="admin-validation-error" id="site-description-error" role="alert" aria-live="polite">
+                                            <AlertCircle size={14} aria-hidden="true" />
                                             {validationErrors.siteDescription}
                                         </p>
                                     )}
                                     {settings.siteDescription !== originalSettings.siteDescription && !validationErrors.siteDescription && (
-                                        <p className="admin-change-indicator">
-                                            <span className="admin-change-dot"></span>
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
                                             Modified
                                         </p>
                                     )}
-                                    <p className="admin-form-help-text">
+                                    <p className="admin-form-help-text" id="site-description-help">
                                         {settings.siteDescription.length}/500 characters
                                     </p>
+                </div>
+
+                                {/* Site Logo Upload */}
+                                <div className={`admin-form-group admin-form-group-important ${settings.siteLogo !== originalSettings.siteLogo ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="site-logo-upload" className="admin-form-label-with-icon">
+                                        <ImageIcon size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Site Logo
+                                        <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Upload a custom logo for your site. Recommended size: 200x50px. Supported formats: PNG, JPG, SVG
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <div className="admin-file-upload-wrapper">
+                                        <input
+                                            type="file"
+                                            id="site-logo-upload"
+                                            accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                                            onChange={async (e) => {
+                                                const file = e.target.files?.[0];
+                                                if (!file) return;
+                                                
+                                                if (file.size > 5 * 1024 * 1024) {
+                                                    toast.error('Logo file size must be less than 5MB');
+                                                    return;
+                                                }
+                                                
+                                                try {
+                                                    setUploadingLogo(true);
+                                                    // TODO: Implement actual upload to server
+                                                    // For now, create a preview URL
+                                                    const reader = new FileReader();
+                                                    reader.onload = (event) => {
+                                                        const result = event.target?.result as string;
+                                                        setSettings({ ...settings, siteLogo: result });
+                                                    };
+                                                    reader.readAsDataURL(file);
+                                                    toast.success('Logo uploaded successfully');
+                                                } catch (error) {
+                                                    toast.error('Failed to upload logo');
+                                                } finally {
+                                                    setUploadingLogo(false);
+                                                }
+                                            }}
+                                            className="admin-file-input"
+                                            disabled={uploadingLogo}
+                                        />
+                                        <label htmlFor="site-logo-upload" className="admin-file-upload-label">
+                                            <Upload size={16} aria-hidden="true" />
+                                            {uploadingLogo ? 'Uploading...' : settings.siteLogo ? 'Change Logo' : 'Upload Logo'}
+                                        </label>
+                                        {settings.siteLogo && (
+                                            <div className="admin-image-preview">
+                                                <img src={settings.siteLogo} alt="Site logo preview" className="admin-image-preview-img" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSettings({ ...settings, siteLogo: '' })}
+                                                    className="admin-image-preview-remove"
+                                                    aria-label="Remove logo"
+                                                >
+                                                    <X size={16} />
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Favicon Upload */}
+                                <div className={`admin-form-group admin-form-group-important ${settings.favicon !== originalSettings.favicon ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="favicon-upload" className="admin-form-label-with-icon">
+                                        <ImageIcon size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Favicon
+                                        <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Upload a custom favicon. Recommended size: 32x32px or 16x16px. Supported formats: ICO, PNG
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <div className="admin-file-upload-wrapper">
+                                        <input
+                                            type="file"
+                                            id="favicon-upload"
+                                            accept="image/x-icon,image/png,image/ico"
+                                            onChange={async (e) => {
+                                                const file = e.target.files?.[0];
+                                                if (!file) return;
+                                                
+                                                if (file.size > 1 * 1024 * 1024) {
+                                                    toast.error('Favicon file size must be less than 1MB');
+                                                    return;
+                                                }
+                                                
+                                                try {
+                                                    setUploadingFavicon(true);
+                                                    // TODO: Implement actual upload to server
+                                                    const reader = new FileReader();
+                                                    reader.onload = (event) => {
+                                                        const result = event.target?.result as string;
+                                                        setSettings({ ...settings, favicon: result });
+                                                    };
+                                                    reader.readAsDataURL(file);
+                                                    toast.success('Favicon uploaded successfully');
+                                                } catch (error) {
+                                                    toast.error('Failed to upload favicon');
+                                                } finally {
+                                                    setUploadingFavicon(false);
+                                                }
+                                            }}
+                                            className="admin-file-input"
+                                            disabled={uploadingFavicon}
+                                        />
+                                        <label htmlFor="favicon-upload" className="admin-file-upload-label">
+                                            <Upload size={16} aria-hidden="true" />
+                                            {uploadingFavicon ? 'Uploading...' : settings.favicon ? 'Change Favicon' : 'Upload Favicon'}
+                                        </label>
+                                        {settings.favicon && (
+                                            <div className="admin-image-preview admin-image-preview-small">
+                                                <img src={settings.favicon} alt="Favicon preview" className="admin-image-preview-img" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSettings({ ...settings, favicon: '' })}
+                                                    className="admin-image-preview-remove"
+                                                    aria-label="Remove favicon"
+                                                >
+                                                    <X size={16} />
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Default Language */}
+                                <div className={`admin-form-group admin-form-group-important ${settings.defaultLanguage !== originalSettings.defaultLanguage ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="default-language-select" className="admin-form-label-with-icon">
+                                        <Languages size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Default Language
+                                        <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Set the default language for new users and the site interface
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <select
+                                        id="default-language-select"
+                                        value={settings.defaultLanguage}
+                                        onChange={(e) => setSettings({ ...settings, defaultLanguage: e.target.value })}
+                                        className="admin-select"
+                                        aria-describedby="default-language-help"
+                                    >
+                                        {availableLanguages.map((lang) => (
+                                            <option key={lang.value} value={lang.value}>
+                                                {lang.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <span id="default-language-help" className="sr-only">
+                                        Select the default language for the site
+                                    </span>
+                                    {settings.defaultLanguage !== originalSettings.defaultLanguage && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Timezone */}
+                                <div className={`admin-form-group admin-form-group-important ${settings.timezone !== originalSettings.timezone ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="timezone-select" className="admin-form-label-with-icon">
+                                        <Clock size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Timezone
+                                        <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Set the default timezone for the application
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <select
+                                        id="timezone-select"
+                                        value={settings.timezone}
+                                        onChange={(e) => setSettings({ ...settings, timezone: e.target.value })}
+                                        className="admin-select"
+                                        aria-describedby="timezone-help"
+                                    >
+                                        {timezones.map((tz) => (
+                                            <option key={tz.value} value={tz.value}>
+                                                {tz.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <span id="timezone-help" className="sr-only">
+                                        Select the default timezone for the site
+                                    </span>
+                                    {settings.timezone !== originalSettings.timezone && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Contact Email */}
+                                <div className={`admin-form-group admin-form-group-important ${settings.contactEmail !== originalSettings.contactEmail ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="contact-email-input" className="admin-form-label-with-icon">
+                                        <Mail size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Contact Email
+                                        <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Set the contact email address for support inquiries
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <Input
+                                        id="contact-email-input"
+                                        type="email"
+                                        value={settings.contactEmail}
+                                        onChange={(e) => setSettings({ ...settings, contactEmail: e.target.value })}
+                                        placeholder="support@example.com"
+                                        className={validationErrors.contactEmail ? 'input-error' : ''}
+                                        aria-describedby={validationErrors.contactEmail ? 'contact-email-error' : 'contact-email-help'}
+                                        aria-invalid={validationErrors.contactEmail ? 'true' : 'false'}
+                                    />
+                                    {validationErrors.contactEmail && (
+                                        <p className="admin-validation-error" id="contact-email-error" role="alert" aria-live="polite">
+                                            <AlertCircle size={14} aria-hidden="true" />
+                                            {validationErrors.contactEmail}
+                                        </p>
+                                    )}
+                                    <span id="contact-email-help" className="sr-only">
+                                        Enter a valid email address for support inquiries
+                                    </span>
+                                    {settings.contactEmail !== originalSettings.contactEmail && !validationErrors.contactEmail && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Social Media Links */}
+                                <div className={`admin-form-group ${JSON.stringify(settings.socialMediaLinks) !== JSON.stringify(originalSettings.socialMediaLinks) ? 'has-changes' : ''}`}>
+                                    <Label className="admin-form-label-with-icon">
+                                        <Link2 size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Social Media Links
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Add links to your social media profiles
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <div className="admin-social-links-grid">
+                                        <div className="admin-form-group">
+                                            <Label htmlFor="social-facebook" className="admin-social-label">
+                                                <Facebook size={16} className="admin-social-icon" aria-hidden="true" />
+                                                Facebook
+                                            </Label>
+                                            <Input
+                                                id="social-facebook"
+                                                type="url"
+                                                value={settings.socialMediaLinks.facebook}
+                                                onChange={(e) => setSettings({
+                                                    ...settings,
+                                                    socialMediaLinks: { ...settings.socialMediaLinks, facebook: e.target.value }
+                                                })}
+                                                placeholder="https://facebook.com/yourpage"
+                                            />
+                                        </div>
+                                        <div className="admin-form-group">
+                                            <Label htmlFor="social-twitter" className="admin-social-label">
+                                                <Twitter size={16} className="admin-social-icon" aria-hidden="true" />
+                                                Twitter
+                                            </Label>
+                                            <Input
+                                                id="social-twitter"
+                                                type="url"
+                                                value={settings.socialMediaLinks.twitter}
+                                                onChange={(e) => setSettings({
+                                                    ...settings,
+                                                    socialMediaLinks: { ...settings.socialMediaLinks, twitter: e.target.value }
+                                                })}
+                                                placeholder="https://twitter.com/yourhandle"
+                                            />
+                                        </div>
+                                        <div className="admin-form-group">
+                                            <Label htmlFor="social-instagram" className="admin-social-label">
+                                                <Instagram size={16} className="admin-social-icon" aria-hidden="true" />
+                                                Instagram
+                                            </Label>
+                                            <Input
+                                                id="social-instagram"
+                                                type="url"
+                                                value={settings.socialMediaLinks.instagram}
+                                                onChange={(e) => setSettings({
+                                                    ...settings,
+                                                    socialMediaLinks: { ...settings.socialMediaLinks, instagram: e.target.value }
+                                                })}
+                                                placeholder="https://instagram.com/yourhandle"
+                                            />
+                                        </div>
+                                        <div className="admin-form-group">
+                                            <Label htmlFor="social-linkedin" className="admin-social-label">
+                                                <Linkedin size={16} className="admin-social-icon" aria-hidden="true" />
+                                                LinkedIn
+                                            </Label>
+                                            <Input
+                                                id="social-linkedin"
+                                                type="url"
+                                                value={settings.socialMediaLinks.linkedin}
+                                                onChange={(e) => setSettings({
+                                                    ...settings,
+                                                    socialMediaLinks: { ...settings.socialMediaLinks, linkedin: e.target.value }
+                                                })}
+                                                placeholder="https://linkedin.com/company/yourcompany"
+                                            />
+                                        </div>
+                                        <div className="admin-form-group">
+                                            <Label htmlFor="social-youtube" className="admin-social-label">
+                                                <Youtube size={16} className="admin-social-icon" aria-hidden="true" />
+                                                YouTube
+                                            </Label>
+                                            <Input
+                                                id="social-youtube"
+                                                type="url"
+                                                value={settings.socialMediaLinks.youtube}
+                                                onChange={(e) => setSettings({
+                                                    ...settings,
+                                                    socialMediaLinks: { ...settings.socialMediaLinks, youtube: e.target.value }
+                                                })}
+                                                placeholder="https://youtube.com/@yourchannel"
+                                            />
+                                        </div>
+                                    </div>
+                                    {JSON.stringify(settings.socialMediaLinks) !== JSON.stringify(originalSettings.socialMediaLinks) && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
                                 </div>
 
                                 {/* Progressive Disclosure - Advanced Settings */}
@@ -361,28 +1005,17 @@ export function AdminSettings() {
                                     </button>
                                     {showAdvancedSettings && (
                                         <div className="admin-advanced-settings-content">
-                                            <div className="admin-form-group">
-                                                <Label>Timezone</Label>
-                                                <select className="admin-select" defaultValue="UTC">
-                                                    <option value="UTC">UTC</option>
-                                                    <option value="America/New_York">Eastern Time</option>
-                                                    <option value="America/Chicago">Central Time</option>
-                                                    <option value="America/Denver">Mountain Time</option>
-                                                    <option value="America/Los_Angeles">Pacific Time</option>
-                                                    <option value="Europe/London">London</option>
-                                                    <option value="Asia/Ho_Chi_Minh">Ho Chi Minh</option>
-                                                </select>
-                                                <p className="admin-form-help-text">
-                                                    Set the default timezone for the application
-                                                </p>
-                                            </div>
+                                            {/* Additional advanced settings can be added here */}
+                                            <p className="admin-form-help-text">
+                                                Advanced configuration options will be available here.
+                                            </p>
                                         </div>
                                     )}
                                 </div>
 
                                 <div className="admin-modal-actions">
                                     <div className="admin-actions-status">
-                                        {hasChanges() && (
+                                        {hasChanges && (
                                             <div className="admin-unsaved-changes-indicator">
                                                 <AlertCircle size={16} />
                                                 <span>You have unsaved changes</span>
@@ -397,12 +1030,17 @@ export function AdminSettings() {
                                     </div>
                                     <Button 
                                         onClick={handleSave} 
-                                        disabled={saving || !hasChanges() || Object.keys(validationErrors).length > 0} 
+                                        disabled={saving || !hasChanges || Object.keys(validationErrors).length > 0} 
                                         className="admin-add-category-btn"
+                                        aria-label={saving ? 'Saving settings' : 'Save all settings'}
+                                        aria-describedby="save-button-help"
                                     >
-                                        <Save size={16} />
+                                        <Save size={16} aria-hidden="true" />
                                         {saving ? t('admin.saving') : t('admin.saveSettings')}
                                     </Button>
+                                    <span id="save-button-help" className="sr-only">
+                                        {!hasChanges ? 'No changes to save' : Object.keys(validationErrors).length > 0 ? 'Please fix errors before saving' : 'Save all settings changes'}
+                                    </span>
                                 </div>
                                 </div>
                             </CardContent>
@@ -411,11 +1049,18 @@ export function AdminSettings() {
                 </TabsContent>
 
                 {/* Upload Settings Tab */}
-                <TabsContent value="upload" className="admin-settings-tab-content">
+                <TabsContent 
+                    value="upload" 
+                    className="admin-settings-tab-content"
+                    ref={tabContentRef}
+                    onTouchStart={handleContentTouchStart}
+                    onTouchMove={handleContentTouchMove}
+                    onTouchEnd={handleContentTouchEnd}
+                >
                     <Card className="admin-settings-card">
                         <CardHeader>
                             <CardTitle className="admin-settings-card-title">
-                                <Upload size={20} style={{ marginRight: '0.5rem' }} />
+                                <Upload size={20} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
                                 Upload Settings
                             </CardTitle>
                             <CardDescription>
@@ -424,78 +1069,479 @@ export function AdminSettings() {
                         </CardHeader>
                         <CardContent>
                             <div className="admin-form">
-                                <div className={`admin-form-group ${validationErrors.maxUploadSize ? 'has-error' : ''} ${settings.maxUploadSize !== originalSettings.maxUploadSize ? 'has-changes' : ''}`}>
-                                    <Label>
+                                <div className={`admin-form-group admin-form-group-important ${validationErrors.maxUploadSize ? 'has-error' : ''} ${settings.maxUploadSize !== originalSettings.maxUploadSize ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="max-upload-size-input" className="admin-form-label-with-icon">
+                                        <Server size={16} className="admin-form-label-icon" aria-hidden="true" />
                                         {t('admin.maxUploadSize')} (MB)
+                                        <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
                                         <div className="admin-tooltip-wrapper">
-                                            <HelpCircle size={14} className="admin-tooltip-icon" />
-                                            <span className="admin-tooltip-text">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
                                                 Maximum file size allowed for uploads. Higher values may require server configuration changes.
                                             </span>
                                         </div>
                                     </Label>
-                                    <Input
-                                        type="number"
-                                        value={settings.maxUploadSize}
-                                        onChange={(e) => setSettings({ ...settings, maxUploadSize: parseInt(e.target.value) || 10 })}
+                                    {/* Status Badge for Upload Size */}
+                                    <div className="admin-setting-status-info">
+                                        <span className={`admin-status-badge admin-status-badge-info ${settings.maxUploadSize > 50 ? 'admin-status-badge-warning' : ''}`}>
+                                            {settings.maxUploadSize > 50 ? (
+                                                <>
+                                                    <AlertTriangle size={14} aria-hidden="true" />
+                                                    Large size may impact performance
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <CheckCircle size={14} aria-hidden="true" />
+                                                    Optimal size
+                                                </>
+                                            )}
+                                        </span>
+                                    </div>
+                    <Input
+                                        id="max-upload-size-input"
+                        type="number"
+                        value={settings.maxUploadSize}
+                        onChange={(e) => setSettings({ ...settings, maxUploadSize: parseInt(e.target.value) || 10 })}
                                         min="1"
                                         max="1000"
                                         className={validationErrors.maxUploadSize ? 'input-error' : ''}
+                                        aria-describedby={validationErrors.maxUploadSize ? 'max-upload-size-error' : 'max-upload-size-help'}
+                                        aria-invalid={validationErrors.maxUploadSize ? 'true' : 'false'}
+                                        aria-required="true"
                                     />
                                     {validationErrors.maxUploadSize && (
-                                        <p className="admin-validation-error">
-                                            <AlertCircle size={14} />
+                                        <p className="admin-validation-error" id="max-upload-size-error" role="alert" aria-live="polite">
+                                            <AlertCircle size={14} aria-hidden="true" />
                                             {validationErrors.maxUploadSize}
                                         </p>
                                     )}
                                     {settings.maxUploadSize !== originalSettings.maxUploadSize && !validationErrors.maxUploadSize && (
-                                        <p className="admin-change-indicator">
-                                            <span className="admin-change-dot"></span>
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
                                             Modified
                                         </p>
                                     )}
-                                    <p className="admin-form-help-text">
+                                    <p className="admin-form-help-text" id="max-upload-size-help">
                                         Maximum file size users can upload (1-1000 MB)
                                     </p>
-                                </div>
+                </div>
 
-                                <div className={`admin-form-group ${validationErrors.allowedFileTypes ? 'has-error' : ''} ${settings.allowedFileTypes !== originalSettings.allowedFileTypes ? 'has-changes' : ''}`}>
-                                    <Label>
+                                <div className={`admin-form-group admin-form-group-critical ${validationErrors.allowedFileTypes ? 'has-error' : ''} ${settings.allowedFileTypes !== originalSettings.allowedFileTypes ? 'has-changes' : ''}`}>
+                                    <Label id="file-formats-label" className="admin-form-label-with-icon">
+                                        <ImageIcon size={16} className="admin-form-label-icon" aria-hidden="true" />
                                         {t('admin.allowedFileFormats')}
+                                        <span className="admin-setting-importance-badge admin-setting-importance-critical">Critical</span>
                                         <div className="admin-tooltip-wrapper">
-                                            <HelpCircle size={14} className="admin-tooltip-icon" />
-                                            <span className="admin-tooltip-text">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
                                                 Select which file formats users can upload. At least one format must be selected.
                                             </span>
                                         </div>
                                     </Label>
-                                    <div className="admin-file-types-selector">
-                                        {availableFileTypes.map((fileType) => {
-                                            const isSelected = selectedFileTypes.includes(fileType.value);
-                                            return (
-                                                <label
-                                                    key={fileType.value}
-                                                    className={`admin-file-type-checkbox ${isSelected ? 'selected' : ''}`}
-                                                >
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={isSelected}
-                                                        onChange={() => handleFileTypeToggle(fileType.value)}
-                                                    />
-                                                    <span>{fileType.label}</span>
-                                                </label>
-                                            );
-                                        })}
+                                    {/* Status Badge for File Types */}
+                                    <div className="admin-setting-status-info">
+                                        <span className={`admin-status-badge admin-status-badge-info ${selectedFileTypes.length === 0 ? 'admin-status-badge-error' : selectedFileTypes.length < 3 ? 'admin-status-badge-warning' : ''}`}>
+                                            {selectedFileTypes.length === 0 ? (
+                                                <>
+                                                    <XCircle size={14} aria-hidden="true" />
+                                                    No formats selected
+                                                </>
+                                            ) : selectedFileTypes.length < 3 ? (
+                                                <>
+                                                    <AlertTriangle size={14} aria-hidden="true" />
+                                                    Limited formats ({selectedFileTypes.length})
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <CheckCircle size={14} aria-hidden="true" />
+                                                    {selectedFileTypes.length} formats enabled
+                                                </>
+                                            )}
+                                        </span>
                                     </div>
+                                    <div 
+                                        className="admin-file-types-selector"
+                                        role="group"
+                                        aria-labelledby="file-formats-label"
+                                        aria-describedby="file-formats-help"
+                                    >
+                        {availableFileTypes.map((fileType) => {
+                            const isSelected = selectedFileTypes.includes(fileType.value);
+                            return (
+                                <label
+                                    key={fileType.value}
+                                    className={`admin-file-type-checkbox ${isSelected ? 'selected' : ''}`}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={() => handleFileTypeToggle(fileType.value)}
+                                                        aria-label={`${fileType.label} file format`}
+                                                        aria-describedby={`file-format-${fileType.value}-desc`}
+                                    />
+                                                    <span id={`file-format-${fileType.value}-desc`}>{fileType.label}</span>
+                                </label>
+                            );
+                        })}
+                    </div>
                                     {validationErrors.allowedFileTypes && (
-                                        <p className="admin-validation-error">
-                                            <AlertCircle size={14} />
+                                        <p className="admin-validation-error" id="file-formats-error" role="alert" aria-live="polite">
+                                            <AlertCircle size={14} aria-hidden="true" />
                                             {validationErrors.allowedFileTypes}
                                         </p>
                                     )}
+                                    <span id="file-formats-help" className="sr-only">
+                                        Select which file formats users can upload. At least one format must be selected. Use spacebar or enter to toggle.
+                                    </span>
                                     {settings.allowedFileTypes !== originalSettings.allowedFileTypes && !validationErrors.allowedFileTypes && (
                                         <p className="admin-change-indicator">
                                             <span className="admin-change-dot"></span>
+                                            Modified
+                        </p>
+                    )}
+                </div>
+
+                                {/* Image Quality */}
+                                <div className={`admin-form-group admin-form-group-important ${settings.imageQuality !== originalSettings.imageQuality ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="image-quality-input" className="admin-form-label-with-icon">
+                                        <Image size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Image Quality
+                                        <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Set default image compression quality (1-100). Higher values mean better quality but larger file sizes.
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <div className="admin-range-input-wrapper">
+                                        <Input
+                                            id="image-quality-input"
+                                            type="range"
+                                            min="1"
+                                            max="100"
+                                            value={settings.imageQuality}
+                                            onChange={(e) => setSettings({ ...settings, imageQuality: parseInt(e.target.value) })}
+                                            className="admin-range-input"
+                                        />
+                                        <span className="admin-range-value">{settings.imageQuality}%</span>
+                                    </div>
+                                    <p className="admin-form-help-text">
+                                        Current quality: {settings.imageQuality}% {settings.imageQuality >= 80 ? '(High)' : settings.imageQuality >= 50 ? '(Medium)' : '(Low)'}
+                                    </p>
+                                    {settings.imageQuality !== originalSettings.imageQuality && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Thumbnail Sizes */}
+                                <div className={`admin-form-group admin-form-group-important ${JSON.stringify(settings.thumbnailSizes) !== JSON.stringify(originalSettings.thumbnailSizes) ? 'has-changes' : ''}`}>
+                                    <Label className="admin-form-label-with-icon">
+                                        <Image size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Thumbnail Sizes
+                                        <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Configure multiple thumbnail sizes to be generated automatically for each uploaded image
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <div className="admin-thumbnail-sizes-list">
+                                        {settings.thumbnailSizes.map((size, index) => (
+                                            <div key={index} className="admin-thumbnail-size-item">
+                                                <Input
+                                                    type="text"
+                                                    value={size}
+                                                    onChange={(e) => {
+                                                        const newSizes = [...settings.thumbnailSizes];
+                                                        newSizes[index] = e.target.value;
+                                                        setSettings({ ...settings, thumbnailSizes: newSizes });
+                                                    }}
+                                                    placeholder="150x150"
+                                                    pattern="\d+x\d+"
+                                                    className="admin-thumbnail-size-input"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const newSizes = settings.thumbnailSizes.filter((_, i) => i !== index);
+                                                        setSettings({ ...settings, thumbnailSizes: newSizes });
+                                                    }}
+                                                    className="admin-thumbnail-size-remove"
+                                                    aria-label="Remove thumbnail size"
+                                                >
+                                                    <X size={16} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        <button
+                                            type="button"
+                                            onClick={() => setSettings({ ...settings, thumbnailSizes: [...settings.thumbnailSizes, ''] })}
+                                            className="admin-thumbnail-size-add"
+                                        >
+                                            <Plus size={16} />
+                                            Add Size
+                                        </button>
+                                    </div>
+                                    {JSON.stringify(settings.thumbnailSizes) !== JSON.stringify(originalSettings.thumbnailSizes) && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Watermark Settings */}
+                                <div className={`admin-form-group ${settings.watermarkEnabled !== originalSettings.watermarkEnabled || settings.watermarkImage !== originalSettings.watermarkImage ? 'has-changes' : ''}`}>
+                                    <Label className="admin-form-label-with-icon">
+                                        <Image size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Watermark Settings
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Enable watermarking and upload a watermark image to be applied to all uploaded images
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <div className="admin-form-group">
+                                        <Label className="admin-maintenance-toggle-label" htmlFor="watermark-enabled-toggle">
+                                            <input
+                                                id="watermark-enabled-toggle"
+                                                type="checkbox"
+                                                checked={settings.watermarkEnabled}
+                                                onChange={(e) => setSettings({ ...settings, watermarkEnabled: e.target.checked })}
+                                                className="admin-maintenance-checkbox"
+                                            />
+                                            <span>Enable Watermark</span>
+                                        </Label>
+                                    </div>
+                                    {settings.watermarkEnabled && (
+                                        <div className="admin-file-upload-wrapper">
+                                            <input
+                                                type="file"
+                                                id="watermark-upload"
+                                                accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                                                onChange={async (e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (!file) return;
+                                                    if (file.size > 2 * 1024 * 1024) {
+                                                        toast.error('Watermark file size must be less than 2MB');
+                                                        return;
+                                                    }
+                                                    const reader = new FileReader();
+                                                    reader.onload = (event) => {
+                                                        const result = event.target?.result as string;
+                                                        setSettings({ ...settings, watermarkImage: result });
+                                                    };
+                                                    reader.readAsDataURL(file);
+                                                }}
+                                                className="admin-file-input"
+                                            />
+                                            <label htmlFor="watermark-upload" className="admin-file-upload-label">
+                                                <Upload size={16} aria-hidden="true" />
+                                                {settings.watermarkImage ? 'Change Watermark' : 'Upload Watermark Image'}
+                                            </label>
+                                            {settings.watermarkImage && (
+                                                <div className="admin-image-preview">
+                                                    <img src={settings.watermarkImage} alt="Watermark preview" className="admin-image-preview-img" />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setSettings({ ...settings, watermarkImage: '' })}
+                                                        className="admin-image-preview-remove"
+                                                        aria-label="Remove watermark"
+                                                    >
+                                                        <X size={16} />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Auto-resize Settings */}
+                                <div className={`admin-form-group admin-form-group-important ${settings.autoResizeEnabled !== originalSettings.autoResizeEnabled || settings.autoResizeMaxWidth !== originalSettings.autoResizeMaxWidth || settings.autoResizeMaxHeight !== originalSettings.autoResizeMaxHeight ? 'has-changes' : ''}`}>
+                                    <Label className="admin-form-label-with-icon">
+                                        <Maximize2 size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Auto-resize Settings
+                                        <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Automatically resize images that exceed the maximum dimensions
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <div className="admin-form-group">
+                                        <Label className="admin-maintenance-toggle-label" htmlFor="auto-resize-enabled-toggle">
+                                            <input
+                                                id="auto-resize-enabled-toggle"
+                                                type="checkbox"
+                                                checked={settings.autoResizeEnabled}
+                                                onChange={(e) => setSettings({ ...settings, autoResizeEnabled: e.target.checked })}
+                                                className="admin-maintenance-checkbox"
+                                            />
+                                            <span>Enable Auto-resize</span>
+                                        </Label>
+                                    </div>
+                                    {settings.autoResizeEnabled && (
+                                        <div className="admin-resize-dimensions">
+                                            <div className="admin-form-group">
+                                                <Label htmlFor="auto-resize-max-width">Max Width (px)</Label>
+                                                <Input
+                                                    id="auto-resize-max-width"
+                                                    type="number"
+                                                    value={settings.autoResizeMaxWidth}
+                                                    onChange={(e) => setSettings({ ...settings, autoResizeMaxWidth: parseInt(e.target.value) || 1920 })}
+                                                    min="100"
+                                                    max="10000"
+                                                />
+                                            </div>
+                                            <div className="admin-form-group">
+                                                <Label htmlFor="auto-resize-max-height">Max Height (px)</Label>
+                                                <Input
+                                                    id="auto-resize-max-height"
+                                                    type="number"
+                                                    value={settings.autoResizeMaxHeight}
+                                                    onChange={(e) => setSettings({ ...settings, autoResizeMaxHeight: parseInt(e.target.value) || 1080 })}
+                                                    min="100"
+                                                    max="10000"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Storage Provider */}
+                                <div className={`admin-form-group admin-form-group-critical ${settings.storageProvider !== originalSettings.storageProvider ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="storage-provider-select" className="admin-form-label-with-icon">
+                                        <HardDrive size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Storage Provider
+                                        <span className="admin-setting-importance-badge admin-setting-importance-critical">Critical</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Choose where to store uploaded files: S3 (Amazon S3), R2 (Cloudflare R2), or local storage
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <select
+                                        id="storage-provider-select"
+                                        value={settings.storageProvider}
+                                        onChange={(e) => setSettings({ ...settings, storageProvider: e.target.value })}
+                                        className="admin-select"
+                                    >
+                                        <option value="s3">Amazon S3</option>
+                                        <option value="r2">Cloudflare R2</option>
+                                        <option value="local">Local Storage</option>
+                                    </select>
+                                    {settings.storageProvider !== originalSettings.storageProvider && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* CDN URL */}
+                                <div className={`admin-form-group ${settings.cdnUrl !== originalSettings.cdnUrl ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="cdn-url-input" className="admin-form-label-with-icon">
+                                        <Cloud size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        CDN URL
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Configure CDN endpoint for faster media delivery (e.g., https://cdn.example.com)
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <Input
+                                        id="cdn-url-input"
+                                        type="url"
+                                        value={settings.cdnUrl}
+                                        onChange={(e) => setSettings({ ...settings, cdnUrl: e.target.value })}
+                                        placeholder="https://cdn.example.com"
+                                    />
+                                    {settings.cdnUrl !== originalSettings.cdnUrl && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Video Settings */}
+                                <div className={`admin-form-group admin-form-group-important ${settings.maxVideoDuration !== originalSettings.maxVideoDuration || settings.videoQuality !== originalSettings.videoQuality ? 'has-changes' : ''}`}>
+                                    <Label className="admin-form-label-with-icon">
+                                        <Video size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Video Settings
+                                        <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Configure maximum video duration and quality settings
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <div className="admin-form-group">
+                                        <Label htmlFor="max-video-duration-input">Max Video Duration (seconds)</Label>
+                                        <Input
+                                            id="max-video-duration-input"
+                                            type="number"
+                                            value={settings.maxVideoDuration}
+                                            onChange={(e) => setSettings({ ...settings, maxVideoDuration: parseInt(e.target.value) || 300 })}
+                                            min="1"
+                                            max="3600"
+                                        />
+                                        <p className="admin-form-help-text">
+                                            Maximum allowed video duration: {Math.floor(settings.maxVideoDuration / 60)} minutes {settings.maxVideoDuration % 60} seconds
+                                        </p>
+                                    </div>
+                                    <div className="admin-form-group">
+                                        <Label htmlFor="video-quality-select">Video Quality</Label>
+                                        <select
+                                            id="video-quality-select"
+                                            value={settings.videoQuality}
+                                            onChange={(e) => setSettings({ ...settings, videoQuality: e.target.value })}
+                                            className="admin-select"
+                                        >
+                                            <option value="low">Low (Smaller file size)</option>
+                                            <option value="medium">Medium (Balanced)</option>
+                                            <option value="high">High (Better quality)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Batch Upload Limit */}
+                                <div className={`admin-form-group admin-form-group-important ${settings.batchUploadLimit !== originalSettings.batchUploadLimit ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="batch-upload-limit-input" className="admin-form-label-with-icon">
+                                        <Upload size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Batch Upload Limit
+                                        <span className="admin-setting-importance-badge admin-setting-importance-important">Important</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Maximum number of files that can be uploaded in a single batch
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <Input
+                                        id="batch-upload-limit-input"
+                                        type="number"
+                                        value={settings.batchUploadLimit}
+                                        onChange={(e) => setSettings({ ...settings, batchUploadLimit: parseInt(e.target.value) || 10 })}
+                                        min="1"
+                                        max="100"
+                                    />
+                                    <p className="admin-form-help-text">
+                                        Users can upload up to {settings.batchUploadLimit} files at once
+                                    </p>
+                                    {settings.batchUploadLimit !== originalSettings.batchUploadLimit && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
                                             Modified
                                         </p>
                                     )}
@@ -503,7 +1549,7 @@ export function AdminSettings() {
 
                                 <div className="admin-modal-actions">
                                     <div className="admin-actions-status">
-                                        {hasChanges() && (
+                                        {hasChanges && (
                                             <div className="admin-unsaved-changes-indicator">
                                                 <AlertCircle size={16} />
                                                 <span>You have unsaved changes</span>
@@ -518,12 +1564,17 @@ export function AdminSettings() {
                                     </div>
                                     <Button 
                                         onClick={handleSave} 
-                                        disabled={saving || !hasChanges() || Object.keys(validationErrors).length > 0} 
+                                        disabled={saving || !hasChanges || Object.keys(validationErrors).length > 0} 
                                         className="admin-add-category-btn"
+                                        aria-label={saving ? 'Saving settings' : 'Save all settings'}
+                                        aria-describedby="save-button-help"
                                     >
-                                        <Save size={16} />
+                                        <Save size={16} aria-hidden="true" />
                                         {saving ? t('admin.saving') : t('admin.saveSettings')}
                                     </Button>
+                                    <span id="save-button-help" className="sr-only">
+                                        {!hasChanges ? 'No changes to save' : Object.keys(validationErrors).length > 0 ? 'Please fix errors before saving' : 'Save all settings changes'}
+                                    </span>
                                 </div>
                             </div>
                         </CardContent>
@@ -531,11 +1582,18 @@ export function AdminSettings() {
                 </TabsContent>
 
                 {/* System Settings Tab */}
-                <TabsContent value="system" className="admin-settings-tab-content">
+                <TabsContent 
+                    value="system" 
+                    className="admin-settings-tab-content"
+                    ref={tabContentRef}
+                    onTouchStart={handleContentTouchStart}
+                    onTouchMove={handleContentTouchMove}
+                    onTouchEnd={handleContentTouchEnd}
+                >
                     <Card className="admin-settings-card">
                         <CardHeader>
                             <CardTitle className="admin-settings-card-title">
-                                <Shield size={20} style={{ marginRight: '0.5rem' }} />
+                                <Shield size={20} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
                                 System Settings
                             </CardTitle>
                             <CardDescription>
@@ -544,20 +1602,37 @@ export function AdminSettings() {
                         </CardHeader>
                         <CardContent>
                             <div className="admin-form">
-                                <div className={`admin-form-group ${settings.maintenanceMode !== originalSettings.maintenanceMode ? 'has-changes' : ''}`}>
-                                    <Label className="admin-maintenance-toggle-label">
-                                        <input
-                                            type="checkbox"
-                                            checked={settings.maintenanceMode}
+                                <div className={`admin-form-group admin-form-group-critical ${settings.maintenanceMode !== originalSettings.maintenanceMode ? 'has-changes' : ''}`}>
+                                    <Label className="admin-maintenance-toggle-label admin-form-label-with-icon" htmlFor="maintenance-mode-toggle">
+                                        {settings.maintenanceMode ? (
+                                            <Lock size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        ) : (
+                                            <Unlock size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        )}
+                        <input
+                                            id="maintenance-mode-toggle"
+                            type="checkbox"
+                            checked={settings.maintenanceMode}
                                             onChange={(e) => handleMaintenanceModeChange(e.target.checked)}
                                             className="admin-maintenance-checkbox"
+                                            aria-describedby="maintenance-mode-help"
+                                            aria-label="Enable maintenance mode"
                                         />
                                         <span>{t('admin.maintenanceMode')}</span>
-                                        {settings.maintenanceMode && (
-                                            <span className="admin-status-badge admin-status-badge-warning">Active</span>
+                                        <span className="admin-setting-importance-badge admin-setting-importance-critical">Critical</span>
+                                        {settings.maintenanceMode ? (
+                                            <span className="admin-status-badge admin-status-badge-error" aria-label="Maintenance mode is active">
+                                                <AlertTriangle size={14} aria-hidden="true" />
+                                                Active - Site Locked
+                                            </span>
+                                        ) : (
+                                            <span className="admin-status-badge admin-status-badge-success" aria-label="Maintenance mode is inactive">
+                                                <CheckCircle size={14} aria-hidden="true" />
+                                                Inactive - Site Online
+                                            </span>
                                         )}
-                                    </Label>
-                                    <p className="admin-form-help-text">
+                    </Label>
+                                    <p className="admin-form-help-text" id="maintenance-mode-help">
                                         When enabled, the site will be unavailable to regular users. Only administrators can access.
                                     </p>
                                     {settings.maintenanceMode !== originalSettings.maintenanceMode && (
@@ -566,7 +1641,7 @@ export function AdminSettings() {
                                             Modified
                                         </p>
                                     )}
-                                </div>
+                </div>
 
                                 {/* Maintenance Mode Confirmation Dialog */}
                                 {showMaintenanceConfirm && (
@@ -598,9 +1673,9 @@ export function AdminSettings() {
                                     </div>
                                 )}
 
-                                <div className="admin-modal-actions">
+                <div className="admin-modal-actions">
                                     <div className="admin-actions-status">
-                                        {hasChanges() && (
+                                        {hasChanges && (
                                             <div className="admin-unsaved-changes-indicator">
                                                 <AlertCircle size={16} />
                                                 <span>You have unsaved changes</span>
@@ -615,118 +1690,156 @@ export function AdminSettings() {
                                     </div>
                                     <Button 
                                         onClick={handleSave} 
-                                        disabled={saving || !hasChanges() || Object.keys(validationErrors).length > 0} 
+                                        disabled={saving || !hasChanges || Object.keys(validationErrors).length > 0} 
                                         className="admin-add-category-btn"
+                                        aria-label={saving ? 'Saving settings' : 'Save all settings'}
+                                        aria-describedby="save-button-help"
                                     >
-                                        <Save size={16} />
-                                        {saving ? t('admin.saving') : t('admin.saveSettings')}
-                                    </Button>
-                                </div>
-                            </div>
+                                        <Save size={16} aria-hidden="true" />
+                        {saving ? t('admin.saving') : t('admin.saveSettings')}
+                    </Button>
+                                    <span id="save-button-help" className="sr-only">
+                                        {!hasChanges ? 'No changes to save' : Object.keys(validationErrors).length > 0 ? 'Please fix errors before saving' : 'Save all settings changes'}
+                                    </span>
+                </div>
+            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
 
                 {/* Notifications Tab */}
-                <TabsContent value="notifications" className="admin-settings-tab-content">
+                <TabsContent 
+                    value="notifications" 
+                    className="admin-settings-tab-content"
+                    ref={tabContentRef}
+                    onTouchStart={handleContentTouchStart}
+                    onTouchMove={handleContentTouchMove}
+                    onTouchEnd={handleContentTouchEnd}
+                >
                     <Card className="admin-settings-card">
                         <CardHeader>
                             <CardTitle className="admin-settings-card-title">
-                                <Bell size={20} style={{ marginRight: '0.5rem' }} />
+                                <Bell size={20} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
                                 System Notifications
                             </CardTitle>
                             <CardDescription>
-                                {t('admin.systemNotificationsDescription')}
+                        {t('admin.systemNotificationsDescription')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             {!showAnnouncementForm ? (
-                                <Button 
-                                    onClick={() => setShowAnnouncementForm(true)}
-                                    className="admin-add-category-btn"
-                                >
-                                    <Megaphone size={16} style={{ marginRight: '0.5rem' }} />
-                                    {t('admin.createNotification')}
-                                </Button>
+                                <div className="admin-empty-state">
+                                    <div className="admin-empty-state-icon">
+                                        <Bell size={48} />
+                                    </div>
+                                    <h3 className="admin-empty-state-title">No System Notifications</h3>
+                                    <p className="admin-empty-state-description">
+                                        Create a system-wide notification to inform all users about important updates, maintenance, or announcements.
+                                    </p>
+                    <Button 
+                        onClick={() => setShowAnnouncementForm(true)}
+                        className="admin-add-category-btn"
+                    >
+                        <Megaphone size={16} style={{ marginRight: '0.5rem' }} />
+                        {t('admin.createNotification')}
+                    </Button>
+                                </div>
                             ) : (
                                 <div className="admin-form admin-announcement-form">
                                     <div className="admin-announcement-form-header">
                                         <h3 className="admin-announcement-form-title">Tạo thông báo hệ thống</h3>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => {
-                                                setShowAnnouncementForm(false);
-                                                setAnnouncementData({
-                                                    type: 'system_announcement',
-                                                    title: '',
-                                                    message: '',
-                                                });
-                                            }}
-                                        >
-                                            <X size={16} />
-                                        </Button>
-                                    </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                    setShowAnnouncementForm(false);
+                                    setAnnouncementData({
+                                        type: 'system_announcement',
+                                        title: '',
+                                        message: '',
+                                    });
+                                }}
+                            >
+                                <X size={16} />
+                            </Button>
+                        </div>
 
-                                    <div className="admin-form-group">
-                                        <Label>Loại thông báo</Label>
-                                        <select
-                                            value={announcementData.type}
-                                            onChange={(e) => setAnnouncementData({ ...announcementData, type: e.target.value as 'system_announcement' | 'feature_update' | 'maintenance_scheduled' | 'terms_updated' })}
+                        <div className="admin-form-group">
+                                        <Label htmlFor="announcement-type-select">Loại thông báo</Label>
+                            <select
+                                            id="announcement-type-select"
+                                value={announcementData.type}
+                                onChange={(e) => setAnnouncementData({ ...announcementData, type: e.target.value as 'system_announcement' | 'feature_update' | 'maintenance_scheduled' | 'terms_updated' })}
                                             className="admin-select"
-                                        >
-                                            <option value="system_announcement">Thông báo hệ thống</option>
-                                            <option value="feature_update">Cập nhật tính năng</option>
-                                            <option value="maintenance_scheduled">Bảo trì hệ thống</option>
-                                            <option value="terms_updated">Cập nhật điều khoản</option>
-                                        </select>
-                                    </div>
+                                            aria-describedby="announcement-type-help"
+                            >
+                                <option value="system_announcement">Thông báo hệ thống</option>
+                                <option value="feature_update">Cập nhật tính năng</option>
+                                <option value="maintenance_scheduled">Bảo trì hệ thống</option>
+                                <option value="terms_updated">Cập nhật điều khoản</option>
+                            </select>
+                                        <span id="announcement-type-help" className="sr-only">
+                                            Select the type of system announcement to send
+                                        </span>
+                        </div>
 
-                                    <div className="admin-form-group">
-                                        <Label>Tiêu đề</Label>
-                                        <Input
-                                            value={announcementData.title}
-                                            onChange={(e) => setAnnouncementData({ ...announcementData, title: e.target.value })}
-                                            placeholder="Nhập tiêu đề thông báo"
-                                        />
-                                    </div>
+                        <div className="admin-form-group">
+                                        <Label htmlFor="announcement-title-input">Tiêu đề</Label>
+                            <Input
+                                            id="announcement-title-input"
+                                value={announcementData.title}
+                                onChange={(e) => setAnnouncementData({ ...announcementData, title: e.target.value })}
+                                placeholder="Nhập tiêu đề thông báo"
+                                            aria-required="true"
+                                            aria-describedby="announcement-title-help"
+                            />
+                                        <span id="announcement-title-help" className="sr-only">
+                                            Enter the title for the system announcement
+                                        </span>
+                        </div>
 
-                                    <div className="admin-form-group">
-                                        <Label>Nội dung</Label>
-                                        <Textarea
-                                            value={announcementData.message}
-                                            onChange={(e) => setAnnouncementData({ ...announcementData, message: e.target.value })}
-                                            placeholder="Nhập nội dung thông báo"
-                                            rows={5}
-                                        />
-                                    </div>
+                        <div className="admin-form-group">
+                                        <Label htmlFor="announcement-message-textarea">Nội dung</Label>
+                            <Textarea
+                                            id="announcement-message-textarea"
+                                value={announcementData.message}
+                                onChange={(e) => setAnnouncementData({ ...announcementData, message: e.target.value })}
+                                placeholder="Nhập nội dung thông báo"
+                                rows={5}
+                                            aria-required="true"
+                                            aria-describedby="announcement-message-help"
+                            />
+                                        <span id="announcement-message-help" className="sr-only">
+                                            Enter the message content for the system announcement
+                                        </span>
+                        </div>
 
-                                    <div className="admin-modal-actions">
-                                        <Button 
-                                            onClick={handleSendAnnouncement} 
-                                            disabled={sendingAnnouncement}
+                        <div className="admin-modal-actions">
+                            <Button 
+                                onClick={handleSendAnnouncement} 
+                                disabled={sendingAnnouncement}
                                             className="admin-add-category-btn"
-                                        >
-                                            <Megaphone size={16} style={{ marginRight: '0.5rem' }} />
-                                            {sendingAnnouncement ? 'Đang gửi...' : 'Gửi thông báo'}
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            onClick={() => {
-                                                setShowAnnouncementForm(false);
-                                                setAnnouncementData({
-                                                    type: 'system_announcement',
-                                                    title: '',
-                                                    message: '',
-                                                });
-                                            }}
-                                            disabled={sendingAnnouncement}
-                                        >
-                                            Hủy
-                                        </Button>
-                                    </div>
-                                </div>
-                            )}
+                            >
+                                <Megaphone size={16} style={{ marginRight: '0.5rem' }} />
+                                {sendingAnnouncement ? 'Đang gửi...' : 'Gửi thông báo'}
+                            </Button>
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    setShowAnnouncementForm(false);
+                                    setAnnouncementData({
+                                        type: 'system_announcement',
+                                        title: '',
+                                        message: '',
+                                    });
+                                }}
+                                disabled={sendingAnnouncement}
+                            >
+                                Hủy
+                            </Button>
+                        </div>
+                    </div>
+                )}
                         </CardContent>
                     </Card>
                 </TabsContent>

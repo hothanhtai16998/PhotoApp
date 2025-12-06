@@ -1,4 +1,13 @@
-import imageCompression from 'browser-image-compression';
+// ✅ OPTIMIZED: Lazy load browser-image-compression only when needed
+// This saves ~50-80KB from initial bundle
+let imageCompressionModule: typeof import('browser-image-compression') | null = null;
+
+async function getImageCompression() {
+	if (!imageCompressionModule) {
+		imageCompressionModule = await import('browser-image-compression');
+	}
+	return imageCompressionModule.default;
+}
 
 export interface CompressionOptions {
 	maxSizeMB?: number;
@@ -52,6 +61,7 @@ export async function compressImage(
 		const compressionThreshold = 2 * 1024 * 1024;
 		
 		if (file.size > compressionThreshold) {
+			const imageCompression = await getImageCompression();
 			const compressedFile = await imageCompression(
 				file,
 				compressionOptions
