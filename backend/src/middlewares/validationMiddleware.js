@@ -1,6 +1,7 @@
 import { body, param, query, validationResult } from 'express-validator';
 import { asyncHandler } from './asyncHandler.js';
 import { logger } from '../utils/logger.js';
+import Settings from '../models/Settings.js';
 
 /**
  * Middleware to check validation results
@@ -31,8 +32,69 @@ export const validate = (req, res, next) => {
 };
 
 /**
+ * Get password requirements from settings
+ */
+const getPasswordRequirements = async () => {
+    try {
+        const settings = await Settings.findOne({ key: 'system' });
+        if (settings && settings.value) {
+            return {
+                minLength: settings.value.passwordMinLength || 8,
+                requireUppercase: settings.value.passwordRequireUppercase ?? true,
+                requireLowercase: settings.value.passwordRequireLowercase ?? true,
+                requireNumber: settings.value.passwordRequireNumber ?? true,
+                requireSpecialChar: settings.value.passwordRequireSpecialChar ?? false,
+            };
+        }
+    } catch (error) {
+        logger.warn('Could not load password requirements from settings, using defaults', { error: error.message });
+    }
+    // Default requirements
+    return {
+        minLength: 8,
+        requireUppercase: true,
+        requireLowercase: true,
+        requireNumber: true,
+        requireSpecialChar: false,
+    };
+};
+
+/**
+ * Build password validation regex based on requirements
+ */
+const buildPasswordRegex = (requirements) => {
+    const parts = [];
+    if (requirements.requireLowercase) parts.push('(?=.*[a-z])');
+    if (requirements.requireUppercase) parts.push('(?=.*[A-Z])');
+    if (requirements.requireNumber) parts.push('(?=.*\\d)');
+    if (requirements.requireSpecialChar) parts.push('(?=.*[^a-zA-Z0-9])');
+    
+    if (parts.length === 0) {
+        // No complexity requirements, just min length
+        return new RegExp(`^.{${requirements.minLength},}$`);
+    }
+    
+    return new RegExp(`^${parts.join('')}.{${requirements.minLength},}$`);
+};
+
+/**
+ * Build password validation message based on requirements
+ */
+const buildPasswordMessage = (requirements) => {
+    const parts = [];
+    parts.push(`at least ${requirements.minLength} characters`);
+    if (requirements.requireLowercase) parts.push('lowercase');
+    if (requirements.requireUppercase) parts.push('uppercase');
+    if (requirements.requireNumber) parts.push('number');
+    if (requirements.requireSpecialChar) parts.push('special character');
+    
+    return `Password must be ${parts.join(', ')}`;
+};
+
+/**
  * Validation rules for authentication
  * Includes sanitization to prevent XSS attacks
+ * Password validation is dynamic based on admin settings
  */
 export const validateSignUp = [
     body('username')
@@ -48,9 +110,15 @@ export const validateSignUp = [
         .isEmail()
         .withMessage('Invalid email format'),
     body('password')
-        .isLength({ min: 8 })
-        .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-        .withMessage('Password must be at least 8 characters with uppercase, lowercase, and a number'),
+        .custom(async (value) => {
+            const requirements = await getPasswordRequirements();
+            const regex = buildPasswordRegex(requirements);
+            
+            if (!regex.test(value)) {
+                throw new Error(buildPasswordMessage(requirements));
+            }
+            return true;
+        }),
     body('firstName')
         .trim()
         .escape() // Sanitize: escape HTML entities

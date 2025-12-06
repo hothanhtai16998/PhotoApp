@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { SignUpForm } from "./auth/components/SignUpForm";
 import { useSignUpValidation } from "./auth/hooks/useSignUpValidation";
-import { signUpSchema, type SignUpFormValue } from "@/types/forms";
+import { createSignUpSchema, type SignUpFormValue } from "@/types/forms";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { t } from "@/i18n";
 import "./SignUpPage.css";
 
@@ -13,6 +14,18 @@ function SignUpPage() {
     const { signUp } = useAuthStore();
     const navigate = useNavigate();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const { settings } = useSiteSettings();
+
+    // Create dynamic schema based on password requirements
+    const signUpSchema = useMemo(() => {
+        return createSignUpSchema({
+            passwordMinLength: settings.passwordMinLength || 8,
+            passwordRequireUppercase: settings.passwordRequireUppercase ?? true,
+            passwordRequireLowercase: settings.passwordRequireLowercase ?? true,
+            passwordRequireNumber: settings.passwordRequireNumber ?? true,
+            passwordRequireSpecialChar: settings.passwordRequireSpecialChar ?? false,
+        });
+    }, [settings]);
 
     const { register, handleSubmit, watch, formState: { errors } } = useForm<SignUpFormValue>({
         resolver: zodResolver(signUpSchema),
@@ -113,6 +126,13 @@ function SignUpPage() {
                         isSubmitting={isSubmitting}
                         emailStatus={emailStatus}
                         usernameStatus={usernameStatus}
+                        passwordRequirements={{
+                            minLength: settings.passwordMinLength || 8,
+                            requireUppercase: settings.passwordRequireUppercase ?? true,
+                            requireLowercase: settings.passwordRequireLowercase ?? true,
+                            requireNumber: settings.passwordRequireNumber ?? true,
+                            requireSpecialChar: settings.passwordRequireSpecialChar ?? false,
+                        }}
                     />
                 </div>
             </div>

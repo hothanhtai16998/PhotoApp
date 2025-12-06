@@ -1,13 +1,15 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useUserStore } from '@/stores/useUserStore';
 import { userService } from '@/services/userService';
 import { toast } from 'sonner';
-import { changePasswordSchema, type ProfileFormData, type ChangePasswordFormData } from '@/types/forms';
+import { createChangePasswordSchema, type ProfileFormData, type ChangePasswordFormData } from '@/types/forms';
+import { useSiteSettings } from '@/hooks/useSiteSettings';
 
 export const useProfileEdit = () => {
   const { user, fetchMe } = useUserStore();
+  const { settings } = useSiteSettings();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
@@ -15,6 +17,17 @@ export const useProfileEdit = () => {
   const [selectedAvatar, setSelectedAvatar] = useState<File | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Create dynamic schema based on password requirements
+  const changePasswordSchema = useMemo(() => {
+    return createChangePasswordSchema({
+      passwordMinLength: settings.passwordMinLength || 8,
+      passwordRequireUppercase: settings.passwordRequireUppercase ?? true,
+      passwordRequireLowercase: settings.passwordRequireLowercase ?? true,
+      passwordRequireNumber: settings.passwordRequireNumber ?? true,
+      passwordRequireSpecialChar: settings.passwordRequireSpecialChar ?? false,
+    });
+  }, [settings]);
 
   // Split displayName into firstName and lastName
   const nameParts = user?.displayName?.split(' ') || [];

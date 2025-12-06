@@ -66,6 +66,15 @@ export function AdminSettings() {
         themePrimaryColor: '#7c3aed',
         themeSecondaryColor: '#a78bfa',
         themeAccentColor: '#67e8f9',
+        themeSuccessColor: '#10b981',
+        themeWarningColor: '#f59e0b',
+        themeErrorColor: '#ef4444',
+        themeInfoColor: '#3b82f6',
+        borderRadius: '1rem',
+        animationsEnabled: true,
+        animationSpeed: 'normal',
+        buttonStyle: 'rounded',
+        cardStyle: 'elevated',
         darkModeEnabled: false,
         darkModeDefault: 'auto',
         customCSS: '',
@@ -454,6 +463,15 @@ export function AdminSettings() {
             settings.themePrimaryColor !== originalSettings.themePrimaryColor ||
             settings.themeSecondaryColor !== originalSettings.themeSecondaryColor ||
             settings.themeAccentColor !== originalSettings.themeAccentColor ||
+            settings.themeSuccessColor !== originalSettings.themeSuccessColor ||
+            settings.themeWarningColor !== originalSettings.themeWarningColor ||
+            settings.themeErrorColor !== originalSettings.themeErrorColor ||
+            settings.themeInfoColor !== originalSettings.themeInfoColor ||
+            settings.borderRadius !== originalSettings.borderRadius ||
+            settings.animationsEnabled !== originalSettings.animationsEnabled ||
+            settings.animationSpeed !== originalSettings.animationSpeed ||
+            settings.buttonStyle !== originalSettings.buttonStyle ||
+            settings.cardStyle !== originalSettings.cardStyle ||
             settings.darkModeEnabled !== originalSettings.darkModeEnabled ||
             settings.darkModeDefault !== originalSettings.darkModeDefault ||
             settings.customCSS !== originalSettings.customCSS ||
@@ -1822,6 +1840,339 @@ export function AdminSettings() {
                                         Accent color (hex format: #RRGGBB)
                                     </p>
                                     {settings.themeAccentColor !== originalSettings.themeAccentColor && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Extended Color Palette */}
+                                <div className="admin-settings-section-divider" style={{ marginTop: '2rem' }}>
+                                    <h3 className="admin-settings-section-title">
+                                        <Palette size={18} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                        Status Colors
+                                    </h3>
+                                </div>
+
+                                {/* Success Color */}
+                                <div className={`admin-form-group ${settings.themeSuccessColor !== originalSettings.themeSuccessColor ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="theme-success-color-input" className="admin-form-label-with-icon">
+                                        <CheckCircle size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Success Color
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Color for success messages and positive actions
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                        <Input
+                                            id="theme-success-color-input"
+                                            type="color"
+                                            value={settings.themeSuccessColor}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, themeSuccessColor: e.target.value }))}
+                                            style={{ width: '60px', height: '40px', padding: '2px', cursor: 'pointer' }}
+                                        />
+                                        <Input
+                                            type="text"
+                                            value={settings.themeSuccessColor}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, themeSuccessColor: e.target.value }))}
+                                            placeholder="#10b981"
+                                            style={{ flex: 1 }}
+                                        />
+                                    </div>
+                                    {settings.themeSuccessColor !== originalSettings.themeSuccessColor && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Warning Color */}
+                                <div className={`admin-form-group ${settings.themeWarningColor !== originalSettings.themeWarningColor ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="theme-warning-color-input" className="admin-form-label-with-icon">
+                                        <AlertTriangle size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Warning Color
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Color for warning messages and caution indicators
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                        <Input
+                                            id="theme-warning-color-input"
+                                            type="color"
+                                            value={settings.themeWarningColor}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, themeWarningColor: e.target.value }))}
+                                            style={{ width: '60px', height: '40px', padding: '2px', cursor: 'pointer' }}
+                                        />
+                                        <Input
+                                            type="text"
+                                            value={settings.themeWarningColor}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, themeWarningColor: e.target.value }))}
+                                            placeholder="#f59e0b"
+                                            style={{ flex: 1 }}
+                                        />
+                                    </div>
+                                    {settings.themeWarningColor !== originalSettings.themeWarningColor && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Error Color */}
+                                <div className={`admin-form-group ${settings.themeErrorColor !== originalSettings.themeErrorColor ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="theme-error-color-input" className="admin-form-label-with-icon">
+                                        <XCircle size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Error Color
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Color for error messages and destructive actions
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                        <Input
+                                            id="theme-error-color-input"
+                                            type="color"
+                                            value={settings.themeErrorColor}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, themeErrorColor: e.target.value }))}
+                                            style={{ width: '60px', height: '40px', padding: '2px', cursor: 'pointer' }}
+                                        />
+                                        <Input
+                                            type="text"
+                                            value={settings.themeErrorColor}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, themeErrorColor: e.target.value }))}
+                                            placeholder="#ef4444"
+                                            style={{ flex: 1 }}
+                                        />
+                                    </div>
+                                    {settings.themeErrorColor !== originalSettings.themeErrorColor && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Info Color */}
+                                <div className={`admin-form-group ${settings.themeInfoColor !== originalSettings.themeInfoColor ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="theme-info-color-input" className="admin-form-label-with-icon">
+                                        <Info size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Info Color
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Color for informational messages and neutral actions
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                        <Input
+                                            id="theme-info-color-input"
+                                            type="color"
+                                            value={settings.themeInfoColor}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, themeInfoColor: e.target.value }))}
+                                            style={{ width: '60px', height: '40px', padding: '2px', cursor: 'pointer' }}
+                                        />
+                                        <Input
+                                            type="text"
+                                            value={settings.themeInfoColor}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, themeInfoColor: e.target.value }))}
+                                            placeholder="#3b82f6"
+                                            style={{ flex: 1 }}
+                                        />
+                                    </div>
+                                    {settings.themeInfoColor !== originalSettings.themeInfoColor && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Design Tokens Section */}
+                                <div className="admin-settings-section-divider" style={{ marginTop: '2rem' }}>
+                                    <h3 className="admin-settings-section-title">
+                                        <Settings size={18} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                        Design Tokens
+                                    </h3>
+                                </div>
+
+                                {/* Border Radius */}
+                                <div className={`admin-form-group ${settings.borderRadius !== originalSettings.borderRadius ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="border-radius-input" className="admin-form-label-with-icon">
+                                        <Settings size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Border Radius
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Global border radius for buttons, cards, and other components (e.g., 0.5rem, 1rem, 1.5rem)
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <Input
+                                        id="border-radius-input"
+                                        type="text"
+                                        value={settings.borderRadius}
+                                        onChange={(e) => setSettings(prev => ({ ...prev, borderRadius: e.target.value }))}
+                                        placeholder="1rem"
+                                        aria-describedby="border-radius-help"
+                                    />
+                                    <p className="admin-form-help-text" id="border-radius-help">
+                                        Current border radius: {settings.borderRadius} (e.g., 0.5rem, 1rem, 1.5rem, 2rem)
+                                    </p>
+                                    {settings.borderRadius !== originalSettings.borderRadius && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Animations */}
+                                <div className={`admin-form-group ${settings.animationsEnabled !== originalSettings.animationsEnabled ? 'has-changes' : ''}`}>
+                                    <Label className="admin-form-label-with-icon" htmlFor="animations-enabled-toggle">
+                                        <Settings size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Enable Animations
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Enable or disable animations and transitions across the site
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <label className="admin-toggle-switch-label" htmlFor="animations-enabled-toggle">
+                                        <input
+                                            id="animations-enabled-toggle"
+                                            type="checkbox"
+                                            checked={settings.animationsEnabled}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, animationsEnabled: e.target.checked }))}
+                                            className="admin-toggle-input"
+                                        />
+                                        <span className="admin-toggle-slider"></span>
+                                    </label>
+                                    <p className="admin-form-help-text">
+                                        {settings.animationsEnabled ? 'Animations are enabled' : 'Animations are disabled'}
+                                    </p>
+                                    {settings.animationsEnabled !== originalSettings.animationsEnabled && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Animation Speed */}
+                                {settings.animationsEnabled && (
+                                    <div className={`admin-form-group ${settings.animationSpeed !== originalSettings.animationSpeed ? 'has-changes' : ''}`}>
+                                        <Label htmlFor="animation-speed-select" className="admin-form-label-with-icon">
+                                            <Settings size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                            Animation Speed
+                                            <div className="admin-tooltip-wrapper">
+                                                <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                                <span className="admin-tooltip-text" role="tooltip">
+                                                    Control the speed of animations and transitions
+                                                </span>
+                                            </div>
+                                        </Label>
+                                        <select
+                                            id="animation-speed-select"
+                                            value={settings.animationSpeed}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, animationSpeed: e.target.value }))}
+                                            className="admin-select"
+                                        >
+                                            <option value="fast">Fast</option>
+                                            <option value="normal">Normal</option>
+                                            <option value="slow">Slow</option>
+                                        </select>
+                                        <p className="admin-form-help-text">
+                                            Animation speed: {settings.animationSpeed}
+                                        </p>
+                                        {settings.animationSpeed !== originalSettings.animationSpeed && (
+                                            <p className="admin-change-indicator" aria-live="polite">
+                                                <span className="admin-change-dot" aria-hidden="true"></span>
+                                                Modified
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Component Styles Section */}
+                                <div className="admin-settings-section-divider" style={{ marginTop: '2rem' }}>
+                                    <h3 className="admin-settings-section-title">
+                                        <Layout size={18} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                        Component Styles
+                                    </h3>
+                                </div>
+
+                                {/* Button Style */}
+                                <div className={`admin-form-group ${settings.buttonStyle !== originalSettings.buttonStyle ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="button-style-select" className="admin-form-label-with-icon">
+                                        <Settings size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Button Style
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Default style for buttons across the site
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <select
+                                        id="button-style-select"
+                                        value={settings.buttonStyle}
+                                        onChange={(e) => setSettings(prev => ({ ...prev, buttonStyle: e.target.value }))}
+                                        className="admin-select"
+                                    >
+                                        <option value="rounded">Rounded</option>
+                                        <option value="square">Square</option>
+                                        <option value="pill">Pill</option>
+                                    </select>
+                                    <p className="admin-form-help-text">
+                                        Button style: {settings.buttonStyle === 'rounded' ? 'Rounded corners' : settings.buttonStyle === 'pill' ? 'Fully rounded (pill)' : 'Sharp corners'}
+                                    </p>
+                                    {settings.buttonStyle !== originalSettings.buttonStyle && (
+                                        <p className="admin-change-indicator" aria-live="polite">
+                                            <span className="admin-change-dot" aria-hidden="true"></span>
+                                            Modified
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Card Style */}
+                                <div className={`admin-form-group ${settings.cardStyle !== originalSettings.cardStyle ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="card-style-select" className="admin-form-label-with-icon">
+                                        <Settings size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Card Style
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Default style for cards and containers
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <select
+                                        id="card-style-select"
+                                        value={settings.cardStyle}
+                                        onChange={(e) => setSettings(prev => ({ ...prev, cardStyle: e.target.value }))}
+                                        className="admin-select"
+                                    >
+                                        <option value="flat">Flat</option>
+                                        <option value="elevated">Elevated</option>
+                                        <option value="outlined">Outlined</option>
+                                    </select>
+                                    <p className="admin-form-help-text">
+                                        Card style: {settings.cardStyle === 'flat' ? 'No shadow' : settings.cardStyle === 'elevated' ? 'With shadow' : 'With border'}
+                                    </p>
+                                    {settings.cardStyle !== originalSettings.cardStyle && (
                                         <p className="admin-change-indicator" aria-live="polite">
                                             <span className="admin-change-dot" aria-hidden="true"></span>
                                             Modified

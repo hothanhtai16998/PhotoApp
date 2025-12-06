@@ -7,6 +7,7 @@ import Image from "../models/Image.js";
 import Collection from "../models/Collection.js";
 import Follow from "../models/Follow.js";
 import Notification from "../models/Notification.js";
+import Settings from "../models/Settings.js";
 import { uploadAvatar, deleteAvatarFromR2 } from "../libs/s3.js";
 import { logger } from '../utils/logger.js';
 
@@ -128,11 +129,56 @@ export const changePassword = asyncHandler(async (req, res) => {
         });
     }
 
-    // Validate password length
+    // Get password requirements from settings
+    let passwordRequirements = {
+        minLength: 8,
+        requireUppercase: true,
+        requireLowercase: true,
+        requireNumber: true,
+        requireSpecialChar: false,
+    };
+
     try {
-        validateInputLength('Password', newPassword, VALIDATION_RULES.password);
+        const settings = await Settings.findOne({ key: 'system' });
+        if (settings && settings.value) {
+            passwordRequirements = {
+                minLength: settings.value.passwordMinLength || 8,
+                requireUppercase: settings.value.passwordRequireUppercase ?? true,
+                requireLowercase: settings.value.passwordRequireLowercase ?? true,
+                requireNumber: settings.value.passwordRequireNumber ?? true,
+                requireSpecialChar: settings.value.passwordRequireSpecialChar ?? false,
+            };
+        }
     } catch (error) {
-        return res.status(400).json({ message: error.message });
+        logger.warn('Could not load password requirements from settings, using defaults', { error: error.message });
+    }
+
+    // Validate password length
+    if (newPassword.length < passwordRequirements.minLength) {
+        return res.status(400).json({
+            message: `Mật khẩu phải có ít nhất ${passwordRequirements.minLength} ký tự`,
+        });
+    }
+
+    // Validate password complexity
+    const regexParts = [];
+    if (passwordRequirements.requireLowercase) regexParts.push('(?=.*[a-z])');
+    if (passwordRequirements.requireUppercase) regexParts.push('(?=.*[A-Z])');
+    if (passwordRequirements.requireNumber) regexParts.push('(?=.*\\d)');
+    if (passwordRequirements.requireSpecialChar) regexParts.push('(?=.*[^a-zA-Z0-9])');
+
+    if (regexParts.length > 0) {
+        const passwordRegex = new RegExp(`^${regexParts.join('')}.{${passwordRequirements.minLength},}$`);
+        if (!passwordRegex.test(newPassword)) {
+            const messageParts = [];
+            if (passwordRequirements.requireLowercase) messageParts.push('chữ thường');
+            if (passwordRequirements.requireUppercase) messageParts.push('chữ hoa');
+            if (passwordRequirements.requireNumber) messageParts.push('số');
+            if (passwordRequirements.requireSpecialChar) messageParts.push('ký tự đặc biệt');
+            return res.status(400).json({
+                message: `Mật khẩu phải có ${messageParts.join(', ')}`,
+            });
+        }
     }
 
     if (newPassword !== newPasswordMatch) {

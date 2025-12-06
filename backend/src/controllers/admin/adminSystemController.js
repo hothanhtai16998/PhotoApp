@@ -74,6 +74,12 @@ export const getPublicSettings = asyncHandler(async (req, res) => {
                 maxUploadSize: 10,
                 allowedFileTypes: ['jpg', 'jpeg', 'png', 'webp'],
                 maintenanceMode: false,
+                // Password requirements (public, needed for signup form)
+                passwordMinLength: 8,
+                passwordRequireUppercase: true,
+                passwordRequireLowercase: true,
+                passwordRequireNumber: true,
+                passwordRequireSpecialChar: false,
             },
         });
     }
@@ -85,6 +91,12 @@ export const getPublicSettings = asyncHandler(async (req, res) => {
         maxUploadSize: settings.value.maxUploadSize || 10,
         allowedFileTypes: settings.value.allowedFileTypes || ['jpg', 'jpeg', 'png', 'webp'],
         maintenanceMode: settings.value.maintenanceMode || false,
+        // Password requirements (public, needed for signup form)
+        passwordMinLength: settings.value.passwordMinLength || 8,
+        passwordRequireUppercase: settings.value.passwordRequireUppercase ?? true,
+        passwordRequireLowercase: settings.value.passwordRequireLowercase ?? true,
+        passwordRequireNumber: settings.value.passwordRequireNumber ?? true,
+        passwordRequireSpecialChar: settings.value.passwordRequireSpecialChar ?? false,
     };
 
     res.json({ settings: publicSettings });

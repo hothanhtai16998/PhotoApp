@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { adminService } from '@/services/adminService';
+import api from '@/lib/axios';
 
 interface SiteSettings {
     siteName: string;
@@ -7,6 +8,11 @@ interface SiteSettings {
     maxUploadSize: number;
     allowedFileTypes: string[];
     maintenanceMode: boolean;
+    passwordMinLength?: number;
+    passwordRequireUppercase?: boolean;
+    passwordRequireLowercase?: boolean;
+    passwordRequireNumber?: boolean;
+    passwordRequireSpecialChar?: boolean;
 }
 
 const defaultSettings: SiteSettings = {
@@ -31,7 +37,15 @@ export function useSiteSettings() {
 
     const loadSettings = async () => {
         try {
-            const data = await adminService.getSettings();
+            // Try public endpoint first (no auth required)
+            let data;
+            try {
+                const res = await api.get('/settings');
+                data = res.data;
+            } catch {
+                // Fallback to admin endpoint if public fails
+                data = await adminService.getSettings();
+            }
             if (data.settings) {
                 const settingsData = data.settings as {
                     siteName?: string;
@@ -39,6 +53,11 @@ export function useSiteSettings() {
                     maxUploadSize?: number;
                     allowedFileTypes?: string[] | string;
                     maintenanceMode?: boolean;
+                    passwordMinLength?: number;
+                    passwordRequireUppercase?: boolean;
+                    passwordRequireLowercase?: boolean;
+                    passwordRequireNumber?: boolean;
+                    passwordRequireSpecialChar?: boolean;
                 };
                 
                 const loadedSettings: SiteSettings = {
@@ -51,6 +70,11 @@ export function useSiteSettings() {
                         ? settingsData.allowedFileTypes.split(',').map(t => t.trim())
                         : defaultSettings.allowedFileTypes,
                     maintenanceMode: (settingsData.maintenanceMode as boolean) || false,
+                    passwordMinLength: settingsData.passwordMinLength ?? 8,
+                    passwordRequireUppercase: settingsData.passwordRequireUppercase ?? true,
+                    passwordRequireLowercase: settingsData.passwordRequireLowercase ?? true,
+                    passwordRequireNumber: settingsData.passwordRequireNumber ?? true,
+                    passwordRequireSpecialChar: settingsData.passwordRequireSpecialChar ?? false,
                 };
                 
                 setSettings(loadedSettings);
