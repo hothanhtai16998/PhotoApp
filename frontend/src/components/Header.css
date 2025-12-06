@@ -1,16 +1,14 @@
 /* Unsplash-style Header */
-:root {
-  --header-height: 56px; /* Reduced header height */
-}
+/* Header height is now defined in index.css root variables */
 
 .unsplash-header {
-  background: var(--bg-primary, #fff);
-  border-bottom: 1px solid var(--border-color, #e5e5e5);
+  background: var(--color-bg-primary, #fff);
+  border-bottom: 1px solid var(--color-border, #e5e5e5);
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  z-index: 1500;
+  z-index: var(--z-header, 1500);
   width: 100%;
   height: var(--header-height);
   box-sizing: border-box;
@@ -116,7 +114,7 @@
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 1500;
+  z-index: var(--z-header, 1500);
 }
 
 /* Search Bar */
@@ -368,7 +366,7 @@
   margin-top: 8px;
   animation: slideDownFade 0.2s ease-out;
   transform-origin: top right !important;
-  z-index: 1600 !important; /* Higher than header z-index (1500) */
+  z-index: var(--z-modal-content, 2002) !important; /* Higher than header z-index */
   /* Ensure dropdown doesn't cause horizontal overflow on desktop */
 }
 
@@ -841,8 +839,8 @@
   bottom: 0;
   width: 320px;
   max-width: 90vw;
-  background: #fff;
-  z-index: 1500;
+  background: var(--color-bg-primary, #fff);
+  z-index: var(--z-header, 1500);
   box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
   animation: slideInRight 0.3s ease;
   overflow-y: auto;

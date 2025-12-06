@@ -47,63 +47,113 @@ function Slider() {
   const nextSlideRef = useRef<(() => void) | undefined>(undefined);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
+  const transitionTimeoutRef = useRef<number | null>(null);
+  const autoPlayTimeoutRef = useRef<number | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-
-  // Fetch all images and select random ones for today
+  // Optimized: Fetch only enough images for randomization (2-3x imageCount)
+  // This avoids fetching hundreds/thousands of images when we only need 10-15
   useEffect(() => {
     const fetchImages = async () => {
       setLoading(true);
-      try {
-        // Fetch images in batches (max limit is 100 per API)
-        const allImages: Image[] = [];
-        let page = 1;
-        let hasMore = true;
-        const { maxPages, apiLimit, imageCount } = sliderConfig;
+      
+      // Create abort controller for cleanup
+      abortControllerRef.current = new AbortController();
+      const signal = abortControllerRef.current.signal;
 
-        while (hasMore && page <= maxPages) {
+      try {
+        const { imageCount, apiLimit } = sliderConfig;
+        
+        // Fetch only enough images for randomization (2-3x what we need)
+        // This ensures we have variety while minimizing network requests
+        const fetchCount = Math.max(imageCount * 3, 30); // At least 30 images, or 3x imageCount
+        const pagesNeeded = Math.ceil(fetchCount / apiLimit);
+        
+        const allImages: Image[] = [];
+        
+        // Fetch only the pages we need
+        for (let page = 1; page <= pagesNeeded; page++) {
+          // Check if component was unmounted
+          if (signal.aborted) {
+            return;
+          }
+
           const response = await imageService.fetchImages({
-            limit: apiLimit, // Maximum allowed by API
+            limit: apiLimit,
             page: page,
           });
 
           if (response.images && response.images.length > 0) {
             allImages.push(...response.images);
-            // Check if there are more pages
-            if (response.pagination) {
-              hasMore = page < response.pagination.pages;
-            } else {
-              // If no pagination info, stop if we got less than limit
-              hasMore = response.images.length === apiLimit;
+            
+            // If we have enough images, stop fetching
+            if (allImages.length >= fetchCount) {
+              break;
             }
-            page++;
+            
+            // If this is the last page, stop
+            if (response.pagination && page >= response.pagination.pages) {
+              break;
+            }
           } else {
-            hasMore = false;
+            break;
           }
         }
 
+        // Check if component was unmounted before setting state
+        if (signal.aborted) {
+          return;
+        }
+
         if (allImages.length > 0) {
-          // Get random images for today
+          // Get random images for today from the fetched subset
           const dailyImages = getDailyRandomImages(allImages, imageCount);
           setImages(dailyImages);
         } else {
           setImages([]);
         }
       } catch (error) {
-        console.error("Error fetching images:", error);
-        setImages([]);
+        // Don't log error if it's an abort
+        if (error instanceof Error && error.name !== 'AbortError') {
+          console.error("Error fetching images:", error);
+        }
+        if (!signal.aborted) {
+          setImages([]);
+        }
       } finally {
-        setLoading(false);
+        if (!signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchImages();
+
+    // Cleanup: abort fetch if component unmounts
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, []);
 
   const goToSlide = useCallback((index: number) => {
     if (isTransitioning || images.length === 0) return;
+    
+    // Clear any existing transition timeout
+    if (transitionTimeoutRef.current !== null) {
+      clearTimeout(transitionTimeoutRef.current);
+      transitionTimeoutRef.current = null;
+    }
+    
     setIsTransitioning(true);
     setCurrentSlide(index % images.length);
-    setTimeout(() => setIsTransitioning(false), sliderConfig.transition.durationMs);
+    
+    // Track timeout for cleanup
+    transitionTimeoutRef.current = window.setTimeout(() => {
+      setIsTransitioning(false);
+      transitionTimeoutRef.current = null;
+    }, sliderConfig.transition.durationMs);
   }, [isTransitioning, images.length]);
 
   const nextSlide = useCallback(() => {
@@ -204,17 +254,25 @@ function Slider() {
       progressStartTimeRef.current = Date.now();
       // Reset the flag after ensuring the useEffect has checked it
       // Use a longer timeout to ensure the useEffect runs first
-      setTimeout(() => {
+      // Clear any existing timeout first
+      if (autoPlayTimeoutRef.current !== null) {
+        clearTimeout(autoPlayTimeoutRef.current);
+      }
+      autoPlayTimeoutRef.current = window.setTimeout(() => {
         isAutoPlayChangeRef.current = false;
+        autoPlayTimeoutRef.current = null;
       }, 10);
     };
 
-    let timeoutId: number | null = null;
-
     if (startProgress > 0) {
       // Resume from pause - use setTimeout for the first slide change
-      timeoutId = window.setTimeout(() => {
+      // Clear any existing timeout first
+      if (autoPlayTimeoutRef.current !== null) {
+        clearTimeout(autoPlayTimeoutRef.current);
+      }
+      autoPlayTimeoutRef.current = window.setTimeout(() => {
         scheduleNextSlide();
+        autoPlayTimeoutRef.current = null;
         // Then set up the regular interval
         autoPlayIntervalRef.current = window.setInterval(scheduleNextSlide, intervalMs);
       }, remainingTime);
@@ -224,8 +282,10 @@ function Slider() {
     }
 
     return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
+      // Cleanup all timers
+      if (autoPlayTimeoutRef.current !== null) {
+        clearTimeout(autoPlayTimeoutRef.current);
+        autoPlayTimeoutRef.current = null;
       }
       if (autoPlayIntervalRef.current) {
         clearInterval(autoPlayIntervalRef.current);
@@ -235,6 +295,9 @@ function Slider() {
         clearInterval(progressIntervalRef.current);
         progressIntervalRef.current = null;
       }
+      // Reset refs
+      progressStartTimeRef.current = null;
+      pausedProgressRef.current = 0;
     };
   }, [images.length, isHovered]);
 
@@ -361,7 +424,40 @@ function Slider() {
     };
 
     preloadImages();
+    
+    // No cleanup needed for image preloading
   }, [currentSlide, images]);
+
+  // Cleanup all timers on unmount
+  useEffect(() => {
+    return () => {
+      // Clear all intervals
+      if (autoPlayIntervalRef.current !== null) {
+        clearInterval(autoPlayIntervalRef.current);
+        autoPlayIntervalRef.current = null;
+      }
+      if (progressIntervalRef.current !== null) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      
+      // Clear all timeouts
+      if (transitionTimeoutRef.current !== null) {
+        clearTimeout(transitionTimeoutRef.current);
+        transitionTimeoutRef.current = null;
+      }
+      if (autoPlayTimeoutRef.current !== null) {
+        clearTimeout(autoPlayTimeoutRef.current);
+        autoPlayTimeoutRef.current = null;
+      }
+      
+      // Abort any pending fetch
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+    };
+  }, []);
 
   if (loading) {
     return (

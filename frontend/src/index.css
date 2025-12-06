@@ -19,6 +19,29 @@
 	}
 
 	:root {
+		/* Z-index scale system */
+		--z-base: 1;
+		--z-dropdown: 100;
+		--z-sticky: 500;
+		--z-fixed: 1000;
+		--z-header: 1500;
+		--z-category-nav: 1499;
+		--z-modal-overlay: 2000;
+		--z-modal: 2001;
+		--z-modal-content: 2002;
+		--z-tooltip: 3000;
+		--z-max: 9999;
+
+		/* Header height - standardized */
+		--header-height: 56px;
+
+		/* Homepage color variables */
+		--color-bg-primary: #fff;
+		--color-text-primary: #111;
+		--color-text-secondary: #767676;
+		--color-border: #e5e5e5;
+		--color-border-hover: #999;
+
 		/* Base colors - soft pastels */
 		--background: 0 0% 100%; /*violet-50*/
 		--foreground: 217.2 32.6% 17.5%; /* slate-800 */
@@ -153,6 +176,13 @@
 	}
 
 	.dark {
+		/* Dark mode homepage colors */
+		--color-bg-primary: #1a1a1a;
+		--color-text-primary: #fff;
+		--color-text-secondary: #b3b3b3;
+		--color-border: #404040;
+		--color-border-hover: #666;
+
 		/* Dark mode - neon on dark aesthetic */
 		--background: 240 15% 18%;
 		--foreground: 214.3 31.8% 91.4%; /* slate-200 */
