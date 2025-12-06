@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import type { Image } from '@/types/image';
 import ProgressiveImage from '@/components/ProgressiveImage';
+import { Button } from '@/components/ui/button';
 import { ImageIcon, Check, GripVertical, Square, CheckSquare2 } from 'lucide-react';
 
 interface CollectionImageGridProps {
@@ -57,9 +58,9 @@ export const CollectionImageGrid = ({
     return (
       <div className="collection-detail-empty">
         <p>Bộ sưu tập này chưa có ảnh nào</p>
-        <button onClick={() => navigate('/')}>
+        <Button onClick={() => navigate('/')} variant="outline">
           Khám phá ảnh để thêm vào bộ sưu tập
-        </button>
+        </Button>
       </div>
     );
   }
@@ -133,26 +134,28 @@ export const CollectionImageGrid = ({
               {/* Hover Overlay with Set Cover Button */}
               {isOwner && (
                 <div className="collection-image-overlay">
-                  <button
+                  <Button
+                    size="sm"
+                    variant="ghost"
                     className={`collection-image-set-cover-btn ${isCoverImage ? 'is-cover' : ''}`}
                     onClick={(e) => handleSetCoverImage(image._id, e)}
                     disabled={isCoverImage || updatingCover === image._id}
+                    loading={updatingCover === image._id}
                     title={isCoverImage ? 'Đây là ảnh bìa' : 'Đặt làm ảnh bìa'}
                   >
-                    {updatingCover === image._id ? (
-                      <div className="cover-loading-spinner" />
-                    ) : isCoverImage ? (
-                      <>
-                        <Check size={16} />
-                        <span>Ảnh bìa</span>
-                      </>
-                    ) : (
+                    {!isCoverImage && updatingCover !== image._id && (
                       <>
                         <ImageIcon size={16} />
                         <span>Đặt làm ảnh bìa</span>
                       </>
                     )}
-                  </button>
+                    {isCoverImage && (
+                      <>
+                        <Check size={16} />
+                        <span>Ảnh bìa</span>
+                      </>
+                    )}
+                  </Button>
                 </div>
               )}
             </div>
@@ -162,4 +165,5 @@ export const CollectionImageGrid = ({
     </div>
   );
 };
+
 

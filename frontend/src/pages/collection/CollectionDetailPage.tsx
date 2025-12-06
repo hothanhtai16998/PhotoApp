@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
+import { Button } from '@/components/ui/button';
 import { collectionService } from '@/services/collectionService';
 import type { Image } from '@/types/image';
 import { toast } from 'sonner';
@@ -251,9 +252,9 @@ export default function CollectionDetailPage() {
 				<div className="collection-detail-page">
 					<div className="collection-detail-error">
 						<p>Không tìm thấy bộ sưu tập</p>
-						<button onClick={() => navigate('/collections')}>
+						<Button onClick={() => navigate('/collections')} variant="outline">
 							Quay lại danh sách
-						</button>
+						</Button>
 					</div>
 				</div>
 			</>

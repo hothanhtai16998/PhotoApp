@@ -10,6 +10,7 @@ import { Avatar } from "./Avatar"
 import NotificationBell from "./NotificationBell"
 import { LanguageSwitcher } from "./LanguageSwitcher"
 import { ThemeToggle } from "./admin/ThemeToggle"
+import { Button } from "@/components/ui/button"
 import LOGO_CONFIG from "@/config/logo"
 import { updateFaviconWithImage } from "@/utils/faviconUpdater"
 import { t } from "@/i18n"
@@ -157,7 +158,7 @@ export const Header = memo(function Header() {
           <div className="header-actions desktop-only">
             {accessToken ? (
               <>
-                <button onClick={() => setUploadModalOpen(true)} className="header-link header-upload-button">{t('header.addImage')}</button>
+                <Button variant="ghost" onClick={() => setUploadModalOpen(true)} className="header-link header-upload-button">{t('header.addImage')}</Button>
                 <NotificationBell />
                 <DropdownMenu modal={false}>
                   <DropdownMenuTrigger asChild>
@@ -223,7 +224,7 @@ export const Header = memo(function Header() {
             ) : (
               <>
                 <Link to="/signin" className="header-link">{t('auth.signIn')}</Link>
-                <button onClick={() => navigate('/signin')} className="header-button">{t('header.addImage')}</button>
+                <Button onClick={() => navigate('/signin')} className="header-button">{t('header.addImage')}</Button>
               </>
             )}
           </div>

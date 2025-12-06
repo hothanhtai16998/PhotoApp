@@ -79,10 +79,10 @@ export const PasswordForm = ({
       <div className="form-actions">
         <Button
           type="submit"
-          disabled={isSubmitting}
+          loading={isSubmitting}
           className="update-btn"
         >
-          {isSubmitting ? t('profile.changing') : t('profile.changePassword')}
+          {t('profile.changePassword')}
         </Button>
       </div>
     </form>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, Plus, Folder, Check, FileText, Sparkles } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { collectionService } from '@/services/collectionService';
 import { collectionTemplateService, type CollectionTemplate } from '@/services/collectionTemplateService';
 import type { Collection } from '@/types/collection';
@@ -313,9 +314,15 @@ export default function CollectionModal({
 			<div className="collection-modal" onClick={(e) => e.stopPropagation()}>
 				<div className="collection-modal-header">
 					<h2>{isEditMode ? t('collections.editCollection') : t('collections.saveToCollection')}</h2>
-					<button className="collection-modal-close" onClick={onClose} aria-label={t('common.close')}>
+					<Button 
+						variant="ghost" 
+						size="icon" 
+						className="collection-modal-close" 
+						onClick={onClose} 
+						aria-label={t('common.close')}
+					>
 						<X size={20} />
-					</button>
+					</Button>
 				</div>
 
 				<div className="collection-modal-content">
@@ -393,20 +400,22 @@ export default function CollectionModal({
 										)}
 									</div>
 									<div className="collection-modal-form-actions">
-								<button
+								<Button
+									variant="outline"
 									className="collection-modal-cancel-btn"
 									onClick={onClose}
 									disabled={editing}
 								>
 									{t('common.cancel')}
-								</button>
-								<button
+								</Button>
+								<Button
 									className="collection-modal-submit-btn"
 									onClick={handleUpdateCollection}
-									disabled={editing || !editCollectionName.trim()}
+									loading={editing}
+									disabled={!editCollectionName.trim()}
 								>
-									{editing ? t('collections.saving') : t('common.saveChanges')}
-								</button>
+									{t('common.saveChanges')}
+								</Button>
 							</div>
 						</div>
 					) : loading ? (
@@ -418,7 +427,8 @@ export default function CollectionModal({
 							{!showCreateForm ? (
 								<>
 									<div className="collection-modal-create-options">
-										<button
+										<Button
+											variant="outline"
 											className="collection-modal-create-btn"
 											onClick={() => {
 												setShowCreateForm(true);
@@ -428,7 +438,7 @@ export default function CollectionModal({
 										>
 											<Plus size={18} />
 											{t('collections.createNew')}
-										</button>
+										</Button>
 										{templates.length > 0 && (
 											<button
 												className="collection-modal-template-btn"
@@ -651,7 +661,8 @@ export default function CollectionModal({
 										)}
 									</div>
 									<div className="collection-modal-form-actions">
-										<button
+										<Button
+											variant="outline"
 											className="collection-modal-cancel-btn"
 											onClick={() => {
 												setShowCreateForm(false);
@@ -661,11 +672,12 @@ export default function CollectionModal({
 											disabled={creating}
 										>
 											{t('common.cancel')}
-										</button>
-										<button
+										</Button>
+										<Button
 											className="collection-modal-submit-btn"
 											onClick={handleCreateCollection}
-											disabled={creating || !newCollectionName.trim()}
+											loading={creating}
+											disabled={!newCollectionName.trim()}
 										>
 											{creating ? t('collections.creating') : t('collections.createNew')}
 										</button>

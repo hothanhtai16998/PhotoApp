@@ -583,24 +583,34 @@ export function AdminSettings() {
         return Object.keys(errors).length === 0;
     }, [settings, selectedFileTypes]);
 
-    // Memoize social media links comparison to avoid expensive JSON.stringify in render
+    // Memoize social media links comparison (shallow comparison for performance)
     const socialLinksChanged = useMemo(() => {
-        return JSON.stringify(settings.socialMediaLinks) !== JSON.stringify(originalSettings.socialMediaLinks);
-    }, [settings.socialMediaLinks, originalSettings.socialMediaLinks]);
+        const current = settings.socialMediaLinks;
+        const original = originalSettings.socialMediaLinks;
+        return current.facebook !== original.facebook ||
+               current.twitter !== original.twitter ||
+               current.instagram !== original.instagram ||
+               current.linkedin !== original.linkedin ||
+               current.youtube !== original.youtube;
+    }, [
+        settings.socialMediaLinks.facebook,
+        settings.socialMediaLinks.twitter,
+        settings.socialMediaLinks.instagram,
+        settings.socialMediaLinks.linkedin,
+        settings.socialMediaLinks.youtube,
+        originalSettings.socialMediaLinks.facebook,
+        originalSettings.socialMediaLinks.twitter,
+        originalSettings.socialMediaLinks.instagram,
+        originalSettings.socialMediaLinks.linkedin,
+        originalSettings.socialMediaLinks.youtube,
+    ]);
 
-    // Memoize password complexity comparison
+    // Memoize password complexity comparison (shallow comparison for performance)
     const passwordComplexityChanged = useMemo(() => {
-        return JSON.stringify({
-            passwordRequireUppercase: settings.passwordRequireUppercase,
-            passwordRequireLowercase: settings.passwordRequireLowercase,
-            passwordRequireNumber: settings.passwordRequireNumber,
-            passwordRequireSpecialChar: settings.passwordRequireSpecialChar,
-        }) !== JSON.stringify({
-            passwordRequireUppercase: originalSettings.passwordRequireUppercase,
-            passwordRequireLowercase: originalSettings.passwordRequireLowercase,
-            passwordRequireNumber: originalSettings.passwordRequireNumber,
-            passwordRequireSpecialChar: originalSettings.passwordRequireSpecialChar,
-        });
+        return settings.passwordRequireUppercase !== originalSettings.passwordRequireUppercase ||
+               settings.passwordRequireLowercase !== originalSettings.passwordRequireLowercase ||
+               settings.passwordRequireNumber !== originalSettings.passwordRequireNumber ||
+               settings.passwordRequireSpecialChar !== originalSettings.passwordRequireSpecialChar;
     }, [
         settings.passwordRequireUppercase,
         settings.passwordRequireLowercase,
@@ -612,10 +622,19 @@ export function AdminSettings() {
         originalSettings.passwordRequireSpecialChar,
     ]);
 
-    // Check if settings have changed (optimized shallow comparison first, then deep if needed)
-    const hasChanges = useMemo(() => {
-        // Quick shallow comparison for common changes
-        if (settings.siteName !== originalSettings.siteName ||
+    // Debounced hasChanges calculation to avoid expensive checks on every keystroke
+    const [hasChanges, setHasChanges] = useState(false);
+    const hasChangesTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    
+    // Calculate hasChanges with debounce (only after user stops typing for 300ms)
+    useEffect(() => {
+        if (hasChangesTimeoutRef.current) {
+            clearTimeout(hasChangesTimeoutRef.current);
+        }
+        
+        hasChangesTimeoutRef.current = setTimeout(() => {
+            // Quick shallow comparison for common changes
+            const changed = settings.siteName !== originalSettings.siteName ||
             settings.siteDescription !== originalSettings.siteDescription ||
             settings.maxUploadSize !== originalSettings.maxUploadSize ||
             settings.allowedFileTypes !== originalSettings.allowedFileTypes ||
@@ -688,19 +707,39 @@ export function AdminSettings() {
             settings.requireEmailVerification !== originalSettings.requireEmailVerification ||
             settings.requirePhoneVerification !== originalSettings.requirePhoneVerification ||
             settings.allowAccountSelfDeletion !== originalSettings.allowAccountSelfDeletion ||
-            JSON.stringify(settings.requiredProfileFields) !== JSON.stringify(originalSettings.requiredProfileFields) ||
+            // Required Profile Fields (shallow array comparison)
+            (settings.requiredProfileFields?.length !== originalSettings.requiredProfileFields?.length ||
+             settings.requiredProfileFields?.some((field, i) => field !== originalSettings.requiredProfileFields?.[i])) ||
             // Monitoring & Alerts Settings
             settings.healthCheckEnabled !== originalSettings.healthCheckEnabled ||
             settings.healthCheckInterval !== originalSettings.healthCheckInterval ||
-            JSON.stringify(settings.alertThresholds || {}) !== JSON.stringify(originalSettings.alertThresholds || {}) ||
+            // Alert Thresholds (shallow object comparison)
+            (settings.alertThresholds?.cpuUsage !== originalSettings.alertThresholds?.cpuUsage ||
+             settings.alertThresholds?.memoryUsage !== originalSettings.alertThresholds?.memoryUsage ||
+             settings.alertThresholds?.diskUsage !== originalSettings.alertThresholds?.diskUsage ||
+             settings.alertThresholds?.responseTime !== originalSettings.alertThresholds?.responseTime ||
+             settings.alertThresholds?.errorRate !== originalSettings.alertThresholds?.errorRate) ||
             settings.emailAlertsEnabled !== originalSettings.emailAlertsEnabled ||
-            JSON.stringify(settings.emailAlertRecipients || []) !== JSON.stringify(originalSettings.emailAlertRecipients || []) ||
-            JSON.stringify(settings.alertEvents || {}) !== JSON.stringify(originalSettings.alertEvents || {})
-        ) {
-            return true;
-        }
-        // If shallow comparison passes, do deep comparison (rare case)
-        return JSON.stringify(settings) !== JSON.stringify(originalSettings);
+            // Email Alert Recipients (shallow array comparison)
+            (settings.emailAlertRecipients?.length !== originalSettings.emailAlertRecipients?.length ||
+             settings.emailAlertRecipients?.some((email, i) => email !== originalSettings.emailAlertRecipients?.[i])) ||
+            // Alert Events (shallow object comparison)
+            (settings.alertEvents?.cpuHigh !== originalSettings.alertEvents?.cpuHigh ||
+             settings.alertEvents?.memoryHigh !== originalSettings.alertEvents?.memoryHigh ||
+             settings.alertEvents?.diskHigh !== originalSettings.alertEvents?.diskHigh ||
+             settings.alertEvents?.responseTimeHigh !== originalSettings.alertEvents?.responseTimeHigh ||
+             settings.alertEvents?.errorRateHigh !== originalSettings.alertEvents?.errorRateHigh ||
+             settings.alertEvents?.databaseDown !== originalSettings.alertEvents?.databaseDown ||
+             settings.alertEvents?.storageDown !== originalSettings.alertEvents?.storageDown);
+            
+            setHasChanges(changed);
+        }, 300); // Debounce by 300ms - only check after user stops typing
+        
+        return () => {
+            if (hasChangesTimeoutRef.current) {
+                clearTimeout(hasChangesTimeoutRef.current);
+            }
+        };
     }, [settings, originalSettings, socialLinksChanged, passwordComplexityChanged]);
 
     const handleSave = async () => {
@@ -795,7 +834,7 @@ export function AdminSettings() {
         
         const timeoutId = setTimeout(() => {
             validateSettings();
-        }, 300); // Debounce validation by 300ms
+        }, 500); // Debounce validation by 500ms to reduce lag
         
         return () => clearTimeout(timeoutId);
     }, [settings, selectedFileTypes, validateSettings]);
@@ -1119,7 +1158,7 @@ export function AdminSettings() {
                     <Input
                                             id="site-name-input"
                         value={settings.siteName}
-                        onChange={(e) => setSettings({ ...settings, siteName: e.target.value })}
+                        onChange={(e) => setSettings(prev => ({ ...prev, siteName: e.target.value }))}
                                             placeholder="Enter site name"
                                             className={validationErrors.siteName ? 'input-error' : ''}
                                             aria-describedby={validationErrors.siteName ? 'site-name-error' : 'site-name-help'}
@@ -1158,7 +1197,7 @@ export function AdminSettings() {
                     <Input
                                         id="site-description-input"
                         value={settings.siteDescription}
-                        onChange={(e) => setSettings({ ...settings, siteDescription: e.target.value })}
+                        onChange={(e) => setSettings(prev => ({ ...prev, siteDescription: e.target.value }))}
                                         placeholder="Enter site description"
                                         className={validationErrors.siteDescription ? 'input-error' : ''}
                                         aria-describedby={validationErrors.siteDescription ? 'site-description-error' : 'site-description-help'}
@@ -1236,14 +1275,16 @@ export function AdminSettings() {
                                         {settings.siteLogo && (
                                             <div className="admin-image-preview">
                                                 <img src={settings.siteLogo} alt="Site logo preview" className="admin-image-preview-img" />
-                                                <button
+                                                <Button
                                                     type="button"
-                                                    onClick={() => setSettings({ ...settings, siteLogo: '' })}
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => setSettings(prev => ({ ...prev, siteLogo: '' }))}
                                                     className="admin-image-preview-remove"
                                                     aria-label="Remove logo"
                                                 >
                                                     <X size={16} />
-                                                </button>
+                                                </Button>
                                             </div>
                                         )}
                                     </div>
@@ -1302,14 +1343,16 @@ export function AdminSettings() {
                                         {settings.favicon && (
                                             <div className="admin-image-preview admin-image-preview-small">
                                                 <img src={settings.favicon} alt="Favicon preview" className="admin-image-preview-img" />
-                                                <button
+                                                <Button
                                                     type="button"
-                                                    onClick={() => setSettings({ ...settings, favicon: '' })}
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => setSettings(prev => ({ ...prev, favicon: '' }))}
                                                     className="admin-image-preview-remove"
                                                     aria-label="Remove favicon"
                                                 >
                                                     <X size={16} />
-                                                </button>
+                                                </Button>
                                             </div>
                                         )}
                                     </div>
@@ -1331,7 +1374,7 @@ export function AdminSettings() {
                                     <select
                                         id="default-language-select"
                                         value={settings.defaultLanguage}
-                                        onChange={(e) => setSettings({ ...settings, defaultLanguage: e.target.value })}
+                                        onChange={(e) => setSettings(prev => ({ ...prev, defaultLanguage: e.target.value }))}
                                         className="admin-select"
                                         aria-describedby="default-language-help"
                                     >
@@ -1368,7 +1411,7 @@ export function AdminSettings() {
                                     <select
                                         id="timezone-select"
                                         value={settings.timezone}
-                                        onChange={(e) => setSettings({ ...settings, timezone: e.target.value })}
+                                        onChange={(e) => setSettings(prev => ({ ...prev, timezone: e.target.value }))}
                                         className="admin-select"
                                         aria-describedby="timezone-help"
                                     >
@@ -1406,7 +1449,7 @@ export function AdminSettings() {
                                         id="contact-email-input"
                                         type="email"
                                         value={settings.contactEmail}
-                                        onChange={(e) => setSettings({ ...settings, contactEmail: e.target.value })}
+                                        onChange={(e) => setSettings(prev => ({ ...prev, contactEmail: e.target.value }))}
                                         placeholder="support@example.com"
                                         className={validationErrors.contactEmail ? 'input-error' : ''}
                                         aria-describedby={validationErrors.contactEmail ? 'contact-email-error' : 'contact-email-help'}
@@ -1533,8 +1576,9 @@ export function AdminSettings() {
 
                                 {/* Progressive Disclosure - Advanced Settings */}
                                 <div className="admin-advanced-settings-section">
-                                    <button
+                                    <Button
                                         type="button"
+                                        variant="ghost"
                                         className="admin-advanced-settings-toggle"
                                         onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
                                     >
@@ -1544,7 +1588,7 @@ export function AdminSettings() {
                                         ) : (
                                             <ChevronDown size={18} />
                                         )}
-                                    </button>
+                                    </Button>
                                     {showAdvancedSettings && (
                                         <div className="admin-advanced-settings-content">
                                             {/* Additional advanced settings can be added here */}
@@ -1572,12 +1616,13 @@ export function AdminSettings() {
                                     </div>
                                     <Button 
                                         onClick={handleSave} 
-                                        disabled={saving || !hasChanges || Object.keys(validationErrors).length > 0} 
+                                        loading={saving}
+                                        disabled={!hasChanges || Object.keys(validationErrors).length > 0} 
                                         className="admin-add-category-btn"
                                         aria-label={saving ? 'Saving settings' : 'Save all settings'}
                                         aria-describedby="save-button-help"
                                     >
-                                        <Save size={16} aria-hidden="true" />
+                                        {!saving && <Save size={16} aria-hidden="true" />}
                                         {saving ? t('admin.saving') : t('admin.saveSettings')}
                                     </Button>
                                     <span id="save-button-help" className="sr-only">
@@ -1643,7 +1688,7 @@ export function AdminSettings() {
                                         id="max-upload-size-input"
                         type="number"
                         value={settings.maxUploadSize}
-                        onChange={(e) => setSettings({ ...settings, maxUploadSize: parseInt(e.target.value) || 10 })}
+                        onChange={(e) => setSettings(prev => ({ ...prev, maxUploadSize: parseInt(e.target.value) || 10 }))}
                                         min="1"
                                         max="1000"
                                         className={validationErrors.maxUploadSize ? 'input-error' : ''}
@@ -1763,7 +1808,7 @@ export function AdminSettings() {
                                             min="1"
                                             max="100"
                                             value={settings.imageQuality}
-                                            onChange={(e) => setSettings({ ...settings, imageQuality: parseInt(e.target.value) })}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, imageQuality: parseInt(e.target.value) }))}
                                             className="admin-range-input"
                                         />
                                         <span className="admin-range-value">{settings.imageQuality}%</span>
@@ -1797,7 +1842,7 @@ export function AdminSettings() {
                                                 id="watermark-enabled-toggle"
                                                 type="checkbox"
                                                 checked={settings.watermarkEnabled}
-                                                onChange={(e) => setSettings({ ...settings, watermarkEnabled: e.target.checked })}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, watermarkEnabled: e.target.checked }))}
                                                 className="admin-maintenance-checkbox"
                                             />
                                             <span>Enable Watermark</span>
@@ -1832,14 +1877,16 @@ export function AdminSettings() {
                                             {settings.watermarkImage && (
                                                 <div className="admin-image-preview">
                                                     <img src={settings.watermarkImage} alt="Watermark preview" className="admin-image-preview-img" />
-                                                    <button
+                                                    <Button
                                                         type="button"
-                                                        onClick={() => setSettings({ ...settings, watermarkImage: '' })}
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => setSettings(prev => ({ ...prev, watermarkImage: '' }))}
                                                         className="admin-image-preview-remove"
                                                         aria-label="Remove watermark"
                                                     >
                                                         <X size={16} />
-                                                    </button>
+                                                    </Button>
                                                 </div>
                                             )}
                                         </div>
@@ -1865,7 +1912,7 @@ export function AdminSettings() {
                                                 id="auto-resize-enabled-toggle"
                                                 type="checkbox"
                                                 checked={settings.autoResizeEnabled}
-                                                onChange={(e) => setSettings({ ...settings, autoResizeEnabled: e.target.checked })}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, autoResizeEnabled: e.target.checked }))}
                                                 className="admin-maintenance-checkbox"
                                             />
                                             <span>Enable Auto-resize</span>
@@ -1879,7 +1926,7 @@ export function AdminSettings() {
                                                     id="auto-resize-max-width"
                                                     type="number"
                                                     value={settings.autoResizeMaxWidth}
-                                                    onChange={(e) => setSettings({ ...settings, autoResizeMaxWidth: parseInt(e.target.value) || 1920 })}
+                                                    onChange={(e) => setSettings(prev => ({ ...prev, autoResizeMaxWidth: parseInt(e.target.value) || 1920 }))}
                                                     min="100"
                                                     max="10000"
                                                 />
@@ -1890,7 +1937,7 @@ export function AdminSettings() {
                                                     id="auto-resize-max-height"
                                                     type="number"
                                                     value={settings.autoResizeMaxHeight}
-                                                    onChange={(e) => setSettings({ ...settings, autoResizeMaxHeight: parseInt(e.target.value) || 1080 })}
+                                                    onChange={(e) => setSettings(prev => ({ ...prev, autoResizeMaxHeight: parseInt(e.target.value) || 1080 }))}
                                                     min="100"
                                                     max="10000"
                                                 />
@@ -1918,7 +1965,7 @@ export function AdminSettings() {
                                             id="max-video-duration-input"
                                             type="number"
                                             value={settings.maxVideoDuration}
-                                            onChange={(e) => setSettings({ ...settings, maxVideoDuration: parseInt(e.target.value) || 300 })}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, maxVideoDuration: parseInt(e.target.value) || 300 }))}
                                             min="1"
                                             max="3600"
                                         />
@@ -1931,7 +1978,7 @@ export function AdminSettings() {
                                         <select
                                             id="video-quality-select"
                                             value={settings.videoQuality}
-                                            onChange={(e) => setSettings({ ...settings, videoQuality: e.target.value })}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, videoQuality: e.target.value }))}
                                             className="admin-select"
                                         >
                                             <option value="low">Low (Smaller file size)</option>
@@ -1958,7 +2005,7 @@ export function AdminSettings() {
                                         id="batch-upload-limit-input"
                                         type="number"
                                         value={settings.batchUploadLimit}
-                                        onChange={(e) => setSettings({ ...settings, batchUploadLimit: parseInt(e.target.value) || 10 })}
+                                        onChange={(e) => setSettings(prev => ({ ...prev, batchUploadLimit: parseInt(e.target.value) || 10 }))}
                                         min="1"
                                         max="100"
                                     />
@@ -1990,12 +2037,13 @@ export function AdminSettings() {
                                     </div>
                                     <Button 
                                         onClick={handleSave} 
-                                        disabled={saving || !hasChanges || Object.keys(validationErrors).length > 0} 
+                                        loading={saving}
+                                        disabled={!hasChanges || Object.keys(validationErrors).length > 0} 
                                         className="admin-add-category-btn"
                                         aria-label={saving ? 'Saving settings' : 'Save all settings'}
                                         aria-describedby="save-button-help"
                                     >
-                                        <Save size={16} aria-hidden="true" />
+                                        {!saving && <Save size={16} aria-hidden="true" />}
                                         {saving ? t('admin.saving') : t('admin.saveSettings')}
                                     </Button>
                                     <span id="save-button-help" className="sr-only">
@@ -2789,12 +2837,13 @@ export function AdminSettings() {
                                     </div>
                                     <Button 
                                         onClick={handleSave} 
-                                        disabled={saving || !hasChanges || Object.keys(validationErrors).length > 0} 
+                                        loading={saving}
+                                        disabled={!hasChanges || Object.keys(validationErrors).length > 0} 
                                         className="admin-add-category-btn"
                                         aria-label={saving ? 'Saving settings' : 'Save all settings'}
                                         aria-describedby="save-button-help"
                                     >
-                                        <Save size={16} aria-hidden="true" />
+                                        {!saving && <Save size={16} aria-hidden="true" />}
                                         {saving ? t('admin.saving') : t('admin.saveSettings')}
                                     </Button>
                                     <span id="save-button-help" className="sr-only">
@@ -3257,12 +3306,13 @@ export function AdminSettings() {
                                     </div>
                                     <Button 
                                         onClick={handleSave} 
-                                        disabled={saving || !hasChanges || Object.keys(validationErrors).length > 0} 
+                                        loading={saving}
+                                        disabled={!hasChanges || Object.keys(validationErrors).length > 0} 
                                         className="admin-add-category-btn"
                                         aria-label={saving ? 'Saving settings' : 'Save all settings'}
                                         aria-describedby="save-button-help"
                                     >
-                                        <Save size={16} aria-hidden="true" />
+                                        {!saving && <Save size={16} aria-hidden="true" />}
                                         {saving ? t('admin.saving') : t('admin.saveSettings')}
                                     </Button>
                                     <span id="save-button-help" className="sr-only">

@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/utils';
 import { reportService, type ReportType, type ReportReason } from '@/services/reportService';
 import { t } from '@/i18n';
+import { Button } from '@/components/ui/button';
 import './ReportButton.css';
 
 interface ReportButtonProps {
@@ -72,14 +73,16 @@ export default function ReportButton({ type, targetId, targetName, className = '
 
     return (
         <>
-            <button
+            <Button
+                variant="outline"
+                size="sm"
                 className={`report-btn ${className}`}
                 onClick={() => setShowModal(true)}
                 title={t('report.reportType', { type: getTypeLabel() })}
             >
                 <Flag size={16} />
                 <span>{t('report.report')}</span>
-            </button>
+            </Button>
 
             {showModal && (
                 <div className="report-modal-overlay" onClick={() => setShowModal(false)}>
@@ -137,21 +140,24 @@ export default function ReportButton({ type, targetId, targetName, className = '
                             </div>
 
                             <div className="report-modal-actions">
-                                <button
+                                <Button
                                     type="button"
+                                    variant="outline"
                                     className="report-btn-cancel"
                                     onClick={() => setShowModal(false)}
                                     disabled={submitting}
                                 >
                                     {t('common.cancel')}
-                                </button>
-                                <button
+                                </Button>
+                                <Button
                                     type="submit"
+                                    variant="destructive"
                                     className="report-btn-submit"
-                                    disabled={submitting || !reason}
+                                    loading={submitting}
+                                    disabled={!reason}
                                 >
-                                    {submitting ? t('report.submitting') : t('report.submit')}
-                                </button>
+                                    {t('report.submit')}
+                                </Button>
                             </div>
                         </form>
                     </div>

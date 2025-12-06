@@ -18,6 +18,25 @@
 		border-width: 0;
 	}
 
+	/* Global Button Improvements - Apply to all buttons */
+	button:not([disabled]) {
+		transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+		cursor: pointer;
+	}
+
+	button:not([disabled]):hover {
+		transform: translateY(-1px);
+	}
+
+	button:not([disabled]):active {
+		transform: translateY(0) scale(0.98);
+	}
+
+	button:disabled {
+		cursor: not-allowed;
+		opacity: 0.6;
+	}
+
 	:root {
 		/* Z-index scale system */
 		--z-base: 1;

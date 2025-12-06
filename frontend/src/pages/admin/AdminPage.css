@@ -5474,3 +5474,114 @@
     gap: 0.5rem;
   }
 }
+
+/* Button Improvements - Enhanced Styles */
+/* Apply to both Button component and native buttons */
+[data-slot="button"],
+button:not([type="submit"]):not([type="reset"]),
+button[type="button"] {
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-slot="button"]:not(:disabled):hover,
+button:not(:disabled):not([type="submit"]):not([type="reset"]):hover,
+button[type="button"]:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+[data-slot="button"]:not(:disabled):active,
+button:not(:disabled):not([type="submit"]):not([type="reset"]):active,
+button[type="button"]:not(:disabled):active {
+  transform: translateY(0) scale(0.98);
+}
+
+[data-slot="button"]:disabled,
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Loading state spinner positioning */
+[data-slot="button"]:has(> svg.animate-spin) {
+  position: relative;
+}
+
+[data-slot="button"] > svg.animate-spin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+}
+
+/* Icon-only button improvements */
+[data-slot="button"][class*="icon"] {
+  aspect-ratio: 1;
+  padding: 0;
+}
+
+/* Button group styles */
+[role="group"] {
+  gap: 0;
+}
+
+[role="group"] [data-slot="button"] {
+  border-radius: 0;
+}
+
+[role="group"] [data-slot="button"]:first-child {
+  border-top-left-radius: calc(var(--radius) - 2px);
+  border-bottom-left-radius: calc(var(--radius) - 2px);
+}
+
+[role="group"] [data-slot="button"]:last-child {
+  border-top-right-radius: calc(var(--radius) - 2px);
+  border-bottom-right-radius: calc(var(--radius) - 2px);
+}
+
+[role="group"][class*="vertical"] [data-slot="button"]:first-child {
+  border-top-left-radius: calc(var(--radius) - 2px);
+  border-top-right-radius: calc(var(--radius) - 2px);
+  border-bottom-left-radius: 0;
+}
+
+[role="group"][class*="vertical"] [data-slot="button"]:last-child {
+  border-bottom-left-radius: calc(var(--radius) - 2px);
+  border-bottom-right-radius: calc(var(--radius) - 2px);
+  border-top-right-radius: 0;
+}
+
+/* Enhanced hover effects for different variants */
+[data-slot="button"][class*="default"]:not(:disabled):hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+[data-slot="button"][class*="destructive"]:not(:disabled):hover {
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+[data-slot="button"][class*="outline"]:not(:disabled):hover {
+  border-color: hsl(var(--ring));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+[data-slot="button"][class*="secondary"]:not(:disabled):hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+[data-slot="button"][class*="ghost"]:not(:disabled):hover {
+  background-color: hsl(var(--accent) / 0.8);
+}
+
+/* Focus ring improvements */
+[data-slot="button"]:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Loading state - hide text when loading */
+[data-slot="button"]:has(svg[class*="lucide-loader"]) > span {
+  opacity: 0;
+}
+

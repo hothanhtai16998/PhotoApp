@@ -26,7 +26,7 @@ export function EditRoleModal({ role, onClose, onSave }: EditRoleModalProps) {
                 <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
                     <div className="admin-modal-header">
                         <h2>{t('admin.cannotEditSystemRole') || 'Không thể chỉnh sửa'}</h2>
-                        <button onClick={onClose}>×</button>
+                        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">×</Button>
                     </div>
                     <div className="admin-modal-form">
                         <p>{t('admin.cannotEditSystemRole') || 'Không thể chỉnh sửa quyền được tạo bởi hệ thống'}</p>

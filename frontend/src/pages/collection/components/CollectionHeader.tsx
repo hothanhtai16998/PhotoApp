@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Heart, Download, CheckSquare2, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { CollectionShare } from '@/components/collection/CollectionShare';
 import ReportButton from '@/components/ReportButton';
 import type { Collection } from '@/types/collection';
@@ -34,12 +35,13 @@ export const CollectionHeader = ({
 
   return (
     <div className="collection-detail-header">
-      <button
+      <Button
+        variant="ghost"
         className="collection-detail-back"
         onClick={() => navigate('/collections')}
       >
         ← Quay lại
-      </button>
+      </Button>
       <div className="collection-detail-info">
         <div className="collection-detail-title-row">
           <div>
@@ -63,15 +65,16 @@ export const CollectionHeader = ({
             </div>
           </div>
           <div className="collection-detail-actions">
-            <button
+            <Button
+              variant={isFavorited ? "default" : "outline"}
               className={`collection-favorite-btn ${isFavorited ? 'favorited' : ''}`}
               onClick={handleToggleFavorite}
-              disabled={togglingFavorite}
+              loading={togglingFavorite}
               title={isFavorited ? 'Xóa khỏi yêu thích' : 'Thêm vào yêu thích'}
             >
               <Heart size={18} fill={isFavorited ? 'currentColor' : 'none'} />
               <span>{isFavorited ? 'Đã yêu thích' : 'Yêu thích'}</span>
-            </button>
+            </Button>
             {collection?.isPublic && (
               <div onClick={(e) => e.stopPropagation()}>
                 <CollectionShare collection={collection} />
@@ -85,17 +88,19 @@ export const CollectionHeader = ({
               </div>
             )}
             {imagesCount > 0 && collection && (
-              <button
+              <Button
+                variant="outline"
                 className="collection-export-btn"
                 onClick={handleExportCollection}
                 title="Xuất bộ sưu tập (ZIP)"
               >
                 <Download size={18} />
                 <span>Xuất</span>
-              </button>
+              </Button>
             )}
             {canEdit && imagesCount > 0 && (
-              <button
+              <Button
+                variant={selectionMode ? "default" : "outline"}
                 className={`collection-selection-mode-btn ${selectionMode ? 'active' : ''}`}
                 onClick={toggleSelectionMode}
                 title={selectionMode ? 'Thoát chế độ chọn' : 'Chọn nhiều ảnh'}
@@ -111,7 +116,7 @@ export const CollectionHeader = ({
                     <span>Chọn</span>
                   </>
                 )}
-              </button>
+              </Button>
             )}
           </div>
         </div>

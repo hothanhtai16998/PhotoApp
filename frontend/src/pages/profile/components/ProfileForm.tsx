@@ -66,12 +66,14 @@ export const ProfileForm = ({
             style={{ display: 'none' }}
             disabled={user?.isOAuthUser}
           />
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             className="change-image-btn"
             onClick={handleAvatarButtonClick}
             disabled={isUploadingAvatar || user?.isOAuthUser}
-            style={user?.isOAuthUser ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+            loading={isUploadingAvatar}
           >
             {t('profile.changeAvatar')}
           </button>
@@ -171,8 +173,8 @@ export const ProfileForm = ({
 
       {/* Submit Button */}
       <div className="form-actions">
-        <Button type="submit" disabled={isSubmitting} className="update-btn">
-          {isSubmitting ? t('profile.updating') : t('profile.updateAccount')}
+        <Button type="submit" loading={isSubmitting} className="update-btn">
+          {t('profile.updateAccount')}
         </Button>
       </div>
     </form>

@@ -70,7 +70,7 @@ export function CreateRoleModal({ users, onClose, onSave }: CreateRoleModalProps
             <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="admin-modal-header">
                     <h2>{t('admin.addAdminRole')}</h2>
-                    <button onClick={onClose}>×</button>
+                    <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">×</Button>
                 </div>
                 <form onSubmit={handleSubmit} className="admin-modal-form">
                     <div className="admin-modal-form-content">

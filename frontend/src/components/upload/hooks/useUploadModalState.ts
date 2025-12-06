@@ -107,17 +107,22 @@ export const useUploadModalState = ({ preUploadAllImages, preserveQuality }: Use
         
         // Then start pre-uploading
         setTimeout(() => {
+          // Throttle frequent progress updates to reduce re-renders and input lag
+          const lastUpdateRef = { time: 0 };
+          const minIntervalMs = 120; // ~8 updates/sec
           preUploadAllImages(updatedImagesData, preserveQuality, (index, progress) => {
-            // Update progress in real-time (0-100%)
-            // Keep isUploading true until we get preUploadData (upload truly complete)
+            const now = performance.now();
+            if (now - lastUpdateRef.time < minIntervalMs && progress < 100) {
+              return; // skip too-frequent intermediate updates
+            }
+            lastUpdateRef.time = now;
+            // Update progress (0-100%) while keeping isUploading true until completion
             setImagesData(prev => {
               const updated = [...prev];
               if (updated[index]) {
                 updated[index] = {
-                  ...updated[index], // Preserve all existing fields
-                  uploadProgress: Math.min(100, Math.max(0, progress)), // Clamp between 0-100
-                  // Keep isUploading true during progress updates
-                  // It will be set to false only when preUploadData is received
+                  ...updated[index],
+                  uploadProgress: Math.min(100, Math.max(0, progress)),
                   isUploading: true,
                 };
               }

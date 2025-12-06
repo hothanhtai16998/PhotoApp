@@ -5,6 +5,7 @@ import { ImageEditor } from './image/ImageEditor';
 import { TagInput } from './ui/TagInput';
 import { EditImageTabs } from './image/EditImageTabs';
 import { useEditImageForm } from './image/hooks/useEditImageForm';
+import { Button } from '@/components/ui/button';
 import { t } from '@/i18n';
 import './EditImageModal.css';
 
@@ -71,9 +72,15 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
         {/* Modal Header */}
         <div className="edit-modal-header">
           <h2>{t('image.editImage')}</h2>
-          <button className="edit-modal-close" onClick={onClose} aria-label={t('common.close')}>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="edit-modal-close" 
+            onClick={onClose} 
+            aria-label={t('common.close')}
+          >
             <X size={20} />
-          </button>
+          </Button>
         </div>
 
         {/* Tabs */}
@@ -299,21 +306,23 @@ function EditImageModal({ image, isOpen, onClose, onUpdate }: EditImageModalProp
 
           {/* Form Actions */}
           <div className="edit-modal-actions">
-            <button
+            <Button
               type="button"
+              variant="outline"
               className="edit-modal-btn edit-modal-btn-cancel"
               onClick={onClose}
               disabled={isSubmitting}
             >
               {t('common.cancel')}
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               className="edit-modal-btn edit-modal-btn-submit"
-              disabled={isSubmitting || !canEdit}
+              loading={isSubmitting}
+              disabled={!canEdit}
             >
-              {isSubmitting ? t('common.loading') : t('common.save')}
-            </button>
+              {t('common.save')}
+            </Button>
           </div>
         </form>
       </div>

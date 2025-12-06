@@ -367,9 +367,15 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                     <span>{preserveQuality ? t('upload.preserveQuality') : t('upload.compressImages')}</span>
                                 </label>
                             )}
-                            <button className="upload-modal-close" onClick={handleCancel}>
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="upload-modal-close" 
+                                onClick={handleCancel}
+                                aria-label="Close upload modal"
+                            >
                                 <X size={20} />
-                            </button>
+                            </Button>
                         </div>
                     </div>
 
@@ -396,10 +402,17 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                             </div>
                             <p className="upload-instruction">{t('upload.dragDrop')}</p>
                             <p className="upload-browse">
-                                <button type="button" className="upload-browse-link" onClick={(e) => {
-                                    e.stopPropagation();
-                                    fileInputRef.current?.click();
-                                }}>{t('upload.browse')}</button> {t('upload.browseHint')}
+                                <Button 
+                                    type="button" 
+                                    variant="link" 
+                                    className="upload-browse-link" 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        fileInputRef.current?.click();
+                                    }}
+                                >
+                                    {t('upload.browse')}
+                                </Button> {t('upload.browseHint')}
                             </p>
                             <p className="upload-max-size">
                                 {t('upload.maxSize')}: {settings.maxUploadSize} MB

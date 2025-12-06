@@ -170,8 +170,8 @@ export const UploadPreview = ({ imageData, index, onRemove, onLocationUpdate, on
                 left: 0,
                 right: 0,
                 bottom: 0,
-                background: 'rgba(0, 0, 0, 0.7)',
-                backdropFilter: 'blur(4px)',
+                // Remove backdrop-filter blur to avoid costly repaints during scroll
+                background: 'rgba(0, 0, 0, 0.5)',
                 borderRadius: '8px',
                 zIndex: 10,
                 pointerEvents: 'none',
