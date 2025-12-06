@@ -8,6 +8,8 @@ import { BrowserRouter } from 'react-router';
 import { Toaster } from 'sonner';
 import AuthInitializer from './components/auth/AuthInitializer.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
+// Import verification utility (makes it available globally in dev mode)
+import './utils/verifyAppearanceSettings';
 
 // Enable Immer MapSet plugin for Map and Set support in Zustand stores
 enableMapSet();

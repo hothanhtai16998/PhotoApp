@@ -52,8 +52,8 @@ This document outlines potential improvements for the Admin Settings tab across 
 - **Timezone**: Configure site timezone
 - **Contact Email**: Set contact email for support
 - **Social Media Links**: Add social media profile links
-- **Terms of Service URL**: Link to terms of service
-- **Privacy Policy URL**: Link to privacy policy
+
+## 2. ⚙️ New Settings Options
 
 ### 2.2 Upload & Media Settings
 - **Image Quality**: Set default image compression quality (1-100)
@@ -65,6 +65,8 @@ This document outlines potential improvements for the Admin Settings tab across 
 - **Video Settings**: Max video duration, video quality settings
 - **Batch Upload Limit**: Maximum files per batch upload
 
+## 2. ⚙️ New Settings Options
+
 ### 2.3 Security Settings
 - **Password Policy**: Minimum length, complexity requirements
 - **Session Timeout**: Session expiration time
@@ -75,6 +77,8 @@ This document outlines potential improvements for the Admin Settings tab across 
 - **API Key Management**: Generate and manage API keys
 - **Security Headers**: Configure security headers (CSP, HSTS, etc.)
 
+## 2. ⚙️ New Settings Options
+
 ### 2.4 Appearance & Branding
 - **Theme Colors**: Primary, secondary, accent colors
 - **Dark Mode**: Enable/disable dark mode, set default
@@ -83,12 +87,16 @@ This document outlines potential improvements for the Admin Settings tab across 
 - **Layout Options**: Grid vs list view defaults
 - **Homepage Layout**: Configure homepage layout options
 
+## 2. ⚙️ New Settings Options
+
 ### 2.5 Email & Notifications
 - **SMTP Settings**: Configure email server settings
 - **Email Templates**: Customize email templates
 - **Notification Preferences**: Which notifications to send
 - **Email Verification**: Require email verification for signup
 - **Welcome Email**: Customize welcome email content
+
+## 2. ⚙️ New Settings Options
 
 ### 2.6 Performance Settings
 - **Caching**: Enable/disable caching, cache duration
@@ -97,11 +105,15 @@ This document outlines potential improvements for the Admin Settings tab across 
 - **Compression**: Enable/disable gzip/brotli compression
 - **Database Optimization**: Query optimization settings
 
+## 2. ⚙️ New Settings Options
+
 ### 2.7 Analytics & Tracking
 - **Google Analytics ID**: Add GA tracking ID
 - **Custom Analytics**: Add custom analytics scripts
 - **Privacy Mode**: Disable tracking for privacy compliance
 - **Event Tracking**: Configure which events to track
+
+## 2. ⚙️ New Settings Options
 
 ### 2.8 User Management
 - **Registration Settings**: Open/closed registration, invite-only

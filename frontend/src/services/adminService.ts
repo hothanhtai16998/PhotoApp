@@ -433,6 +433,10 @@ export const adminService = {
         title: string;
         message: string;
         recipientIds?: string[];
+        scheduledDate?: string;
+        expirationDate?: string;
+        priority?: 'low' | 'medium' | 'high' | 'urgent';
+        targetRoles?: string[];
     }): Promise<{ success: boolean; message: string; recipientCount: number }> => {
         const res = await api.post('/admin/announcements', data, {
             withCredentials: true,

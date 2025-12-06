@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { adminService } from '@/services/adminService';
 import api from '@/lib/axios';
+import { applyAppearanceSettings } from '@/utils/applyAppearanceSettings';
 
 interface SiteSettings {
     siteName: string;
@@ -78,6 +79,31 @@ export function useSiteSettings() {
                 };
                 
                 setSettings(loadedSettings);
+                
+                // Apply appearance settings if they exist
+                if (settingsData.themePrimaryColor || settingsData.borderRadius || settingsData.customCSS) {
+                    applyAppearanceSettings({
+                        themePrimaryColor: settingsData.themePrimaryColor as string | undefined,
+                        themeSecondaryColor: settingsData.themeSecondaryColor as string | undefined,
+                        themeAccentColor: settingsData.themeAccentColor as string | undefined,
+                        themeSuccessColor: settingsData.themeSuccessColor as string | undefined,
+                        themeWarningColor: settingsData.themeWarningColor as string | undefined,
+                        themeErrorColor: settingsData.themeErrorColor as string | undefined,
+                        themeInfoColor: settingsData.themeInfoColor as string | undefined,
+                        borderRadius: settingsData.borderRadius as string | undefined,
+                        animationsEnabled: settingsData.animationsEnabled as boolean | undefined,
+                        animationSpeed: settingsData.animationSpeed as string | undefined,
+                        buttonStyle: settingsData.buttonStyle as string | undefined,
+                        cardStyle: settingsData.cardStyle as string | undefined,
+                        darkModeEnabled: settingsData.darkModeEnabled as boolean | undefined,
+                        darkModeDefault: settingsData.darkModeDefault as string | undefined,
+                        customCSS: settingsData.customCSS as string | undefined,
+                        fontFamily: settingsData.fontFamily as string | undefined,
+                        fontSize: settingsData.fontSize as string | undefined,
+                        defaultViewMode: settingsData.defaultViewMode as string | undefined,
+                        homepageLayout: settingsData.homepageLayout as string | undefined,
+                    });
+                }
             }
         } catch (error) {
             // If settings can't be loaded (e.g., user not admin), use defaults

@@ -5,13 +5,14 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Save, Megaphone, X, Settings, Upload, Shield, Bell, Globe, ChevronDown, ChevronUp, HelpCircle, CheckCircle2, AlertCircle, ChevronRight, Home, Info, AlertTriangle, CheckCircle, XCircle, Eye, EyeOff, FileText, Image as ImageIcon, Server, Database, Lock, Unlock, Mail, Languages, Clock, Link2, Facebook, Twitter, Instagram, Linkedin, Youtube, Image, Video, Maximize2, Plus, Minus, Palette, Type, Layout, Monitor } from 'lucide-react';
+import { Save, Megaphone, X, Settings, Upload, Shield, Bell, Globe, ChevronDown, ChevronUp, HelpCircle, CheckCircle2, AlertCircle, ChevronRight, Home, Info, AlertTriangle, CheckCircle, XCircle, Eye, EyeOff, FileText, Image as ImageIcon, Server, Database, Lock, Unlock, Mail, Languages, Clock, Link2, Facebook, Twitter, Instagram, Linkedin, Youtube, Image, Video, Maximize2, Plus, Minus, Palette, Type, Layout, Monitor, AtSign, Send, FileEdit, Users, UserPlus, UserCheck, Trash2, Calendar, Target, Star, History, BookOpen, Save as SaveIcon, FolderOpen } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { useSiteSettings } from '@/hooks/useSiteSettings';
 import { t } from '@/i18n';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { applyAppearanceSettings } from '@/utils/applyAppearanceSettings';
 
 export function AdminSettings() {
     const { hasPermission, isSuperAdmin } = usePermissions();
@@ -82,6 +83,43 @@ export function AdminSettings() {
         fontSize: '16px',
         defaultViewMode: 'grid',
         homepageLayout: 'default',
+        // Email & Notifications Settings
+        // SMTP Settings
+        smtpEnabled: false,
+        smtpHost: '',
+        smtpPort: 587,
+        smtpSecure: false,
+        smtpUser: '',
+        smtpPassword: '',
+        smtpFromName: '',
+        smtpFromEmail: '',
+        // Email Verification
+        emailVerificationRequired: false,
+        // Welcome Email
+        welcomeEmailEnabled: true,
+        welcomeEmailSubject: 'Welcome to {siteName}!',
+        welcomeEmailContent: '',
+        // Notification Preferences
+        notifyOnSignup: true,
+        notifyOnPasswordChange: true,
+        notifyOnProfileUpdate: false,
+        notifyOnImageUpload: false,
+        notifyOnComment: true,
+        notifyOnFavorite: false,
+        // User Management Settings
+        registrationEnabled: true,
+        registrationType: 'open', // 'open' | 'closed' | 'invite-only'
+        defaultUserRole: 'user', // 'user' | 'moderator' | 'admin'
+        requireEmailVerification: false,
+        requirePhoneVerification: false,
+        allowAccountSelfDeletion: true,
+        requiredProfileFields: {
+            displayName: true,
+            bio: false,
+            location: false,
+            website: false,
+            phone: false,
+        },
     });
     
     // Available file types for selection
@@ -119,9 +157,20 @@ export function AdminSettings() {
         type: 'system_announcement' as 'system_announcement' | 'feature_update' | 'maintenance_scheduled' | 'terms_updated',
         title: '',
         message: '',
+        scheduledDate: '', // ISO string for scheduled date/time
+        priority: 'medium' as 'low' | 'medium' | 'high' | 'urgent',
+        expirationDate: '', // ISO string for expiration
+        targetRoles: [] as string[], // ['user', 'moderator', 'admin']
+        targetUserIds: [] as string[], // Specific user IDs
+        sendToAll: true, // Send to all users
     });
     const [sendingAnnouncement, setSendingAnnouncement] = useState(false);
     const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+    const [announcementTemplates, setAnnouncementTemplates] = useState<Array<{ id: string; name: string; data: typeof announcementData }>>([]);
+    const [announcementHistory, setAnnouncementHistory] = useState<Array<{ id: string; title: string; sentAt: string; recipientCount: number; readCount: number }>>([]);
+    const [showHistory, setShowHistory] = useState(false);
+    const [showTemplates, setShowTemplates] = useState(false);
+    const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
     const [originalSettings, setOriginalSettings] = useState(settings);
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [isFadingOut, setIsFadingOut] = useState(false);
@@ -257,6 +306,15 @@ export function AdminSettings() {
                     themePrimaryColor: (settingsData.themePrimaryColor as string) || '#7c3aed',
                     themeSecondaryColor: (settingsData.themeSecondaryColor as string) || '#a78bfa',
                     themeAccentColor: (settingsData.themeAccentColor as string) || '#67e8f9',
+                    themeSuccessColor: (settingsData.themeSuccessColor as string) || '#10b981',
+                    themeWarningColor: (settingsData.themeWarningColor as string) || '#f59e0b',
+                    themeErrorColor: (settingsData.themeErrorColor as string) || '#ef4444',
+                    themeInfoColor: (settingsData.themeInfoColor as string) || '#3b82f6',
+                    borderRadius: (settingsData.borderRadius as string) || '1rem',
+                    animationsEnabled: (settingsData.animationsEnabled as boolean) ?? true,
+                    animationSpeed: (settingsData.animationSpeed as string) || 'normal',
+                    buttonStyle: (settingsData.buttonStyle as string) || 'default',
+                    cardStyle: (settingsData.cardStyle as string) || 'default',
                     darkModeEnabled: (settingsData.darkModeEnabled as boolean) ?? false,
                     darkModeDefault: (settingsData.darkModeDefault as string) || 'auto',
                     customCSS: (settingsData.customCSS as string) || '',
@@ -264,9 +322,65 @@ export function AdminSettings() {
                     fontSize: (settingsData.fontSize as string) || '16px',
                     defaultViewMode: (settingsData.defaultViewMode as string) || 'grid',
                     homepageLayout: (settingsData.homepageLayout as string) || 'default',
+                    // Email & Notifications Settings
+                    smtpEnabled: (settingsData.smtpEnabled as boolean) ?? false,
+                    smtpHost: (settingsData.smtpHost as string) || '',
+                    smtpPort: (settingsData.smtpPort as number) || 587,
+                    smtpSecure: (settingsData.smtpSecure as boolean) ?? false,
+                    smtpUser: (settingsData.smtpUser as string) || '',
+                    smtpPassword: (settingsData.smtpPassword as string) || '',
+                    smtpFromName: (settingsData.smtpFromName as string) || '',
+                    smtpFromEmail: (settingsData.smtpFromEmail as string) || '',
+                    emailVerificationRequired: (settingsData.emailVerificationRequired as boolean) ?? false,
+                    welcomeEmailEnabled: (settingsData.welcomeEmailEnabled as boolean) ?? true,
+                    welcomeEmailSubject: (settingsData.welcomeEmailSubject as string) || 'Welcome to {siteName}!',
+                    welcomeEmailContent: (settingsData.welcomeEmailContent as string) || '',
+                    notifyOnSignup: (settingsData.notifyOnSignup as boolean) ?? true,
+                    notifyOnPasswordChange: (settingsData.notifyOnPasswordChange as boolean) ?? true,
+                    notifyOnProfileUpdate: (settingsData.notifyOnProfileUpdate as boolean) ?? false,
+                    notifyOnImageUpload: (settingsData.notifyOnImageUpload as boolean) ?? false,
+                    notifyOnComment: (settingsData.notifyOnComment as boolean) ?? true,
+                    notifyOnFavorite: (settingsData.notifyOnFavorite as boolean) ?? false,
+                    // User Management Settings
+                    registrationEnabled: (settingsData.registrationEnabled as boolean) ?? true,
+                    registrationType: (settingsData.registrationType as string) || 'open',
+                    defaultUserRole: (settingsData.defaultUserRole as string) || 'user',
+                    requireEmailVerification: (settingsData.requireEmailVerification as boolean) ?? false,
+                    requirePhoneVerification: (settingsData.requirePhoneVerification as boolean) ?? false,
+                    allowAccountSelfDeletion: (settingsData.allowAccountSelfDeletion as boolean) ?? true,
+                    requiredProfileFields: settingsData.requiredProfileFields || {
+                        displayName: true,
+                        bio: false,
+                        location: false,
+                        website: false,
+                        phone: false,
+                    },
                 };
                 setSettings(loadedSettings);
                 setOriginalSettings(loadedSettings);
+                
+                // Apply appearance settings when loaded
+                applyAppearanceSettings({
+                    themePrimaryColor: loadedSettings.themePrimaryColor,
+                    themeSecondaryColor: loadedSettings.themeSecondaryColor,
+                    themeAccentColor: loadedSettings.themeAccentColor,
+                    themeSuccessColor: loadedSettings.themeSuccessColor,
+                    themeWarningColor: loadedSettings.themeWarningColor,
+                    themeErrorColor: loadedSettings.themeErrorColor,
+                    themeInfoColor: loadedSettings.themeInfoColor,
+                    borderRadius: loadedSettings.borderRadius,
+                    animationsEnabled: loadedSettings.animationsEnabled,
+                    animationSpeed: loadedSettings.animationSpeed,
+                    buttonStyle: loadedSettings.buttonStyle,
+                    cardStyle: loadedSettings.cardStyle,
+                    darkModeEnabled: loadedSettings.darkModeEnabled,
+                    darkModeDefault: loadedSettings.darkModeDefault,
+                    customCSS: loadedSettings.customCSS,
+                    fontFamily: loadedSettings.fontFamily,
+                    fontSize: loadedSettings.fontSize,
+                    defaultViewMode: loadedSettings.defaultViewMode,
+                    homepageLayout: loadedSettings.homepageLayout,
+                });
             } else {
                 // If no settings returned, use defaults (already set in initial state)
                 console.warn('No settings data returned from API');
@@ -362,6 +476,31 @@ export function AdminSettings() {
         const urlPattern = /^https?:\/\/.+/;
         if (settings.socialMediaLinks.facebook && !urlPattern.test(settings.socialMediaLinks.facebook)) {
             errors.socialFacebook = 'Please enter a valid URL (must start with http:// or https://)';
+        }
+
+        // Validate SMTP settings if enabled
+        if (settings.smtpEnabled) {
+            if (!settings.smtpHost.trim()) {
+                errors.smtpHost = 'SMTP host is required when SMTP is enabled';
+            }
+            
+            if (!settings.smtpPort || settings.smtpPort < 1 || settings.smtpPort > 65535) {
+                errors.smtpPort = 'SMTP port must be between 1 and 65535';
+            }
+            
+            if (!settings.smtpUser.trim()) {
+                errors.smtpUser = 'SMTP username is required when SMTP is enabled';
+            }
+            
+            if (!settings.smtpPassword.trim()) {
+                errors.smtpPassword = 'SMTP password is required when SMTP is enabled';
+            }
+            
+            if (!settings.smtpFromEmail.trim()) {
+                errors.smtpFromEmail = 'From email is required when SMTP is enabled';
+            } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.smtpFromEmail)) {
+                errors.smtpFromEmail = 'Please enter a valid email address';
+            }
         }
         if (settings.socialMediaLinks.twitter && !urlPattern.test(settings.socialMediaLinks.twitter)) {
             errors.socialTwitter = 'Please enter a valid URL (must start with http:// or https://)';
@@ -478,7 +617,34 @@ export function AdminSettings() {
             settings.fontFamily !== originalSettings.fontFamily ||
             settings.fontSize !== originalSettings.fontSize ||
             settings.defaultViewMode !== originalSettings.defaultViewMode ||
-            settings.homepageLayout !== originalSettings.homepageLayout
+            settings.homepageLayout !== originalSettings.homepageLayout ||
+            // Email & Notifications Settings
+            settings.smtpEnabled !== originalSettings.smtpEnabled ||
+            settings.smtpHost !== originalSettings.smtpHost ||
+            settings.smtpPort !== originalSettings.smtpPort ||
+            settings.smtpSecure !== originalSettings.smtpSecure ||
+            settings.smtpUser !== originalSettings.smtpUser ||
+            settings.smtpPassword !== originalSettings.smtpPassword ||
+            settings.smtpFromName !== originalSettings.smtpFromName ||
+            settings.smtpFromEmail !== originalSettings.smtpFromEmail ||
+            settings.emailVerificationRequired !== originalSettings.emailVerificationRequired ||
+            settings.welcomeEmailEnabled !== originalSettings.welcomeEmailEnabled ||
+            settings.welcomeEmailSubject !== originalSettings.welcomeEmailSubject ||
+            settings.welcomeEmailContent !== originalSettings.welcomeEmailContent ||
+            settings.notifyOnSignup !== originalSettings.notifyOnSignup ||
+            settings.notifyOnPasswordChange !== originalSettings.notifyOnPasswordChange ||
+            settings.notifyOnProfileUpdate !== originalSettings.notifyOnProfileUpdate ||
+            settings.notifyOnImageUpload !== originalSettings.notifyOnImageUpload ||
+            settings.notifyOnComment !== originalSettings.notifyOnComment ||
+            settings.notifyOnFavorite !== originalSettings.notifyOnFavorite ||
+            // User Management Settings
+            settings.registrationEnabled !== originalSettings.registrationEnabled ||
+            settings.registrationType !== originalSettings.registrationType ||
+            settings.defaultUserRole !== originalSettings.defaultUserRole ||
+            settings.requireEmailVerification !== originalSettings.requireEmailVerification ||
+            settings.requirePhoneVerification !== originalSettings.requirePhoneVerification ||
+            settings.allowAccountSelfDeletion !== originalSettings.allowAccountSelfDeletion ||
+            JSON.stringify(settings.requiredProfileFields) !== JSON.stringify(originalSettings.requiredProfileFields)
         ) {
             return true;
         }
@@ -506,6 +672,29 @@ export function AdminSettings() {
                 allowedFileTypes: settings.allowedFileTypes.split(',').map(t => t.trim()),
             };
             await adminService.updateSettings(updateData);
+            
+            // Apply appearance settings immediately after save
+            applyAppearanceSettings({
+                themePrimaryColor: settings.themePrimaryColor,
+                themeSecondaryColor: settings.themeSecondaryColor,
+                themeAccentColor: settings.themeAccentColor,
+                themeSuccessColor: settings.themeSuccessColor,
+                themeWarningColor: settings.themeWarningColor,
+                themeErrorColor: settings.themeErrorColor,
+                themeInfoColor: settings.themeInfoColor,
+                borderRadius: settings.borderRadius,
+                animationsEnabled: settings.animationsEnabled,
+                animationSpeed: settings.animationSpeed,
+                buttonStyle: settings.buttonStyle,
+                cardStyle: settings.cardStyle,
+                darkModeEnabled: settings.darkModeEnabled,
+                darkModeDefault: settings.darkModeDefault,
+                customCSS: settings.customCSS,
+                fontFamily: settings.fontFamily,
+                fontSize: settings.fontSize,
+                defaultViewMode: settings.defaultViewMode,
+                homepageLayout: settings.homepageLayout,
+            });
             
             // Update original settings to reflect saved state (prevent flash)
             setOriginalSettings(settings);
@@ -567,30 +756,91 @@ export function AdminSettings() {
         }
 
         if (!announcementData.title.trim() || !announcementData.message.trim()) {
-            toast.error('Vui lòng điền đầy đủ tiêu đề và nội dung');
+            toast.error('Please fill in both title and content');
             return;
+        }
+
+        // Validate scheduled date is in the future
+        if (announcementData.scheduledDate && new Date(announcementData.scheduledDate) <= new Date()) {
+            toast.error('Scheduled date must be in the future');
+            return;
+        }
+
+        // Validate expiration date is after scheduled date
+        if (announcementData.expirationDate && announcementData.scheduledDate) {
+            if (new Date(announcementData.expirationDate) <= new Date(announcementData.scheduledDate)) {
+                toast.error('Expiration date must be after scheduled date');
+                return;
+            }
         }
 
         try {
             setSendingAnnouncement(true);
-            const result = await adminService.createSystemAnnouncement(announcementData);
-            toast.success(result.message || `Đã gửi thông báo đến ${result.recipientCount} người dùng`);
+            
+            // Prepare announcement data for API
+            const announcementPayload: any = {
+                type: announcementData.type,
+                title: announcementData.title,
+                message: announcementData.message,
+                priority: announcementData.priority,
+            };
+
+            if (announcementData.scheduledDate) {
+                announcementPayload.scheduledDate = announcementData.scheduledDate;
+            }
+
+            if (announcementData.expirationDate) {
+                announcementPayload.expirationDate = announcementData.expirationDate;
+            }
+
+            if (!announcementData.sendToAll && announcementData.targetRoles.length > 0) {
+                announcementPayload.targetRoles = announcementData.targetRoles;
+            }
+
+            if (announcementData.targetUserIds.length > 0) {
+                announcementPayload.recipientIds = announcementData.targetUserIds;
+            }
+
+            const result = await adminService.createSystemAnnouncement(announcementPayload);
+            
+            // Add to history
+            const newHistoryItem = {
+                id: Date.now().toString(),
+                title: announcementData.title,
+                sentAt: announcementData.scheduledDate || new Date().toISOString(),
+                recipientCount: result.recipientCount || 0,
+                readCount: 0,
+            };
+            setAnnouncementHistory(prev => [newHistoryItem, ...prev]);
+
+            toast.success(
+                announcementData.scheduledDate 
+                    ? `Announcement scheduled for ${new Date(announcementData.scheduledDate).toLocaleString()}`
+                    : (result.message || `Announcement sent to ${result.recipientCount} users`)
+            );
+            
             setShowAnnouncementForm(false);
             setAnnouncementData({
                 type: 'system_announcement',
                 title: '',
                 message: '',
+                scheduledDate: '',
+                priority: 'medium',
+                expirationDate: '',
+                targetRoles: [],
+                targetUserIds: [],
+                sendToAll: true,
             });
         } catch (error: unknown) {
             const axiosError = error as { response?: { data?: { message?: string } } };
-            toast.error(axiosError.response?.data?.message || 'Lỗi khi gửi thông báo');
+            toast.error(axiosError.response?.data?.message || 'Error sending announcement');
         } finally {
             setSendingAnnouncement(false);
         }
     };
 
     // Swipe gesture handlers for mobile tab navigation
-    const tabs = ['general', 'upload', 'system', 'notifications'];
+    const tabs = ['general', 'upload', 'system', 'security', 'appearance', 'email', 'users', 'notifications'];
     
     const handleTouchStart = (e: React.TouchEvent) => {
         if (!isMobile) return;
@@ -756,6 +1006,14 @@ export function AdminSettings() {
                     <TabsTrigger value="appearance">
                         <Palette size={16} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
                         <span>Appearance</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="email">
+                        <Mail size={16} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                        <span>Email</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="users">
+                        <Users size={16} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                        <span>Users</span>
                     </TabsTrigger>
                     <TabsTrigger value="notifications">
                         <Bell size={16} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
@@ -1723,8 +1981,10 @@ export function AdminSettings() {
                                     </h3>
                                 </div>
 
+                                {/* Color Picker Grid */}
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '1rem' }}>
                                 {/* Primary Color */}
-                                <div className={`admin-form-group admin-form-group-important ${settings.themePrimaryColor !== originalSettings.themePrimaryColor ? 'has-changes' : ''}`}>
+                                <div className={`admin-form-group admin-form-group-important ${settings.themePrimaryColor !== originalSettings.themePrimaryColor ? 'has-changes' : ''}`} style={{ flex: '0 0 auto', minWidth: '120px' }}>
                                     <Label htmlFor="theme-primary-color-input" className="admin-form-label-with-icon">
                                         <Palette size={16} className="admin-form-label-icon" aria-hidden="true" />
                                         Primary Color
@@ -1736,7 +1996,7 @@ export function AdminSettings() {
                                             </span>
                                         </div>
                                     </Label>
-                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'fit-content' }}>
                                         <Input
                                             id="theme-primary-color-input"
                                             type="color"
@@ -1750,7 +2010,7 @@ export function AdminSettings() {
                                             value={settings.themePrimaryColor}
                                             onChange={(e) => setSettings(prev => ({ ...prev, themePrimaryColor: e.target.value }))}
                                             placeholder="#7c3aed"
-                                            style={{ flex: 1 }}
+                                            style={{ width: '100px' }}
                                             aria-label="Primary color hex code"
                                         />
                                     </div>
@@ -1766,7 +2026,7 @@ export function AdminSettings() {
                                 </div>
 
                                 {/* Secondary Color */}
-                                <div className={`admin-form-group ${settings.themeSecondaryColor !== originalSettings.themeSecondaryColor ? 'has-changes' : ''}`}>
+                                <div className={`admin-form-group ${settings.themeSecondaryColor !== originalSettings.themeSecondaryColor ? 'has-changes' : ''}`} style={{ flex: '0 0 auto', minWidth: '120px' }}>
                                     <Label htmlFor="theme-secondary-color-input" className="admin-form-label-with-icon">
                                         <Palette size={16} className="admin-form-label-icon" aria-hidden="true" />
                                         Secondary Color
@@ -1777,7 +2037,7 @@ export function AdminSettings() {
                                             </span>
                                         </div>
                                     </Label>
-                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'fit-content' }}>
                                         <Input
                                             id="theme-secondary-color-input"
                                             type="color"
@@ -1791,7 +2051,7 @@ export function AdminSettings() {
                                             value={settings.themeSecondaryColor}
                                             onChange={(e) => setSettings(prev => ({ ...prev, themeSecondaryColor: e.target.value }))}
                                             placeholder="#a78bfa"
-                                            style={{ flex: 1 }}
+                                            style={{ width: '100px' }}
                                             aria-label="Secondary color hex code"
                                         />
                                     </div>
@@ -1807,7 +2067,7 @@ export function AdminSettings() {
                                 </div>
 
                                 {/* Accent Color */}
-                                <div className={`admin-form-group ${settings.themeAccentColor !== originalSettings.themeAccentColor ? 'has-changes' : ''}`}>
+                                <div className={`admin-form-group ${settings.themeAccentColor !== originalSettings.themeAccentColor ? 'has-changes' : ''}`} style={{ flex: '0 0 auto', minWidth: '120px' }}>
                                     <Label htmlFor="theme-accent-color-input" className="admin-form-label-with-icon">
                                         <Palette size={16} className="admin-form-label-icon" aria-hidden="true" />
                                         Accent Color
@@ -1818,7 +2078,7 @@ export function AdminSettings() {
                                             </span>
                                         </div>
                                     </Label>
-                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'fit-content' }}>
                                         <Input
                                             id="theme-accent-color-input"
                                             type="color"
@@ -1832,7 +2092,7 @@ export function AdminSettings() {
                                             value={settings.themeAccentColor}
                                             onChange={(e) => setSettings(prev => ({ ...prev, themeAccentColor: e.target.value }))}
                                             placeholder="#67e8f9"
-                                            style={{ flex: 1 }}
+                                            style={{ width: '100px' }}
                                             aria-label="Accent color hex code"
                                         />
                                     </div>
@@ -1846,6 +2106,7 @@ export function AdminSettings() {
                                         </p>
                                     )}
                                 </div>
+                                </div>
 
                                 {/* Extended Color Palette */}
                                 <div className="admin-settings-section-divider" style={{ marginTop: '2rem' }}>
@@ -1855,8 +2116,10 @@ export function AdminSettings() {
                                     </h3>
                                 </div>
 
+                                {/* Status Colors Grid */}
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '1rem' }}>
                                 {/* Success Color */}
-                                <div className={`admin-form-group ${settings.themeSuccessColor !== originalSettings.themeSuccessColor ? 'has-changes' : ''}`}>
+                                <div className={`admin-form-group ${settings.themeSuccessColor !== originalSettings.themeSuccessColor ? 'has-changes' : ''}`} style={{ flex: '0 0 auto', minWidth: '120px' }}>
                                     <Label htmlFor="theme-success-color-input" className="admin-form-label-with-icon">
                                         <CheckCircle size={16} className="admin-form-label-icon" aria-hidden="true" />
                                         Success Color
@@ -1867,7 +2130,7 @@ export function AdminSettings() {
                                             </span>
                                         </div>
                                     </Label>
-                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'fit-content' }}>
                                         <Input
                                             id="theme-success-color-input"
                                             type="color"
@@ -1880,7 +2143,7 @@ export function AdminSettings() {
                                             value={settings.themeSuccessColor}
                                             onChange={(e) => setSettings(prev => ({ ...prev, themeSuccessColor: e.target.value }))}
                                             placeholder="#10b981"
-                                            style={{ flex: 1 }}
+                                            style={{ width: '100px' }}
                                         />
                                     </div>
                                     {settings.themeSuccessColor !== originalSettings.themeSuccessColor && (
@@ -1892,7 +2155,7 @@ export function AdminSettings() {
                                 </div>
 
                                 {/* Warning Color */}
-                                <div className={`admin-form-group ${settings.themeWarningColor !== originalSettings.themeWarningColor ? 'has-changes' : ''}`}>
+                                <div className={`admin-form-group ${settings.themeWarningColor !== originalSettings.themeWarningColor ? 'has-changes' : ''}`} style={{ flex: '0 0 auto', minWidth: '120px' }}>
                                     <Label htmlFor="theme-warning-color-input" className="admin-form-label-with-icon">
                                         <AlertTriangle size={16} className="admin-form-label-icon" aria-hidden="true" />
                                         Warning Color
@@ -1903,7 +2166,7 @@ export function AdminSettings() {
                                             </span>
                                         </div>
                                     </Label>
-                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'fit-content' }}>
                                         <Input
                                             id="theme-warning-color-input"
                                             type="color"
@@ -1916,7 +2179,7 @@ export function AdminSettings() {
                                             value={settings.themeWarningColor}
                                             onChange={(e) => setSettings(prev => ({ ...prev, themeWarningColor: e.target.value }))}
                                             placeholder="#f59e0b"
-                                            style={{ flex: 1 }}
+                                            style={{ width: '100px' }}
                                         />
                                     </div>
                                     {settings.themeWarningColor !== originalSettings.themeWarningColor && (
@@ -1928,7 +2191,7 @@ export function AdminSettings() {
                                 </div>
 
                                 {/* Error Color */}
-                                <div className={`admin-form-group ${settings.themeErrorColor !== originalSettings.themeErrorColor ? 'has-changes' : ''}`}>
+                                <div className={`admin-form-group ${settings.themeErrorColor !== originalSettings.themeErrorColor ? 'has-changes' : ''}`} style={{ flex: '0 0 auto', minWidth: '120px' }}>
                                     <Label htmlFor="theme-error-color-input" className="admin-form-label-with-icon">
                                         <XCircle size={16} className="admin-form-label-icon" aria-hidden="true" />
                                         Error Color
@@ -1939,7 +2202,7 @@ export function AdminSettings() {
                                             </span>
                                         </div>
                                     </Label>
-                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'fit-content' }}>
                                         <Input
                                             id="theme-error-color-input"
                                             type="color"
@@ -1952,7 +2215,7 @@ export function AdminSettings() {
                                             value={settings.themeErrorColor}
                                             onChange={(e) => setSettings(prev => ({ ...prev, themeErrorColor: e.target.value }))}
                                             placeholder="#ef4444"
-                                            style={{ flex: 1 }}
+                                            style={{ width: '100px' }}
                                         />
                                     </div>
                                     {settings.themeErrorColor !== originalSettings.themeErrorColor && (
@@ -1964,7 +2227,7 @@ export function AdminSettings() {
                                 </div>
 
                                 {/* Info Color */}
-                                <div className={`admin-form-group ${settings.themeInfoColor !== originalSettings.themeInfoColor ? 'has-changes' : ''}`}>
+                                <div className={`admin-form-group ${settings.themeInfoColor !== originalSettings.themeInfoColor ? 'has-changes' : ''}`} style={{ flex: '0 0 auto', minWidth: '120px' }}>
                                     <Label htmlFor="theme-info-color-input" className="admin-form-label-with-icon">
                                         <Info size={16} className="admin-form-label-icon" aria-hidden="true" />
                                         Info Color
@@ -1975,7 +2238,7 @@ export function AdminSettings() {
                                             </span>
                                         </div>
                                     </Label>
-                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'fit-content' }}>
                                         <Input
                                             id="theme-info-color-input"
                                             type="color"
@@ -1988,7 +2251,7 @@ export function AdminSettings() {
                                             value={settings.themeInfoColor}
                                             onChange={(e) => setSettings(prev => ({ ...prev, themeInfoColor: e.target.value }))}
                                             placeholder="#3b82f6"
-                                            style={{ flex: 1 }}
+                                            style={{ width: '100px' }}
                                         />
                                     </div>
                                     {settings.themeInfoColor !== originalSettings.themeInfoColor && (
@@ -1997,6 +2260,7 @@ export function AdminSettings() {
                                             Modified
                                         </p>
                                     )}
+                                </div>
                                 </div>
 
                                 {/* Design Tokens Section */}
@@ -2955,6 +3219,703 @@ export function AdminSettings() {
                     </Card>
                 </TabsContent>
 
+                {/* Email & Notifications Tab */}
+                <TabsContent 
+                    value="email" 
+                    className="admin-settings-tab-content"
+                    ref={tabContentRef}
+                    onTouchStart={handleContentTouchStart}
+                    onTouchMove={handleContentTouchMove}
+                    onTouchEnd={handleContentTouchEnd}
+                >
+                    <Card className="admin-settings-card">
+                        <CardHeader>
+                            <CardTitle className="admin-settings-card-title">
+                                <Mail size={20} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                Email & Notifications
+                            </CardTitle>
+                            <CardDescription>
+                                Configure email server settings, templates, and notification preferences
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="admin-form">
+                                {/* SMTP Settings */}
+                                <div className="admin-settings-section-divider">
+                                    <h3 className="admin-settings-section-title">
+                                        <Server size={18} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                        SMTP Settings
+                                    </h3>
+                                </div>
+
+                                <div className={`admin-form-group ${settings.smtpEnabled !== originalSettings.smtpEnabled ? 'has-changes' : ''}`}>
+                                    <Label className="admin-maintenance-toggle-label" htmlFor="smtp-enabled-toggle">
+                                        <input
+                                            id="smtp-enabled-toggle"
+                                            type="checkbox"
+                                            checked={settings.smtpEnabled}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, smtpEnabled: e.target.checked }))}
+                                            className="admin-maintenance-checkbox"
+                                        />
+                                        <span>Enable SMTP</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Enable SMTP to send emails from your server
+                                            </span>
+                                        </div>
+                                    </Label>
+                                </div>
+
+                                {settings.smtpEnabled && (
+                                    <>
+                                        <div className={`admin-form-group ${validationErrors.smtpHost ? 'has-error' : ''} ${settings.smtpHost !== originalSettings.smtpHost ? 'has-changes' : ''}`}>
+                                            <Label htmlFor="smtp-host-input" className="admin-form-label-with-icon">
+                                                <Server size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                                SMTP Host
+                                                <span className="admin-required-indicator" aria-label="required">*</span>
+                                            </Label>
+                                            <Input
+                                                id="smtp-host-input"
+                                                type="text"
+                                                value={settings.smtpHost}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, smtpHost: e.target.value }))}
+                                                placeholder="smtp.example.com"
+                                                aria-invalid={!!validationErrors.smtpHost}
+                                                aria-describedby={validationErrors.smtpHost ? "smtp-host-error" : "smtp-host-help"}
+                                            />
+                                            {validationErrors.smtpHost ? (
+                                                <p className="admin-form-error-text" id="smtp-host-error" role="alert">{validationErrors.smtpHost}</p>
+                                            ) : (
+                                                <p className="admin-form-help-text" id="smtp-host-help">Your SMTP server hostname</p>
+                                            )}
+                                        </div>
+
+                                        <div className={`admin-form-group ${validationErrors.smtpPort ? 'has-error' : ''} ${settings.smtpPort !== originalSettings.smtpPort ? 'has-changes' : ''}`}>
+                                            <Label htmlFor="smtp-port-input" className="admin-form-label-with-icon">
+                                                <Server size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                                SMTP Port
+                                                <span className="admin-required-indicator" aria-label="required">*</span>
+                                            </Label>
+                                            <Input
+                                                id="smtp-port-input"
+                                                type="number"
+                                                value={settings.smtpPort}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, smtpPort: parseInt(e.target.value) || 587 }))}
+                                                placeholder="587"
+                                                min="1"
+                                                max="65535"
+                                                aria-invalid={!!validationErrors.smtpPort}
+                                                aria-describedby={validationErrors.smtpPort ? "smtp-port-error" : "smtp-port-help"}
+                                            />
+                                            {validationErrors.smtpPort ? (
+                                                <p className="admin-form-error-text" id="smtp-port-error" role="alert">{validationErrors.smtpPort}</p>
+                                            ) : (
+                                                <p className="admin-form-help-text" id="smtp-port-help">Common ports: 587 (TLS), 465 (SSL), 25 (unencrypted)</p>
+                                            )}
+                                        </div>
+
+                                        <div className={`admin-form-group ${settings.smtpSecure !== originalSettings.smtpSecure ? 'has-changes' : ''}`}>
+                                            <Label className="admin-maintenance-toggle-label" htmlFor="smtp-secure-toggle">
+                                                <input
+                                                    id="smtp-secure-toggle"
+                                                    type="checkbox"
+                                                    checked={settings.smtpSecure}
+                                                    onChange={(e) => setSettings(prev => ({ ...prev, smtpSecure: e.target.checked }))}
+                                                    className="admin-maintenance-checkbox"
+                                                />
+                                                <span>Use SSL/TLS</span>
+                                                <div className="admin-tooltip-wrapper">
+                                                    <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                                    <span className="admin-tooltip-text" role="tooltip">
+                                                        Enable for secure connections (usually port 465)
+                                                    </span>
+                                                </div>
+                                            </Label>
+                                        </div>
+
+                                        <div className={`admin-form-group ${validationErrors.smtpUser ? 'has-error' : ''} ${settings.smtpUser !== originalSettings.smtpUser ? 'has-changes' : ''}`}>
+                                            <Label htmlFor="smtp-user-input" className="admin-form-label-with-icon">
+                                                <AtSign size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                                SMTP Username
+                                                <span className="admin-required-indicator" aria-label="required">*</span>
+                                            </Label>
+                                            <Input
+                                                id="smtp-user-input"
+                                                type="text"
+                                                value={settings.smtpUser}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, smtpUser: e.target.value }))}
+                                                placeholder="user@example.com"
+                                                aria-invalid={!!validationErrors.smtpUser}
+                                                aria-describedby={validationErrors.smtpUser ? "smtp-user-error" : undefined}
+                                            />
+                                            {validationErrors.smtpUser && (
+                                                <p className="admin-form-error-text" id="smtp-user-error" role="alert">{validationErrors.smtpUser}</p>
+                                            )}
+                                        </div>
+
+                                        <div className={`admin-form-group ${validationErrors.smtpPassword ? 'has-error' : ''} ${settings.smtpPassword !== originalSettings.smtpPassword ? 'has-changes' : ''}`}>
+                                            <Label htmlFor="smtp-password-input" className="admin-form-label-with-icon">
+                                                <Lock size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                                SMTP Password
+                                                <span className="admin-required-indicator" aria-label="required">*</span>
+                                            </Label>
+                                            <div style={{ position: 'relative' }}>
+                                                <Input
+                                                    id="smtp-password-input"
+                                                    type="password"
+                                                    value={settings.smtpPassword}
+                                                    onChange={(e) => setSettings(prev => ({ ...prev, smtpPassword: e.target.value }))}
+                                                    placeholder="Enter SMTP password"
+                                                    aria-invalid={!!validationErrors.smtpPassword}
+                                                    aria-describedby={validationErrors.smtpPassword ? "smtp-password-error" : "smtp-password-help"}
+                                                />
+                                            </div>
+                                            {validationErrors.smtpPassword ? (
+                                                <p className="admin-form-error-text" id="smtp-password-error" role="alert">{validationErrors.smtpPassword}</p>
+                                            ) : (
+                                                <p className="admin-form-help-text" id="smtp-password-help">Password for SMTP authentication</p>
+                                            )}
+                                        </div>
+
+                                        <div className={`admin-form-group ${settings.smtpFromName !== originalSettings.smtpFromName ? 'has-changes' : ''}`}>
+                                            <Label htmlFor="smtp-from-name-input" className="admin-form-label-with-icon">
+                                                <FileText size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                                From Name
+                                            </Label>
+                                            <Input
+                                                id="smtp-from-name-input"
+                                                type="text"
+                                                value={settings.smtpFromName}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, smtpFromName: e.target.value }))}
+                                                placeholder={settings.siteName || "Your Site Name"}
+                                            />
+                                            <p className="admin-form-help-text">Display name for sent emails</p>
+                                        </div>
+
+                                        <div className={`admin-form-group ${validationErrors.smtpFromEmail ? 'has-error' : ''} ${settings.smtpFromEmail !== originalSettings.smtpFromEmail ? 'has-changes' : ''}`}>
+                                            <Label htmlFor="smtp-from-email-input" className="admin-form-label-with-icon">
+                                                <Mail size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                                From Email
+                                                <span className="admin-required-indicator" aria-label="required">*</span>
+                                            </Label>
+                                            <Input
+                                                id="smtp-from-email-input"
+                                                type="email"
+                                                value={settings.smtpFromEmail}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, smtpFromEmail: e.target.value }))}
+                                                placeholder="noreply@example.com"
+                                                aria-invalid={!!validationErrors.smtpFromEmail}
+                                                aria-describedby={validationErrors.smtpFromEmail ? "smtp-from-email-error" : "smtp-from-email-help"}
+                                            />
+                                            {validationErrors.smtpFromEmail ? (
+                                                <p className="admin-form-error-text" id="smtp-from-email-error" role="alert">{validationErrors.smtpFromEmail}</p>
+                                            ) : (
+                                                <p className="admin-form-help-text" id="smtp-from-email-help">Email address to send from</p>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* Email Verification */}
+                                <div className="admin-settings-section-divider" style={{ marginTop: '2rem' }}>
+                                    <h3 className="admin-settings-section-title">
+                                        <Shield size={18} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                        Email Verification
+                                    </h3>
+                                </div>
+
+                                <div className={`admin-form-group ${settings.emailVerificationRequired !== originalSettings.emailVerificationRequired ? 'has-changes' : ''}`}>
+                                    <Label className="admin-maintenance-toggle-label" htmlFor="email-verification-toggle">
+                                        <input
+                                            id="email-verification-toggle"
+                                            type="checkbox"
+                                            checked={settings.emailVerificationRequired}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, emailVerificationRequired: e.target.checked }))}
+                                            className="admin-maintenance-checkbox"
+                                        />
+                                        <span>Require Email Verification</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Require users to verify their email address during signup
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <p className="admin-form-help-text">Users must verify their email before accessing the site</p>
+                                </div>
+
+                                {/* Welcome Email */}
+                                <div className="admin-settings-section-divider" style={{ marginTop: '2rem' }}>
+                                    <h3 className="admin-settings-section-title">
+                                        <Send size={18} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                        Welcome Email
+                                    </h3>
+                                </div>
+
+                                <div className={`admin-form-group ${settings.welcomeEmailEnabled !== originalSettings.welcomeEmailEnabled ? 'has-changes' : ''}`}>
+                                    <Label className="admin-maintenance-toggle-label" htmlFor="welcome-email-enabled-toggle">
+                                        <input
+                                            id="welcome-email-enabled-toggle"
+                                            type="checkbox"
+                                            checked={settings.welcomeEmailEnabled}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, welcomeEmailEnabled: e.target.checked }))}
+                                            className="admin-maintenance-checkbox"
+                                        />
+                                        <span>Enable Welcome Email</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Send a welcome email to new users after signup
+                                            </span>
+                                        </div>
+                                    </Label>
+                                </div>
+
+                                {settings.welcomeEmailEnabled && (
+                                    <>
+                                        <div className={`admin-form-group ${settings.welcomeEmailSubject !== originalSettings.welcomeEmailSubject ? 'has-changes' : ''}`}>
+                                            <Label htmlFor="welcome-email-subject-input" className="admin-form-label-with-icon">
+                                                <FileText size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                                Email Subject
+                                            </Label>
+                                            <Input
+                                                id="welcome-email-subject-input"
+                                                type="text"
+                                                value={settings.welcomeEmailSubject}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, welcomeEmailSubject: e.target.value }))}
+                                                placeholder="Welcome to {siteName}!"
+                                            />
+                                            <p className="admin-form-help-text">Use {'{siteName}'} to insert the site name</p>
+                                        </div>
+
+                                        <div className={`admin-form-group ${settings.welcomeEmailContent !== originalSettings.welcomeEmailContent ? 'has-changes' : ''}`}>
+                                            <Label htmlFor="welcome-email-content-input" className="admin-form-label-with-icon">
+                                                <FileEdit size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                                Email Content
+                                            </Label>
+                                            <Textarea
+                                                id="welcome-email-content-input"
+                                                value={settings.welcomeEmailContent}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, welcomeEmailContent: e.target.value }))}
+                                                placeholder="Welcome to {siteName}! We're excited to have you here..."
+                                                rows={8}
+                                            />
+                                            <p className="admin-form-help-text">Use {'{siteName}'}, {'{username}'}, {'{email}'} for dynamic content</p>
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* Notification Preferences */}
+                                <div className="admin-settings-section-divider" style={{ marginTop: '2rem' }}>
+                                    <h3 className="admin-settings-section-title">
+                                        <Bell size={18} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                        Notification Preferences
+                                    </h3>
+                                </div>
+
+                                <div className={`admin-form-group ${settings.notifyOnSignup !== originalSettings.notifyOnSignup ? 'has-changes' : ''}`}>
+                                    <Label className="admin-maintenance-toggle-label" htmlFor="notify-on-signup-toggle">
+                                        <input
+                                            id="notify-on-signup-toggle"
+                                            type="checkbox"
+                                            checked={settings.notifyOnSignup}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, notifyOnSignup: e.target.checked }))}
+                                            className="admin-maintenance-checkbox"
+                                        />
+                                        <span>Notify on New User Signup</span>
+                                    </Label>
+                                </div>
+
+                                <div className={`admin-form-group ${settings.notifyOnPasswordChange !== originalSettings.notifyOnPasswordChange ? 'has-changes' : ''}`}>
+                                    <Label className="admin-maintenance-toggle-label" htmlFor="notify-on-password-change-toggle">
+                                        <input
+                                            id="notify-on-password-change-toggle"
+                                            type="checkbox"
+                                            checked={settings.notifyOnPasswordChange}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, notifyOnPasswordChange: e.target.checked }))}
+                                            className="admin-maintenance-checkbox"
+                                        />
+                                        <span>Notify on Password Change</span>
+                                    </Label>
+                                </div>
+
+                                <div className={`admin-form-group ${settings.notifyOnProfileUpdate !== originalSettings.notifyOnProfileUpdate ? 'has-changes' : ''}`}>
+                                    <Label className="admin-maintenance-toggle-label" htmlFor="notify-on-profile-update-toggle">
+                                        <input
+                                            id="notify-on-profile-update-toggle"
+                                            type="checkbox"
+                                            checked={settings.notifyOnProfileUpdate}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, notifyOnProfileUpdate: e.target.checked }))}
+                                            className="admin-maintenance-checkbox"
+                                        />
+                                        <span>Notify on Profile Update</span>
+                                    </Label>
+                                </div>
+
+                                <div className={`admin-form-group ${settings.notifyOnImageUpload !== originalSettings.notifyOnImageUpload ? 'has-changes' : ''}`}>
+                                    <Label className="admin-maintenance-toggle-label" htmlFor="notify-on-image-upload-toggle">
+                                        <input
+                                            id="notify-on-image-upload-toggle"
+                                            type="checkbox"
+                                            checked={settings.notifyOnImageUpload}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, notifyOnImageUpload: e.target.checked }))}
+                                            className="admin-maintenance-checkbox"
+                                        />
+                                        <span>Notify on Image Upload</span>
+                                    </Label>
+                                </div>
+
+                                <div className={`admin-form-group ${settings.notifyOnComment !== originalSettings.notifyOnComment ? 'has-changes' : ''}`}>
+                                    <Label className="admin-maintenance-toggle-label" htmlFor="notify-on-comment-toggle">
+                                        <input
+                                            id="notify-on-comment-toggle"
+                                            type="checkbox"
+                                            checked={settings.notifyOnComment}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, notifyOnComment: e.target.checked }))}
+                                            className="admin-maintenance-checkbox"
+                                        />
+                                        <span>Notify on Comment</span>
+                                    </Label>
+                                </div>
+
+                                <div className={`admin-form-group ${settings.notifyOnFavorite !== originalSettings.notifyOnFavorite ? 'has-changes' : ''}`}>
+                                    <Label className="admin-maintenance-toggle-label" htmlFor="notify-on-favorite-toggle">
+                                        <input
+                                            id="notify-on-favorite-toggle"
+                                            type="checkbox"
+                                            checked={settings.notifyOnFavorite}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, notifyOnFavorite: e.target.checked }))}
+                                            className="admin-maintenance-checkbox"
+                                        />
+                                        <span>Notify on Favorite</span>
+                                    </Label>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* User Management Tab */}
+                <TabsContent 
+                    value="users" 
+                    className="admin-settings-tab-content"
+                    ref={tabContentRef}
+                    onTouchStart={handleContentTouchStart}
+                    onTouchMove={handleContentTouchMove}
+                    onTouchEnd={handleContentTouchEnd}
+                >
+                    <Card className="admin-settings-card">
+                        <CardHeader>
+                            <CardTitle className="admin-settings-card-title">
+                                <Users size={20} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                User Management
+                            </CardTitle>
+                            <CardDescription>
+                                Configure user registration, roles, profile fields, and account management
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="admin-form">
+                                {/* Registration Settings */}
+                                <div className="admin-settings-section-divider">
+                                    <h3 className="admin-settings-section-title">
+                                        <UserPlus size={18} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                        Registration Settings
+                                    </h3>
+                                </div>
+
+                                <div className={`admin-form-group ${settings.registrationEnabled !== originalSettings.registrationEnabled ? 'has-changes' : ''}`}>
+                                    <Label className="admin-maintenance-toggle-label" htmlFor="registration-enabled-toggle">
+                                        <input
+                                            id="registration-enabled-toggle"
+                                            type="checkbox"
+                                            checked={settings.registrationEnabled}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, registrationEnabled: e.target.checked }))}
+                                            className="admin-maintenance-checkbox"
+                                        />
+                                        <span>Enable User Registration</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Allow new users to create accounts
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <p className="admin-form-help-text">When disabled, only admins can create new user accounts</p>
+                                </div>
+
+                                {settings.registrationEnabled && (
+                                    <div className={`admin-form-group ${settings.registrationType !== originalSettings.registrationType ? 'has-changes' : ''}`}>
+                                        <Label htmlFor="registration-type-select" className="admin-form-label-with-icon">
+                                            <UserPlus size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                            Registration Type
+                                        </Label>
+                                        <select
+                                            id="registration-type-select"
+                                            value={settings.registrationType}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, registrationType: e.target.value as 'open' | 'closed' | 'invite-only' }))}
+                                            className="admin-select"
+                                        >
+                                            <option value="open">Open - Anyone can register</option>
+                                            <option value="closed">Closed - Registration disabled</option>
+                                            <option value="invite-only">Invite Only - Requires invitation code</option>
+                                        </select>
+                                        <p className="admin-form-help-text">
+                                            {settings.registrationType === 'open' && 'Anyone can create an account'}
+                                            {settings.registrationType === 'closed' && 'Registration is disabled for everyone'}
+                                            {settings.registrationType === 'invite-only' && 'Users need an invitation code to register'}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Default User Role */}
+                                <div className="admin-settings-section-divider" style={{ marginTop: '2rem' }}>
+                                    <h3 className="admin-settings-section-title">
+                                        <Shield size={18} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                        Default User Role
+                                    </h3>
+                                </div>
+
+                                <div className={`admin-form-group ${settings.defaultUserRole !== originalSettings.defaultUserRole ? 'has-changes' : ''}`}>
+                                    <Label htmlFor="default-user-role-select" className="admin-form-label-with-icon">
+                                        <Shield size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                        Default Role for New Users
+                                    </Label>
+                                    <select
+                                        id="default-user-role-select"
+                                        value={settings.defaultUserRole}
+                                        onChange={(e) => setSettings(prev => ({ ...prev, defaultUserRole: e.target.value as 'user' | 'moderator' | 'admin' }))}
+                                        className="admin-select"
+                                    >
+                                        <option value="user">User - Standard user permissions</option>
+                                        <option value="moderator">Moderator - Can moderate content</option>
+                                        <option value="admin">Admin - Full administrative access</option>
+                                    </select>
+                                    <p className="admin-form-help-text">Role assigned to new users when they register</p>
+                                </div>
+
+                                {/* User Verification */}
+                                <div className="admin-settings-section-divider" style={{ marginTop: '2rem' }}>
+                                    <h3 className="admin-settings-section-title">
+                                        <UserCheck size={18} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                        User Verification
+                                    </h3>
+                                </div>
+
+                                <div className={`admin-form-group ${settings.requireEmailVerification !== originalSettings.requireEmailVerification ? 'has-changes' : ''}`}>
+                                    <Label className="admin-maintenance-toggle-label" htmlFor="require-email-verification-toggle">
+                                        <input
+                                            id="require-email-verification-toggle"
+                                            type="checkbox"
+                                            checked={settings.requireEmailVerification}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, requireEmailVerification: e.target.checked }))}
+                                            className="admin-maintenance-checkbox"
+                                        />
+                                        <span>Require Email Verification</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Users must verify their email address before accessing the site
+                                            </span>
+                                        </div>
+                                    </Label>
+                                </div>
+
+                                <div className={`admin-form-group ${settings.requirePhoneVerification !== originalSettings.requirePhoneVerification ? 'has-changes' : ''}`}>
+                                    <Label className="admin-maintenance-toggle-label" htmlFor="require-phone-verification-toggle">
+                                        <input
+                                            id="require-phone-verification-toggle"
+                                            type="checkbox"
+                                            checked={settings.requirePhoneVerification}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, requirePhoneVerification: e.target.checked }))}
+                                            className="admin-maintenance-checkbox"
+                                        />
+                                        <span>Require Phone Verification</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Users must verify their phone number (requires SMS service)
+                                            </span>
+                                        </div>
+                                    </Label>
+                                </div>
+
+                                {/* Profile Fields */}
+                                <div className="admin-settings-section-divider" style={{ marginTop: '2rem' }}>
+                                    <h3 className="admin-settings-section-title">
+                                        <FileText size={18} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                        Profile Fields
+                                    </h3>
+                                </div>
+
+                                <p className="admin-form-help-text" style={{ marginBottom: '1rem' }}>Configure which profile fields are required or optional</p>
+
+                                <div className={`admin-form-group ${JSON.stringify(settings.requiredProfileFields) !== JSON.stringify(originalSettings.requiredProfileFields) ? 'has-changes' : ''}`}>
+                                    <Label className="admin-maintenance-toggle-label" htmlFor="profile-field-displayname-toggle">
+                                        <input
+                                            id="profile-field-displayname-toggle"
+                                            type="checkbox"
+                                            checked={settings.requiredProfileFields.displayName}
+                                            onChange={(e) => setSettings(prev => ({
+                                                ...prev,
+                                                requiredProfileFields: {
+                                                    ...prev.requiredProfileFields,
+                                                    displayName: e.target.checked
+                                                }
+                                            }))}
+                                            className="admin-maintenance-checkbox"
+                                        />
+                                        <span>Display Name (Required)</span>
+                                    </Label>
+                                </div>
+
+                                <div className={`admin-form-group ${JSON.stringify(settings.requiredProfileFields) !== JSON.stringify(originalSettings.requiredProfileFields) ? 'has-changes' : ''}`}>
+                                    <Label className="admin-maintenance-toggle-label" htmlFor="profile-field-bio-toggle">
+                                        <input
+                                            id="profile-field-bio-toggle"
+                                            type="checkbox"
+                                            checked={settings.requiredProfileFields.bio}
+                                            onChange={(e) => setSettings(prev => ({
+                                                ...prev,
+                                                requiredProfileFields: {
+                                                    ...prev.requiredProfileFields,
+                                                    bio: e.target.checked
+                                                }
+                                            }))}
+                                            className="admin-maintenance-checkbox"
+                                        />
+                                        <span>Bio (Required)</span>
+                                    </Label>
+                                </div>
+
+                                <div className={`admin-form-group ${JSON.stringify(settings.requiredProfileFields) !== JSON.stringify(originalSettings.requiredProfileFields) ? 'has-changes' : ''}`}>
+                                    <Label className="admin-maintenance-toggle-label" htmlFor="profile-field-location-toggle">
+                                        <input
+                                            id="profile-field-location-toggle"
+                                            type="checkbox"
+                                            checked={settings.requiredProfileFields.location}
+                                            onChange={(e) => setSettings(prev => ({
+                                                ...prev,
+                                                requiredProfileFields: {
+                                                    ...prev.requiredProfileFields,
+                                                    location: e.target.checked
+                                                }
+                                            }))}
+                                            className="admin-maintenance-checkbox"
+                                        />
+                                        <span>Location (Required)</span>
+                                    </Label>
+                                </div>
+
+                                <div className={`admin-form-group ${JSON.stringify(settings.requiredProfileFields) !== JSON.stringify(originalSettings.requiredProfileFields) ? 'has-changes' : ''}`}>
+                                    <Label className="admin-maintenance-toggle-label" htmlFor="profile-field-website-toggle">
+                                        <input
+                                            id="profile-field-website-toggle"
+                                            type="checkbox"
+                                            checked={settings.requiredProfileFields.website}
+                                            onChange={(e) => setSettings(prev => ({
+                                                ...prev,
+                                                requiredProfileFields: {
+                                                    ...prev.requiredProfileFields,
+                                                    website: e.target.checked
+                                                }
+                                            }))}
+                                            className="admin-maintenance-checkbox"
+                                        />
+                                        <span>Website (Required)</span>
+                                    </Label>
+                                </div>
+
+                                <div className={`admin-form-group ${JSON.stringify(settings.requiredProfileFields) !== JSON.stringify(originalSettings.requiredProfileFields) ? 'has-changes' : ''}`}>
+                                    <Label className="admin-maintenance-toggle-label" htmlFor="profile-field-phone-toggle">
+                                        <input
+                                            id="profile-field-phone-toggle"
+                                            type="checkbox"
+                                            checked={settings.requiredProfileFields.phone}
+                                            onChange={(e) => setSettings(prev => ({
+                                                ...prev,
+                                                requiredProfileFields: {
+                                                    ...prev.requiredProfileFields,
+                                                    phone: e.target.checked
+                                                }
+                                            }))}
+                                            className="admin-maintenance-checkbox"
+                                        />
+                                        <span>Phone (Required)</span>
+                                    </Label>
+                                </div>
+
+                                {/* Account Deletion */}
+                                <div className="admin-settings-section-divider" style={{ marginTop: '2rem' }}>
+                                    <h3 className="admin-settings-section-title">
+                                        <Trash2 size={18} style={{ marginRight: '0.5rem' }} aria-hidden="true" />
+                                        Account Deletion
+                                    </h3>
+                                </div>
+
+                                <div className={`admin-form-group ${settings.allowAccountSelfDeletion !== originalSettings.allowAccountSelfDeletion ? 'has-changes' : ''}`}>
+                                    <Label className="admin-maintenance-toggle-label" htmlFor="allow-account-self-deletion-toggle">
+                                        <input
+                                            id="allow-account-self-deletion-toggle"
+                                            type="checkbox"
+                                            checked={settings.allowAccountSelfDeletion}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, allowAccountSelfDeletion: e.target.checked }))}
+                                            className="admin-maintenance-checkbox"
+                                        />
+                                        <span>Allow Account Self-Deletion</span>
+                                        <div className="admin-tooltip-wrapper">
+                                            <HelpCircle size={14} className="admin-tooltip-icon" aria-hidden="true" />
+                                            <span className="admin-tooltip-text" role="tooltip">
+                                                Allow users to delete their own accounts from their profile settings
+                                            </span>
+                                        </div>
+                                    </Label>
+                                    <p className="admin-form-help-text">When disabled, only admins can delete user accounts</p>
+                                </div>
+
+                                {/* Save Button */}
+                                <div style={{ 
+                                    display: 'flex', 
+                                    justifyContent: 'space-between', 
+                                    alignItems: 'center', 
+                                    marginTop: '2rem', 
+                                    paddingTop: '1.5rem', 
+                                    borderTop: '1px solid hsl(var(--border))' 
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        {hasChanges && (
+                                            <span className="admin-change-indicator" style={{ fontSize: '0.875rem', color: 'hsl(var(--muted-foreground))' }}>
+                                                <AlertCircle size={14} style={{ marginRight: '0.25rem' }} aria-hidden="true" />
+                                                You have unsaved changes
+                                            </span>
+                                        )}
+                                        {saveSuccess && (
+                                            <div className={`admin-save-success-indicator ${isFadingOut ? 'fade-out' : ''}`}>
+                                                <CheckCircle2 size={16} />
+                                                <span>Settings saved successfully!</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <Button 
+                                        onClick={handleSave} 
+                                        disabled={saving || !hasChanges || Object.keys(validationErrors).length > 0} 
+                                        className="admin-add-category-btn"
+                                        aria-label={saving ? 'Saving settings' : 'Save all settings'}
+                                        aria-describedby="save-button-help-users"
+                                    >
+                                        <Save size={16} aria-hidden="true" />
+                                        {saving ? t('admin.saving') : t('admin.saveSettings')}
+                                    </Button>
+                                    <span id="save-button-help-users" className="sr-only">
+                                        {!hasChanges ? 'No changes to save' : Object.keys(validationErrors).length > 0 ? 'Please fix errors before saving' : 'Save all settings changes'}
+                                    </span>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
                 {/* Notifications Tab */}
                 <TabsContent 
                     value="notifications" 
@@ -2975,41 +3936,213 @@ export function AdminSettings() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                {!showAnnouncementForm ? (
+                {!showAnnouncementForm && !showHistory && !showTemplates ? (
                                 <div className="admin-empty-state">
                                     <div className="admin-empty-state-icon">
                                         <Bell size={48} />
                                     </div>
-                                    <h3 className="admin-empty-state-title">No System Notifications</h3>
+                                    <h3 className="admin-empty-state-title">System Announcements</h3>
                                     <p className="admin-empty-state-description">
-                                        Create a system-wide notification to inform all users about important updates, maintenance, or announcements.
+                                        Create, schedule, and manage system-wide notifications to inform users about important updates, maintenance, or announcements.
                                     </p>
-                    <Button 
-                        onClick={() => setShowAnnouncementForm(true)}
-                        className="admin-add-category-btn"
-                    >
-                        <Megaphone size={16} style={{ marginRight: '0.5rem' }} />
-                        {t('admin.createNotification')}
-                    </Button>
+                                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                        <Button 
+                                            onClick={() => setShowAnnouncementForm(true)}
+                                            className="admin-add-category-btn"
+                                        >
+                                            <Megaphone size={16} style={{ marginRight: '0.5rem' }} />
+                                            Create Announcement
+                                        </Button>
+                                        <Button 
+                                            onClick={() => setShowHistory(true)}
+                                            variant="outline"
+                                        >
+                                            <History size={16} style={{ marginRight: '0.5rem' }} />
+                                            View History
+                                        </Button>
+                                        <Button 
+                                            onClick={() => setShowTemplates(true)}
+                                            variant="outline"
+                                        >
+                                            <BookOpen size={16} style={{ marginRight: '0.5rem' }} />
+                                            Templates
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : showHistory ? (
+                                <div className="admin-form">
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                        <h3 className="admin-announcement-form-title">Announcement History</h3>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setShowHistory(false)}
+                                        >
+                                            <X size={16} style={{ marginRight: '0.5rem' }} />
+                                            Back
+                                        </Button>
+                                    </div>
+                                    {announcementHistory.length === 0 ? (
+                                        <div className="admin-empty-state" style={{ padding: '2rem' }}>
+                                            <History size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                                            <p>No announcement history yet</p>
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                            {announcementHistory.map((announcement) => (
+                                                <Card key={announcement.id} style={{ padding: '1rem' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                                                        <div style={{ flex: 1 }}>
+                                                            <h4 style={{ marginBottom: '0.5rem', fontWeight: 600 }}>{announcement.title}</h4>
+                                                            <p style={{ fontSize: '0.875rem', color: 'hsl(var(--muted-foreground))', marginBottom: '0.5rem' }}>
+                                                                Sent: {new Date(announcement.sentAt).toLocaleString()}
+                                                            </p>
+                                                            <div style={{ display: 'flex', gap: '1rem', fontSize: '0.875rem' }}>
+                                                                <span>Recipients: {announcement.recipientCount}</span>
+                                                                <span>Read: {announcement.readCount} ({Math.round((announcement.readCount / announcement.recipientCount) * 100)}%)</span>
+                                                            </div>
+                                                        </div>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                // View read receipts - would need backend API
+                                                                toast.info('Read receipts feature coming soon');
+                                                            }}
+                                                        >
+                                                            <Eye size={16} />
+                                                        </Button>
+                                                    </div>
+                                                </Card>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ) : showTemplates ? (
+                                <div className="admin-form">
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                        <h3 className="admin-announcement-form-title">Announcement Templates</h3>
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setShowTemplates(false);
+                                                    setShowAnnouncementForm(true);
+                                                }}
+                                            >
+                                                <Plus size={16} style={{ marginRight: '0.5rem' }} />
+                                                New Template
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setShowTemplates(false)}
+                                            >
+                                                <X size={16} />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    {announcementTemplates.length === 0 ? (
+                                        <div className="admin-empty-state" style={{ padding: '2rem' }}>
+                                            <BookOpen size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                                            <p>No templates saved yet</p>
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => {
+                                                    setShowTemplates(false);
+                                                    setShowAnnouncementForm(true);
+                                                }}
+                                                style={{ marginTop: '1rem' }}
+                                            >
+                                                Create First Template
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                            {announcementTemplates.map((template) => (
+                                                <Card key={template.id} style={{ padding: '1rem' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <div>
+                                                            <h4 style={{ marginBottom: '0.25rem', fontWeight: 600 }}>{template.name}</h4>
+                                                            <p style={{ fontSize: '0.875rem', color: 'hsl(var(--muted-foreground))' }}>
+                                                                {template.data.title}
+                                                            </p>
+                                                        </div>
+                                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => {
+                                                                    setAnnouncementData(template.data);
+                                                                    setShowTemplates(false);
+                                                                    setShowAnnouncementForm(true);
+                                                                }}
+                                                            >
+                                                                <FolderOpen size={16} />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => {
+                                                                    setAnnouncementTemplates(prev => prev.filter(t => t.id !== template.id));
+                                                                    toast.success('Template deleted');
+                                                                }}
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </Card>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="admin-form admin-announcement-form">
                                     <div className="admin-announcement-form-header">
-                                        <h3 className="admin-announcement-form-title">Tạo thông báo hệ thống</h3>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                    setShowAnnouncementForm(false);
-                                    setAnnouncementData({
-                                        type: 'system_announcement',
-                                        title: '',
-                                        message: '',
-                                    });
-                                }}
-                            >
-                                <X size={16} />
-                            </Button>
+                                        <h3 className="admin-announcement-form-title">Create System Announcement</h3>
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                    const templateName = prompt('Template name:');
+                                                    if (templateName && templateName.trim()) {
+                                                        const newTemplate = {
+                                                            id: Date.now().toString(),
+                                                            name: templateName.trim(),
+                                                            data: { ...announcementData },
+                                                        };
+                                                        setAnnouncementTemplates(prev => [...prev, newTemplate]);
+                                                        toast.success('Template saved');
+                                                    }
+                                                }}
+                                                title="Save as template"
+                                            >
+                                                <SaveIcon size={16} />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setShowAnnouncementForm(false);
+                                                    setAnnouncementData({
+                                                        type: 'system_announcement',
+                                                        title: '',
+                                                        message: '',
+                                                        scheduledDate: '',
+                                                        priority: 'medium',
+                                                        expirationDate: '',
+                                                        targetRoles: [],
+                                                        targetUserIds: [],
+                                                        sendToAll: true,
+                                                    });
+                                                }}
+                                            >
+                                                <X size={16} />
+                                            </Button>
+                                        </div>
                         </div>
 
                         <div className="admin-form-group">
@@ -3047,44 +4180,205 @@ export function AdminSettings() {
                         </div>
 
                         <div className="admin-form-group">
-                                        <Label htmlFor="announcement-message-textarea">Nội dung</Label>
+                                        <Label htmlFor="announcement-message-textarea">Content</Label>
                             <Textarea
                                             id="announcement-message-textarea"
                                 value={announcementData.message}
                                 onChange={(e) => setAnnouncementData({ ...announcementData, message: e.target.value })}
-                                placeholder="Nhập nội dung thông báo"
-                                rows={5}
+                                placeholder="Enter announcement content (supports basic HTML)"
+                                rows={8}
                                             aria-required="true"
                                             aria-describedby="announcement-message-help"
                             />
+                                        <p className="admin-form-help-text">Supports basic HTML formatting (bold, italic, links, lists)</p>
                                         <span id="announcement-message-help" className="sr-only">
                                             Enter the message content for the system announcement
                                         </span>
                         </div>
 
+                        {/* Advanced Settings Section */}
+                        <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid hsl(var(--border))' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                <h4 style={{ fontSize: '1rem', fontWeight: 600 }}>Advanced Settings</h4>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+                                >
+                                    {showAdvancedSettings ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                    {showAdvancedSettings ? 'Hide' : 'Show'}
+                                </Button>
+                            </div>
+
+                            {showAdvancedSettings && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    {/* Priority Level */}
+                                    <div className="admin-form-group">
+                                        <Label htmlFor="announcement-priority-select" className="admin-form-label-with-icon">
+                                            <Star size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                            Priority Level
+                                        </Label>
+                                        <select
+                                            id="announcement-priority-select"
+                                            value={announcementData.priority}
+                                            onChange={(e) => setAnnouncementData({ ...announcementData, priority: e.target.value as 'low' | 'medium' | 'high' | 'urgent' })}
+                                            className="admin-select"
+                                        >
+                                            <option value="low">Low - General information</option>
+                                            <option value="medium">Medium - Important notice</option>
+                                            <option value="high">High - Urgent action required</option>
+                                            <option value="urgent">Urgent - Immediate attention</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Scheduled Date */}
+                                    <div className="admin-form-group">
+                                        <Label htmlFor="announcement-scheduled-date" className="admin-form-label-with-icon">
+                                            <Calendar size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                            Schedule Announcement
+                                        </Label>
+                                        <Input
+                                            id="announcement-scheduled-date"
+                                            type="datetime-local"
+                                            value={announcementData.scheduledDate ? new Date(announcementData.scheduledDate).toISOString().slice(0, 16) : ''}
+                                            onChange={(e) => {
+                                                const dateValue = e.target.value;
+                                                setAnnouncementData({ 
+                                                    ...announcementData, 
+                                                    scheduledDate: dateValue ? new Date(dateValue).toISOString() : '' 
+                                                });
+                                            }}
+                                        />
+                                        <p className="admin-form-help-text">Leave empty to send immediately, or set a future date/time</p>
+                                    </div>
+
+                                    {/* Expiration Date */}
+                                    <div className="admin-form-group">
+                                        <Label htmlFor="announcement-expiration-date" className="admin-form-label-with-icon">
+                                            <Clock size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                            Expiration Date
+                                        </Label>
+                                        <Input
+                                            id="announcement-expiration-date"
+                                            type="datetime-local"
+                                            value={announcementData.expirationDate ? new Date(announcementData.expirationDate).toISOString().slice(0, 16) : ''}
+                                            onChange={(e) => {
+                                                const dateValue = e.target.value;
+                                                setAnnouncementData({ 
+                                                    ...announcementData, 
+                                                    expirationDate: dateValue ? new Date(dateValue).toISOString() : '' 
+                                                });
+                                            }}
+                                        />
+                                        <p className="admin-form-help-text">Announcement will automatically expire after this date</p>
+                                    </div>
+
+                                    {/* Target Audience */}
+                                    <div className="admin-form-group">
+                                        <Label className="admin-form-label-with-icon">
+                                            <Target size={16} className="admin-form-label-icon" aria-hidden="true" />
+                                            Target Audience
+                                        </Label>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                            <Label className="admin-maintenance-toggle-label" htmlFor="send-to-all-toggle">
+                                                <input
+                                                    id="send-to-all-toggle"
+                                                    type="checkbox"
+                                                    checked={announcementData.sendToAll}
+                                                    onChange={(e) => setAnnouncementData({ ...announcementData, sendToAll: e.target.checked })}
+                                                    className="admin-maintenance-checkbox"
+                                                />
+                                                <span>Send to All Users</span>
+                                            </Label>
+                                            {!announcementData.sendToAll && (
+                                                <div style={{ paddingLeft: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                    <Label className="admin-maintenance-toggle-label" htmlFor="target-role-user">
+                                                        <input
+                                                            id="target-role-user"
+                                                            type="checkbox"
+                                                            checked={announcementData.targetRoles.includes('user')}
+                                                            onChange={(e) => {
+                                                                const roles = e.target.checked
+                                                                    ? [...announcementData.targetRoles, 'user']
+                                                                    : announcementData.targetRoles.filter(r => r !== 'user');
+                                                                setAnnouncementData({ ...announcementData, targetRoles: roles });
+                                                            }}
+                                                            className="admin-maintenance-checkbox"
+                                                        />
+                                                        <span>Users</span>
+                                                    </Label>
+                                                    <Label className="admin-maintenance-toggle-label" htmlFor="target-role-moderator">
+                                                        <input
+                                                            id="target-role-moderator"
+                                                            type="checkbox"
+                                                            checked={announcementData.targetRoles.includes('moderator')}
+                                                            onChange={(e) => {
+                                                                const roles = e.target.checked
+                                                                    ? [...announcementData.targetRoles, 'moderator']
+                                                                    : announcementData.targetRoles.filter(r => r !== 'moderator');
+                                                                setAnnouncementData({ ...announcementData, targetRoles: roles });
+                                                            }}
+                                                            className="admin-maintenance-checkbox"
+                                                        />
+                                                        <span>Moderators</span>
+                                                    </Label>
+                                                    <Label className="admin-maintenance-toggle-label" htmlFor="target-role-admin">
+                                                        <input
+                                                            id="target-role-admin"
+                                                            type="checkbox"
+                                                            checked={announcementData.targetRoles.includes('admin')}
+                                                            onChange={(e) => {
+                                                                const roles = e.target.checked
+                                                                    ? [...announcementData.targetRoles, 'admin']
+                                                                    : announcementData.targetRoles.filter(r => r !== 'admin');
+                                                                setAnnouncementData({ ...announcementData, targetRoles: roles });
+                                                            }}
+                                                            className="admin-maintenance-checkbox"
+                                                        />
+                                                        <span>Admins</span>
+                                                    </Label>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                         <div className="admin-modal-actions">
-                            <Button 
-                                onClick={handleSendAnnouncement} 
-                                disabled={sendingAnnouncement}
-                                            className="admin-add-category-btn"
-                            >
-                                <Megaphone size={16} style={{ marginRight: '0.5rem' }} />
-                                {sendingAnnouncement ? 'Đang gửi...' : 'Gửi thông báo'}
-                            </Button>
-                            <Button
-                                variant="outline"
-                                onClick={() => {
-                                    setShowAnnouncementForm(false);
-                                    setAnnouncementData({
-                                        type: 'system_announcement',
-                                        title: '',
-                                        message: '',
-                                    });
-                                }}
-                                disabled={sendingAnnouncement}
-                            >
-                                Hủy
-                            </Button>
+                            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                <Button 
+                                    onClick={handleSendAnnouncement} 
+                                    disabled={sendingAnnouncement || !announcementData.title.trim() || !announcementData.message.trim()}
+                                    className="admin-add-category-btn"
+                                >
+                                    <Megaphone size={16} style={{ marginRight: '0.5rem' }} />
+                                    {announcementData.scheduledDate 
+                                        ? (sendingAnnouncement ? 'Scheduling...' : 'Schedule Announcement')
+                                        : (sendingAnnouncement ? 'Sending...' : 'Send Announcement')
+                                    }
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                        setShowAnnouncementForm(false);
+                                        setAnnouncementData({
+                                            type: 'system_announcement',
+                                            title: '',
+                                            message: '',
+                                            scheduledDate: '',
+                                            priority: 'medium',
+                                            expirationDate: '',
+                                            targetRoles: [],
+                                            targetUserIds: [],
+                                            sendToAll: true,
+                                        });
+                                    }}
+                                    disabled={sendingAnnouncement}
+                                >
+                                    Cancel
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 )}

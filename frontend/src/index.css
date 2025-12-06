@@ -85,6 +85,10 @@
 		--online: 140 100% 50%;
 		--offline: 0 0% 70%;
 
+		/* Success */
+		--success: 140 100% 50%;
+		--success-foreground: 0 0% 100%;
+
 		/* Warning */
 		--warning: 37.7 92.1% 50.2%;
 		--warning-foreground: 0 0% 100%;
@@ -218,6 +222,18 @@
 		--online: 140 100% 60%;
 		--away: 45 100% 65%;
 		--offline: 0 0% 50%;
+
+		/* Success */
+		--success: 140 100% 60%;
+		--success-foreground: 0 0% 100%;
+
+		/* Warning */
+		--warning: 37.7 92.1% 50.2%;
+		--warning-foreground: 0 0% 100%;
+
+		/* Info */
+		--info: 198.6 88.7% 48.4%;
+		--info-foreground: 0 0% 100%;
 
 		--destructive: 0 80% 47%;
 		--destructive-foreground: 0 0% 100%;
@@ -381,6 +397,61 @@
 		transition: var(
 			--transition-bounce
 		);
+	}
+
+	/* Sonner Toast Customization - Use our status colors */
+	/* Override Sonner's default colors to use our theme status colors */
+	[data-sonner-toast][data-type="success"] {
+		background: hsl(var(--success)) !important;
+		color: hsl(var(--success-foreground)) !important;
+		border-color: hsl(var(--success)) !important;
+	}
+
+	[data-sonner-toast][data-type="error"] {
+		background: hsl(var(--destructive)) !important;
+		color: hsl(var(--destructive-foreground)) !important;
+		border-color: hsl(var(--destructive)) !important;
+	}
+
+	[data-sonner-toast][data-type="warning"] {
+		background: hsl(var(--warning)) !important;
+		color: hsl(var(--warning-foreground)) !important;
+		border-color: hsl(var(--warning)) !important;
+	}
+
+	[data-sonner-toast][data-type="info"] {
+		background: hsl(var(--info)) !important;
+		color: hsl(var(--info-foreground)) !important;
+		border-color: hsl(var(--info)) !important;
+	}
+
+	/* Ensure icons and text use foreground colors */
+	[data-sonner-toast][data-type="success"] [data-icon],
+	[data-sonner-toast][data-type="success"] [data-close-button],
+	[data-sonner-toast][data-type="success"] [data-title],
+	[data-sonner-toast][data-type="success"] [data-description] {
+		color: hsl(var(--success-foreground)) !important;
+	}
+
+	[data-sonner-toast][data-type="error"] [data-icon],
+	[data-sonner-toast][data-type="error"] [data-close-button],
+	[data-sonner-toast][data-type="error"] [data-title],
+	[data-sonner-toast][data-type="error"] [data-description] {
+		color: hsl(var(--destructive-foreground)) !important;
+	}
+
+	[data-sonner-toast][data-type="warning"] [data-icon],
+	[data-sonner-toast][data-type="warning"] [data-close-button],
+	[data-sonner-toast][data-type="warning"] [data-title],
+	[data-sonner-toast][data-type="warning"] [data-description] {
+		color: hsl(var(--warning-foreground)) !important;
+	}
+
+	[data-sonner-toast][data-type="info"] [data-icon],
+	[data-sonner-toast][data-type="info"] [data-close-button],
+	[data-sonner-toast][data-type="info"] [data-title],
+	[data-sonner-toast][data-type="info"] [data-description] {
+		color: hsl(var(--info-foreground)) !important;
 	}
 
 	.transition-smooth {

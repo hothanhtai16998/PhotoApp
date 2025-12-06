@@ -191,14 +191,14 @@ export const SignUpForm = ({
             </div>
             {/* Show lowercase + uppercase requirement only if both are required */}
             {passwordRequirements.requireLowercase && passwordRequirements.requireUppercase && (
-              <div className={`requirement-item ${passwordValidation.hasLowerUpper ? 'valid' : 'invalid'}`}>
-                {passwordValidation.hasLowerUpper ? (
-                  <Check size={16} className="requirement-icon check-icon" />
-                ) : (
-                  <X size={16} className="requirement-icon x-icon" />
-                )}
-                <span className="requirement-text">{t('auth.passwordLowerUpper')}</span>
-              </div>
+            <div className={`requirement-item ${passwordValidation.hasLowerUpper ? 'valid' : 'invalid'}`}>
+              {passwordValidation.hasLowerUpper ? (
+                <Check size={16} className="requirement-icon check-icon" />
+              ) : (
+                <X size={16} className="requirement-icon x-icon" />
+              )}
+              <span className="requirement-text">{t('auth.passwordLowerUpper')}</span>
+            </div>
             )}
             {/* Show number requirement only if required */}
             {passwordRequirements.requireNumber && (
@@ -215,12 +215,12 @@ export const SignUpForm = ({
             {passwordRequirements.requireSpecialChar && (
               <div className={`requirement-item ${passwordValidation.hasSpecialChar ? 'valid' : 'invalid'}`}>
                 {passwordValidation.hasSpecialChar ? (
-                  <Check size={16} className="requirement-icon check-icon" />
-                ) : (
-                  <X size={16} className="requirement-icon x-icon" />
-                )}
+                <Check size={16} className="requirement-icon check-icon" />
+              ) : (
+                <X size={16} className="requirement-icon x-icon" />
+              )}
                 <span className="requirement-text">Chứa ít nhất một ký tự đặc biệt</span>
-              </div>
+            </div>
             )}
           </div>
         )}

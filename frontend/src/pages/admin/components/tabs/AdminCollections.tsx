@@ -37,7 +37,7 @@ export function AdminCollections() {
         try {
             // Don't block UI on initial load - only show loading for subsequent loads
             if (collections.length > 0) {
-                setLoading(true);
+            setLoading(true);
             }
             const data = await adminService.getAllCollections({
                 page,
