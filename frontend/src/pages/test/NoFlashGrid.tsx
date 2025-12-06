@@ -147,7 +147,7 @@ function BlurUpImage({
         preloadImage(full)
             .then((src) => {
                 setBackSrc(src);
-                setLoaded(true);
+            setLoaded(true);
                 onLoadComplete?.();
             })
             .catch(() => {
@@ -784,7 +784,7 @@ function ImageModal({
                                                 }}
                                             >
                                                 {authorName ? authorName[0]?.toUpperCase() : 'A'}
-                                            </div>
+                            </div>
                                             <div>
                                                 <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 2 }}>
                                                     {authorName}
@@ -1725,13 +1725,13 @@ export default function NoFlashGridPage() {
     const loadData = useCallback(async () => {
         try {
             setLoading(true);
-            const [imgsRes, catsRes] = await Promise.all([
-                api.get('/images'),
-                api.get('/categories'),
-            ]);
+                const [imgsRes, catsRes] = await Promise.all([
+                    api.get('/images'),
+                    api.get('/categories'),
+                ]);
             const loadedImages = toImageArray(imgsRes.data);
             setImages(loadedImages);
-            setCategories(toCategoryArray(catsRes.data));
+                setCategories(toCategoryArray(catsRes.data));
 
             // Clear image dimensions cache when refreshing (in case images were updated)
             setImageDimensions(new Map());
@@ -1742,13 +1742,13 @@ export default function NoFlashGridPage() {
                 .map(img => img.thumbnailUrl || img.smallUrl)
                 .filter((src): src is string => Boolean(src));
             preloadImages(thumbnails, true);
-        } catch (e) {
-            console.error('Failed to load data', e);
-            setImages([]);
-            setCategories([]);
-        } finally {
-            setLoading(false);
-        }
+            } catch (e) {
+                console.error('Failed to load data', e);
+                setImages([]);
+                setCategories([]);
+            } finally {
+                setLoading(false);
+            }
     }, []);
 
     // Load data on mount
@@ -2128,7 +2128,7 @@ export default function NoFlashGridPage() {
                                     height: 'auto',
                                 }}
                             >
-                                <BlurUpImage
+                        <BlurUpImage
                                     image={image}
                                     onClick={async () => {
                                         // Unsplash technique: Preload image COMPLETELY before opening modal

@@ -208,19 +208,25 @@ export async function uploadImageWithSizes(buffer, bucket, filename, mimetype = 
 		}
 
 		// For other formats (JPEG, PNG, etc.), process with Sharp
-		const [thumbnailBuffer, smallBuffer, regularBuffer, avifBuffer] = await Promise.all([
+		// Determine original file extension from detected format or default to jpg
+		const originalExtension = imageFormat === 'png' ? 'png' : imageFormat === 'jpeg' ? 'jpg' : 'jpg';
+		const originalContentType = contentType || (imageFormat === 'png' ? 'image/png' : 'image/jpeg');
+		
+		const [thumbnailBuffer, smallBuffer, regularBuffer, webpFullBuffer, originalBuffer] = await Promise.all([
 			sharp(buffer).resize(200, 200, { fit: 'cover' }).webp().toBuffer(),
 			sharp(buffer).resize(500, 500, { fit: 'cover' }).webp().toBuffer(),
 			sharp(buffer).resize(1000, 1000, { fit: 'inside' }).webp().toBuffer(),
-			sharp(buffer).webp().toBuffer(),
+			sharp(buffer).webp().toBuffer(), // WebP version for display
+			Promise.resolve(buffer), // Keep original buffer for true original file
 		]);
 
 		// Upload all sizes in parallel to R2
-		const [thumb, small, regular, original] = await Promise.all([
+		const [thumb, small, regular, webpFull, original] = await Promise.all([
 			uploadToR2(thumbnailBuffer, `${bucket}/${filename}-thumbnail.webp`, 'image/webp'),
 			uploadToR2(smallBuffer, `${bucket}/${filename}-small.webp`, 'image/webp'),
 			uploadToR2(regularBuffer, `${bucket}/${filename}-regular.webp`, 'image/webp'),
-			uploadToR2(avifBuffer, `${bucket}/${filename}.webp`, 'image/webp'),
+			uploadToR2(webpFullBuffer, `${bucket}/${filename}.webp`, 'image/webp'), // WebP for display
+			uploadToR2(originalBuffer, `${bucket}/${filename}-original.${originalExtension}`, originalContentType), // True original
 		]);
 
 		return {
@@ -228,8 +234,8 @@ export async function uploadImageWithSizes(buffer, bucket, filename, mimetype = 
 			thumbnailUrl: thumb,
 			smallUrl: small,
 			regularUrl: regular,
-			imageUrl: original,
-			imageAvifUrl: original,
+			imageUrl: original, // True original file (JPG/PNG)
+			imageAvifUrl: webpFull, // WebP version for display
 			thumbnailAvifUrl: thumb,
 			smallAvifUrl: small,
 			regularAvifUrl: regular,
