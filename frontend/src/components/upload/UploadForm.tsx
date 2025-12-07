@@ -1,3 +1,4 @@
+import { memo, useCallback, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import type { ImageData } from './hooks/useImageUpload';
 import type { Category } from '@/services/categoryService';
@@ -15,7 +16,7 @@ interface UploadFormProps {
   onUpdateCoordinates: (index: number, coordinates: Coordinates | undefined) => void;
 }
 
-export const UploadForm = ({
+export const UploadForm = memo(({
   imageData,
   index,
   categories,
@@ -24,7 +25,26 @@ export const UploadForm = ({
   onUpdateCoordinates: _onUpdateCoordinates,
 }: UploadFormProps) => {
   const { user } = useUserStore();
-  const isAdmin = user?.isAdmin === true || user?.isSuperAdmin === true;
+  const isAdmin = useMemo(() => user?.isAdmin === true || user?.isSuperAdmin === true, [user]);
+
+  // Memoize handlers to prevent re-renders
+  const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    onUpdate(index, 'title', e.target.value);
+  }, [index, onUpdate]);
+
+  const handleCategoryChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    onUpdate(index, 'category', e.target.value);
+  }, [index, onUpdate]);
+
+  const handleTagsChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const tagString = e.target.value;
+    const tagsArray = tagString.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+    onUpdate(index, 'tags', tagsArray);
+  }, [index, onUpdate]);
+
+  const tagsValue = useMemo(() => {
+    return Array.isArray(imageData.tags) ? imageData.tags.join(', ') : imageData.tags || '';
+  }, [imageData.tags]);
 
   return (
     <div className="upload-form-container">
@@ -32,7 +52,7 @@ export const UploadForm = ({
       <Input
         type="text"
         value={imageData.title}
-        onChange={(e) => onUpdate(index, 'title', e.target.value)}
+        onChange={handleTitleChange}
         placeholder={t('image.titlePlaceholder')}
         className="upload-form-input"
       />
@@ -51,7 +71,7 @@ export const UploadForm = ({
           ) : (
             <select
               value={imageData.category}
-              onChange={(e) => onUpdate(index, 'category', e.target.value)}
+              onChange={handleCategoryChange}
               className="upload-form-select"
             >
               <option value="">{t('admin.selectCategory')}</option>
@@ -73,17 +93,23 @@ export const UploadForm = ({
       {/* Tags - shown for all users, below category/title, same style as title */}
       <Input
         type="text"
-        value={Array.isArray(imageData.tags) ? imageData.tags.join(', ') : imageData.tags || ''}
-        onChange={(e) => {
-          // Convert comma-separated string to array
-          const tagString = e.target.value;
-          const tagsArray = tagString.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-          onUpdate(index, 'tags', tagsArray);
-        }}
+        value={tagsValue}
+        onChange={handleTagsChange}
         placeholder={t('collections.tagsPlaceholder')}
         className="upload-form-input"
       />
     </div>
   );
-};
+}, (prevProps, nextProps) => {
+  // Custom comparison to prevent unnecessary re-renders
+  return (
+    prevProps.imageData.title === nextProps.imageData.title &&
+    prevProps.imageData.category === nextProps.imageData.category &&
+    prevProps.imageData.tags === nextProps.imageData.tags &&
+    prevProps.imageData.errors === nextProps.imageData.errors &&
+    prevProps.index === nextProps.index &&
+    prevProps.loadingCategories === nextProps.loadingCategories &&
+    prevProps.categories.length === nextProps.categories.length
+  );
+});
 

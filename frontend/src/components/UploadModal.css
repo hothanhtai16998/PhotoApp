@@ -213,6 +213,10 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  /* Performance optimizations for smooth scrolling */
+  will-change: scroll-position;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  overscroll-behavior: contain; /* Prevent scroll chaining */
 }
 
 /* Dropzone */
@@ -937,6 +941,9 @@
   gap: 16px;
   margin-bottom: 24px;
   align-items: start;
+  /* Performance optimizations for smooth scrolling */
+  will-change: contents;
+  contain: layout style paint;
 }
 
 .upload-image-card {
@@ -951,6 +958,10 @@
   width: 420px; /* Fixed width matching image preview */
   align-items: stretch;
   overflow: hidden;
+  /* Performance optimizations */
+  contain: layout style paint;
+  will-change: auto;
+  transform: translateZ(0); /* Force GPU acceleration */
 }
 
 /* Image preview container - determines card width, has top border radius */

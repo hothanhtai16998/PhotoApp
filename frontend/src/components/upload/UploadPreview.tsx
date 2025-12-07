@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo, useMemo } from 'react';
 import { X, MapPin } from 'lucide-react';
 import type { ImageData } from './hooks/useImageUpload';
 import { reverseGeocode, delay } from '@/utils/geocoding';
@@ -14,11 +14,23 @@ interface UploadPreviewProps {
   onOrientationChange?: (isPortrait: boolean) => void;
 }
 
-export const UploadPreview = ({ imageData, index, onRemove, onLocationUpdate, onOrientationChange }: UploadPreviewProps) => {
+export const UploadPreview = memo(({ imageData, index, onRemove, onLocationUpdate, onOrientationChange }: UploadPreviewProps) => {
   const isUploading = imageData.isUploading === true;
   const uploadError = imageData.uploadError;
   const hasPreUploadData = !!imageData.preUploadData;
   const isUploaded = hasPreUploadData && !uploadError && !isUploading;
+
+  // Memoize object URL to prevent recreation on every render
+  const imageUrl = useMemo(() => {
+    return URL.createObjectURL(imageData.file);
+  }, [imageData.file]);
+
+  // Cleanup object URL on unmount
+  useEffect(() => {
+    return () => {
+      URL.revokeObjectURL(imageUrl);
+    };
+  }, [imageUrl]);
 
   // Simple overlay - show when uploading or before upload completes
   const showOverlay = isUploading || (!hasPreUploadData && !uploadError);
@@ -112,11 +124,11 @@ export const UploadPreview = ({ imageData, index, onRemove, onLocationUpdate, on
     }
   };
 
-  // Fixed width for both landscape and portrait
-  const fixedWidth = '420px';
+  // Fixed width for both landscape and portrait - memoize to prevent recalculation
+  const fixedWidth = useMemo(() => '420px', []);
 
   // Outer container - fixed width for both orientations, matches form width
-  const containerStyle: React.CSSProperties = {
+  const containerStyle: React.CSSProperties = useMemo(() => ({
     position: 'relative',
     display: 'block',
     width: fixedWidth,
@@ -124,11 +136,11 @@ export const UploadPreview = ({ imageData, index, onRemove, onLocationUpdate, on
     marginBottom: 0,
     padding: 0,
     background: 'transparent',
-  };
+  }), [fixedWidth]);
 
   // Image container - fixed width, natural height based on aspect ratio
   // Container should collapse to exactly image height, location button is absolutely positioned inside
-  const imageContainerStyle: React.CSSProperties = {
+  const imageContainerStyle: React.CSSProperties = useMemo(() => ({
     position: 'relative',
     display: 'block',
     width: '100%',
@@ -139,10 +151,10 @@ export const UploadPreview = ({ imageData, index, onRemove, onLocationUpdate, on
     minHeight: 0, // Ensure no minimum height
     lineHeight: 0, // Remove inline spacing
     fontSize: 0, // Remove inline spacing
-  };
+  }), []);
 
   // Image - fixed width, natural height, no padding
-  const imageStyle: React.CSSProperties = {
+  const imageStyle: React.CSSProperties = useMemo(() => ({
     width: '100%',
     height: 'auto', // Natural height based on aspect ratio
     objectFit: 'contain', // Show full image without cropping
@@ -155,7 +167,7 @@ export const UploadPreview = ({ imageData, index, onRemove, onLocationUpdate, on
     padding: 0,
     verticalAlign: 'top', // Remove inline spacing
     maxHeight: 'none', // Remove any max-height constraints
-  };
+  }), []);
 
   return (
     <div
@@ -165,10 +177,11 @@ export const UploadPreview = ({ imageData, index, onRemove, onLocationUpdate, on
       <div style={imageContainerStyle} className="upload-image-container-wrapper">
         <img
           ref={imgRef}
-          src={URL.createObjectURL(imageData.file)}
+          src={imageUrl}
           alt={`Preview ${index + 1}`}
           style={imageStyle}
           onLoad={handleImageLoad}
+          decoding="async"
         />
         {/* Simple Overlay - shows during upload */}
         {showOverlay && (
@@ -357,4 +370,15 @@ export const UploadPreview = ({ imageData, index, onRemove, onLocationUpdate, on
       </div>
     </div>
   );
-};
+}, (prevProps, nextProps) => {
+  // Custom comparison to prevent unnecessary re-renders
+  return (
+    prevProps.imageData.file === nextProps.imageData.file &&
+    prevProps.imageData.isUploading === nextProps.imageData.isUploading &&
+    prevProps.imageData.uploadProgress === nextProps.imageData.uploadProgress &&
+    prevProps.imageData.uploadError === nextProps.imageData.uploadError &&
+    prevProps.imageData.preUploadData === nextProps.imageData.preUploadData &&
+    prevProps.imageData.location === nextProps.imageData.location &&
+    prevProps.index === nextProps.index
+  );
+});

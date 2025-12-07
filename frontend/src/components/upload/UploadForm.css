@@ -21,6 +21,8 @@
   font-size: 16px;
   outline: none;
   box-sizing: border-box;
+  /* Performance optimization - prevent layout shifts */
+  contain: layout style;
 }
 
 /* Category Select Field */

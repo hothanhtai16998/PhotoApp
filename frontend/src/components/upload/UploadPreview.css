@@ -292,8 +292,10 @@
   /* Block display to collapse to image height exactly */
   display: block;
   position: relative; /* For absolutely positioned location button */
-  /* Ensure container only sizes to image, not absolutely positioned children */
-  contain: layout style;
+  /* Performance optimizations */
+  will-change: auto;
+  transform: translateZ(0); /* Force GPU acceleration */
+  backface-visibility: hidden;
 }
 
 .upload-image-container-wrapper img {
@@ -308,6 +310,10 @@
   box-sizing: border-box;
   flex-shrink: 0;
   flex-grow: 0;
+  /* Performance optimizations */
+  will-change: auto;
+  transform: translateZ(0); /* Force GPU acceleration */
+  image-rendering: auto;
 }
 
 @media (max-width: 480px) {

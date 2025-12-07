@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useUserStore } from '@/stores/useUserStore';
@@ -563,7 +563,7 @@ function UploadModal({ isOpen, onClose }: UploadModalProps) {
                         {imagesData.map((imgData, index) => {
                             return (
                                 <div
-                                    key={index}
+                                    key={`${imgData.file.name}-${imgData.file.size}-${index}`}
                                     className="upload-image-card"
                                     draggable={false}
                                     onDragEnter={(e) => e.stopPropagation()}
