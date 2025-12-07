@@ -16,6 +16,7 @@ import leftArrowIcon from '@/assets/left-arrow.svg';
 import rightArrowIcon from '@/assets/right-arrow.svg';
 import closeIcon from '@/assets/close.svg';
 import { preloadImage, loadedImages } from '../utils/imagePreloader';
+import './ImageModal.css';
 
 type ExtendedImage = Image & { categoryName?: string; category?: string };
 
@@ -474,44 +475,16 @@ export function ImageModal({
         !img ? null :
             <div
                 onClick={handleOverlayClick}
-                style={{
-                    position: 'fixed',
-                    inset: 0,
-                    background: 'rgba(0,0,0,0.4)',
-                    zIndex: 9999,
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    justifyContent: 'center',
-                    padding: 0,
-                    // No transition to prevent flash on open
-                    transition: 'none',
-                }}
+                className="image-modal-overlay"
             >
                 <div
                     ref={modalRef}
-                    style={{
-                        position: 'relative',
-                        width: 'clamp(1400px, 90vw, 1600px)',
-                        height: '100vh',
-                        background: '#ffffff',
-                        borderRadius: 0,
-                        overflow: 'hidden',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        marginTop: isScrolled ? 0 : 16, // Space initially, no space when scrolled
-                        // Smooth transition only when first crossing threshold (scrolling down), instant otherwise
-                        transition: shouldAnimate ? 'margin-top 0.2s ease-out' : 'none',
-                    }}
+                    className={`image-modal-container ${isScrolled ? 'scrolled' : ''} ${shouldAnimate ? 'animate' : ''}`}
                 >
                     {/* Scroll area inside modal */}
                     <div
                         ref={scrollRef}
-                        style={{
-                            flex: 1,
-                            overflowY: 'auto',
-                            display: 'flex',
-                            flexDirection: 'column',
-                        }}
+                        className="image-modal-scroll-area"
                         onScroll={(e) => {
                             const top = (e.currentTarget as HTMLDivElement).scrollTop;
                             const prevTop = scrollPosRef.current;
@@ -535,29 +508,10 @@ export function ImageModal({
                         }}
                     >
                         {/* Top info - Sticky: starts with space, sticks to viewport top when scrolling */}
-                        <div
-                            style={{
-                                position: 'sticky',
-                                top: 0, // Sticks to top of scroll container (which becomes viewport top when modal margin is 0)
-                                height: 72,
-                                minHeight: 72,
-                                padding: '12px 16px',
-                                background: 'transparent',
-                                color: '#333',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                zIndex: 10, // Ensure it stays on top when scrolling
-                            }}
-                        >
+                        <div className="image-modal-top-info">
                             <div
                                 ref={authorAreaRef}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 8,
-                                    position: 'relative',
-                                }}
+                                className="image-modal-author-area"
                                 onMouseEnter={() => {
                                     // Clear any hide timeout
                                     if ((authorAreaRef.current as any)?.hideTimeout) {
@@ -627,25 +581,12 @@ export function ImageModal({
                                     (authorAreaRef.current as any).hideTimeout = hideTimeout;
                                 }}
                             >
-                                <div
-                                    style={{
-                                        width: 36,
-                                        height: 36,
-                                        borderRadius: '50%',
-                                        background: 'rgba(0, 0, 0, 0.1)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: 12,
-                                        fontWeight: 600,
-                                        color: '#333',
-                                    }}
-                                >
+                                <div className="image-modal-author-avatar">
                                     {authorName ? authorName[0]?.toUpperCase() : 'A'}
                                 </div>
                                 <div>
-                                    <div style={{ fontWeight: 700 }}>{authorName}</div>
-                                    <div style={{ fontSize: 12, opacity: 0.8 }}>{img.imageTitle || t('image.topInfo')}</div>
+                                    <div className="image-modal-author-name">{authorName}</div>
+                                    <div className="image-modal-author-title">{img.imageTitle || t('image.topInfo')}</div>
                                 </div>
 
                                 {/* Author tooltip/popup */}
@@ -654,21 +595,10 @@ export function ImageModal({
                                     return (
                                         <div
                                             data-author-tooltip
+                                            className={`image-modal-author-tooltip ${tooltipAnimating ? 'animating' : ''}`}
                                             style={{
-                                                position: 'fixed',
                                                 top: `${rect.bottom + 4}px`,
                                                 left: `${rect.left}px`,
-                                                background: '#fff',
-                                                borderRadius: '8px',
-                                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                                padding: '12px',
-                                                minWidth: 360,
-                                                width: 360,
-                                                zIndex: 10000,
-                                                pointerEvents: 'auto',
-                                                opacity: tooltipAnimating ? 1 : 0,
-                                                transform: tooltipAnimating ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(-4px)',
-                                                transition: 'opacity 0.2s ease-out, transform 0.2s ease-out',
                                             }}
                                             onMouseEnter={() => {
                                                 // Clear any hide timeout from author area
@@ -695,57 +625,31 @@ export function ImageModal({
                                                 (e.currentTarget as any).hideTimeout = hideTimeout;
                                             }}
                                         >
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                                                <div
-                                                    style={{
-                                                        width: 48,
-                                                        height: 48,
-                                                        borderRadius: '50%',
-                                                        background: 'rgba(0, 0, 0, 0.1)',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        fontSize: 18,
-                                                        fontWeight: 600,
-                                                        color: '#333',
-                                                    }}
-                                                >
+                                            <div className="image-modal-author-tooltip-header">
+                                                <div className="image-modal-author-tooltip-avatar">
                                                     {authorName ? authorName[0]?.toUpperCase() : 'A'}
                                                 </div>
                                                 <div>
-                                                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 2 }}>
+                                                    <div className="image-modal-author-tooltip-name">
                                                         {authorName}
                                                     </div>
-                                                    <div style={{ fontSize: 13, color: '#666' }}>
+                                                    <div className="image-modal-author-tooltip-bio">
                                                         {(img as any)?.uploadedBy?.bio || t('image.photographer')}
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div style={{ fontSize: 13, color: '#333', lineHeight: 1.4, marginBottom: 10 }}>
+                                            <div className="image-modal-author-tooltip-location">
                                                 {(img as any)?.uploadedBy?.location || t('image.noLocation')}
                                             </div>
 
                                             {/* Uploaded images section */}
                                             {authorImages.length > 0 && (
-                                                <div style={{ marginBottom: 10 }}>
-                                                    <div style={{
-                                                        display: 'grid',
-                                                        gridTemplateColumns: 'repeat(3, 1fr)',
-                                                        gap: 6,
-                                                        marginBottom: 0
-                                                    }}>
+                                                <div className="image-modal-author-images-section">
+                                                    <div className="image-modal-author-images-grid">
                                                         {authorImages.slice(0, 3).map((authorImg, idx) => (
                                                             <div
                                                                 key={authorImg._id || idx}
-                                                                style={{
-                                                                    width: '100%',
-                                                                    paddingBottom: '70%',
-                                                                    position: 'relative',
-                                                                    borderRadius: '4px',
-                                                                    overflow: 'hidden',
-                                                                    background: '#f0f0f0',
-                                                                    cursor: 'pointer',
-                                                                }}
+                                                                className="image-modal-author-image-item"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     const imageIndex = images.findIndex(i => i._id === authorImg._id);
@@ -758,24 +662,10 @@ export function ImageModal({
                                                                     <img
                                                                         src={authorImg.thumbnailUrl || authorImg.smallUrl || authorImg.imageUrl}
                                                                         alt={authorImg.imageTitle || 'Photo'}
-                                                                        style={{
-                                                                            position: 'absolute',
-                                                                            inset: 0,
-                                                                            width: '100%',
-                                                                            height: '100%',
-                                                                            objectFit: 'cover',
-                                                                        }}
+                                                                        className="image-modal-author-image"
                                                                     />
                                                                 ) : (
-                                                                    <div style={{
-                                                                        position: 'absolute',
-                                                                        inset: 0,
-                                                                        display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'center',
-                                                                        color: '#999',
-                                                                        fontSize: 12,
-                                                                    }}>
+                                                                    <div className="image-modal-author-image-placeholder">
                                                                         {t('image.noImage')}
                                                                     </div>
                                                                 )}
@@ -800,24 +690,7 @@ export function ImageModal({
                                                     }
                                                     setShowAuthorTooltip(false);
                                                 }}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '8px 16px',
-                                                    background: '#f5f5f5',
-                                                    border: 'none',
-                                                    borderRadius: '6px',
-                                                    color: '#333',
-                                                    fontSize: 14,
-                                                    fontWeight: 500,
-                                                    cursor: 'pointer',
-                                                    transition: 'background 0.2s',
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    e.currentTarget.style.background = '#e8e8e8';
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    e.currentTarget.style.background = '#f5f5f5';
-                                                }}
+                                                className="image-modal-view-profile-button"
                                             >
                                                 {t('image.viewProfile')}
                                             </button>
@@ -825,25 +698,12 @@ export function ImageModal({
                                     );
                                 })()}
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div className="image-modal-actions">
                                 {/* Download button with dropdown */}
-                                <div style={{ position: 'relative' }} data-download-menu>
+                                <div className="image-modal-download-menu-wrapper" data-download-menu>
                                     <button
                                         onClick={() => setShowDownloadMenu(!showDownloadMenu)}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 6,
-                                            padding: '8px 16px',
-                                            background: 'rgba(0, 0, 0, 0.05)',
-                                            border: 'none',
-                                            borderRadius: '8px',
-                                            color: '#333',
-                                            cursor: 'pointer',
-                                            fontSize: 14,
-                                            fontWeight: 500,
-                                            transition: 'background 0.2s',
-                                        }}
+                                        className="image-modal-download-button"
                                         onMouseEnter={(e) => {
                                             e.currentTarget.style.background = 'rgba(0, 0, 0, 0.1)';
                                         }}
@@ -856,18 +716,7 @@ export function ImageModal({
                                     </button>
                                     {showDownloadMenu && (
                                         <div
-                                            style={{
-                                                position: 'absolute',
-                                                top: '100%',
-                                                right: 0,
-                                                marginTop: 8,
-                                                background: '#fff',
-                                                borderRadius: '8px',
-                                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                                padding: '8px 0',
-                                                minWidth: 200,
-                                                zIndex: 1000,
-                                            }}
+                                            className="image-modal-download-menu"
                                             onClick={(e) => e.stopPropagation()}
                                         >
                                             {[
@@ -882,33 +731,14 @@ export function ImageModal({
                                                         handleDownload(option.value);
                                                         setShowDownloadMenu(false);
                                                     }}
-                                                    style={{
-                                                        width: '100%',
-                                                        padding: '12px 16px',
-                                                        border: 'none',
-                                                        background: 'transparent',
-                                                        textAlign: 'left',
-                                                        cursor: 'pointer',
-                                                        fontSize: 14,
-                                                        color: '#333',
-                                                        display: 'flex',
-                                                        justifyContent: 'space-between',
-                                                        alignItems: 'center',
-                                                        transition: 'background 0.2s',
-                                                    }}
-                                                    onMouseEnter={(e) => {
-                                                        e.currentTarget.style.background = 'rgba(0,0,0,0.05)';
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        e.currentTarget.style.background = 'transparent';
-                                                    }}
+                                                    className="image-modal-download-menu-item"
                                                 >
                                                     <div>
-                                                        <div style={{ fontWeight: 500 }}>{option.label}</div>
-                                                        <div style={{ fontSize: 12, color: '#666', marginTop: 2 }}>{option.dimension}</div>
+                                                        <div className="image-modal-download-option-label">{option.label}</div>
+                                                        <div className="image-modal-download-option-dimension">{option.dimension}</div>
                                                     </div>
                                                     {option.value === 'medium' && (
-                                                        <span style={{ fontSize: 11, color: '#999' }}>{t('image.default')}</span>
+                                                        <span className="image-modal-download-option-default">{t('image.default')}</span>
                                                     )}
                                                 </button>
                                             ))}
@@ -921,112 +751,34 @@ export function ImageModal({
                                     <button
                                         onClick={handleToggleFavorite}
                                         disabled={isTogglingFavorite}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 6,
-                                            padding: '8px 16px',
-                                            background: 'rgba(0, 0, 0, 0.05)',
-                                            border: 'none',
-                                            borderRadius: '8px',
-                                            color: '#333',
-                                            cursor: isTogglingFavorite ? 'not-allowed' : 'pointer',
-                                            fontSize: 14,
-                                            fontWeight: 500,
-                                            transition: 'background 0.2s',
-                                            opacity: isTogglingFavorite ? 0.6 : 1,
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            if (!isTogglingFavorite) {
-                                                e.currentTarget.style.background = 'rgba(0, 0, 0, 0.1)';
-                                            }
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.05)';
-                                        }}
+                                        className="image-modal-favorite-button"
                                     >
                                         <Heart size={16} fill={isFavorited ? 'currentColor' : 'none'} />
                                         <span>{t('image.save')}</span>
-                                        <kbd style={{
-                                            padding: '2px 6px',
-                                            background: 'rgba(0,0,0,0.1)',
-                                            borderRadius: '4px',
-                                            fontSize: 11,
-                                            fontWeight: 500,
-                                        }}>F</kbd>
+                                        <kbd className="image-modal-kbd">F</kbd>
                                     </button>
                                 )}
 
                                 {/* Share button */}
                                 <button
                                     onClick={handleShare}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 6,
-                                        padding: '8px 16px',
-                                        background: 'rgba(0, 0, 0, 0.05)',
-                                        border: 'none',
-                                        borderRadius: '8px',
-                                        color: '#333',
-                                        cursor: 'pointer',
-                                        fontSize: 14,
-                                        fontWeight: 500,
-                                        transition: 'background 0.2s',
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.background = 'rgba(0, 0, 0, 0.1)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.background = 'rgba(0, 0, 0, 0.05)';
-                                    }}
+                                    className="image-modal-share-button"
                                 >
                                     <Share2 size={16} />
                                     <span>{t('share.share')}</span>
-                                    <kbd style={{
-                                        padding: '2px 6px',
-                                        background: 'rgba(0,0,0,0.1)',
-                                        borderRadius: '4px',
-                                        fontSize: 11,
-                                        fontWeight: 500,
-                                    }}>⌘S</kbd>
+                                    <kbd className="image-modal-kbd">⌘S</kbd>
                                 </button>
                             </div>
                         </div>
 
                         {/* Middle image with gutters */}
-                        <div
-                            style={{
-                                background: '#ffffff',
-                                padding: '0px 0',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                // No transition to prevent flash
-                                transition: 'none',
-                            }}
-                        >
+                        <div className="image-modal-middle-container">
                             {/* Unsplash-style simple container - no complex calculations */}
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'flex-start',
-                                    justifyContent: 'center',
-                                    width: '100%',
-                                    padding: '0px 16px', // Match horizontal padding with top section (16px) so image aligns with author section
-                                    background: '#ffffff',
-                                    overflow: 'hidden',
-                                }}
-                            >
+                            <div className="image-modal-image-wrapper">
                                 <div
+                                    className={`image-modal-image-container ${img.width && img.height ? 'has-aspect-ratio' : 'no-aspect-ratio'}`}
                                     style={{
-                                        position: 'relative',
-                                        display: 'block',
-                                        width: '100%',
-                                        maxHeight: 'calc(100vh - 180px)',
-                                        overflow: 'hidden',
-                                        // Reserve space with aspectRatio to prevent layout collapse
-                                        aspectRatio: img.width && img.height ? `${img.width} / ${img.height}` : 'auto',
-                                        minHeight: img.width && img.height ? 'auto' : '300px',
+                                        aspectRatio: img.width && img.height ? `${img.width} / ${img.height}` : undefined,
                                     }}
                                 >
                                     {/* Back layer: Always render, hide with opacity when front is ready */}
@@ -1036,22 +788,7 @@ export function ImageModal({
                                             key={`back-${img._id}`}
                                             src={backSrc}
                                             alt={img.imageTitle || 'photo'}
-                                            style={{
-                                                position: 'relative',
-                                                width: '100%',
-                                                height: 'auto',
-                                                maxWidth: '100%',
-                                                maxHeight: 'calc(100vh - 180px)',
-                                                objectFit: 'contain',
-                                                filter: 'none',
-                                                // Fade out when front is loaded, but stay in DOM
-                                                opacity: frontLoaded ? 0 : 1,
-                                                transition: 'none',
-                                                display: 'block',
-                                                userSelect: 'none',
-                                                pointerEvents: 'none',
-                                                zIndex: 1,
-                                            }}
+                                            className={`image-modal-back-image ${frontLoaded ? 'loaded' : ''}`}
                                             draggable={false}
                                             onLoad={(e) => {
                                                 const imgEl = e.currentTarget;
@@ -1068,23 +805,7 @@ export function ImageModal({
                                             ref={imgElementRef}
                                             src={frontSrc}
                                             alt={img.imageTitle || 'photo'}
-                                            style={{
-                                                position: frontLoaded ? 'relative' : 'absolute',
-                                                top: frontLoaded ? 'auto' : 0,
-                                                left: frontLoaded ? 'auto' : 0,
-                                                width: '100%',
-                                                height: 'auto',
-                                                maxWidth: '100%',
-                                                maxHeight: 'calc(100vh - 180px)',
-                                                objectFit: 'contain',
-                                                filter: 'none', // No blur
-                                                opacity: 1,
-                                                transition: 'none',
-                                                display: 'block',
-                                                userSelect: 'none',
-                                                pointerEvents: 'none',
-                                                zIndex: 2,
-                                            }}
+                                            className={`image-modal-front-image ${frontLoaded ? 'loaded' : ''}`}
                                             draggable={false}
                                             onLoad={(e) => {
                                                 const imgEl = e.currentTarget;
@@ -1118,68 +839,39 @@ export function ImageModal({
                         </div>
 
                         {/* Bottom info (scrolls with content) */}
-                        <div
-                            style={{
-                                background: '#ffffff',
-                                color: '#333',
-                                padding: '24px 16px',
-                            }}
-                        >
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    gap: 24,
-                                    flexWrap: 'wrap',
-                                    marginBottom: 24,
-                                }}
-                            >
+                        <div className="image-modal-bottom-info">
+                            <div className="image-modal-bottom-info-row">
                                 {/* Left: image info */}
-                                <div style={{ flex: '1 1 480px', minWidth: 320 }}>
-                                    <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>
+                                <div className="image-modal-image-info">
+                                    <div className="image-modal-image-title">
                                         {img.imageTitle || 'Untitled image'}
                                     </div>
-                                    <div style={{ display: 'flex', gap: 12, marginBottom: 12, fontSize: 14 }}>
+                                    <div className="image-modal-image-stats">
                                         <span>Views: {(img as any)?.views ?? '—'}</span>
                                         <span>Downloads: {(img as any)?.downloads ?? '—'}</span>
                                     </div>
-                                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-                                        <span style={{ padding: '6px 10px', borderRadius: 16, background: '#fff2', fontSize: 13 }}>
+                                    <div className="image-modal-image-tags">
+                                        <span className="image-modal-image-tag">
                                             Tag 1
                                         </span>
-                                        <span style={{ padding: '6px 10px', borderRadius: 16, background: '#fff2', fontSize: 13 }}>
+                                        <span className="image-modal-image-tag">
                                             Tag 2
                                         </span>
-                                        <span style={{ padding: '6px 10px', borderRadius: 16, background: '#fff2', fontSize: 13 }}>
+                                        <span className="image-modal-image-tag">
                                             Tag 3
                                         </span>
                                     </div>
-                                    <div style={{ fontSize: 14, lineHeight: 1.5 }}>
+                                    <div className="image-modal-image-description">
                                         {(img as any)?.description || 'No description provided.'}
                                     </div>
                                 </div>
 
                                 {/* Right: actions */}
-                                <div
-                                    style={{
-                                        flex: '1 1 240px',
-                                        minWidth: 200,
-                                        display: 'flex',
-                                        flexWrap: 'wrap',
-                                        gap: 8,
-                                        alignItems: 'center',
-                                        justifyContent: 'flex-start',
-                                    }}
-                                >
+                                <div className="image-modal-actions-container">
                                     {['Save', 'Share', 'Report', 'Edit', 'Download'].map((label) => (
                                         <button
                                             key={label}
-                                            style={{
-                                                padding: '10px 12px',
-                                                borderRadius: 6,
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                minWidth: 100,
-                                            }}
+                                            className="image-modal-action-button"
                                         >
                                             {label}
                                         </button>
@@ -1189,14 +881,8 @@ export function ImageModal({
 
                             {/* Related images */}
                             <div>
-                                <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Related images</div>
-                                <div
-                                    style={{
-                                        display: 'grid',
-                                        gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-                                        gap: 12,
-                                    }}
-                                >
+                                <div className="image-modal-related-title">Related images</div>
+                                <div className="image-modal-related-grid">
                                     {images
                                         .filter((_, i) => i !== index)
                                         .slice(0, 8)
@@ -1205,15 +891,7 @@ export function ImageModal({
                                             return (
                                                 <div
                                                     key={related._id || i}
-                                                    style={{
-                                                        width: '100%',
-                                                        paddingBottom: '70%',
-                                                        position: 'relative',
-                                                        borderRadius: 8,
-                                                        overflow: 'hidden',
-                                                        background: '#fff2',
-                                                        cursor: 'pointer',
-                                                    }}
+                                                    className="image-modal-related-item"
                                                     onClick={() => {
                                                         if (onSelectIndex && originalIdx >= 0) {
                                                             onSelectIndex(originalIdx);
@@ -1224,26 +902,10 @@ export function ImageModal({
                                                         <img
                                                             src={related.thumbnailUrl || related.smallUrl || related.imageUrl}
                                                             alt={related.imageTitle || 'related'}
-                                                            style={{
-                                                                position: 'absolute',
-                                                                inset: 0,
-                                                                width: '100%',
-                                                                height: '100%',
-                                                                objectFit: 'cover',
-                                                            }}
+                                                            className="image-modal-related-image"
                                                         />
                                                     ) : (
-                                                        <div
-                                                            style={{
-                                                                position: 'absolute',
-                                                                inset: 0,
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                color: '#333',
-                                                                opacity: 0.8,
-                                                            }}
-                                                        >
+                                                        <div className="image-modal-related-placeholder">
                                                             No preview
                                                         </div>
                                                     )}
@@ -1262,40 +924,12 @@ export function ImageModal({
                         e.stopPropagation();
                         onClose();
                     }}
-                    style={{
-                        position: 'fixed',
-                        left: 24,
-                        top: 24,
-                        width: 32,
-                        height: 32,
-                        background: 'transparent',
-                        border: 'none',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        transition: 'opacity 0.2s',
-                        zIndex: 10001,
-                        padding: 0,
-                    }}
-                    onMouseEnter={(e) => {
-                        const img = e.currentTarget.querySelector('img');
-                        if (img) img.style.opacity = '1';
-                    }}
-                    onMouseLeave={(e) => {
-                        const img = e.currentTarget.querySelector('img');
-                        if (img) img.style.opacity = '0.7';
-                    }}
+                    className="image-modal-close-button"
                 >
                     <img
                         src={closeIcon}
                         alt="Close"
-                        style={{
-                            width: 32,
-                            height: 32,
-                            opacity: 0.7,
-                            transition: 'opacity 0.2s',
-                        }}
+                        className="image-modal-close-icon"
                     />
                 </button>
 
@@ -1308,45 +942,12 @@ export function ImageModal({
                         }
                     }}
                     disabled={index === 0}
-                    style={{
-                        position: 'fixed',
-                        left: 24,
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        width: 'auto',
-                        height: 'auto',
-                        background: 'transparent',
-                        border: 'none',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: index === 0 ? 'not-allowed' : 'pointer',
-                        transition: 'opacity 0.2s',
-                        zIndex: 10000,
-                        padding: 0,
-                    }}
-                    onMouseEnter={(e) => {
-                        if (index > 0) {
-                            const img = e.currentTarget.querySelector('img');
-                            if (img) img.style.opacity = '1';
-                        }
-                    }}
-                    onMouseLeave={(e) => {
-                        if (index > 0) {
-                            const img = e.currentTarget.querySelector('img');
-                            if (img) img.style.opacity = '0.7';
-                        }
-                    }}
+                    className="image-modal-nav-button left"
                 >
                     <img
                         src={leftArrowIcon}
                         alt={t('common.previous')}
-                        style={{
-                            width: 48,
-                            height: 48,
-                            opacity: index === 0 ? 0.3 : 0.7,
-                            transition: 'opacity 0.2s',
-                        }}
+                        className="image-modal-nav-icon"
                     />
                 </button>
 
@@ -1359,45 +960,12 @@ export function ImageModal({
                         }
                     }}
                     disabled={index === images.length - 1}
-                    style={{
-                        position: 'fixed',
-                        right: 24,
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        width: 'auto',
-                        height: 'auto',
-                        background: 'transparent',
-                        border: 'none',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: index === images.length - 1 ? 'not-allowed' : 'pointer',
-                        transition: 'opacity 0.2s',
-                        zIndex: 10000,
-                        padding: 0,
-                    }}
-                    onMouseEnter={(e) => {
-                        if (index < images.length - 1) {
-                            const img = e.currentTarget.querySelector('img');
-                            if (img) img.style.opacity = '1';
-                        }
-                    }}
-                    onMouseLeave={(e) => {
-                        if (index < images.length - 1) {
-                            const img = e.currentTarget.querySelector('img');
-                            if (img) img.style.opacity = '0.7';
-                        }
-                    }}
+                    className="image-modal-nav-button right"
                 >
                     <img
                         src={rightArrowIcon}
                         alt={t('common.next')}
-                        style={{
-                            width: 48,
-                            height: 48,
-                            opacity: index === images.length - 1 ? 0.3 : 0.7,
-                            transition: 'opacity 0.2s',
-                        }}
+                        className="image-modal-nav-icon"
                     />
                 </button>
             </div>

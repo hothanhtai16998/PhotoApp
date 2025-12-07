@@ -349,9 +349,8 @@ export default function NoFlashGridPage() {
                 ))}
                 <button
                     onClick={loadData}
-                    className="category-filter-button"
+                    className="category-filter-button refresh-button"
                     title="Refresh images and categories"
-                    style={{ marginLeft: 'auto' }}
                 >
                     🔄 Refresh
                 </button>
@@ -423,19 +422,7 @@ export default function NoFlashGridPage() {
                                     priority={isPriority}
                                 />
                                 {/* Debug overlay - shows column, aspect ratio and height */}
-                                <div style={{
-                                    position: 'absolute',
-                                    top: 4,
-                                    left: 4,
-                                    background: 'rgba(0, 0, 0, 0.7)',
-                                    color: '#fff',
-                                    padding: '4px 8px',
-                                    borderRadius: 4,
-                                    fontSize: '11px',
-                                    fontFamily: 'monospace',
-                                    zIndex: 10,
-                                    pointerEvents: 'none',
-                                }}>
+                                <div className="debug-overlay">
                                     C: {column} | AR: {aspectRatio} | H: {actualHeight}px | R: {rowSpan} | RS: {rowStart}
                                 </div>
                             </div>
