@@ -9,7 +9,8 @@
   --admin-shadow: rgba(0, 0, 0, 0.1);
 }
 
-.dark, .dark-theme {
+.dark,
+.dark-theme {
   --admin-bg: #1a1a1a;
   --admin-card-bg: #2d2d2d;
   --admin-text: #ffffff;
@@ -567,7 +568,11 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, rgba(102, 126, 234, 0.8) 0%, rgba(118, 75, 162, 0.8) 100%);
+  background: linear-gradient(
+    90deg,
+    rgba(102, 126, 234, 0.8) 0%,
+    rgba(118, 75, 162, 0.8) 100%
+  );
   opacity: 0.8;
 }
 
@@ -716,6 +721,12 @@
   border-radius: 8px;
 }
 
+/* Fix any buttons that might have flex-direction: column */
+.admin-actions [data-slot='button'],
+.admin-actions button {
+  flex-direction: row;
+}
+
 .admin-actions button:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -834,6 +845,21 @@
   gap: 8px;
   flex-wrap: wrap;
   margin-top: 8px;
+}
+
+/* Ensure buttons with icons and text display correctly - Button component already handles this */
+/* Only fix if there's a specific issue with flex-direction */
+.admin-image-actions [data-slot='button'],
+.admin-image-actions button {
+  /* Button component already has inline-flex items-center gap-2 */
+}
+
+/* Fix any buttons that might have flex-direction: column set elsewhere */
+.admin-image-actions [data-slot='button'],
+.admin-image-actions button,
+.admin-actions [data-slot='button'],
+.admin-actions button {
+  flex-direction: row;
 }
 
 /* Hover styles for moderation action buttons */
@@ -1025,6 +1051,12 @@
   width: 100%;
 }
 
+/* Fix any buttons that might have flex-direction: column */
+.admin-image-info [data-slot='button'],
+.admin-image-info button {
+  flex-direction: row;
+}
+
 /* Pagination */
 .admin-pagination {
   display: flex;
@@ -1033,34 +1065,63 @@
   gap: 16px;
   margin-top: 32px;
   padding: 20px;
-  background: linear-gradient(
-    135deg,
-    rgba(102, 126, 234, 0.05) 0%,
-    rgba(118, 75, 162, 0.05) 100%
-  );
+  background: #f9fafb;
   border-radius: 12px;
-  border: 1px solid rgba(102, 126, 234, 0.1);
+  border: 1px solid #e5e7eb;
 }
 
+/* Pagination buttons - clean styling for outline variant */
+.admin-pagination [data-slot='button'],
 .admin-pagination button {
-  padding: 10px 20px;
-  border-radius: 8px;
+  /* Don't add extra padding - Button component already has px-4 py-2 */
+  /* Remove any padding overrides to prevent double padding */
+  padding: 0.5rem 1rem !important;
+  border-radius: 8px !important;
   transition: all 0.2s ease;
   font-weight: 500;
+  /* Clean white background with single border */
+  background: white !important;
+  border: 1px solid #d1d5db !important;
+  color: #374151 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  /* Remove any pseudo-elements that might create double borders */
+  outline: none !important;
+  position: relative;
+  z-index: 1;
 }
 
-.admin-pagination button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+/* Remove any ::before or ::after that might create double borders */
+.admin-pagination [data-slot='button']::before,
+.admin-pagination [data-slot='button']::after,
+.admin-pagination button::before,
+.admin-pagination button::after {
+  display: none !important;
+}
+
+.admin-pagination button:hover:not(:disabled),
+.admin-pagination [data-slot='button']:hover:not(:disabled) {
+  background: #f9fafb !important;
+  border-color: #9ca3af !important;
+  color: #111827 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.admin-pagination button:disabled,
+.admin-pagination [data-slot='button']:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f3f4f6 !important;
 }
 
 .admin-pagination span {
   font-weight: 600;
-  color: #667eea;
+  color: #374151;
   padding: 8px 16px;
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
 }
 
 /* Modal */
@@ -1574,13 +1635,19 @@
   .admin-stat-label {
     font-size: 0.8125rem;
   }
-  
+
   /* Touch-optimized buttons on mobile */
   .admin-actions button,
   .admin-nav-item {
     min-height: 48px;
     min-width: 48px;
     padding: 0.75rem 1rem;
+  }
+
+  /* Fix any buttons that might have flex-direction: column */
+  .admin-actions [data-slot='button'],
+  .admin-actions button {
+    flex-direction: row;
   }
 
   .admin-images-grid {
@@ -1738,6 +1805,11 @@
     min-height: 36px;
     padding: 6px 12px;
     font-size: 0.8125rem;
+  }
+
+  .admin-actions [data-slot='button'],
+  .admin-actions button {
+    flex-direction: row;
   }
 
   .admin-modal {
@@ -1902,6 +1974,11 @@
     min-height: 32px;
     padding: 4px 10px;
     font-size: 0.75rem;
+  }
+
+  .admin-actions [data-slot='button'],
+  .admin-actions button {
+    flex-direction: row;
   }
 
   .admin-permission-tag {
@@ -2104,7 +2181,7 @@
   color: var(--admin-text);
 }
 
-.admin-breadcrumb-item[aria-current="page"] span {
+.admin-breadcrumb-item[aria-current='page'] span {
   color: var(--admin-text);
   font-weight: 600;
   padding: 6px 8px;
@@ -2169,8 +2246,8 @@
 }
 
 /* Override UI component focus styles */
-.admin-settings input[data-slot="input"]:focus,
-.admin-settings input[data-slot="input"]:focus-visible {
+.admin-settings input[data-slot='input']:focus,
+.admin-settings input[data-slot='input']:focus-visible {
   outline: none !important;
   box-shadow: none !important;
   ring: none !important;
@@ -2182,12 +2259,12 @@
   outline: none;
 }
 
-.admin-file-type-checkbox input[type="checkbox"]:focus {
+.admin-file-type-checkbox input[type='checkbox']:focus {
   outline: none;
 }
 
 .admin-file-type-checkbox:focus-visible,
-.admin-file-type-checkbox input[type="checkbox"]:focus-visible {
+.admin-file-type-checkbox input[type='checkbox']:focus-visible {
   outline: 3px solid #667eea;
   outline-offset: 2px;
   border-radius: 6px;
@@ -2292,7 +2369,7 @@
   color: var(--admin-text);
 }
 
-.admin-settings-tabs-list button[aria-selected="true"] {
+.admin-settings-tabs-list button[aria-selected='true'] {
   background: #000000;
   color: white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -2335,13 +2412,13 @@
   margin-bottom: 8px;
 }
 
-.admin-settings-card [data-slot="card-description"] {
+.admin-settings-card [data-slot='card-description'] {
   color: var(--admin-text-secondary);
   font-size: 0.875rem;
   margin-top: 4px;
 }
 
-.admin-settings-card [data-slot="card-content"] {
+.admin-settings-card [data-slot='card-content'] {
   padding: 24px;
 }
 
@@ -2547,7 +2624,7 @@
     margin-bottom: 16px;
   }
 
-  .admin-settings-card [data-slot="card-content"] {
+  .admin-settings-card [data-slot='card-content'] {
     padding: 16px;
   }
 
@@ -2586,7 +2663,7 @@
     min-width: 80px;
   }
 
-  .admin-file-type-checkbox input[type="checkbox"] {
+  .admin-file-type-checkbox input[type='checkbox'] {
     width: 20px;
     height: 20px;
     min-width: 20px;
@@ -2742,7 +2819,8 @@
   border: 1px solid #fecaca;
 }
 
-.dark, .dark-theme .admin-setting-importance-critical {
+.dark,
+.dark-theme .admin-setting-importance-critical {
   background: rgba(220, 38, 38, 0.2);
   color: #fca5a5;
   border-color: rgba(220, 38, 38, 0.3);
@@ -2754,7 +2832,8 @@
   border: 1px solid #fde68a;
 }
 
-.dark, .dark-theme .admin-setting-importance-important {
+.dark,
+.dark-theme .admin-setting-importance-important {
   background: rgba(245, 158, 11, 0.2);
   color: #fcd34d;
   border-color: rgba(245, 158, 11, 0.3);
@@ -2770,7 +2849,8 @@
   padding-bottom: 8px;
 }
 
-.dark, .dark-theme .admin-form-group-critical {
+.dark,
+.dark-theme .admin-form-group-critical {
   background: rgba(220, 38, 38, 0.1);
   border-left-color: #ef4444;
 }
@@ -2784,7 +2864,8 @@
   padding-bottom: 8px;
 }
 
-.dark, .dark-theme .admin-form-group-important {
+.dark,
+.dark-theme .admin-form-group-important {
   background: rgba(245, 158, 11, 0.1);
   border-left-color: #fbbf24;
 }
@@ -2807,7 +2888,8 @@
   border: 1px solid #a7f3d0;
 }
 
-.dark, .dark-theme .admin-status-badge-success {
+.dark,
+.dark-theme .admin-status-badge-success {
   background: rgba(16, 185, 129, 0.2);
   color: #6ee7b7;
   border-color: rgba(16, 185, 129, 0.3);
@@ -2819,7 +2901,8 @@
   border: 1px solid #fecaca;
 }
 
-.dark, .dark-theme .admin-status-badge-error {
+.dark,
+.dark-theme .admin-status-badge-error {
   background: rgba(220, 38, 38, 0.2);
   color: #fca5a5;
   border-color: rgba(220, 38, 38, 0.3);
@@ -2831,7 +2914,8 @@
   border: 1px solid #fde68a;
 }
 
-.dark, .dark-theme .admin-status-badge-warning {
+.dark,
+.dark-theme .admin-status-badge-warning {
   background: rgba(245, 158, 11, 0.2);
   color: #fcd34d;
   border-color: rgba(245, 158, 11, 0.3);
@@ -2843,7 +2927,8 @@
   border: 1px solid #bfdbfe;
 }
 
-.dark, .dark-theme .admin-status-badge-info {
+.dark,
+.dark-theme .admin-status-badge-info {
   background: rgba(59, 130, 246, 0.2);
   color: #93c5fd;
   border-color: rgba(59, 130, 246, 0.3);
@@ -3192,7 +3277,8 @@
   margin-top: 12px;
 }
 
-.dark, .dark-theme .admin-storage-provider-warning {
+.dark,
+.dark-theme .admin-storage-provider-warning {
   background: rgba(245, 158, 11, 0.15);
   border-color: rgba(245, 158, 11, 0.3);
 }
@@ -3210,7 +3296,8 @@
   line-height: 1.5;
 }
 
-.dark, .dark-theme .admin-warning-content {
+.dark,
+.dark-theme .admin-warning-content {
   color: #fcd34d;
 }
 
@@ -3279,7 +3366,8 @@
 }
 
 @keyframes pulse-dot {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -5020,7 +5108,8 @@
   background: rgba(255, 255, 255, 0.85);
 }
 
-.dark, .dark-theme .admin-analytics .admin-stat-card:hover {
+.dark,
+.dark-theme .admin-analytics .admin-stat-card:hover {
   background: rgba(45, 45, 45, 0.5);
 }
 
@@ -5042,7 +5131,8 @@
   cursor: pointer;
 }
 
-.dark, .dark-theme .admin-stat-card {
+.dark,
+.dark-theme .admin-stat-card {
   background: rgba(45, 45, 45, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -5512,11 +5602,11 @@
   .admin-settings-section-divider {
     margin: 1.5rem 0 1rem;
   }
-  
+
   .admin-settings-section-title {
     font-size: 1rem;
   }
-  
+
   .admin-checkbox-group {
     padding: 0.75rem;
     gap: 0.5rem;
@@ -5525,37 +5615,37 @@
 
 /* Button Improvements - Enhanced Styles */
 /* Apply to both Button component and native buttons */
-[data-slot="button"],
-button:not([type="submit"]):not([type="reset"]),
-button[type="button"] {
+[data-slot='button'],
+button:not([type='submit']):not([type='reset']),
+button[type='button'] {
   position: relative;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-[data-slot="button"]:not(:disabled):hover,
-button:not(:disabled):not([type="submit"]):not([type="reset"]):hover,
-button[type="button"]:not(:disabled):hover {
+[data-slot='button']:not(:disabled):hover,
+button:not(:disabled):not([type='submit']):not([type='reset']):hover,
+button[type='button']:not(:disabled):hover {
   transform: translateY(-1px);
 }
 
-[data-slot="button"]:not(:disabled):active,
-button:not(:disabled):not([type="submit"]):not([type="reset"]):active,
-button[type="button"]:not(:disabled):active {
+[data-slot='button']:not(:disabled):active,
+button:not(:disabled):not([type='submit']):not([type='reset']):active,
+button[type='button']:not(:disabled):active {
   transform: translateY(0) scale(0.98);
 }
 
-[data-slot="button"]:disabled,
+[data-slot='button']:disabled,
 button:disabled {
   cursor: not-allowed;
   opacity: 0.6;
 }
 
 /* Loading state spinner positioning */
-[data-slot="button"]:has(> svg.animate-spin) {
+[data-slot='button']:has(> svg.animate-spin) {
   position: relative;
 }
 
-[data-slot="button"] > svg.animate-spin {
+[data-slot='button'] > svg.animate-spin {
   position: absolute;
   left: 50%;
   top: 50%;
@@ -5564,72 +5654,71 @@ button:disabled {
 }
 
 /* Icon-only button improvements */
-[data-slot="button"][class*="icon"] {
+[data-slot='button'][class*='icon'] {
   aspect-ratio: 1;
   padding: 0;
 }
 
 /* Button group styles */
-[role="group"] {
+[role='group'] {
   gap: 0;
 }
 
-[role="group"] [data-slot="button"] {
+[role='group'] [data-slot='button'] {
   border-radius: 0;
 }
 
-[role="group"] [data-slot="button"]:first-child {
+[role='group'] [data-slot='button']:first-child {
   border-top-left-radius: calc(var(--radius) - 2px);
   border-bottom-left-radius: calc(var(--radius) - 2px);
 }
 
-[role="group"] [data-slot="button"]:last-child {
+[role='group'] [data-slot='button']:last-child {
   border-top-right-radius: calc(var(--radius) - 2px);
   border-bottom-right-radius: calc(var(--radius) - 2px);
 }
 
-[role="group"][class*="vertical"] [data-slot="button"]:first-child {
+[role='group'][class*='vertical'] [data-slot='button']:first-child {
   border-top-left-radius: calc(var(--radius) - 2px);
   border-top-right-radius: calc(var(--radius) - 2px);
   border-bottom-left-radius: 0;
 }
 
-[role="group"][class*="vertical"] [data-slot="button"]:last-child {
+[role='group'][class*='vertical'] [data-slot='button']:last-child {
   border-bottom-left-radius: calc(var(--radius) - 2px);
   border-bottom-right-radius: calc(var(--radius) - 2px);
   border-top-right-radius: 0;
 }
 
 /* Enhanced hover effects for different variants */
-[data-slot="button"][class*="default"]:not(:disabled):hover {
+[data-slot='button'][class*='default']:not(:disabled):hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-[data-slot="button"][class*="destructive"]:not(:disabled):hover {
+[data-slot='button'][class*='destructive']:not(:disabled):hover {
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
-[data-slot="button"][class*="outline"]:not(:disabled):hover {
+[data-slot='button'][class*='outline']:not(:disabled):hover {
   border-color: hsl(var(--ring));
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-[data-slot="button"][class*="secondary"]:not(:disabled):hover {
+[data-slot='button'][class*='secondary']:not(:disabled):hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-[data-slot="button"][class*="ghost"]:not(:disabled):hover {
+[data-slot='button'][class*='ghost']:not(:disabled):hover {
   background-color: hsl(var(--accent) / 0.8);
 }
 
 /* Focus ring improvements */
-[data-slot="button"]:focus-visible {
+[data-slot='button']:focus-visible {
   outline: 2px solid hsl(var(--ring));
   outline-offset: 2px;
 }
 
 /* Loading state - hide text when loading */
-[data-slot="button"]:has(svg[class*="lucide-loader"]) > span {
+[data-slot='button']:has(svg[class*='lucide-loader']) > span {
   opacity: 0;
 }
-

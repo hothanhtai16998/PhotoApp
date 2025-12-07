@@ -314,7 +314,7 @@
   width: 100%;
   border-radius: 8px;
   overflow: hidden;
-  background: #f5f5f5;
+  background: transparent;
 }
 
 .upload-preview-image {
@@ -322,8 +322,8 @@
   height: auto;
   display: block;
   max-height: 500px;
-  object-fit: contain;
-  background: #f5f5f5;
+  object-fit: cover;
+  background: transparent;
 }
 
 .upload-remove-file {
@@ -948,8 +948,7 @@
   height: fit-content;
   display: flex;
   flex-direction: column;
-  width: fit-content;
-  max-width: 100%;
+  width: 420px; /* Fixed width matching image preview */
   align-items: stretch;
   overflow: hidden;
 }
@@ -961,6 +960,8 @@
   align-self: stretch;
   border-radius: 12px 12px 0 0;
   overflow: hidden;
+  margin: 0;
+  padding: 0;
 }
 
 /* Form container - no border radius, matches image width exactly */

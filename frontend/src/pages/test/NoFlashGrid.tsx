@@ -296,6 +296,29 @@ function ImageModal({
         };
     }, []);
 
+    // Keyboard navigation: Arrow keys to navigate (stop at boundaries), Escape to close
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                if (index < images.length - 1) {
+                    onNavigate(index + 1);
+                }
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                if (index > 0) {
+                    onNavigate(index - 1);
+                }
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                onClose();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [index, images.length, onNavigate, onClose]);
+
     // Enhanced preloading: next/prev + nearby images
     useEffect(() => {
         const preloadIndices = [
@@ -1196,10 +1219,14 @@ function ImageModal({
                                         width: '100%',
                                         maxHeight: 'calc(100vh - 180px)',
                                         overflow: 'hidden',
+                                        // Reserve space with aspectRatio to prevent layout collapse
+                                        aspectRatio: img.width && img.height ? `${img.width} / ${img.height}` : 'auto',
+                                        minHeight: img.width && img.height ? 'auto' : '300px',
                                     }}
                                 >
-                                    {/* Back layer: show only network thumbnails (skip base64 to prevent flash) */}
-                                    {backSrc && !backSrc.startsWith('data:') && !frontLoaded ? (
+                                    {/* Back layer: Always render, hide with opacity when front is ready */}
+                                    {/* This prevents flash by keeping an image in DOM at all times */}
+                                    {backSrc && !backSrc.startsWith('data:') && (
                                         <img
                                             key={`back-${img._id}`}
                                             src={backSrc}
@@ -1211,8 +1238,9 @@ function ImageModal({
                                                 maxWidth: '100%',
                                                 maxHeight: 'calc(100vh - 180px)',
                                                 objectFit: 'contain',
-                                                filter: 'none', // No blur
-                                                opacity: 1,
+                                                filter: 'none',
+                                                // Fade out when front is loaded, but stay in DOM
+                                                opacity: frontLoaded ? 0 : 1,
                                                 transition: 'none',
                                                 display: 'block',
                                                 userSelect: 'none',
@@ -1227,9 +1255,9 @@ function ImageModal({
                                                 }
                                             }}
                                         />
-                                    ) : null}
+                                    )}
                                     {/* Front layer: Full-quality image (shown when ready, no blur) */}
-                                    {frontSrc ? (
+                                    {frontSrc && (
                                         <img
                                             key={`front-${img._id}-${frontSrc}`}
                                             ref={imgElementRef}
@@ -1279,7 +1307,7 @@ function ImageModal({
                                                 setFrontLoaded(false);
                                             }}
                                         />
-                                    ) : null}
+                                    )}
                                 </div>
                             </div>
                         </div>

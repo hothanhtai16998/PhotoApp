@@ -65,7 +65,7 @@ export function AdminImages({
         // Check if trying to approve without category
         if (status === 'approved') {
             const hasCategory = imageCategory && (
-                typeof imageCategory === 'string' || 
+                typeof imageCategory === 'string' ||
                 (typeof imageCategory === 'object' && imageCategory._id)
             );
             if (!hasCategory) {
@@ -87,11 +87,11 @@ export function AdminImages({
 
         try {
             await adminService.moderateImage(moderationModal.imageId, moderationModal.status, notes);
-            const successMessage = moderationModal.status === 'approved' 
+            const successMessage = moderationModal.status === 'approved'
                 ? t('admin.approveSuccess')
-                : moderationModal.status === 'rejected' 
-                ? t('admin.rejectSuccess')
-                : t('admin.flagSuccess');
+                : moderationModal.status === 'rejected'
+                    ? t('admin.rejectSuccess')
+                    : t('admin.flagSuccess');
             toast.success(successMessage);
             setModerationModal(null);
             onImageUpdated?.();
@@ -141,8 +141,8 @@ export function AdminImages({
             <div className="admin-images-grid">
                 {images.map((img) => (
                     <div key={img._id} className="admin-image-card">
-                        <img 
-                            src={img.imageUrl} 
+                        <img
+                            src={img.imageUrl}
                             alt={img.imageTitle}
                             onClick={() => setSelectedImage(img.imageUrl)}
                             style={{ cursor: 'pointer' }}
@@ -186,9 +186,9 @@ export function AdminImages({
                             {img.moderationStatus && (
                                 <p className="moderation-status">
                                     {t('admin.moderationStatus')} <span className={`moderation-badge ${img.moderationStatus}`}>
-                                        {img.moderationStatus === 'approved' ? t('admin.approved') : 
-                                         img.moderationStatus === 'rejected' ? t('admin.rejected') : 
-                                         img.moderationStatus === 'flagged' ? t('admin.flagged') : t('admin.pending')}
+                                        {img.moderationStatus === 'approved' ? t('admin.approved') :
+                                            img.moderationStatus === 'rejected' ? t('admin.rejected') :
+                                                img.moderationStatus === 'flagged' ? t('admin.flagged') : t('admin.pending')}
                                     </span>
                                 </p>
                             )}
@@ -254,6 +254,7 @@ export function AdminImages({
             {pagination.pages > 1 && (
                 <div className="admin-pagination">
                     <Button
+                        variant="outline"
                         disabled={pagination.page === 1}
                         onClick={() => onPageChange(pagination.page - 1)}
                     >
@@ -263,6 +264,7 @@ export function AdminImages({
                         {t('admin.pageOf', { current: pagination.page, total: pagination.pages })}
                     </span>
                     <Button
+                        variant="outline"
                         disabled={pagination.page === pagination.pages}
                         onClick={() => onPageChange(pagination.page + 1)}
                     >
@@ -273,7 +275,7 @@ export function AdminImages({
 
             {/* Fullscreen Image Viewer */}
             {selectedImage && (
-                <div 
+                <div
                     className="admin-image-viewer-overlay"
                     onClick={() => setSelectedImage(null)}
                 >
@@ -287,8 +289,8 @@ export function AdminImages({
                     >
                         <X size={24} />
                     </button>
-                    <img 
-                        src={selectedImage} 
+                    <img
+                        src={selectedImage}
                         alt="Fullscreen view"
                         className="admin-image-viewer-image"
                         onClick={(e) => e.stopPropagation()}
@@ -324,11 +326,11 @@ export function AdminImages({
                     onClose={() => setModerationModal(null)}
                     onConfirm={handleModerationConfirm}
                     title={
-                        moderationModal.status === 'approved' 
+                        moderationModal.status === 'approved'
                             ? t('admin.approveImage')
                             : moderationModal.status === 'rejected'
-                            ? t('admin.rejectImage')
-                            : t('admin.flagImage')
+                                ? t('admin.rejectImage')
+                                : t('admin.flagImage')
                     }
                     placeholder={t('admin.moderationNotesPlaceholder') || 'Nhập ghi chú kiểm duyệt (tùy chọn)...'}
                     isOptional={moderationModal.status === 'approved'}

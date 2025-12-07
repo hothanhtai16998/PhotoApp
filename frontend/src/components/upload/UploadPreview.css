@@ -273,23 +273,51 @@
   }
 }
 
-/* Responsive styles for portrait images */
-.upload-preview-container-portrait {
-  max-width: 440px;
+/* Responsive styles - both portrait and landscape use fixed width */
+.upload-preview-container-portrait,
+.upload-preview-container-landscape {
+  width: 420px;
 }
 
-.upload-preview-container-landscape {
+/* Image container wrapper - ensures no padding, collapses to image height */
+.upload-image-container-wrapper {
+  margin: 0;
+  padding: 0;
+  line-height: 0;
+  font-size: 0; /* Remove inline spacing */
   width: 100%;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  /* Block display to collapse to image height exactly */
+  display: block;
+  position: relative; /* For absolutely positioned location button */
+}
+
+.upload-image-container-wrapper img {
+  margin: 0;
+  padding: 0;
+  display: block;
+  vertical-align: top;
+  width: 100%;
+  height: auto;
+  max-height: none;
+  /* Ensure image determines container height exactly */
+  box-sizing: border-box;
+  flex-shrink: 0;
+  flex-grow: 0;
 }
 
 @media (max-width: 480px) {
-  .upload-preview-container-portrait {
-    max-width: 100%;
+  .upload-preview-container-portrait,
+  .upload-preview-container-landscape {
     width: 100%;
+    max-width: 100%;
+    min-width: auto;
   }
 }
 
-/* Location Button - bottom left of image */
+/* Location Button - bottom left of image, inside image bounds */
 .upload-location-button {
   position: absolute;
   bottom: 8px;
@@ -305,23 +333,30 @@
   color: white;
   font-size: 14px;
   font-weight: 500;
-  z-index: 50;
+  z-index: 200;
   transition: background 0.2s ease;
+  pointer-events: auto;
+  margin: 0;
+  /* Ensure button doesn't create any space in document flow */
+  width: auto;
+  height: auto;
+  box-sizing: border-box;
 }
 
 .upload-location-button:hover {
   background: rgba(0, 0, 0, 0.9);
 }
 
-/* Location Input Overlay - appears at button position */
+/* Location Input Overlay - appears at button position, inside image bounds */
 .upload-location-input-overlay {
   position: absolute;
   bottom: 8px;
   left: 8px;
-  z-index: 50;
+  z-index: 200;
   min-width: 300px;
   width: 400px;
   max-width: calc(100% - 16px);
+  pointer-events: auto;
 }
 
 .upload-location-input-wrapper {

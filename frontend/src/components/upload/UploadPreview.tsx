@@ -112,38 +112,49 @@ export const UploadPreview = ({ imageData, index, onRemove, onLocationUpdate, on
     }
   };
 
-  // Unsplash-style: use image's natural width for portrait (capped at 440px), constrained width for landscape
-  const portraitWidth = isPortrait && imageWidth ? `${imageWidth}px` : (isPortrait ? '440px' : '100%');
+  // Fixed width for both landscape and portrait
+  const fixedWidth = '420px';
 
-  // Outer container - this will be the shared width for both image and form
-  // In Unsplash, this container has the exact width (440px), and both image and form are siblings with 100% width
-  // For landscape images, cap at 440px to match portrait width
+  // Outer container - fixed width for both orientations, matches form width
   const containerStyle: React.CSSProperties = {
     position: 'relative',
     display: 'block',
-    width: isPortrait ? portraitWidth : '100%',
-    maxWidth: isPortrait ? portraitWidth : '440px',
+    width: fixedWidth,
+    margin: 0,
     marginBottom: 0,
+    padding: 0,
+    background: 'transparent',
   };
 
-  // Image container - fills 100% of parent container (matches form width)
+  // Image container - fixed width, natural height based on aspect ratio
+  // Container should collapse to exactly image height, location button is absolutely positioned inside
   const imageContainerStyle: React.CSSProperties = {
     position: 'relative',
     display: 'block',
     width: '100%',
-    maxWidth: '100%',
+    background: 'transparent',
+    margin: 0,
+    padding: 0,
+    height: 'auto', // Natural height based on image aspect ratio
+    minHeight: 0, // Ensure no minimum height
+    lineHeight: 0, // Remove inline spacing
+    fontSize: 0, // Remove inline spacing
   };
 
-  // Image fills its container 100% - no border, no border radius (container handles styling)
+  // Image - fixed width, natural height, no padding
   const imageStyle: React.CSSProperties = {
     width: '100%',
-    height: 'auto',
-    maxHeight: '660px',
-    objectFit: 'contain',
+    height: 'auto', // Natural height based on aspect ratio
+    objectFit: 'contain', // Show full image without cropping
     borderRadius: '0',
     border: 'none',
     display: 'block',
     transition: 'opacity 0.3s ease',
+    background: 'transparent',
+    margin: 0,
+    padding: 0,
+    verticalAlign: 'top', // Remove inline spacing
+    maxHeight: 'none', // Remove any max-height constraints
   };
 
   return (
@@ -151,7 +162,7 @@ export const UploadPreview = ({ imageData, index, onRemove, onLocationUpdate, on
       style={containerStyle}
       className={isPortrait ? 'upload-preview-container-portrait' : 'upload-preview-container-landscape'}
     >
-      <div style={imageContainerStyle}>
+      <div style={imageContainerStyle} className="upload-image-container-wrapper">
         <img
           ref={imgRef}
           src={URL.createObjectURL(imageData.file)}
@@ -266,8 +277,8 @@ export const UploadPreview = ({ imageData, index, onRemove, onLocationUpdate, on
         >
           <X size={16} />
         </button>
-        {/* Location Button - bottom left (shown when location input is hidden) */}
-        {onLocationUpdate && !showLocationInput && (
+        {/* Location Button - TEMPORARILY REMOVED FOR TESTING */}
+        {/* {onLocationUpdate && !showLocationInput && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -282,10 +293,10 @@ export const UploadPreview = ({ imageData, index, onRemove, onLocationUpdate, on
             <MapPin size={16} />
             <span>{t('image.locationPlaceholder')}</span>
           </button>
-        )}
+        )} */}
 
-        {/* Location Input Overlay - appears at button position when button is clicked */}
-        {onLocationUpdate && showLocationInput && (
+        {/* Location Input Overlay - TEMPORARILY REMOVED FOR TESTING */}
+        {/* {onLocationUpdate && showLocationInput && (
           <div className="upload-location-input-overlay">
             <div className="upload-location-input-wrapper">
               <input
@@ -334,7 +345,7 @@ export const UploadPreview = ({ imageData, index, onRemove, onLocationUpdate, on
               </button>
             </div>
           </div>
-        )}
+        )} */}
       </div>
     </div>
   );

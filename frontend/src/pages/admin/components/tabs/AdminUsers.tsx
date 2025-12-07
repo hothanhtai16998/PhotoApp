@@ -54,7 +54,7 @@ export function AdminUsers({
 
     const handleBanConfirm = async (reason: string | undefined) => {
         if (!banModal.user) return;
-        
+
         try {
             await adminService.banUser(banModal.user._id, reason);
             toast.success(t('admin.banSuccess', { username: banModal.user.username }));
@@ -71,7 +71,7 @@ export function AdminUsers({
 
     const handleUnbanConfirm = async () => {
         if (!unbanModal.user) return;
-        
+
         try {
             await adminService.unbanUser(unbanModal.user._id);
             toast.success(t('admin.unbanSuccess', { username: unbanModal.user.username }));
@@ -226,6 +226,7 @@ export function AdminUsers({
             {pagination.pages > 1 && (
                 <div className="admin-pagination">
                     <Button
+                        variant="outline"
                         disabled={pagination.page === 1}
                         onClick={() => onPageChange(pagination.page - 1)}
                     >
@@ -235,6 +236,7 @@ export function AdminUsers({
                         {t('admin.pageOf', { current: pagination.page, total: pagination.pages })}
                     </span>
                     <Button
+                        variant="outline"
                         disabled={pagination.page === pagination.pages}
                         onClick={() => onPageChange(pagination.page + 1)}
                     >

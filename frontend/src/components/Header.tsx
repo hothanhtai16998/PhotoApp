@@ -1,10 +1,9 @@
-import { memo, useState, useRef, useEffect } from "react"
+import { memo, useState, useRef, useEffect, lazy, Suspense } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Shield, Heart, User, LogOut, Info } from "lucide-react"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { useUserStore } from "@/stores/useUserStore"
 import { useImageStore } from "@/stores/useImageStore"
-import UploadModal from "./UploadModal"
 import { SearchBar, type SearchBarRef } from "./SearchBar"
 import { Avatar } from "./Avatar"
 import NotificationBell from "./NotificationBell"
@@ -22,6 +21,9 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu"
 import './Header.css'
+
+// Lazy load UploadModal to improve initial page load
+const UploadModal = lazy(() => import('./UploadModal').then(module => ({ default: module.default })))
 
 export const Header = memo(function Header() {
   const { accessToken, signOut } = useAuthStore()
@@ -158,7 +160,17 @@ export const Header = memo(function Header() {
           <div className="header-actions desktop-only">
             {accessToken ? (
               <>
-                <Button variant="ghost" onClick={() => setUploadModalOpen(true)} className="header-link header-upload-button">{t('header.addImage')}</Button>
+                <Button
+                  variant="ghost"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setUploadModalOpen(true);
+                  }}
+                  className="header-link header-upload-button"
+                >
+                  {t('header.addImage')}
+                </Button>
                 <NotificationBell />
                 <DropdownMenu modal={false}>
                   <DropdownMenuTrigger asChild>
@@ -233,8 +245,17 @@ export const Header = memo(function Header() {
 
 
 
-      {/* Upload Modal */}
-      <UploadModal isOpen={uploadModalOpen} onClose={() => setUploadModalOpen(false)} />
+      {/* Upload Modal - Lazy loaded, only render when open */}
+      {uploadModalOpen && (
+        <Suspense fallback={null}>
+          <UploadModal
+            isOpen={uploadModalOpen}
+            onClose={() => {
+              setUploadModalOpen(false);
+            }}
+          />
+        </Suspense>
+      )}
 
     </header >
   )
