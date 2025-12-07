@@ -152,6 +152,12 @@ export const useImageStats = ({
   const [views, setViews] = useState<number>(image.views || 0);
   const [downloads, setDownloads] = useState<number>(image.downloads || 0);
   const currentImageIdRef = useRef<string | null>(null);
+  // Track pending API calls to prevent race conditions on rapid navigation
+  const pendingViewCallRef = useRef<string | null>(null);
+  const pendingDownloadCallRef = useRef<string | null>(null);
+  // Track if we've optimistically updated to handle reverts gracefully
+  const optimisticViewUpdateRef = useRef<boolean>(false);
+  const optimisticDownloadUpdateRef = useRef<boolean>(false);
 
   // Reset stats when image changes
   useEffect(() => {
@@ -159,10 +165,19 @@ export const useImageStats = ({
       setViews(image.views || 0);
       setDownloads(image.downloads || 0);
       currentImageIdRef.current = image._id;
+      // Cancel any pending calls for previous image
+      pendingViewCallRef.current = null;
+      pendingDownloadCallRef.current = null;
+      optimisticViewUpdateRef.current = false;
+      optimisticDownloadUpdateRef.current = false;
     } else {
       setViews(0);
       setDownloads(0);
       currentImageIdRef.current = null;
+      pendingViewCallRef.current = null;
+      pendingDownloadCallRef.current = null;
+      optimisticViewUpdateRef.current = false;
+      optimisticDownloadUpdateRef.current = false;
     }
   }, [image?._id, image?.views, image?.downloads]);
 
@@ -174,38 +189,82 @@ export const useImageStats = ({
       // Mark as viewed immediately to prevent duplicate calls
       markImageAsViewed(imageId);
 
+      // Track this API call to prevent race conditions
+      pendingViewCallRef.current = imageId;
+      optimisticViewUpdateRef.current = true;
+
+      // Optimistically increment view count immediately (for instant UI feedback)
+      setViews((prevViews) => prevViews + 1);
+
       imageService
         .incrementView(imageId)
         .then((response) => {
-          setViews(response.views);
-          // Update the image in the parent component if callback provided
-          if (onImageUpdate && currentImageIdRef.current === imageId) {
-            const mergedDailyViews = {
-              ...(image.dailyViews || {}),
-              ...(response.dailyViews || {}),
-            };
-            onImageUpdate({
-              ...image,
-              views: response.views,
-              dailyViews: mergedDailyViews,
-            });
+          // Only process response if this is still the current image and call is still pending
+          // This prevents race conditions when user navigates quickly
+          if (
+            pendingViewCallRef.current === imageId &&
+            currentImageIdRef.current === imageId
+          ) {
+            // Update with actual server response (may differ from optimistic update)
+            setViews(response.views);
+            optimisticViewUpdateRef.current = false;
+
+            // Update the image in the parent component if callback provided
+            if (onImageUpdate) {
+              const mergedDailyViews = {
+                ...(image.dailyViews || {}),
+                ...(response.dailyViews || {}),
+              };
+              onImageUpdate({
+                ...image,
+                views: response.views,
+                dailyViews: mergedDailyViews,
+              });
+            }
+          }
+          // Clear pending call ref if this was the active call
+          if (pendingViewCallRef.current === imageId) {
+            pendingViewCallRef.current = null;
           }
         })
         .catch((error) => {
-          console.error('Failed to increment view:', error);
-          // Remove from localStorage on error so it can be retried
-          try {
-            const viewed = getViewedImages();
-            viewed.delete(imageId);
-            const data: TrackedImage[] = Array.from(viewed.entries()).map(
-              ([id, timestamp]) => ({
-                imageId: id,
-                timestamp,
-              })
-            );
-            localStorage.setItem(VIEWED_IMAGES_KEY, JSON.stringify(data));
-          } catch {
-            // Ignore localStorage errors
+          // Only handle error if this is still the current image and call is still pending
+          // Note: Rate limit cases return 200, so they're handled in .then(), not here
+          if (
+            pendingViewCallRef.current === imageId &&
+            currentImageIdRef.current === imageId
+          ) {
+            // Real network/server error - revert optimistic update after a small delay to avoid flicker
+            console.error('Failed to increment view:', error);
+            setTimeout(() => {
+              // Double-check we're still on the same image before reverting
+              if (
+                currentImageIdRef.current === imageId &&
+                optimisticViewUpdateRef.current
+              ) {
+                setViews((prevViews) => Math.max(0, prevViews - 1));
+                optimisticViewUpdateRef.current = false;
+
+                // Remove from localStorage on error so it can be retried
+                try {
+                  const viewed = getViewedImages();
+                  viewed.delete(imageId);
+                  const data: TrackedImage[] = Array.from(viewed.entries()).map(
+                    ([id, timestamp]) => ({
+                      imageId: id,
+                      timestamp,
+                    })
+                  );
+                  localStorage.setItem(VIEWED_IMAGES_KEY, JSON.stringify(data));
+                } catch {
+                  // Ignore localStorage errors
+                }
+              }
+            }, 500); // Small delay to avoid flicker
+          }
+          // Clear pending call ref if this was the active call
+          if (pendingViewCallRef.current === imageId) {
+            pendingViewCallRef.current = null;
           }
         });
     }
@@ -239,32 +298,78 @@ export const useImageStats = ({
         // Mark as downloaded immediately to prevent duplicate calls
         markImageAsDownloaded(image._id);
 
+        // Track this API call to prevent race conditions
+        const imageId = image._id;
+        pendingDownloadCallRef.current = imageId;
+        optimisticDownloadUpdateRef.current = true;
+
+        // Optimistically increment download count immediately (for instant UI feedback)
+        setDownloads((prevDownloads) => prevDownloads + 1);
+
         try {
           const response = await imageService.incrementDownload(image._id);
-          setDownloads(response.downloads);
-          // Update the image in the parent component if callback provided
-          if (onImageUpdate) {
-            onImageUpdate({
-              ...image,
-              downloads: response.downloads,
-              dailyDownloads: response.dailyDownloads || image.dailyDownloads,
-            });
+
+          // Only process response if this is still the current image and call is still pending
+          // This prevents race conditions when user navigates quickly
+          if (
+            pendingDownloadCallRef.current === imageId &&
+            currentImageIdRef.current === imageId
+          ) {
+            // Update with actual server response (may differ from optimistic update)
+            setDownloads(response.downloads);
+            optimisticDownloadUpdateRef.current = false;
+
+            // Update the image in the parent component if callback provided
+            if (onImageUpdate) {
+              onImageUpdate({
+                ...image,
+                downloads: response.downloads,
+                dailyDownloads: response.dailyDownloads || image.dailyDownloads,
+              });
+            }
           }
-        } catch (error) {
-          console.error('Failed to increment download:', error);
-          // Remove from localStorage on error so it can be retried
-          try {
-            const downloaded = getDownloadedImages();
-            downloaded.delete(image._id);
-            const data: TrackedImage[] = Array.from(downloaded.entries()).map(
-              ([id, timestamp]) => ({
-                imageId: id,
-                timestamp,
-              })
-            );
-            localStorage.setItem(DOWNLOADED_IMAGES_KEY, JSON.stringify(data));
-          } catch {
-            // Ignore localStorage errors
+        } catch (error: any) {
+          // Only handle error if this is still the current image and call is still pending
+          // Note: Rate limit cases return 200, so they're handled in try block, not here
+          if (
+            pendingDownloadCallRef.current === imageId &&
+            currentImageIdRef.current === imageId
+          ) {
+            // Real network/server error - revert optimistic update after a small delay to avoid flicker
+            console.error('Failed to increment download:', error);
+            setTimeout(() => {
+              // Double-check we're still on the same image before reverting
+              if (
+                currentImageIdRef.current === imageId &&
+                optimisticDownloadUpdateRef.current
+              ) {
+                setDownloads((prevDownloads) => Math.max(0, prevDownloads - 1));
+                optimisticDownloadUpdateRef.current = false;
+
+                // Remove from localStorage on error so it can be retried
+                try {
+                  const downloaded = getDownloadedImages();
+                  downloaded.delete(image._id);
+                  const data: TrackedImage[] = Array.from(
+                    downloaded.entries()
+                  ).map(([id, timestamp]) => ({
+                    imageId: id,
+                    timestamp,
+                  }));
+                  localStorage.setItem(
+                    DOWNLOADED_IMAGES_KEY,
+                    JSON.stringify(data)
+                  );
+                } catch {
+                  // Ignore localStorage errors
+                }
+              }
+            }, 500); // Small delay to avoid flicker
+          }
+        } finally {
+          // Clear pending call ref if this was the active call
+          if (pendingDownloadCallRef.current === imageId) {
+            pendingDownloadCallRef.current = null;
           }
         }
       }

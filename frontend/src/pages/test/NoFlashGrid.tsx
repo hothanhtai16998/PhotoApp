@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import api from '@/lib/axios';
 import type { Image } from '@/types/image';
-import Header from '@/components/Header';
 import './NoFlashGrid.css';
 
 // Import extracted modules
