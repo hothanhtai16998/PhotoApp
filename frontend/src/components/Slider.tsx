@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { ChevronLeft, ChevronRight, Settings2 } from "lucide-react";
 import { imageService } from "@/services/imageService";
 import type { Image } from "@/types/image";
-import { sliderConfig } from "@/config/sliderConfig";
+import { sliderConfig, type TransitionType } from "@/config/sliderConfig";
 import "./Slider.css";
 
 // Date-based randomization: same images per day
@@ -32,6 +32,8 @@ function getDailyRandomImages(images: Image[], count: number): Image[] {
   return shuffled.slice(0, count);
 }
 
+const TRANSITION_STORAGE_KEY = 'slider-transition-type';
+
 function Slider() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -39,6 +41,21 @@ function Slider() {
   const [loading, setLoading] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
   const [autoPlayProgress, setAutoPlayProgress] = useState(0);
+  const [transitionType, setTransitionType] = useState<TransitionType>(() => {
+    // Load from localStorage or use default
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(TRANSITION_STORAGE_KEY);
+      if (saved && sliderConfig.transition.availableTypes.includes(saved as TransitionType)) {
+        return saved as TransitionType;
+      }
+    }
+    return sliderConfig.transition.defaultType;
+  });
+  const [showTransitionMenu, setShowTransitionMenu] = useState(false);
+  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
+  const [imageLoadStates, setImageLoadStates] = useState<Map<string, 'loading' | 'loaded' | 'error'>>(new Map());
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
+  const transitionMenuRef = useRef<HTMLDivElement>(null);
   const autoPlayIntervalRef = useRef<number | null>(null);
   const progressIntervalRef = useRef<number | null>(null);
   const progressStartTimeRef = useRef<number | null>(null);
@@ -56,21 +73,21 @@ function Slider() {
   useEffect(() => {
     const fetchImages = async () => {
       setLoading(true);
-      
+
       // Create abort controller for cleanup
       abortControllerRef.current = new AbortController();
       const signal = abortControllerRef.current.signal;
 
       try {
         const { imageCount, apiLimit } = sliderConfig;
-        
+
         // Fetch only enough images for randomization (2-3x what we need)
         // This ensures we have variety while minimizing network requests
         const fetchCount = Math.max(imageCount * 3, 30); // At least 30 images, or 3x imageCount
         const pagesNeeded = Math.ceil(fetchCount / apiLimit);
-        
+
         const allImages: Image[] = [];
-        
+
         // Fetch only the pages we need
         for (let page = 1; page <= pagesNeeded; page++) {
           // Check if component was unmounted
@@ -85,12 +102,12 @@ function Slider() {
 
           if (response.images && response.images.length > 0) {
             allImages.push(...response.images);
-            
+
             // If we have enough images, stop fetching
             if (allImages.length >= fetchCount) {
               break;
             }
-            
+
             // If this is the last page, stop
             if (response.pagination && page >= response.pagination.pages) {
               break;
@@ -137,18 +154,27 @@ function Slider() {
     };
   }, []);
 
+  // Handle transition type change
+  const handleTransitionTypeChange = useCallback((type: TransitionType) => {
+    setTransitionType(type);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(TRANSITION_STORAGE_KEY, type);
+    }
+    setShowTransitionMenu(false);
+  }, []);
+
   const goToSlide = useCallback((index: number) => {
     if (isTransitioning || images.length === 0) return;
-    
+
     // Clear any existing transition timeout
     if (transitionTimeoutRef.current !== null) {
       clearTimeout(transitionTimeoutRef.current);
       transitionTimeoutRef.current = null;
     }
-    
+
     setIsTransitioning(true);
     setCurrentSlide(index % images.length);
-    
+
     // Track timeout for cleanup
     transitionTimeoutRef.current = window.setTimeout(() => {
       setIsTransitioning(false);
@@ -158,6 +184,7 @@ function Slider() {
 
   const nextSlide = useCallback(() => {
     if (images.length === 0) return;
+    setSlideDirection('right');
     goToSlide((currentSlide + 1) % images.length);
   }, [currentSlide, goToSlide, images.length]);
 
@@ -168,6 +195,7 @@ function Slider() {
 
   const prevSlide = useCallback(() => {
     if (images.length === 0) return;
+    setSlideDirection('left');
     goToSlide((currentSlide - 1 + images.length) % images.length);
   }, [currentSlide, goToSlide, images.length]);
 
@@ -343,6 +371,93 @@ function Slider() {
     );
   };
 
+  // Get thumbnail URL for blur-up effect
+  const getThumbnailForBlur = (image: Image | null): string | null => {
+    if (!image) return null;
+    return (
+      image.thumbnailAvifUrl ||
+      image.thumbnailUrl ||
+      image.smallAvifUrl ||
+      image.smallUrl ||
+      null
+    );
+  };
+
+  // Progressive image loading handler
+  const handleImageLoad = useCallback((imageId: string, imageUrl: string) => {
+    setLoadedImages(prev => new Set(prev).add(imageId));
+    setImageLoadStates(prev => {
+      const next = new Map(prev);
+      next.set(imageId, 'loaded');
+      return next;
+    });
+  }, []);
+
+  // Close transition menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (transitionMenuRef.current && !transitionMenuRef.current.contains(event.target as Node)) {
+        setShowTransitionMenu(false);
+      }
+    };
+
+    if (showTransitionMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showTransitionMenu]);
+
+  // Preload images progressively
+  useEffect(() => {
+    if (!sliderConfig.loading.enableProgressiveLoading || images.length === 0) return;
+
+    const preloadImage = (image: Image, priority: 'high' | 'low' = 'low') => {
+      const imageId = image._id;
+      if (loadedImages.has(imageId)) return;
+
+      setImageLoadStates(prev => {
+        const next = new Map(prev);
+        if (!next.has(imageId)) {
+          next.set(imageId, 'loading');
+        }
+        return next;
+      });
+
+      const imageUrl = getImageUrl(image);
+      if (!imageUrl) return;
+
+      const img = new window.Image();
+      img.onload = () => handleImageLoad(imageId, imageUrl);
+      img.onerror = () => {
+        setImageLoadStates(prev => {
+          const next = new Map(prev);
+          next.set(imageId, 'error');
+          return next;
+        });
+      };
+      img.fetchPriority = priority;
+      img.src = imageUrl;
+    };
+
+    // Load current slide with high priority
+    const currentImage = images[currentSlide];
+    if (currentImage) {
+      preloadImage(currentImage, 'high');
+    }
+
+    // Preload next 2-3 images with low priority
+    for (let i = 1; i <= 3; i++) {
+      const nextIndex = (currentSlide + i) % images.length;
+      const nextImage = images[nextIndex];
+      if (nextImage) {
+        preloadImage(nextImage, 'low');
+      }
+    }
+  }, [currentSlide, images, loadedImages, handleImageLoad]);
+
   // Get current and next image for bottom carousel
   const getBottomCarouselImages = (): Image[] => {
     if (images.length === 0) return [];
@@ -424,7 +539,7 @@ function Slider() {
     };
 
     preloadImages();
-    
+
     // No cleanup needed for image preloading
   }, [currentSlide, images]);
 
@@ -440,7 +555,7 @@ function Slider() {
         clearInterval(progressIntervalRef.current);
         progressIntervalRef.current = null;
       }
-      
+
       // Clear all timeouts
       if (transitionTimeoutRef.current !== null) {
         clearTimeout(transitionTimeoutRef.current);
@@ -450,7 +565,7 @@ function Slider() {
         clearTimeout(autoPlayTimeoutRef.current);
         autoPlayTimeoutRef.current = null;
       }
-      
+
       // Abort any pending fetch
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
@@ -463,7 +578,11 @@ function Slider() {
     return (
       <div className="tripzo-page">
         <div className="loading-state">
-          <div className="skeleton-main-slide" />
+          <div className="skeleton-main-slide blur-up-skeleton">
+            {/* Blur-up effect for skeleton */}
+            <div className="skeleton-blur-layer" />
+            <div className="skeleton-content" />
+          </div>
           <div className="loading-text">Loading images...</div>
         </div>
       </div>
@@ -495,15 +614,45 @@ function Slider() {
         </div>
       )}
 
+      {/* Transition Type Selector */}
+      <div className="slider-transition-selector" ref={transitionMenuRef}>
+        <button
+          className="slider-transition-toggle"
+          onClick={() => setShowTransitionMenu(!showTransitionMenu)}
+          aria-label="Transition settings"
+        >
+          <Settings2 size={18} />
+        </button>
+        {showTransitionMenu && (
+          <div className="slider-transition-menu">
+            <div className="slider-transition-menu-header">Transition Style</div>
+            {sliderConfig.transition.availableTypes.map((type) => (
+              <button
+                key={type}
+                className={`slider-transition-option ${transitionType === type ? 'active' : ''}`}
+                onClick={() => handleTransitionTypeChange(type)}
+              >
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Main Carousel */}
-      <div className="main-carousel-container">
+      <div className={`main-carousel-container transition-${transitionType} slide-direction-${slideDirection}`}>
         {images.map((image, index) => {
           const imageUrl = getImageUrl(image);
+          const thumbnailUrl = getThumbnailForBlur(image);
+          const isActive = index === currentSlide;
+          const isLoaded = loadedImages.has(image._id);
+          const loadState = imageLoadStates.get(image._id) || 'loading';
+          const showBlurUp = sliderConfig.loading.enableBlurUp && thumbnailUrl && !isLoaded;
 
           return (
             <div
               key={image._id}
-              className={`main-slide ${index === currentSlide ? "active" : ""}`}
+              className={`main-slide ${isActive ? "active" : ""} transition-${transitionType}`}
               style={{ backgroundColor: '#1a1a1a' }}
             >
               {/* Blurred background layer */}
@@ -517,17 +666,40 @@ function Slider() {
                   }}
                 />
               )}
+
+              {/* Blur-up placeholder (thumbnail) */}
+              {showBlurUp && (
+                <div
+                  className="blur-up-placeholder"
+                  style={{
+                    backgroundImage: `url("${thumbnailUrl}")`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    filter: 'blur(20px)',
+                    opacity: isLoaded ? 0 : 1,
+                    transition: 'opacity 0.3s ease-out',
+                  }}
+                />
+              )}
+
               {/* Main image layer - separate from blurred background */}
               {imageUrl && (
                 <div
-                  className="main-image-layer"
+                  className={`main-image-layer ${isLoaded ? 'loaded' : 'loading'}`}
                   style={{
                     backgroundImage: `url("${imageUrl}")`,
                     backgroundSize: 'contain',
                     backgroundPosition: 'center',
                     backgroundRepeat: 'no-repeat',
+                    opacity: isLoaded ? 1 : (showBlurUp ? 0 : 0.3),
+                    transition: 'opacity 0.5s ease-in-out',
                   }}
                 />
+              )}
+
+              {/* Loading skeleton overlay */}
+              {loadState === 'loading' && !showBlurUp && (
+                <div className="slide-loading-skeleton" />
               )}
             </div>
           );

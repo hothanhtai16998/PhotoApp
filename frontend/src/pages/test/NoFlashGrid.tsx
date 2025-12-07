@@ -305,27 +305,42 @@ function ImageModal({
             (index - 2 + images.length) % images.length,
         ];
 
-        const sources: string[] = [];
+        const fullSources: string[] = [];
+        const thumbnailSources: string[] = [];
+        
         preloadIndices.forEach((i) => {
             const target = images[i];
             if (!target) return;
-            const src = target.regularUrl || target.imageUrl || target.smallUrl || target.thumbnailUrl;
-            if (src && !loadedImages.has(src)) {
-                sources.push(src);
+            
+            // Preload full quality image
+            const fullSrc = target.regularUrl || target.imageUrl || target.smallUrl || target.thumbnailUrl;
+            if (fullSrc && !loadedImages.has(fullSrc)) {
+                fullSources.push(fullSrc);
+            }
+            
+            // Also preload thumbnail for instant display on navigation
+            const thumbSrc = target.thumbnailUrl || target.smallUrl;
+            if (thumbSrc && thumbSrc !== fullSrc && !loadedImages.has(thumbSrc)) {
+                thumbnailSources.push(thumbSrc);
             }
         });
 
-        // Preload with priority for next/prev (modal images - keep decode to prevent flash)
-        if (sources.length > 0 && sources[0]) {
-            preloadImage(sources[0], false); // Next image - decode for smooth transition
-            if (sources.length > 1 && sources[1]) {
-                preloadImage(sources[1], false); // Prev image - decode for smooth transition
+        // Preload thumbnails first (small, fast) - these show immediately on navigation
+        thumbnailSources.forEach(src => {
+            if (src) preloadImage(src, true).catch(() => { }); // Skip decode for faster loading
+        });
+
+        // Preload full quality with priority for next/prev
+        if (fullSources.length > 0 && fullSources[0]) {
+            preloadImage(fullSources[0], false); // Next image - decode for smooth transition
+            if (fullSources.length > 1 && fullSources[1]) {
+                preloadImage(fullSources[1], false); // Prev image - decode for smooth transition
             }
-            // Preload nearby images with delay (can skip decode for background preload)
-            if (sources.length > 2) {
+            // Preload nearby images with delay
+            if (fullSources.length > 2) {
                 setTimeout(() => {
-                    sources.slice(2).forEach(src => {
-                        if (src) preloadImage(src, true).catch(() => { }); // Skip decode for background preload
+                    fullSources.slice(2).forEach(src => {
+                        if (src) preloadImage(src, true).catch(() => { });
                     });
                 }, 200);
             }
