@@ -16,6 +16,7 @@ import leftArrowIcon from '@/assets/left-arrow.svg';
 import rightArrowIcon from '@/assets/right-arrow.svg';
 import closeIcon from '@/assets/close.svg';
 import { preloadImage, loadedImages } from '../utils/imagePreloader';
+import { useImageStats } from '../hooks/useImageStats';
 import './ImageModal.css';
 
 type ExtendedImage = Image & { categoryName?: string; category?: string };
@@ -92,6 +93,27 @@ export function ImageModal({
         (img as any)?.user ||
         'Author';
     // No aspect ratio calculations needed - browser handles it with object-fit: contain
+
+    // Handle image update callback for stats
+    const handleImageUpdate = useCallback((updatedImage: Image) => {
+        // Update the image in the images array if callback is provided
+        if (onSelectIndex && updatedImage._id === img?._id) {
+            // The hook will update its internal state, we just need to notify parent if needed
+            // For now, the hook's internal state is sufficient for display
+        }
+    }, [img?._id, onSelectIndex]);
+
+    // Use image stats hook for view and download tracking
+    // The hook automatically increments view count when image is displayed
+    // Only use the hook when we have a valid image
+    const { views, downloads, handleDownload: handleDownloadWithStats } = useImageStats({
+        image: img || ({} as Image),
+        onImageUpdate: handleImageUpdate,
+    });
+
+    // Fallback to image's initial values if hook returns 0 but image has values
+    const displayViews = views || (img as any)?.views || 0;
+    const displayDownloads = downloads || (img as any)?.downloads || 0;
 
     // lock body scroll
     useEffect(() => {
@@ -393,42 +415,53 @@ export function ImageModal({
         [onClose]
     );
 
-    // Handle download
+    // Handle download with size selection and increment download count
     const handleDownload = useCallback(async (size: DownloadSize) => {
         if (!img?._id) return;
-        try {
-            const response = await api.get(`/images/${img._id}/download?size=${size}`, {
-                responseType: 'blob',
-                withCredentials: true,
-            });
-            const blob = new Blob([response.data], { type: response.headers['content-type'] || 'image/webp' });
-            const blobUrl = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = blobUrl;
-            const contentDisposition = response.headers['content-disposition'];
-            let fileName = 'photo.webp';
-            if (contentDisposition) {
-                const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
-                if (fileNameMatch) {
-                    fileName = fileNameMatch[1];
+
+        // Create a synthetic event for the hook's handleDownload
+        const syntheticEvent = {
+            stopPropagation: () => { },
+            preventDefault: () => { },
+        } as React.MouseEvent;
+
+        // Use the hook's handleDownload which increments the count and updates state
+        await handleDownloadWithStats(syntheticEvent, async (image: Image, _e: React.MouseEvent) => {
+            // Then download the image with the selected size
+            try {
+                const response = await api.get(`/images/${image._id}/download?size=${size}`, {
+                    responseType: 'blob',
+                    withCredentials: true,
+                });
+                const blob = new Blob([response.data], { type: response.headers['content-type'] || 'image/webp' });
+                const blobUrl = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                const contentDisposition = response.headers['content-disposition'];
+                let fileName = 'photo.webp';
+                if (contentDisposition) {
+                    const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
+                    if (fileNameMatch) {
+                        fileName = fileNameMatch[1];
+                    }
+                } else {
+                    const sanitizedTitle = (image.imageTitle || 'photo').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                    const urlExtension = image.imageUrl?.match(/\.([a-z]+)(?:\?|$)/i)?.[1] || 'webp';
+                    fileName = `${sanitizedTitle}.${urlExtension}`;
                 }
-            } else {
-                const sanitizedTitle = (img.imageTitle || 'photo').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-                const urlExtension = img.imageUrl?.match(/\.([a-z]+)(?:\?|$)/i)?.[1] || 'webp';
-                fileName = `${sanitizedTitle}.${urlExtension}`;
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+                toast.success(t('image.downloadSuccess'));
+                setShowDownloadMenu(false);
+            } catch (error) {
+                console.error('Download failed:', error);
+                toast.error(t('image.downloadFailed'));
             }
-            link.download = fileName;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
-            toast.success(t('image.downloadSuccess'));
-            setShowDownloadMenu(false);
-        } catch (error) {
-            console.error('Download failed:', error);
-            toast.error(t('image.downloadFailed'));
-        }
-    }, [img]);
+        });
+    }, [img, handleDownloadWithStats]);
 
     // Handle toggle favorite
     const handleToggleFavorite = useCallback(async () => {
@@ -850,8 +883,8 @@ export function ImageModal({
                                         {img.imageTitle || 'Untitled image'}
                                     </div>
                                     <div className="image-modal-image-stats">
-                                        <span>Views: {(img as any)?.views ?? '—'}</span>
-                                        <span>Downloads: {(img as any)?.downloads ?? '—'}</span>
+                                        <span>Views: {displayViews ?? '—'}</span>
+                                        <span>Downloads: {displayDownloads ?? '—'}</span>
                                     </div>
                                     <div className="image-modal-image-tags">
                                         <span className="image-modal-image-tag">

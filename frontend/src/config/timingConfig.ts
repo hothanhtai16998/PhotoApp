@@ -64,4 +64,11 @@ export const timingConfig = {
     // Debounce delay for search input
     debounceMs: 300,
   },
+
+  // Image stats tracking (views and downloads)
+  imageStats: {
+    // Expiration time for viewed/downloaded images in localStorage (24 hours)
+    // After this time, the same image can be counted again
+    expirationHours: 1,
+  },
 } as const;

@@ -144,7 +144,6 @@ function App() {
           <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/test/no-flash-grid" element={<NoFlashGridPage />} />
-          {/* <Route path="/UnsplashGrid" element={<UnsplashGrid />} /> */}
 
 
           {/**protected routes */}

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import api from '@/lib/axios';
 import type { Image } from '@/types/image';
+import Header from '@/components/Header';
 import './NoFlashGrid.css';
 
 // Import extracted modules
@@ -382,135 +383,135 @@ export default function NoFlashGridPage() {
     }, [selectedIndex, filteredImages]);
 
     return (
-        <div className="no-flash-grid-page">
-            <h1 className="no-flash-grid-title">No-Flash Grid Test</h1>
-            <p className="no-flash-grid-description">Custom grid + modal (no shared components). Blur-up, double buffer, preload. Unsplash-style grid layout.</p>
+        <>
 
-            <div className="category-filter-container">
-                <button
-                    onClick={() => setActiveCategory('')}
-                    className={`category-filter-button ${activeCategory === '' ? 'active' : ''}`}
-                >
-                    All
-                </button>
-                {categories.map((cat) => (
+            <div className="no-flash-grid-page">
+                <div className="category-filter-container">
                     <button
-                        key={cat._id || cat.name}
-                        onClick={() => setActiveCategory(cat.name)}
-                        className={`category-filter-button ${activeCategory === cat.name ? 'active' : ''}`}
+                        onClick={() => setActiveCategory('')}
+                        className={`category-filter-button ${activeCategory === '' ? 'active' : ''}`}
                     >
-                        {cat.name}
+                        All
                     </button>
-                ))}
-                <button
-                    onClick={() => {
-                        setCurrentPage(1);
-                        loadData(1, false);
-                    }}
-                    className="category-filter-button refresh-button"
-                    title="Refresh images and categories"
-                >
-                    🔄 Refresh
-                </button>
-            </div>
+                    {categories.map((cat) => (
+                        <button
+                            key={cat._id || cat.name}
+                            onClick={() => setActiveCategory(cat.name)}
+                            className={`category-filter-button ${activeCategory === cat.name ? 'active' : ''}`}
+                        >
+                            {cat.name}
+                        </button>
+                    ))}
+                    <button
+                        onClick={() => {
+                            setCurrentPage(1);
+                            loadData(1, false);
+                        }}
+                        className="category-filter-button refresh-button"
+                        title="Refresh images and categories"
+                    >
+                        🔄 Refresh
+                    </button>
+                </div>
 
-            {loading ? (
-                <div className="loading-state">Loading...</div>
-            ) : (
-                <div
-                    ref={gridRef}
-                    className="no-flash-grid"
-                    style={{
-                        // Unsplash-style: Fixed columns with dynamic row spans
-                        gridTemplateColumns: `repeat(${columnCount}, 1fr)`,
-                        gap: `${GRID_CONFIG.gap}px`,
-                        // Base row height for row span calculations - MUST be a string with units
-                        gridAutoRows: `${GRID_CONFIG.baseRowHeight}px`,
-                        // Don't use grid-auto-flow: dense - we use explicit row positioning
-                    }}
-                >
-                    {gridLayout.map((layout, idx) => {
-                        const { image, column, rowSpan, rowStart } = layout;
-                        // Priority loading for first 12 images (above the fold)
-                        const isPriority = idx < 12;
+                {loading ? (
+                    <div className="loading-state">Loading...</div>
+                ) : (
+                    <div
+                        ref={gridRef}
+                        className="no-flash-grid"
+                        style={{
+                            // Unsplash-style: Fixed columns with dynamic row spans
+                            gridTemplateColumns: `repeat(${columnCount}, 1fr)`,
+                            gap: `${GRID_CONFIG.gap}px`,
+                            // Base row height for row span calculations - MUST be a string with units
+                            gridAutoRows: `${GRID_CONFIG.baseRowHeight}px`,
+                            // Don't use grid-auto-flow: dense - we use explicit row positioning
+                        }}
+                    >
+                        {gridLayout.map((layout, idx) => {
+                            const { image, column, rowSpan, rowStart } = layout;
+                            // Priority loading for first 12 images (above the fold)
+                            const isPriority = idx < 12;
 
-                        // Calculate aspect ratio for debug display
-                        const dimensions = imageDimensions.get(image._id) || null;
-                        const finalWidth = dimensions?.width || image.width || 0;
-                        const finalHeight = dimensions?.height || image.height || 0;
-                        const aspectRatio = finalWidth && finalHeight ? (finalWidth / finalHeight).toFixed(2) : 'N/A';
-                        // Actual height includes gaps: rowSpan rows + (rowSpan - 1) gaps
-                        const actualHeight = rowSpan * GRID_CONFIG.baseRowHeight + (rowSpan - 1) * GRID_CONFIG.gap;
+                            // Calculate aspect ratio for debug display
+                            const dimensions = imageDimensions.get(image._id) || null;
+                            const finalWidth = dimensions?.width || image.width || 0;
+                            const finalHeight = dimensions?.height || image.height || 0;
+                            const aspectRatio = finalWidth && finalHeight ? (finalWidth / finalHeight).toFixed(2) : 'N/A';
+                            // Actual height includes gaps: rowSpan rows + (rowSpan - 1) gaps
+                            const actualHeight = rowSpan * GRID_CONFIG.baseRowHeight + (rowSpan - 1) * GRID_CONFIG.gap;
 
-                        return (
-                            <div
-                                key={`${image._id || idx}-${column}-${rowStart}`}
-                                className="grid-item-wrapper"
-                                style={{
-                                    // Explicit column and row start, use span for row end
-                                    // This lets CSS Grid handle gaps automatically
-                                    gridColumn: column,
-                                    gridRowStart: rowStart,
-                                    gridRowEnd: `span ${rowSpan}`,
-                                    // Let the grid area determine height (includes internal row gaps)
-                                    // to avoid mismatch and sticking
-                                    height: 'auto',
-                                }}
-                            >
-                                <BlurUpImage
-                                    image={image}
-                                    onClick={async () => {
-                                        // Unsplash technique: Preload image COMPLETELY before opening modal
-                                        const full = image.regularUrl || image.imageUrl || image.smallUrl || image.thumbnailUrl;
-                                        if (full) {
-                                            try {
-                                                // Wait for image to be fully loaded and decoded before opening modal
-                                                // Keep decode to ensure smooth modal opening
-                                                await preloadImage(full, false);
-                                                // Image is ready - open modal smoothly
-                                                setSelectedIndex(idx);
-                                            } catch {
-                                                // On error, still open modal (will show placeholder)
+                            return (
+                                <div
+                                    key={`${image._id || idx}-${column}-${rowStart}`}
+                                    className="grid-item-wrapper"
+                                    style={{
+                                        // Explicit column and row start, use span for row end
+                                        // This lets CSS Grid handle gaps automatically
+                                        gridColumn: column,
+                                        gridRowStart: rowStart,
+                                        gridRowEnd: `span ${rowSpan}`,
+                                        // Let the grid area determine height (includes internal row gaps)
+                                        // to avoid mismatch and sticking
+                                        height: 'auto',
+                                    }}
+                                >
+                                    <BlurUpImage
+                                        image={image}
+                                        onClick={async () => {
+                                            // Unsplash technique: Preload image COMPLETELY before opening modal
+                                            const full = image.regularUrl || image.imageUrl || image.smallUrl || image.thumbnailUrl;
+                                            if (full) {
+                                                try {
+                                                    // Wait for image to be fully loaded and decoded before opening modal
+                                                    // Keep decode to ensure smooth modal opening
+                                                    await preloadImage(full, false);
+                                                    // Image is ready - open modal smoothly
+                                                    setSelectedIndex(idx);
+                                                } catch {
+                                                    // On error, still open modal (will show placeholder)
+                                                    setSelectedIndex(idx);
+                                                }
+                                            } else {
                                                 setSelectedIndex(idx);
                                             }
-                                        } else {
-                                            setSelectedIndex(idx);
-                                        }
-                                    }}
-                                    priority={isPriority}
-                                />
-                                {/* Debug overlay - shows column, aspect ratio and height */}
-                                <div className="debug-overlay">
-                                    C: {column} | AR: {aspectRatio} | H: {actualHeight}px | R: {rowSpan} | RS: {rowStart}
+                                        }}
+                                        priority={isPriority}
+                                    />
+                                    {/* Debug overlay - shows column, aspect ratio and height */}
+                                    <div className="debug-overlay">
+                                        C: {column} | AR: {aspectRatio} | H: {actualHeight}px | R: {rowSpan} | RS: {rowStart}
+                                    </div>
                                 </div>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {/* Infinite scroll trigger */}
+                {!loading && (
+                    <div ref={loadMoreRef} style={{ height: '1px', marginTop: '20px' }}>
+                        {isLoadingMore && (
+                            <div className="loading-state" style={{ padding: '20px' }}>
+                                Loading more images...
                             </div>
-                        );
-                    })}
-                </div>
-            )}
+                        )}
+                    </div>
+                )}
 
-            {/* Infinite scroll trigger */}
-            {!loading && (
-                <div ref={loadMoreRef} style={{ height: '1px', marginTop: '20px' }}>
-                    {isLoadingMore && (
-                        <div className="loading-state" style={{ padding: '20px' }}>
-                            Loading more images...
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {selectedIndex !== null && filteredImages[selectedIndex] && (
-                <ImageModal
-                    key={filteredImages[selectedIndex]._id || selectedIndex}
-                    images={filteredImages}
-                    index={selectedIndex}
-                    onClose={() => setSelectedIndex(null)}
-                    onNavigate={(next) => setSelectedIndex(next)}
-                    onSelectIndex={(idx) => setSelectedIndex(idx)}
-                />
-            )}
-        </div>
+                {selectedIndex !== null && filteredImages[selectedIndex] && (
+                    <ImageModal
+                        key={filteredImages[selectedIndex]._id || selectedIndex}
+                        images={filteredImages}
+                        index={selectedIndex}
+                        onClose={() => setSelectedIndex(null)}
+                        onNavigate={(next) => setSelectedIndex(next)}
+                        onSelectIndex={(idx) => setSelectedIndex(idx)}
+                    />
+                )}
+            </div>
+        </>
     );
 }
 
