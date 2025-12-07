@@ -5,8 +5,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: calc(100vh - 240px);
-  padding: 20px;
+  min-height: calc(100vh - 180px);
+  padding: 10px;
   flex-shrink: 0;
   width: 100%;
   margin: 0;
@@ -23,7 +23,7 @@
   will-change: transform;
   /* Constrain wrapper to prevent image "blow up" */
   max-width: 100%;
-  max-height: calc(100vh - 240px);
+  max-height: calc(100vh - 180px);
   width: 100%;
 }
 
@@ -40,15 +40,19 @@
   width: auto;
   height: auto;
   max-width: 100%;
-  max-height: calc(100vh - 240px);
+  max-height: calc(100vh - 180px);
 }
 
 .modal-image {
   max-width: 100%;
-  max-height: calc(100vh - 240px);
+  max-height: calc(100vh - 180px);
   width: auto;
   height: auto;
   object-fit: contain;
+  /* Prevent upscaling - don't stretch small images */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  image-rendering: high-quality;
   border-radius: 4px;
   /* Placeholder background for blur-up effect */
   background-color: #f0f0f0;

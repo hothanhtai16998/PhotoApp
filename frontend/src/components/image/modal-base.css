@@ -62,6 +62,7 @@ body.scroll-locked .image-modal-overlay {
   width: 90%;
   max-width: min(1800px, 96%);
   height: calc(100vh - 40px);
+  max-height: calc(100vh - 40px);
   z-index: 2001; /* Above overlay (2000), header (1500) and category nav (1499) */
   display: flex;
   flex-direction: column;

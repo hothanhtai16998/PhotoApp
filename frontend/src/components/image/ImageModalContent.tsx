@@ -38,8 +38,10 @@ export const ImageModalContent = ({
     img.regularUrl ||
     img.imageUrl ||
     '';
+  // Always use highest quality image for modal (prioritize original/full size)
+  // Use imageUrl (original) first, then regularUrl, never use smallUrl for modal display
   const deriveFull = (img: Image) =>
-    img.regularUrl || img.imageUrl || img.smallUrl || '';
+    img.imageUrl || img.regularUrl || '';
 
   const [displayedSrc, setDisplayedSrc] = useState(() => {
     const placeholder = derivePlaceholder(image);

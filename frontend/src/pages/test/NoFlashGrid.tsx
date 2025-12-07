@@ -239,7 +239,7 @@ function ImageModal({
         // Then immediately load network thumbnail (larger, better quality)
         const base64Placeholder = img.base64Thumbnail || null;
         const networkThumbnail = img.thumbnailUrl || img.smallUrl || img.imageUrl || '';
-        const full = img.regularUrl || img.imageUrl || '';
+        const full = img.imageUrl || img.regularUrl || ''; // Prioritize original/full size
 
         // Start with base64 for instant display (prevents blank space)
         // Network thumbnail will load immediately after (fast, small file)
@@ -308,7 +308,7 @@ function ImageModal({
         preloadIndices.forEach((i) => {
             const target = images[i];
             if (!target) return;
-            const src = target.regularUrl || target.imageUrl || target.smallUrl || target.thumbnailUrl;
+            const src = target.imageUrl || target.regularUrl || target.smallUrl || target.thumbnailUrl; // Prioritize original/full size
             if (src && !loadedImages.has(src)) {
                 sources.push(src);
             }
@@ -361,9 +361,9 @@ function ImageModal({
 
         // Unsplash technique: Use different image sizes
         // Low-res thumbnail = thumbnailUrl or smallUrl (small file, pixelated when enlarged to full size)
-        // High-res = regularUrl or imageUrl (full quality, sharp at full size)
+        // High-res = imageUrl (original) first, then regularUrl (full quality, sharp at full size)
         const thumbnail = img.thumbnailUrl || img.smallUrl || img.imageUrl || '';
-        const full = img.regularUrl || img.imageUrl || '';
+        const full = img.imageUrl || img.regularUrl || ''; // Prioritize original/full size
 
         // Calculate what the state should be
         const currentState = calculateInitialState();
@@ -1147,10 +1147,8 @@ function ImageModal({
                             style={{
                                 background: '#ffffff',
                                 padding: '0px 0',
-                                flex: 1,
                                 display: 'flex',
                                 flexDirection: 'column',
-                                minHeight: '75vh', // Increase min height so image has more room
                                 // No transition to prevent flash
                                 transition: 'none',
                             }}
@@ -1159,26 +1157,24 @@ function ImageModal({
                             <div
                                 style={{
                                     display: 'flex',
-                                    alignItems: 'center',
+                                    alignItems: 'flex-start',
                                     justifyContent: 'center',
                                     width: '100%',
-                                    flex: 1,
-                                    minHeight: '75vh', // Match increased min height
                                     padding: '0px 16px', // Match horizontal padding with top section (16px) so image aligns with author section
                                     background: '#ffffff',
                                     overflow: 'hidden',
                                 }}
                             >
+                                {/* Unsplash-style wrapper with CSS custom properties for dynamic sizing */}
                                 <div
                                     style={{
                                         position: 'relative',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        width: '100%',
-                                        height: '100%',
-                                        maxHeight: '100%', // Ensure it doesn't exceed container height
-                                        overflow: 'hidden', // Clip any content that extends beyond
+                                        display: 'block',
+                                        width: img.width && img.height 
+                                            ? 'clamp(min(100%, 1493px), 100%, calc(calc(100vh - 180px) * ' + (img.width / img.height).toFixed(10) + '))'
+                                            : '100%',
+                                        maxWidth: '100%',
+                                        maxHeight: 'calc(100vh - 180px)',
                                         background: '#ffffff',
                                     }}
                                 >
@@ -1192,7 +1188,9 @@ function ImageModal({
                                             style={{
                                                 position: 'relative',
                                                 width: '100%',
-                                                height: '100%',
+                                                height: 'auto',
+                                                maxWidth: '100%',
+                                                maxHeight: 'calc(100vh - 180px)',
                                                 objectFit: 'contain',
                                                 // Apply blur filter to base64 thumbnails (like Unsplash's BlurHash)
                                                 // This makes the tiny 20x20px image look better when stretched
@@ -1216,39 +1214,80 @@ function ImageModal({
                                         />
                                     ) : null}
                                     {/* Front layer: Full-quality image (shown when ready, no blur) */}
-                                    {frontSrc ? (
-                                        <img
-                                            key={`front-${img._id}-${frontSrc}`}
-                                            ref={imgElementRef}
-                                            src={frontSrc}
-                                            alt={img.imageTitle || 'photo'}
-                                            style={{
-                                                position: 'absolute',
-                                                inset: 0,
-                                                width: '100%',
-                                                height: '100%',
-                                                objectFit: 'contain',
-                                                // No blur (front layer is sharp)
-                                                filter: 'none',
-                                                opacity: 1,
-                                                // No transitions - instant display to prevent flash
-                                                transition: 'none',
-                                                background: '#ffffff',
-                                                display: 'block',
-                                                userSelect: 'none',
-                                                pointerEvents: 'none',
-                                                zIndex: 2,
-                                            }}
-                                            draggable={false}
-                                            onLoad={(e) => {
-                                                // Ensure image is decoded before display
-                                                const imgEl = e.currentTarget;
-                                                if (imgEl.decode) {
-                                                    imgEl.decode().catch(() => { });
-                                                }
-                                            }}
-                                        />
-                                    ) : null}
+                                    {frontSrc ? (() => {
+                                        // Calculate aspect ratio factor for sizes attribute (like Unsplash)
+                                        const aspectRatio = img.width && img.height ? img.width / img.height : 1;
+                                        const headerFooterSpace = 180; // Match CSS max-height calculation
+                                        
+                                        // Generate srcset from available image URLs (like Unsplash)
+                                        const generateSrcSet = (): string => {
+                                            const parts: string[] = [];
+                                            // Use available image sizes with width descriptors
+                                            if (img.smallUrl) parts.push(`${img.smallUrl} 800w`);
+                                            if (img.regularUrl && img.regularUrl !== img.smallUrl) parts.push(`${img.regularUrl} 1080w`);
+                                            if (img.imageUrl && img.imageUrl !== img.regularUrl && img.imageUrl !== img.smallUrl) {
+                                                // Use natural width if available, otherwise estimate
+                                                const width = img.width || 1920;
+                                                parts.push(`${img.imageUrl} ${width}w`);
+                                            }
+                                            return parts.join(', ');
+                                        };
+                                        
+                                        // Build sizes attribute (like Unsplash) - tells browser what size image will be displayed
+                                        const sizesAttr = [
+                                            '(max-width: 767px) 100vw',
+                                            '(max-width: 1541px) min(100%, 1493px)',
+                                            `(max-height: ${headerFooterSpace + 20}px) min(100%, 1493px)`,
+                                            img.width && img.height 
+                                                ? `(min-aspect-ratio: ${img.width}/${img.height}) calc(calc(100vh - ${headerFooterSpace}px) * ${aspectRatio.toFixed(10)})`
+                                                : '',
+                                            'calc(100vw - 48px)'
+                                        ].filter(Boolean).join(', ');
+                                        
+                                        const srcSet = generateSrcSet();
+                                        
+                                        return (
+                                            <img
+                                                key={`front-${img._id}-${frontSrc}`}
+                                                ref={imgElementRef}
+                                                src={frontSrc}
+                                                srcSet={srcSet || undefined}
+                                                sizes={sizesAttr || undefined}
+                                                width={img.width || undefined}
+                                                height={img.height || undefined}
+                                                alt={img.imageTitle || 'photo'}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: 0,
+                                                    left: 0,
+                                                    right: 0,
+                                                    width: '100%',
+                                                    height: 'auto',
+                                                    maxWidth: '100%',
+                                                    maxHeight: 'calc(100vh - 180px)',
+                                                    objectFit: 'contain',
+                                                    // No blur (front layer is sharp)
+                                                    filter: 'none',
+                                                    opacity: 1,
+                                                    // No transitions - instant display to prevent flash
+                                                    transition: 'none',
+                                                    background: '#ffffff',
+                                                    display: 'block',
+                                                    userSelect: 'none',
+                                                    pointerEvents: 'none',
+                                                    zIndex: 2,
+                                                }}
+                                                draggable={false}
+                                                onLoad={(e) => {
+                                                    // Ensure image is decoded before display
+                                                    const imgEl = e.currentTarget;
+                                                    if (imgEl.decode) {
+                                                        imgEl.decode().catch(() => { });
+                                                    }
+                                                }}
+                                            />
+                                        );
+                                    })() : null}
                                 </div>
                             </div>
                         </div>
@@ -2169,7 +2208,8 @@ export default function NoFlashGridPage() {
                                     image={image}
                                     onClick={async () => {
                                         // Unsplash technique: Preload image COMPLETELY before opening modal
-                                        const full = image.regularUrl || image.imageUrl || image.smallUrl || image.thumbnailUrl;
+                                        // Always use highest quality: imageUrl (original) first, then regularUrl
+                                        const full = image.imageUrl || image.regularUrl || image.smallUrl || image.thumbnailUrl;
                                         if (full) {
                                             try {
                                                 // Wait for image to be fully loaded and decoded before opening modal

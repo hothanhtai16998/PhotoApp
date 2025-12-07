@@ -35,7 +35,7 @@ export const ICON_SIZE = {
  * Modal image constants
  */
 export const MODAL_IMAGE = {
-  HEADER_HEIGHT_PX: 240,
+  HEADER_HEIGHT_PX: 180,
   ZOOM_ICON_SIZE: 18,
   MAX_ZOOM: 5,
   ZOOM_PERCENTAGE_MULTIPLIER: 100,
