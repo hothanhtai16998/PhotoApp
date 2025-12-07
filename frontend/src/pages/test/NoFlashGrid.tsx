@@ -10,6 +10,7 @@ import { loadImageDimensions } from './utils/imageDimensions';
 import { calculateImageLayout, getColumnCount } from './utils/gridLayout';
 import { BlurUpImage } from './components/BlurUpImage';
 import { ImageModal } from './components/ImageModal';
+import { useInfiniteScroll } from './hooks/useInfiniteScroll';
 
 type Category = { name: string; _id: string };
 
@@ -22,6 +23,10 @@ export default function NoFlashGridPage() {
     const [activeCategory, setActiveCategory] = useState<string>('');
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const [_pagination, setPagination] = useState<{ page: number; limit: number; total: number; pages: number } | null>(null);
     const gridRef = useRef<HTMLDivElement | null>(null);
     const [columnCount, setColumnCount] = useState(() => {
         if (typeof window === 'undefined') return GRID_CONFIG.columns.desktop;
@@ -53,39 +58,89 @@ export default function NoFlashGridPage() {
     const loadingDimensionsRef = useRef<Set<string>>(new Set()); // Track which images we're currently loading
 
     // Load images and categories
-    const loadData = useCallback(async () => {
+    const loadData = useCallback(async (page: number = 1, append: boolean = false) => {
         try {
-            setLoading(true);
+            if (page === 1) {
+                setLoading(true);
+            } else {
+                setIsLoadingMore(true);
+            }
+
+            const categoryParam = activeCategory ? `&category=${encodeURIComponent(activeCategory)}` : '';
             const [imgsRes, catsRes] = await Promise.all([
-                api.get('/images'),
-                api.get('/categories'),
+                api.get(`/images?page=${page}&limit=20${categoryParam}`),
+                page === 1 ? api.get('/categories') : Promise.resolve({ data: null }),
             ]);
-            const loadedImages = toImageArray(imgsRes.data);
-            setImages(loadedImages);
-            setCategories(toCategoryArray(catsRes.data));
 
-            // Clear image dimensions cache when refreshing (in case images were updated)
-            setImageDimensions(new Map());
-            loadingDimensionsRef.current.clear();
+            const responseData = imgsRes.data;
+            const loadedImages = toImageArray(responseData.images || responseData);
 
-            // Preload thumbnails for first batch of images
+            // Handle pagination response
+            if (responseData.pagination) {
+                setPagination(responseData.pagination);
+                setHasMore(responseData.pagination.page < responseData.pagination.pages);
+            } else {
+                // Fallback: if no pagination info, assume no more if we got fewer than limit
+                setHasMore(loadedImages.length >= 20);
+            }
+
+            if (append) {
+                setImages(prev => [...prev, ...loadedImages]);
+            } else {
+                setImages(loadedImages);
+                // Clear image dimensions cache when refreshing (in case images were updated)
+                setImageDimensions(new Map());
+                loadingDimensionsRef.current.clear();
+            }
+
+            // Only update categories on first page load
+            if (page === 1 && catsRes.data) {
+                setCategories(toCategoryArray(catsRes.data));
+            }
+
+            // Preload thumbnails for newly loaded images
             const thumbnails = loadedImages.slice(0, 20)
                 .map(img => img.thumbnailUrl || img.smallUrl)
                 .filter((src): src is string => Boolean(src));
             preloadImages(thumbnails, true);
         } catch (e) {
             console.error('Failed to load data', e);
-            setImages([]);
-            setCategories([]);
+            if (!append) {
+                setImages([]);
+                if (page === 1) {
+                    setCategories([]);
+                }
+            }
         } finally {
-            setLoading(false);
+            if (page === 1) {
+                setLoading(false);
+            } else {
+                setIsLoadingMore(false);
+            }
         }
-    }, []);
+    }, [activeCategory]);
 
     // Load data on mount
     useEffect(() => {
-        loadData();
-    }, [loadData]);
+        setCurrentPage(1);
+        loadData(1, false);
+    }, [activeCategory]); // Reload when category changes
+
+    // Load more images when scrolling
+    const handleLoadMore = useCallback(async () => {
+        if (!hasMore || isLoadingMore || loading) return;
+        const nextPage = currentPage + 1;
+        setCurrentPage(nextPage);
+        await loadData(nextPage, true);
+    }, [hasMore, isLoadingMore, loading, currentPage, loadData]);
+
+    // Infinite scroll hook
+    const { loadMoreRef } = useInfiniteScroll({
+        hasMore,
+        isLoading: loading || isLoadingMore,
+        onLoadMore: handleLoadMore,
+        rootMargin: '600px', // Start loading 600px before reaching bottom
+    });
 
     // Refresh data when window gains focus (in case data was updated in another tab)
     useEffect(() => {
@@ -348,7 +403,10 @@ export default function NoFlashGridPage() {
                     </button>
                 ))}
                 <button
-                    onClick={loadData}
+                    onClick={() => {
+                        setCurrentPage(1);
+                        loadData(1, false);
+                    }}
                     className="category-filter-button refresh-button"
                     title="Refresh images and categories"
                 >
@@ -428,6 +486,17 @@ export default function NoFlashGridPage() {
                             </div>
                         );
                     })}
+                </div>
+            )}
+
+            {/* Infinite scroll trigger */}
+            {!loading && (
+                <div ref={loadMoreRef} style={{ height: '1px', marginTop: '20px' }}>
+                    {isLoadingMore && (
+                        <div className="loading-state" style={{ padding: '20px' }}>
+                            Loading more images...
+                        </div>
+                    )}
                 </div>
             )}
 

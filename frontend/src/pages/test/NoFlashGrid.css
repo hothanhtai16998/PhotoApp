@@ -82,17 +82,16 @@
   object-fit: cover;
   object-position: center;
   display: block;
-  transition: filter 0.25s ease, transform 0.25s ease;
+  transition: filter 0.25s ease;
+  transform: scale(1);
 }
 
 .blur-up-image.loading {
   filter: none;
-  transform: scale(1.02);
 }
 
 .blur-up-image.loaded {
   filter: none;
-  transform: none;
 }
 
 /* Modal Styles */

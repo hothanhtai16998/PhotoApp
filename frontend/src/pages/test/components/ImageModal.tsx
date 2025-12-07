@@ -4,7 +4,7 @@ import type { Image } from '@/types/image';
 import { Heart, Share2, ChevronDown } from 'lucide-react';
 import { favoriteService } from '@/services/favoriteService';
 import { useBatchedFavoriteCheck, updateFavoriteCache } from '@/hooks/useBatchedFavoriteCheck';
-import type { DownloadSize } from '@/components/image/DownloadSizeSelector';
+import type { DownloadSize } from '../types/downloadSize';
 import { shareService } from '@/utils/shareService';
 import { generateImageSlug } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -45,6 +45,8 @@ export function ImageModal({
         // Then immediately load network thumbnail (larger, better quality)
         const base64Placeholder = img.base64Thumbnail || null;
         const networkThumbnail = img.thumbnailUrl || img.smallUrl || img.imageUrl || '';
+        // Use regularUrl (optimized for detail view, loads faster) first, fallback to imageUrl (original/highest quality)
+        // regularUrl is better for modal because it's optimized and prevents flashing
         const full = img.regularUrl || img.imageUrl || '';
 
         // Start with base64 for instant display (prevents blank space)
@@ -141,7 +143,7 @@ export function ImageModal({
             const target = images[i];
             if (!target) return;
 
-            // Preload full quality image
+            // Preload full quality image (use regularUrl - optimized for detail view, loads faster)
             const fullSrc = target.regularUrl || target.imageUrl || target.smallUrl || target.thumbnailUrl;
             if (fullSrc && !loadedImages.has(fullSrc)) {
                 fullSources.push(fullSrc);
@@ -206,7 +208,8 @@ export function ImageModal({
 
         // Unsplash technique: Use different image sizes
         // Low-res thumbnail = thumbnailUrl or smallUrl (small file, pixelated when enlarged to full size)
-        // High-res = regularUrl or imageUrl (full quality, sharp at full size)
+        // High-res = regularUrl (optimized for detail view, loads faster) or imageUrl (original) as fallback
+        // regularUrl is better for modal because it's optimized and prevents flashing
         const thumbnail = img.thumbnailUrl || img.smallUrl || img.imageUrl || '';
         const full = img.regularUrl || img.imageUrl || '';
 
