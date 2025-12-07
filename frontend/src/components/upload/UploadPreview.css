@@ -292,6 +292,8 @@
   /* Block display to collapse to image height exactly */
   display: block;
   position: relative; /* For absolutely positioned location button */
+  /* Ensure container only sizes to image, not absolutely positioned children */
+  contain: layout style;
 }
 
 .upload-image-container-wrapper img {
@@ -319,7 +321,7 @@
 
 /* Location Button - bottom left of image, inside image bounds */
 .upload-location-button {
-  position: absolute;
+  position: absolute !important;
   bottom: 8px;
   left: 8px;
   background: rgba(0, 0, 0, 0.8);
@@ -336,11 +338,14 @@
   z-index: 200;
   transition: background 0.2s ease;
   pointer-events: auto;
-  margin: 0;
+  margin: 0 !important;
   /* Ensure button doesn't create any space in document flow */
   width: auto;
   height: auto;
   box-sizing: border-box;
+  /* Remove from document flow completely */
+  top: auto;
+  right: auto;
 }
 
 .upload-location-button:hover {

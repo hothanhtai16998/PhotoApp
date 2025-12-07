@@ -277,8 +277,8 @@ export const UploadPreview = ({ imageData, index, onRemove, onLocationUpdate, on
         >
           <X size={16} />
         </button>
-        {/* Location Button - TEMPORARILY REMOVED FOR TESTING */}
-        {/* {onLocationUpdate && !showLocationInput && (
+        {/* Location Button - bottom left (shown when location input is hidden) */}
+        {onLocationUpdate && !showLocationInput && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -289,14 +289,22 @@ export const UploadPreview = ({ imageData, index, onRemove, onLocationUpdate, on
               }, 0);
             }}
             className="upload-location-button"
+            style={{
+              position: 'absolute',
+              bottom: '8px',
+              left: '8px',
+              zIndex: 200,
+              margin: 0,
+              padding: 0,
+            }}
           >
             <MapPin size={16} />
             <span>{t('image.locationPlaceholder')}</span>
           </button>
-        )} */}
+        )}
 
-        {/* Location Input Overlay - TEMPORARILY REMOVED FOR TESTING */}
-        {/* {onLocationUpdate && showLocationInput && (
+        {/* Location Input Overlay - appears at button position when button is clicked */}
+        {onLocationUpdate && showLocationInput && (
           <div className="upload-location-input-overlay">
             <div className="upload-location-input-wrapper">
               <input
@@ -345,7 +353,7 @@ export const UploadPreview = ({ imageData, index, onRemove, onLocationUpdate, on
               </button>
             </div>
           </div>
-        )} */}
+        )}
       </div>
     </div>
   );
