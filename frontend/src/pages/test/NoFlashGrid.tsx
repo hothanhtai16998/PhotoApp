@@ -307,17 +307,17 @@ function ImageModal({
 
         const fullSources: string[] = [];
         const thumbnailSources: string[] = [];
-        
+
         preloadIndices.forEach((i) => {
             const target = images[i];
             if (!target) return;
-            
+
             // Preload full quality image
             const fullSrc = target.regularUrl || target.imageUrl || target.smallUrl || target.thumbnailUrl;
             if (fullSrc && !loadedImages.has(fullSrc)) {
                 fullSources.push(fullSrc);
             }
-            
+
             // Also preload thumbnail for instant display on navigation
             const thumbSrc = target.thumbnailUrl || target.smallUrl;
             if (thumbSrc && thumbSrc !== fullSrc && !loadedImages.has(thumbSrc)) {
