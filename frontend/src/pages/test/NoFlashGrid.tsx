@@ -252,6 +252,7 @@ function ImageModal({
 
     const [imageState, setImageState] = useState(calculateInitialState);
     const [frontSrc, setFrontSrc] = useState<string | null>(null); // Full-quality image (front layer)
+    const [frontLoaded, setFrontLoaded] = useState(false); // Track if front image is actually loaded and ready
     const [backSrc, setBackSrc] = useState<string | null>(imageState.src); // Low-quality placeholder (back layer)
     const backSrcRef = useRef<string | null>(imageState.src); // Track current backSrc to prevent unnecessary updates
     // const isFullQuality = imageState.isFullQuality || frontSrc !== null; // True if front layer is ready
@@ -462,6 +463,8 @@ function ImageModal({
             // Check if already loaded
             if (loadedImages.has(full)) {
                 setFrontSrc(full);
+                // If already cached, mark as loaded immediately
+                setFrontLoaded(true);
             } else {
                 // Preload full image (with decode for smooth transition)
                 preloadImage(full, false)
@@ -475,9 +478,15 @@ function ImageModal({
                         // On error, keep showing back layer (thumbnail)
                     });
             }
+        } else if (full && full === thumbnail) {
+            // If thumbnail is the same as full, use it as front image
+            setFrontSrc(full);
+            // Mark as loaded since it's the same as back image
+            setFrontLoaded(true);
         } else {
             // If no full image to load, ensure front layer is cleared
             setFrontSrc(null);
+            setFrontLoaded(false);
         }
     }, [img]);
 
@@ -1147,10 +1156,8 @@ function ImageModal({
                             style={{
                                 background: '#ffffff',
                                 padding: '0px 0',
-                                flex: 1,
                                 display: 'flex',
                                 flexDirection: 'column',
-                                minHeight: '75vh', // Increase min height so image has more room
                                 // No transition to prevent flash
                                 transition: 'none',
                             }}
@@ -1159,11 +1166,9 @@ function ImageModal({
                             <div
                                 style={{
                                     display: 'flex',
-                                    alignItems: 'center',
+                                    alignItems: 'flex-start',
                                     justifyContent: 'center',
                                     width: '100%',
-                                    flex: 1,
-                                    minHeight: '75vh', // Match increased min height
                                     padding: '0px 16px', // Match horizontal padding with top section (16px) so image aligns with author section
                                     background: '#ffffff',
                                     overflow: 'hidden',
@@ -1172,19 +1177,14 @@ function ImageModal({
                                 <div
                                     style={{
                                         position: 'relative',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
+                                        display: 'block',
                                         width: '100%',
-                                        height: '100%',
-                                        maxHeight: '100%', // Ensure it doesn't exceed container height
-                                        overflow: 'hidden', // Clip any content that extends beyond
-                                        background: '#ffffff',
+                                        maxHeight: 'calc(100vh - 180px)',
+                                        overflow: 'hidden',
                                     }}
                                 >
-                                    {/* Unsplash double-buffer technique: Back layer (blurred) + Front layer (sharp) */}
-                                    {/* Back layer: Always shows blurred low-quality placeholder */}
-                                    {backSrc ? (
+                                    {/* Back layer: show only network thumbnails (skip base64 to prevent flash) */}
+                                    {backSrc && !backSrc.startsWith('data:') && !frontLoaded ? (
                                         <img
                                             key={`back-${img._id}`}
                                             src={backSrc}
@@ -1192,14 +1192,13 @@ function ImageModal({
                                             style={{
                                                 position: 'relative',
                                                 width: '100%',
-                                                height: '100%',
+                                                height: 'auto',
+                                                maxWidth: '100%',
+                                                maxHeight: 'calc(100vh - 180px)',
                                                 objectFit: 'contain',
-                                                // Apply blur filter to base64 thumbnails (like Unsplash's BlurHash)
-                                                // This makes the tiny 20x20px image look better when stretched
-                                                filter: backSrc.startsWith('data:') ? 'blur(20px)' : 'none',
+                                                filter: 'none', // No blur
                                                 opacity: 1,
                                                 transition: 'none',
-                                                background: '#ffffff',
                                                 display: 'block',
                                                 userSelect: 'none',
                                                 pointerEvents: 'none',
@@ -1207,7 +1206,6 @@ function ImageModal({
                                             }}
                                             draggable={false}
                                             onLoad={(e) => {
-                                                // Ensure image is decoded before display
                                                 const imgEl = e.currentTarget;
                                                 if (imgEl.decode) {
                                                     imgEl.decode().catch(() => { });
@@ -1223,17 +1221,17 @@ function ImageModal({
                                             src={frontSrc}
                                             alt={img.imageTitle || 'photo'}
                                             style={{
-                                                position: 'absolute',
-                                                inset: 0,
+                                                position: frontLoaded ? 'relative' : 'absolute',
+                                                top: frontLoaded ? 'auto' : 0,
+                                                left: frontLoaded ? 'auto' : 0,
                                                 width: '100%',
-                                                height: '100%',
+                                                height: 'auto',
+                                                maxWidth: '100%',
+                                                maxHeight: 'calc(100vh - 180px)',
                                                 objectFit: 'contain',
-                                                // No blur (front layer is sharp)
-                                                filter: 'none',
+                                                filter: 'none', // No blur
                                                 opacity: 1,
-                                                // No transitions - instant display to prevent flash
                                                 transition: 'none',
-                                                background: '#ffffff',
                                                 display: 'block',
                                                 userSelect: 'none',
                                                 pointerEvents: 'none',
@@ -1241,11 +1239,29 @@ function ImageModal({
                                             }}
                                             draggable={false}
                                             onLoad={(e) => {
-                                                // Ensure image is decoded before display
                                                 const imgEl = e.currentTarget;
                                                 if (imgEl.decode) {
-                                                    imgEl.decode().catch(() => { });
+                                                    imgEl.decode().then(() => {
+                                                        // Wait a frame to ensure image is rendered before marking as loaded
+                                                        requestAnimationFrame(() => {
+                                                            requestAnimationFrame(() => {
+                                                                setFrontLoaded(true);
+                                                            });
+                                                        });
+                                                    }).catch(() => {
+                                                        requestAnimationFrame(() => {
+                                                            setFrontLoaded(true);
+                                                        });
+                                                    });
+                                                } else {
+                                                    requestAnimationFrame(() => {
+                                                        setFrontLoaded(true);
+                                                    });
                                                 }
+                                            }}
+                                            onError={() => {
+                                                // If front image fails to load, keep back image visible
+                                                setFrontLoaded(false);
                                             }}
                                         />
                                     ) : null}
